@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<project name="CoolTool">
+    <bannerLeft>
+        <name>CoolTool</name>
+        <src>http://maven.apache.org/images/apache-maven-project.png</src>
+        <href>http://www.st.cs.uni-sb.de/</href>
+    </bannerLeft>
+    <bannerRight>
+        <src>http://maven.apache.org/images/maven-small.gif</src>
+    </bannerRight>
+    <body>
+        <links>
+            <item name="Software Engineering Group at Saarland University" href="http://www.st.cs.uni-sb.de/"/>
+        </links>
+
+        <menu name="Quickstart">
+            <item name="Howto" href="howto.html"/>
+            <item name="Tips" href="tips.html"/>
+            <item name="FAQ" href="faq.html"/>
+        </menu>
+    ${reports}
+  </body>
+</project>
