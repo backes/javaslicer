@@ -28,7 +28,18 @@
             </roles>
         </developer>
         <developer>
-            <!-- TODO Replace with your tutor's data (if he or she is not mburger). -->
+            <id>vdallmeier</id>
+            <name>Valentin Dallmeier</name>
+            <email>dallmeier@st.cs.uni-sb.de</email>
+            <url>http://www.st.cs.uni-sb.de/~dallmeier/</url>
+            <organization>Software Engineering Group at Saarland University</organization>
+            <organizationUrl>http://www.st.cs.uni-sb.de/</organizationUrl>
+            <timezone>2</timezone>
+            <roles>
+                <role>Tutor</role>
+            </roles>
+        </developer>
+        <developer>
             <id>mburger</id>
             <name>Martin Burger</name>
             <email>mburger@cs.uni-sb.de</email>
@@ -63,7 +74,7 @@
     </organization>
 
     <modules>
-        <module>java-slicer-pdg</module>
+        <module>java-slicer-tracer</module>
     </modules>
 
     <dependencyManagement>
