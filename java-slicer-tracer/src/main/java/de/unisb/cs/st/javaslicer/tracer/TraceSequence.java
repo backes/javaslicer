@@ -4,7 +4,7 @@ public interface TraceSequence {
 
     /**
      * Each trace sequence has a globally unique index.
-     * @return
+     * @return the index of this trace sequence
      */
     int getIndex();
 
