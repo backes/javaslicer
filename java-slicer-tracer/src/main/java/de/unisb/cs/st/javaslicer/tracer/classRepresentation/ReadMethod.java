@@ -13,6 +13,7 @@ public class ReadMethod {
         this.readClass = readClass;
         this.name = name;
         this.desc = desc;
+        readClass.addMethod(this);
     }
 
     public int addInstruction(final Instruction instruction) {

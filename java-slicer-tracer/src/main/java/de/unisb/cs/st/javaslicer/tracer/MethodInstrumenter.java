@@ -6,7 +6,6 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
-import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ArrayInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.FieldInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.IIncInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
@@ -17,9 +16,10 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.LdcInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.MethodInvocationInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.NewArrayInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.tracer.classRepresentation.SimpleInstruction;
 
 public class MethodInstrumenter extends MethodAdapter implements Opcodes {
+
+    public static Object o = new Object();
 
     private final Tracer tracer;
     private final ReadMethod readMethod;
@@ -29,6 +29,12 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
     private final Label startLabel = new Label();
     private final Label endLabel = new Label();
+
+    private static int[] foo = new int[3];
+    static {
+        foo[0] = 11;
+        foo[1] = 12;
+    }
 
     public MethodInstrumenter(final MethodVisitor mv, final Tracer tracer, final ReadMethod readMethod) {
         super(mv);
@@ -44,145 +50,16 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
     @Override
     public void visitJumpInsn(final int opcode, final Label label) {
-        // it's not necessary to record these predicated. If a branch is taken, the label where we jump to noticed that.
-        /*
-        int index = -1;
-        switch (opcode) {
-        // one operand:
-        case IFEQ:
-            index = this.tracer.newBooleanTraceSequence().getIndex();
-            super.visitInsn(DUP);
-            pushIntOnStack(index);
-            super.visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/SimpleTracerMethods",
-                    "traceIntEqZero", "(II)V");
-            break;
-        case IFNE:
-            index = this.tracer.newBooleanTraceSequence().getIndex();
-            super.visitInsn(DUP);
-            pushIntOnStack(index);
-            super.visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/SimpleTracerMethods",
-                    "traceIntNeqZero", "(II)V");
-            break;
-        case IFLT:
-            index = this.tracer.newBooleanTraceSequence().getIndex();
-            super.visitInsn(DUP);
-            pushIntOnStack(index);
-            super.visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/SimpleTracerMethods",
-                    "traceIntLtZero", "(II)V");
-            break;
-        case IFGE:
-            index = this.tracer.newBooleanTraceSequence().getIndex();
-            super.visitInsn(DUP);
-            pushIntOnStack(index);
-            super.visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/SimpleTracerMethods",
-                    "traceIntGeZero", "(II)V");
-            break;
-        case IFGT:
-            index = this.tracer.newBooleanTraceSequence().getIndex();
-            super.visitInsn(DUP);
-            pushIntOnStack(index);
-            super.visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/SimpleTracerMethods",
-                    "traceIntGtZero", "(II)V");
-            break;
-        case IFLE:
-            index = this.tracer.newBooleanTraceSequence().getIndex();
-            super.visitInsn(DUP);
-            pushIntOnStack(index);
-            super.visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/SimpleTracerMethods",
-                    "traceIntLeZero", "(II)V");
-            break;
-        case IFNULL:
-            index = this.tracer.newBooleanTraceSequence().getIndex();
-            super.visitInsn(DUP);
-            pushIntOnStack(index);
-            super.visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/SimpleTracerMethods",
-                    "traceObjIsNull", "(Ljava/lang/Object;I)V");
-            break;
-        case IFNONNULL:
-            index = this.tracer.newBooleanTraceSequence().getIndex();
-            super.visitInsn(DUP);
-            pushIntOnStack(index);
-            super.visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/SimpleTracerMethods",
-                    "traceObjIsNotNull", "(Ljava/lang/Object;I)V");
-            break;
-
-        // two operands:
-        case IF_ICMPEQ:
-            index = this.tracer.newBooleanTraceSequence().getIndex();
-            super.visitInsn(DUP2);
-            pushIntOnStack(index);
-            super.visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/SimpleTracerMethods",
-                    "traceIntCmpEq", "(III)V");
-            break;
-        case IF_ICMPNE:
-            index = this.tracer.newBooleanTraceSequence().getIndex();
-            super.visitInsn(DUP2);
-            pushIntOnStack(index);
-            super.visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/SimpleTracerMethods",
-                    "traceIntCmpNeq", "(III)V");
-            break;
-        case IF_ICMPLT:
-            index = this.tracer.newBooleanTraceSequence().getIndex();
-            super.visitInsn(DUP2);
-            pushIntOnStack(index);
-            super.visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/SimpleTracerMethods",
-                    "traceIntCmpLt", "(III)V");
-            break;
-        case IF_ICMPGE:
-            index = this.tracer.newBooleanTraceSequence().getIndex();
-            super.visitInsn(DUP2);
-            pushIntOnStack(index);
-            super.visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/SimpleTracerMethods",
-                    "traceIntCmpGe", "(III)V");
-            break;
-        case IF_ICMPGT:
-            index = this.tracer.newBooleanTraceSequence().getIndex();
-            super.visitInsn(DUP2);
-            pushIntOnStack(index);
-            super.visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/SimpleTracerMethods",
-                    "traceIntCmpGt", "(III)V");
-            break;
-        case IF_ICMPLE:
-            index = this.tracer.newBooleanTraceSequence().getIndex();
-            super.visitInsn(DUP2);
-            pushIntOnStack(index);
-            super.visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/SimpleTracerMethods",
-                    "traceIntCmpLe", "(III)V");
-            break;
-        case IF_ACMPEQ:
-            index = this.tracer.newBooleanTraceSequence().getIndex();
-            super.visitInsn(DUP2);
-            pushIntOnStack(index);
-            super.visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/SimpleTracerMethods",
-                    "traceObjCmpEq", "(Ljava/lang/Object;Ljava/lang/Object;I)V");
-            break;
-        case IF_ACMPNE:
-            index = this.tracer.newBooleanTraceSequence().getIndex();
-            super.visitInsn(DUP2);
-            pushIntOnStack(index);
-            super.visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/SimpleTracerMethods",
-                    "traceObjCmpNeq", "(Ljava/lang/Object;Ljava/lang/Object;I)V");
-            break;
-
-        // zero operands (not interesting, static):
-        case GOTO:
-        case JSR:
-            break;
-
-        default:
-            assert false;
-        }
-        */
-
         registerInstruction(new JumpInstruction(this.readMethod, this.lineNumber, opcode, label));
-
         super.visitJumpInsn(opcode, label);
     }
 
     private void registerInstruction(final Instruction instruction) {
+        /*
         pushIntOnStack(instruction.getIndex());
         super.visitFieldInsn(PUTSTATIC, Type.getInternalName(Tracer.class), "lastInstructionIndex",
                 Type.INT_TYPE.getDescriptor());
+        */
     }
 
     private void pushIntOnStack(final int index) {
@@ -209,131 +86,43 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
             super.visitInsn(ICONST_5);
             break;
         default:
-            super.visitIntInsn(getIntPushOpcode(index), index);
+            if ((index << 24) >> 24 == index)
+                super.visitIntInsn(BIPUSH, index);
+            else if ((index << 16) >> 16 == index)
+                super.visitIntInsn(SIPUSH, index);
+            else
+                super.visitLdcInsn(index);
             break;
         }
-    }
-
-    private int getIntPushOpcode(final int index) {
-        if ((index & 255) == index)
-            return BIPUSH;
-        if ((index & 65535) == index)
-            return SIPUSH;
-        return LDC;
     }
 
     @Override
     public void visitMethodInsn(final int opcode, final String owner, final String name, final String desc) {
-        // it's not necessary to record the class of the object whose method is called,
-        // because we get the called method when it's start label is crossed!
-        /*
-        int index = -1;
-        switch (opcode) {
-        // static invocations are not interesting
-        case INVOKESTATIC:
-        case INVOKESPECIAL:
-            break;
-
-        case INVOKEINTERFACE:
-        case INVOKEVIRTUAL:
-            // get the number of argument words (i.e. a double has two words)
-            final int argWords = getArgumentWords(desc);
-            if (argWords == 0) {
-                // just duplicate the object reference
-                super.visitInsn(DUP);
-            } else if (argWords == 1) {
-                // duplicate object reference and argument, then drop the argument
-                super.visitInsn(DUP2);
-                super.visitInsn(POP);
-            } else if (argWords == 2) {
-                // copy the two arguments under the object reference, then pop them.
-                // at the end, just copy the object reference under the two arguments.
-                super.visitInsn(DUP2_X1);
-                super.visitInsn(POP2);
-                super.visitInsn(DUP_X2);
-            } else if (argWords == 3) {
-                // copy the first two arguments under the object reference, then pop them.
-                super.visitInsn(DUP2_X2);
-                super.visitInsn(POP2);
-                // copy third argument and object reference under the first two
-                super.visitInsn(DUP2_X2);
-                // pop the third argument
-                super.visitInsn(POP);
-            } else {
-                copyObjectReference(owner, desc);
-            }
-
-            // now that the object reference is copied to the top of the stack, we just record it
-            index = this.tracer.newClassTraceSequence().getIndex();
-            pushIntOnStack(index);
-            super.visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/SimpleTracerMethods", "traceClass",
-                    "(Ljava/lang/Object;I)V");
-            break;
-
-        default:
-            assert false;
-        }
-        */
-
         registerInstruction(new MethodInvocationInstruction(this.readMethod, this.lineNumber, opcode, owner, name, desc));
 
         super.visitMethodInsn(opcode, owner, name, desc);
 
-        // after the method invokation, we have to add a label, s.t. we can record when the method returns
+        // *after* the method invocation, we have to add a label, s.t. we can record when the method returns
         final Label afterReturnLabel = new Label();
-        visitLabel(afterReturnLabel , true);
+        visitLabel(afterReturnLabel, true);
     }
 
-    private int getArgumentWords(final String methodDesc) {
-        final Type[] types = Type.getArgumentTypes(methodDesc);
-        int size = 0;
-        for (final Type type : types) {
-            size += type.getSize();
-        }
-        return size;
-    }
-
-    private void copyObjectReference(final String methodOwner, final String methodDesc) {
-        final Label copyStartLabel = new Label();
-        final Label copyEndLabel = new Label();
-        super.visitLabel(copyStartLabel);
-        final Type[] types = Type.getArgumentTypes(methodDesc);
-        final int startVarIndex = this.localVariableIndex;
-        this.localVariableIndex += types.length;
-        // the arguments are on the stack in reverse order!
-        for (int i = types.length - 1; i >= 0; --i) {
-            final int varIndex = startVarIndex + i;
-            super.visitLocalVariable("__trace_argCopy" + varIndex, types[i].getDescriptor(), null, copyStartLabel, copyEndLabel,
-                    varIndex);
-            super.visitVarInsn(types[i].getOpcode(ISTORE), varIndex);
-        }
-        // now copy and save the object reference
-        final int objRefIndex = this.localVariableIndex++;
-        super.visitLocalVariable("__trace_argCopy" + objRefIndex, methodOwner, null, copyStartLabel, copyEndLabel, objRefIndex);
-        super.visitInsn(DUP);
-        super.visitVarInsn(ASTORE, objRefIndex);
-
-        // half the way is done: now we have to reconstruct the arguments
-        for (int i = 0; i < types.length; ++i) {
-            final int varIndex = startVarIndex + i;
-            super.visitVarInsn(types[i].getOpcode(ILOAD), varIndex);
-        }
-
-        // and at least push the stored object reference on the stack
-        super.visitVarInsn(ALOAD, objRefIndex);
-
-        super.visitLabel(copyEndLabel);
+    @Override
+    public void visitMaxs(final int maxStack, final int maxLocals) {
+        // all the code is ready, so we add the endLabel here
+        visitLabel(this.endLabel, true);
+        super.visitMaxs(maxStack, maxLocals);
     }
 
     @Override
     public void visitEnd() {
         super.visitEnd();
-        super.visitLabel(this.endLabel);
         this.readMethod.ready();
     }
 
     @Override
     public void visitFieldInsn(final int opcode, final String owner, final String name, final String desc) {
+        /*
         int index = -1;
         switch (opcode) {
         case PUTSTATIC:
@@ -363,7 +152,9 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
             super.visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/SimpleTracerMethods",
                     "traceInteger", "(II)V");
         }
+        */
 
+        final int index = 0;
         registerInstruction(new FieldInstruction(this.readMethod, opcode, owner, name, desc, index));
         super.visitFieldInsn(opcode, owner, name, desc);
     }
@@ -376,6 +167,7 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
     @Override
     public void visitInsn(final int opcode) {
+        /*
         int arrayTraceIndex = -1;
         int indexTraceIndex = -1;
         switch (opcode) {
@@ -457,6 +249,7 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
         } else {
             registerInstruction(new SimpleInstruction(this.readMethod, this.lineNumber, opcode));
         }
+        */
 
         super.visitInsn(opcode);
     }
@@ -531,12 +324,13 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
         // whenever a label is crossed, it stores the instruction index we come from
         final int index = this.tracer.newIntegerTraceSequence().getIndex();
-        // push last executed instruction index on stack
+        // at runtime: push last executed instruction index on stack, then the sequence index
         super.visitFieldInsn(GETSTATIC, Type.getInternalName(Tracer.class), "lastInstructionIndex",
                 Type.INT_TYPE.getDescriptor());
         pushIntOnStack(index);
         super.visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/SimpleTracerMethods",
                 "traceInteger", "(II)V");
+
         // and *after* that, we store our new instruction index on the stack
         registerInstruction(new LabelMarker(this.readMethod, this.lineNumber, label, index, additionalLabel));
     }

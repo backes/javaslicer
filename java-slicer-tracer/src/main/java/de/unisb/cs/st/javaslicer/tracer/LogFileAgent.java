@@ -14,17 +14,15 @@ public class LogFileAgent {
 
         private final Tracer tracer;
         private final File logFile;
-        private final boolean debug;
 
-        public WriteLogfileThread(final Tracer tracer, final File logFile, final boolean debug) {
+        public WriteLogfileThread(final Tracer tracer, final File logFile) {
             this.tracer = tracer;
             this.logFile = logFile;
-            this.debug = debug;
         }
 
         @Override
         public void run() {
-            if (this.debug)
+            if (Tracer.debug)
                 System.out.println("DEBUG: writing trace to output file: " + this.logFile.getAbsolutePath());
 
             ObjectOutputStream str = null;
@@ -33,18 +31,18 @@ public class LogFileAgent {
                 str.writeObject(this.tracer);
             } catch (final IOException e) {
                 System.err.println("ERROR: can not write to \"" + this.logFile.getAbsolutePath() + "\": " + e);
-                System.exit(1);
+                return;
             } finally {
                 try {
                     if (str != null)
                         str.close();
                 } catch (final IOException e) {
                     System.err.println("ERROR: can not close file \"" + this.logFile.getAbsolutePath() + "\": " + e);
-                    System.exit(1);
+                    return;
                 }
             }
 
-            if (this.debug)
+            if (Tracer.debug)
                 System.out.println("DEBUG: trace written successfully");
         }
 
@@ -52,7 +50,6 @@ public class LogFileAgent {
 
     public static void premain(final String agentArgs, final Instrumentation inst) {
         String logFilename = null;
-        boolean debug = false;
         final String[] args = agentArgs == null || agentArgs.length() == 0 ? new String[0] : agentArgs.split(",");
         for (final String arg : args) {
             final String[] parts = arg.split(":");
@@ -71,9 +68,9 @@ public class LogFileAgent {
                 logFilename = value;
             } else if ("debug".equalsIgnoreCase(key)) {
                 if (value == null || "true".equalsIgnoreCase(value)) {
-                    debug = true;
+                    Tracer.debug = true;
                 } else if ("false".equalsIgnoreCase(value)) {
-                    debug = false;
+                    Tracer.debug = false;
                 } else {
                     System.err.println("ERROR: illegal value for \"debug\" argument: \"" + value + "\"");
                     System.exit(1);
@@ -106,7 +103,7 @@ public class LogFileAgent {
             e.printStackTrace(System.err);
             System.exit(1);
         }
-        Runtime.getRuntime().addShutdownHook(new WriteLogfileThread(tracer, logFile, debug));
+        Runtime.getRuntime().addShutdownHook(new WriteLogfileThread(tracer, logFile));
     }
 
 }
