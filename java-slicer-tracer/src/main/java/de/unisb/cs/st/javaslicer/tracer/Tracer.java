@@ -1,5 +1,6 @@
 package de.unisb.cs.st.javaslicer.tracer;
 
+import java.io.PrintStream;
 import java.io.Serializable;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
@@ -9,27 +10,29 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.objectweb.asm.ClassAdapter;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.TryCatchBlockNode;
 import org.objectweb.asm.tree.analysis.Analyzer;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
 import org.objectweb.asm.tree.analysis.BasicVerifier;
+import org.objectweb.asm.tree.analysis.Frame;
 import org.objectweb.asm.util.CheckClassAdapter;
+import org.objectweb.asm.util.TraceMethodVisitor;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 
 public class Tracer implements ClassFileTransformer, Serializable {
 
-    public static boolean debug = true;
+    public static boolean debug = false;
 
     // this is the variable modified during runtime of the instrumented program
-    public static int lastInstructionIndex = -1;
+    public int lastInstructionIndex = -1;
 
     private static final List<ReadClass> readClasses = new ArrayList<ReadClass>();
     private static final List<TraceSequence> traceSequences = new ArrayList<TraceSequence>();
@@ -53,7 +56,7 @@ public class Tracer implements ClassFileTransformer, Serializable {
             Class[] allLoadedClasses = inst.getAllLoadedClasses();
             int k = 0;
             for (final Class class1 : allLoadedClasses)
-                if (inst.isModifiableClass(class1))
+                if (inst.isModifiableClass(class1) && !class1.isInterface())
                     allLoadedClasses[k++] = class1;
             if (k < allLoadedClasses.length)
                 allLoadedClasses = Arrays.copyOf(allLoadedClasses, k);
@@ -72,35 +75,24 @@ public class Tracer implements ClassFileTransformer, Serializable {
         try {
             if (Type.getObjectType(className).getClassName().startsWith(Tracer.class.getPackage().getName()))
                 return null;
-            // TODO check and remove
-            /*
-            if (Type.getInternalName(IOException.class).equals(className))
-                return null;
-            */
 
             // register that class for later reconstruction of the trace
             final ReadClass readClass = new ReadClass(className, classfileBuffer);
             this.readClasses.add(readClass);
 
             final ClassReader reader = new ClassReader(classfileBuffer);
-            final ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+            final ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
 
             final ClassVisitor output = debug ? new CheckClassAdapter(writer) : writer;
 
-            final ClassVisitor instrumenter = new ClassAdapter(output);
-                //new ClassInstrumenter(output, this, readClass);
+            final ClassVisitor instrumenter = new ClassInstrumenter(output, this, readClass);
 
             reader.accept(instrumenter, 0);
 
             final byte[] newClassfileBuffer = writer.toByteArray();
 
             if (debug) {
-                try {
-                    checkClass(newClassfileBuffer);
-                } catch (final AnalyzerException e) {
-                    System.err.println("Error in class " + readClass.getClassName() + ":");
-                    e.printStackTrace(System.err);
-                }
+                checkClass(newClassfileBuffer, readClass.getClassName());
             }
 
             return newClassfileBuffer;
@@ -111,7 +103,7 @@ public class Tracer implements ClassFileTransformer, Serializable {
         }
     }
 
-    private void checkClass(final byte[] newClassfileBuffer) throws AnalyzerException {
+    private boolean checkClass(final byte[] newClassfileBuffer, final String classname) {
         final ClassNode cn = new ClassNode();
         final ClassReader cr = new ClassReader(newClassfileBuffer);
         cr.accept(new CheckClassAdapter(cn), ClassReader.SKIP_DEBUG);
@@ -129,18 +121,78 @@ public class Tracer implements ClassFileTransformer, Serializable {
                     false));
             */
             final Analyzer a = new Analyzer(new BasicVerifier());
-            a.analyze(cn.name, method);
+            try {
+                a.analyze(cn.name, method);
+            } catch (final AnalyzerException e) {
+                System.err.println("Error in class " + classname + ":");
+                e.printStackTrace(System.err);
+                printMethod(a, System.err, method);
+                return false;
+            }
         }
+        return true;
     }
 
-    public synchronized TraceSequence newIntegerTraceSequence() {
+    private void printMethod(final Analyzer a, final PrintStream err, final MethodNode method) {
+        final Frame[] frames = a.getFrames();
+
+        final TraceMethodVisitor mv = new TraceMethodVisitor();
+
+        err.println(method.name + method.desc);
+        for (int j = 0; j < method.instructions.size(); ++j) {
+            method.instructions.get(j).accept(mv);
+
+            final StringBuffer s = new StringBuffer();
+            final Frame f = frames[j];
+            if (f == null) {
+                s.append('?');
+            } else {
+                for (int k = 0; k < f.getLocals(); ++k) {
+                    s.append(getShortName(f.getLocal(k).toString()))
+                            .append(' ');
+                }
+                s.append(" : ");
+                for (int k = 0; k < f.getStackSize(); ++k) {
+                    s.append(getShortName(f.getStack(k).toString()))
+                            .append(' ');
+                }
+            }
+            while (s.length() < method.maxStack + method.maxLocals + 1) {
+                s.append(' ');
+            }
+            err.print(Integer.toString(j + 100000).substring(1));
+            err.print(" " + s + " : " + mv.text.get(j));
+        }
+        for (int j = 0; j < method.tryCatchBlocks.size(); ++j) {
+            ((TryCatchBlockNode) method.tryCatchBlocks.get(j)).accept(mv);
+            err.print(" " + mv.text.get(j));
+        }
+        err.println();
+    }
+
+    private static String getShortName(final String name) {
+        final int n = name.lastIndexOf('/');
+        int k = name.length();
+        if (name.charAt(k - 1) == ';') {
+            k--;
+        }
+        return n == -1 ? name : name.substring(n + 1, k);
+    }
+
+    public synchronized IntegerTraceSequence newIntegerTraceSequence() {
         final int nextIndex = this.traceSequences.size();
-        final TraceSequence seq = new IntegerTraceSequence(nextIndex);
+        final IntegerTraceSequence seq = new IntegerTraceSequence(nextIndex);
+        return seq;
+    }
+
+    public synchronized LongTraceSequence newLongTraceSequence() {
+        final int nextIndex = this.traceSequences.size();
+        final LongTraceSequence seq = new LongTraceSequence(nextIndex);
         return seq;
     }
 
     public TraceSequence newObjectTraceSequence() {
-        return new ObjectTraceSequence(newIntegerTraceSequence());
+        return new ObjectTraceSequence(newLongTraceSequence());
     }
 
     public static void traceInteger(final int value, final int traceSequenceIndex) {

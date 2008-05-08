@@ -2,4 +2,3 @@ Manifest-Version: 1.0
 Can-Redefine-Classes: true
 Can-Retransform-Classes: true
 Premain-Class: de.unisb.cs.st.javaslicer.tracer.LogFileAgent
-

@@ -1,20 +1,37 @@
 package de.unisb.cs.st.javaslicer.tracer;
 
+import java.util.Collections;
+import java.util.Map;
+
+import org.apache.commons.collections.Factory;
+import org.apache.commons.collections.map.AbstractReferenceMap;
+import org.apache.commons.collections.map.LazyMap;
+import org.apache.commons.collections.map.ReferenceIdentityMap;
+
+@SuppressWarnings("unchecked")
 public class ObjectTraceSequence implements TraceSequence {
 
-    private final TraceSequence integerTraceSequence;
+    protected static final Map<Object, Long> objectMap = Collections.synchronizedMap(
+            LazyMap.decorate(
+                    new ReferenceIdentityMap(AbstractReferenceMap.SOFT, AbstractReferenceMap.HARD),
+                    new Factory() {
+                        public Object create() {
+                            return new Long(objectMap.size());
+                        }
+                    }));
 
-    public ObjectTraceSequence(final TraceSequence integerTraceSequence) {
-        this.integerTraceSequence = integerTraceSequence;
+    private final LongTraceSequence longTraceSequence;
+
+    public ObjectTraceSequence(final LongTraceSequence longTraceSequence) {
+        this.longTraceSequence = longTraceSequence;
     }
 
     public int getIndex() {
-        return this.integerTraceSequence.getIndex();
+        return this.longTraceSequence.getIndex();
     }
 
     public void trace(final Object obj) {
-        // TODO Auto-generated method stub
-
+        this.longTraceSequence.trace(objectMap.get(obj));
     }
 
 }

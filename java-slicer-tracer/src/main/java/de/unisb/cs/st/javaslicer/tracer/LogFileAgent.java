@@ -49,61 +49,69 @@ public class LogFileAgent {
     }
 
     public static void premain(final String agentArgs, final Instrumentation inst) {
-        String logFilename = null;
-        final String[] args = agentArgs == null || agentArgs.length() == 0 ? new String[0] : agentArgs.split(",");
-        for (final String arg : args) {
-            final String[] parts = arg.split(":");
-            if (parts.length > 2) {
-                System.err.println("ERROR: unknown argument: \"" + arg + "\"");
-                System.exit(1);
-            }
-            final String key = parts[0];
-            final String value = parts.length < 2 ? null : parts[1];
-
-            if ("logfile".equalsIgnoreCase(key)) {
-                if (value == null) {
-                    System.err.println("ERROR: expecting value for \"logfile\" argument");
-                    System.exit(1);
-                }
-                logFilename = value;
-            } else if ("debug".equalsIgnoreCase(key)) {
-                if (value == null || "true".equalsIgnoreCase(value)) {
-                    Tracer.debug = true;
-                } else if ("false".equalsIgnoreCase(value)) {
-                    Tracer.debug = false;
-                } else {
-                    System.err.println("ERROR: illegal value for \"debug\" argument: \"" + value + "\"");
-                    System.exit(1);
-                }
-            }
-        }
-
-        if (logFilename == null) {
-            System.err.println("ERROR: no logfile specified");
-            System.exit(1);
-        }
-
-        final File logFile = new File(logFilename);
-        if (logFile.exists()) {
-            if (!logFile.canWrite()) {
-                System.err.println("ERROR: Cannot write logfile \"" + logFile.getAbsolutePath() + "\"");
-                System.exit(1);
-            }
-            if (!logFile.delete()) {
-                System.err.println("ERROR: Cannot delete existing logfile \"" + logFile.getAbsolutePath() + "\"");
-                System.exit(1);
-            }
-        }
-
-        Tracer tracer = null;
         try {
-            tracer = Tracer.newTracer(inst, true);
-        } catch (final TracerException e) {
-            System.err.println("ERROR: could not add instrumenting agent:");
-            e.printStackTrace(System.err);
-            System.exit(1);
+            String logFilename = null;
+            final String[] args = agentArgs == null || agentArgs.length() == 0 ? new String[0] : agentArgs.split(",");
+            for (final String arg : args) {
+                final String[] parts = arg.split(":");
+                if (parts.length > 2) {
+                    System.err.println("ERROR: unknown argument: \"" + arg + "\"");
+                    System.exit(1);
+                }
+                final String key = parts[0];
+                final String value = parts.length < 2 ? null : parts[1];
+
+                if ("logfile".equalsIgnoreCase(key)) {
+                    if (value == null) {
+                        System.err.println("ERROR: expecting value for \"logfile\" argument");
+                        System.exit(1);
+                    }
+                    logFilename = value;
+                } else if ("debug".equalsIgnoreCase(key)) {
+                    if (value == null || "true".equalsIgnoreCase(value)) {
+                        Tracer.debug = true;
+                    } else if ("false".equalsIgnoreCase(value)) {
+                        Tracer.debug = false;
+                    } else {
+                        System.err.println("ERROR: illegal value for \"debug\" argument: \"" + value + "\"");
+                        System.exit(1);
+                    }
+                } else {
+                    System.err.println("Unknown argument: " + key);
+                    System.exit(1);
+                }
+            }
+
+            if (logFilename == null) {
+                System.err.println("ERROR: no logfile specified");
+                System.exit(1);
+            }
+
+            final File logFile = new File(logFilename);
+            if (logFile.exists()) {
+                if (!logFile.canWrite()) {
+                    System.err.println("ERROR: Cannot write logfile \"" + logFile.getAbsolutePath() + "\"");
+                    System.exit(1);
+                }
+                if (!logFile.delete()) {
+                    System.err.println("ERROR: Cannot delete existing logfile \"" + logFile.getAbsolutePath() + "\"");
+                    System.exit(1);
+                }
+            }
+
+            Tracer tracer = null;
+            try {
+                tracer = Tracer.newTracer(inst, true);
+            } catch (final TracerException e) {
+                System.err.println("ERROR: could not add instrumenting agent:");
+                e.printStackTrace(System.err);
+                System.exit(1);
+            }
+            Runtime.getRuntime().addShutdownHook(new WriteLogfileThread(tracer, logFile));
+        } catch (final Throwable t) {
+            System.err.println("ERROR in premain method:");
+            t.printStackTrace(System.err);
         }
-        Runtime.getRuntime().addShutdownHook(new WriteLogfileThread(tracer, logFile));
     }
 
 }

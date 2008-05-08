@@ -43,6 +43,7 @@ public class InstrumentPersistent {
             return;
         }
 
+        System.out.println("Manipulating " + sourceFile.getAbsolutePath());
         final FileInputStream in = new FileInputStream(sourceFile);
         final ByteArrayOutputStream out = new ByteArrayOutputStream();
         final byte[] buf = new byte[1024];
