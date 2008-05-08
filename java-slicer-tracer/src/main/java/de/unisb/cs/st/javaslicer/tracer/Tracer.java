@@ -32,7 +32,7 @@ public class Tracer implements ClassFileTransformer, Serializable {
     public static boolean debug = false;
 
     // this is the variable modified during runtime of the instrumented program
-    public int lastInstructionIndex = -1;
+    public static int lastInstructionIndex = -1;
 
     private static final List<ReadClass> readClasses = new ArrayList<ReadClass>();
     private static final List<TraceSequence> traceSequences = new ArrayList<TraceSequence>();
@@ -182,12 +182,14 @@ public class Tracer implements ClassFileTransformer, Serializable {
     public synchronized IntegerTraceSequence newIntegerTraceSequence() {
         final int nextIndex = this.traceSequences.size();
         final IntegerTraceSequence seq = new IntegerTraceSequence(nextIndex);
+        this.traceSequences.add(seq);
         return seq;
     }
 
     public synchronized LongTraceSequence newLongTraceSequence() {
         final int nextIndex = this.traceSequences.size();
         final LongTraceSequence seq = new LongTraceSequence(nextIndex);
+        this.traceSequences.add(seq);
         return seq;
     }
 
