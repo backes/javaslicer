@@ -24,7 +24,6 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
     private final Tracer tracer;
     private final ReadMethod readMethod;
 
-    private final int localVariableIndex = 0;
     private int lineNumber = -1;
 
     private final Label startLabel = new Label();

@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer.tracer;
+package de.unisb.cs.st.javaslicer.tracer.traceSequences;
 
 import java.util.Collections;
 import java.util.Map;

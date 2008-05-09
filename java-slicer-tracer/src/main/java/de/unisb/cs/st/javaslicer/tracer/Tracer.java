@@ -26,36 +26,42 @@ import org.objectweb.asm.util.TraceMethodVisitor;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.IntegerTraceSequence;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.LongTraceSequence;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectTraceSequence;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 
 public class Tracer implements ClassFileTransformer, Serializable {
 
+    private static Tracer instance = null;
     public static boolean debug = false;
 
     // this is the variable modified during runtime of the instrumented program
     public static int lastInstructionIndex = -1;
 
-    private static final List<ReadClass> readClasses = new ArrayList<ReadClass>();
-    private static final List<TraceSequence> traceSequences = new ArrayList<TraceSequence>();
+    private final List<ReadClass> readClasses = new ArrayList<ReadClass>();
+    private final List<TraceSequence> traceSequences = new ArrayList<TraceSequence>();
 
     private Tracer() {
         // prevent instantiation
     }
 
-    public static Tracer newTracer() {
-        return new Tracer();
+    public static Tracer getInstance() {
+        if (instance == null)
+            instance = new Tracer();
+        return instance;
     }
 
-    public static Tracer newTracer(final Instrumentation inst, final boolean retransformClasses)
+    public void add(final Instrumentation inst, final boolean retransformClasses)
             throws TracerException {
         if (retransformClasses && !inst.isRetransformClassesSupported())
             throw new TracerException("Your JVM does not support retransformation of classes");
 
-        final Tracer tracer = new Tracer();
-        inst.addTransformer(tracer, true);
+        inst.addTransformer(this, true);
         if (retransformClasses) {
-            Class[] allLoadedClasses = inst.getAllLoadedClasses();
+            Class<?>[] allLoadedClasses = inst.getAllLoadedClasses();
             int k = 0;
-            for (final Class class1 : allLoadedClasses)
+            for (final Class<?> class1 : allLoadedClasses)
                 if (inst.isModifiableClass(class1) && !class1.isInterface())
                     allLoadedClasses[k++] = class1;
             if (k < allLoadedClasses.length)
@@ -66,7 +72,6 @@ public class Tracer implements ClassFileTransformer, Serializable {
                 throw new TracerException(e);
             }
         }
-        return tracer;
     }
 
     public synchronized byte[] transform(final ClassLoader loader, final String className, final Class<?> classBeingRedefined,
@@ -198,15 +203,17 @@ public class Tracer implements ClassFileTransformer, Serializable {
     }
 
     public static void traceInteger(final int value, final int traceSequenceIndex) {
-        assert traceSequenceIndex < traceSequences.size();
-        final TraceSequence seq = traceSequences.get(traceSequenceIndex);
+        final Tracer tracer = getInstance();
+        assert traceSequenceIndex < tracer.readClasses.size();
+        final TraceSequence seq = tracer.traceSequences.get(traceSequenceIndex);
         assert seq instanceof IntegerTraceSequence;
         ((IntegerTraceSequence)seq).trace(value);
     }
 
     public static void traceObject(final Object obj, final int traceSequenceIndex) {
-        assert traceSequenceIndex < traceSequences.size();
-        final TraceSequence seq = traceSequences.get(traceSequenceIndex);
+        final Tracer tracer = getInstance();
+        assert traceSequenceIndex < tracer.traceSequences.size();
+        final TraceSequence seq = tracer.traceSequences.get(traceSequenceIndex);
         assert seq instanceof ObjectTraceSequence;
         ((ObjectTraceSequence)seq).trace(obj);
     }

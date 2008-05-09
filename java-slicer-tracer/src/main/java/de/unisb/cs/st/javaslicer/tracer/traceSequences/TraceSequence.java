@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer.tracer;
+package de.unisb.cs.st.javaslicer.tracer.traceSequences;
 
 public interface TraceSequence {
 

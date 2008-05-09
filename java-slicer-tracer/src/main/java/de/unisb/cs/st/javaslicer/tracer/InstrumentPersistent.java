@@ -27,7 +27,7 @@ public class InstrumentPersistent {
             System.exit(1);
         }
 
-        final Tracer tracer = Tracer.newTracer();
+        final Tracer tracer = Tracer.getInstance();
         try {
             manipulate(tracer, sourceDir);
         } catch (final IOException e) {

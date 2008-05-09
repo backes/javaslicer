@@ -99,9 +99,9 @@ public class LogFileAgent {
                 }
             }
 
-            Tracer tracer = null;
+            final Tracer tracer = Tracer.getInstance();
             try {
-                tracer = Tracer.newTracer(inst, true);
+                tracer.add(inst, true);
             } catch (final TracerException e) {
                 System.err.println("ERROR: could not add instrumenting agent:");
                 e.printStackTrace(System.err);
