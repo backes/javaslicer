@@ -35,7 +35,8 @@ public class ClassInstrumenter extends ClassAdapter implements Opcodes {
 
 		final ReadMethod readMethod = new ReadMethod(this.readClass, name, desc);
         final MethodInstrumenter myInstrumenter = new MethodInstrumenter(mv, this.tracer, readMethod);
-        return new JSRInlinerAdapter(myInstrumenter, access, name, desc, signature, exceptions);
+        //return new JSRInlinerAdapter(myInstrumenter, access, name, desc, signature, exceptions);
+        return myInstrumenter;
 	}
 
 	@Override

@@ -34,12 +34,16 @@ import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 public class Tracer implements ClassFileTransformer, Serializable {
 
     private static Tracer instance = null;
+
     public static boolean debug = false;
 
     // this is the variable modified during runtime of the instrumented program
     public static int lastInstructionIndex = -1;
+    
+    public static boolean trace = true;
 
     private final List<ReadClass> readClasses = new ArrayList<ReadClass>();
+
     private final List<TraceSequence> traceSequences = new ArrayList<TraceSequence>();
 
     private Tracer() {
@@ -52,33 +56,65 @@ public class Tracer implements ClassFileTransformer, Serializable {
         return instance;
     }
 
-    public void add(final Instrumentation inst, final boolean retransformClasses)
-            throws TracerException {
+    public void add(final Instrumentation inst, final boolean retransformClasses) throws TracerException {
         if (retransformClasses && !inst.isRetransformClassesSupported())
             throw new TracerException("Your JVM does not support retransformation of classes");
 
         inst.addTransformer(this, true);
+
         if (retransformClasses) {
             Class<?>[] allLoadedClasses = inst.getAllLoadedClasses();
             int k = 0;
-            for (final Class<?> class1 : allLoadedClasses)
-                if (inst.isModifiableClass(class1) && !class1.isInterface())
+            for (final Class<?> class1 : allLoadedClasses) {
+                boolean modify = inst.isModifiableClass(class1) && !class1.isInterface();
+                modify &= !class1.getName().startsWith("de.unisb.cs.st.javaslicer.tracer");
+                if (modify)
                     allLoadedClasses[k++] = class1;
+            }
             if (k < allLoadedClasses.length)
                 allLoadedClasses = Arrays.copyOf(allLoadedClasses, k);
+
+            System.out.println("all classes: ");
+            System.out.println("############################################");
+            System.out.println("############################################");
+            System.out.println("############################################");
+            for (Class c1 : allLoadedClasses) {
+                System.out.println(c1);
+            }
+            System.out.println("############################################");
+            System.out.println("############################################");
+            System.out.println("############################################");
+
+            Class<?>[] oldAllLoaded = allLoadedClasses;
+            allLoadedClasses = new Class<?>[oldAllLoaded.length + 1];
+            allLoadedClasses[0] = Tracer.class;
+            System.arraycopy(oldAllLoaded, 0, allLoadedClasses, 1, oldAllLoaded.length);
+
             try {
                 inst.retransformClasses(allLoadedClasses);
             } catch (final UnmodifiableClassException e) {
                 throw new TracerException(e);
             }
+            System.out.println("Instrumentation ready");
         }
     }
 
-    public synchronized byte[] transform(final ClassLoader loader, final String className, final Class<?> classBeingRedefined,
-            final ProtectionDomain protectionDomain, final byte[] classfileBuffer) {
+    public synchronized byte[] transform(final ClassLoader loader, final String className,
+            final Class<?> classBeingRedefined, final ProtectionDomain protectionDomain, final byte[] classfileBuffer) {
 
         try {
             if (Type.getObjectType(className).getClassName().startsWith(Tracer.class.getPackage().getName()))
+                return null;
+            if (Type.getObjectType(className).getClassName().startsWith("java.lang.instrument."))
+                return null;
+            if (Type.getObjectType(className).getClassName().startsWith("sun.misc."))
+                return null;
+            if (Type.getObjectType(className).getClassName().startsWith("sun.instrument."))
+                return null;
+            if (Type.getObjectType(className).getClassName().startsWith("java.lang.ClassLoader"))
+                return null;
+
+            if (!Type.getObjectType(className).getClassName().equals("java.lang.Integer"))
                 return null;
 
             // register that class for later reconstruction of the trace
@@ -86,7 +122,7 @@ public class Tracer implements ClassFileTransformer, Serializable {
             this.readClasses.add(readClass);
 
             final ClassReader reader = new ClassReader(classfileBuffer);
-            final ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
+            final ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
 
             final ClassVisitor output = debug ? new CheckClassAdapter(writer) : writer;
 
@@ -114,17 +150,13 @@ public class Tracer implements ClassFileTransformer, Serializable {
         cr.accept(new CheckClassAdapter(cn), ClassReader.SKIP_DEBUG);
 
         /*
-        final Type syperType = cn.superName == null
-                ? null
-                : Type.getObjectType(cn.superName);
-        */
-        for (final Object methodObj: cn.methods) {
+         * final Type syperType = cn.superName == null ? null : Type.getObjectType(cn.superName);
+         */
+        for (final Object methodObj : cn.methods) {
             final MethodNode method = (MethodNode) methodObj;
             /*
-            final Analyzer a = new Analyzer(new SimpleVerifier(Type.getObjectType(cn.name),
-                    syperType,
-                    false));
-            */
+             * final Analyzer a = new Analyzer(new SimpleVerifier(Type.getObjectType(cn.name), syperType, false));
+             */
             final Analyzer a = new Analyzer(new BasicVerifier());
             try {
                 a.analyze(cn.name, method);
@@ -153,13 +185,11 @@ public class Tracer implements ClassFileTransformer, Serializable {
                 s.append('?');
             } else {
                 for (int k = 0; k < f.getLocals(); ++k) {
-                    s.append(getShortName(f.getLocal(k).toString()))
-                            .append(' ');
+                    s.append(getShortName(f.getLocal(k).toString())).append(' ');
                 }
                 s.append(" : ");
                 for (int k = 0; k < f.getStackSize(); ++k) {
-                    s.append(getShortName(f.getStack(k).toString()))
-                            .append(' ');
+                    s.append(getShortName(f.getStack(k).toString())).append(' ');
                 }
             }
             while (s.length() < method.maxStack + method.maxLocals + 1) {
@@ -204,10 +234,10 @@ public class Tracer implements ClassFileTransformer, Serializable {
 
     public static void traceInteger(final int value, final int traceSequenceIndex) {
         final Tracer tracer = getInstance();
-        assert traceSequenceIndex < tracer.readClasses.size();
+        assert traceSequenceIndex < tracer.traceSequences.size();
         final TraceSequence seq = tracer.traceSequences.get(traceSequenceIndex);
         assert seq instanceof IntegerTraceSequence;
-        ((IntegerTraceSequence)seq).trace(value);
+        ((IntegerTraceSequence) seq).trace(value);
     }
 
     public static void traceObject(final Object obj, final int traceSequenceIndex) {
@@ -215,7 +245,7 @@ public class Tracer implements ClassFileTransformer, Serializable {
         assert traceSequenceIndex < tracer.traceSequences.size();
         final TraceSequence seq = tracer.traceSequences.get(traceSequenceIndex);
         assert seq instanceof ObjectTraceSequence;
-        ((ObjectTraceSequence)seq).trace(obj);
+        ((ObjectTraceSequence) seq).trace(obj);
     }
 
 }
