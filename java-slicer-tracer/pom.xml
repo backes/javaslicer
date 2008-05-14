@@ -24,12 +24,9 @@
 				<configuration>
 					<archive>
 						<manifestEntries>
-							<Premain-Class>
-								de.unisb.cs.st.javaslicer.tracer.LogFileAgent
-							</Premain-Class>
-							<Can-Redefine-Classes>
-								true
-							</Can-Redefine-Classes>
+							<Premain-Class>de.unisb.cs.st.javaslicer.tracer.LogFileAgent</Premain-Class>
+							<Can-Retransform-Classes>true</Can-Retransform-Classes>
+							<Boot-Class-Path>./${project.build.finalName}.jar</Boot-Class-Path>
 						</manifestEntries>
 					</archive>
 				</configuration>

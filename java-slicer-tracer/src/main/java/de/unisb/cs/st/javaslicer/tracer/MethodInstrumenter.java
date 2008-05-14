@@ -1,7 +1,5 @@
 package de.unisb.cs.st.javaslicer.tracer;
 
-import java.util.Arrays;
-
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodAdapter;
 import org.objectweb.asm.MethodVisitor;
@@ -37,7 +35,6 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
         this.readMethod = readMethod;
     }
 
-/*
     @Override
     public void visitCode() {
         super.visitCode();
@@ -339,48 +336,5 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
             break;
         }
     }
-*/
-
-    @Override
-    public void visitLabel(Label label) {
-        super.visitLabel(label);
-        /*
-        visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
-        visitInsn(ACONST_NULL);
-        visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/Object;)V");
-        //visitInsn(POP2);
-        visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
-        visitFieldInsn(GETSTATIC, "de/unisb/cs/st/javaslicer/tracer/Tracer", "lastInstructionIndex", "I");
-        visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(I)V");
-        */
-        
-        Label l1 = new Label();
-        super.visitLabel(l1);
-        visitFieldInsn(GETSTATIC, "de/unisb/cs/st/javaslicer/tracer/Tracer", "trace", "Z");
-        Label l2 = new Label();
-        visitJumpInsn(IFEQ, l2);
-        Label l3 = new Label();
-        super.visitLabel(l3);
-        
-        // disable tracing
-        visitInsn(ICONST_0);
-        visitFieldInsn(PUTSTATIC, "de/unisb/cs/st/javaslicer/tracer/Tracer", "trace", "Z");
-        
-        visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
-        visitLdcInsn("Trace:");
-        visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V");
-        visitFieldInsn(GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
-        visitMethodInsn(INVOKESTATIC, "java/lang/Thread", "currentThread", "()Ljava/lang/Thread;");
-        visitMethodInsn(INVOKEVIRTUAL, "java/lang/Thread", "getStackTrace", "()[Ljava/lang/StackTraceElement;");
-        visitMethodInsn(INVOKESTATIC, "java/util/Arrays", "toString", "([Ljava/lang/Object;)Ljava/lang/String;");
-        visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V");
-
-        // enable tracing
-        visitInsn(ICONST_1);
-        visitFieldInsn(PUTSTATIC, "de/unisb/cs/st/javaslicer/tracer/Tracer", "trace", "Z");
-        
-        super.visitLabel(l2);
-        
-}
 
 }

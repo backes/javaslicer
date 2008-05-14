@@ -39,7 +39,7 @@ public class Tracer implements ClassFileTransformer, Serializable {
 
     // this is the variable modified during runtime of the instrumented program
     public static int lastInstructionIndex = -1;
-    
+
     public static boolean trace = true;
 
     private final List<ReadClass> readClasses = new ArrayList<ReadClass>();
@@ -78,14 +78,14 @@ public class Tracer implements ClassFileTransformer, Serializable {
             System.out.println("############################################");
             System.out.println("############################################");
             System.out.println("############################################");
-            for (Class c1 : allLoadedClasses) {
+            for (final Class c1 : allLoadedClasses) {
                 System.out.println(c1);
             }
             System.out.println("############################################");
             System.out.println("############################################");
             System.out.println("############################################");
 
-            Class<?>[] oldAllLoaded = allLoadedClasses;
+            final Class<?>[] oldAllLoaded = allLoadedClasses;
             allLoadedClasses = new Class<?>[oldAllLoaded.length + 1];
             allLoadedClasses[0] = Tracer.class;
             System.arraycopy(oldAllLoaded, 0, allLoadedClasses, 1, oldAllLoaded.length);
@@ -104,17 +104,6 @@ public class Tracer implements ClassFileTransformer, Serializable {
 
         try {
             if (Type.getObjectType(className).getClassName().startsWith(Tracer.class.getPackage().getName()))
-                return null;
-            if (Type.getObjectType(className).getClassName().startsWith("java.lang.instrument."))
-                return null;
-            if (Type.getObjectType(className).getClassName().startsWith("sun.misc."))
-                return null;
-            if (Type.getObjectType(className).getClassName().startsWith("sun.instrument."))
-                return null;
-            if (Type.getObjectType(className).getClassName().startsWith("java.lang.ClassLoader"))
-                return null;
-
-            if (!Type.getObjectType(className).getClassName().equals("java.lang.Integer"))
                 return null;
 
             // register that class for later reconstruction of the trace
