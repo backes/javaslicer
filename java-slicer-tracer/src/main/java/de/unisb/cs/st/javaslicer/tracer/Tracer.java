@@ -113,12 +113,6 @@ public class Tracer implements ClassFileTransformer, Serializable {
             if (Type.getObjectType(className).getClassName().startsWith(Tracer.class.getPackage().getName()))
                 return null;
 
-            if (Type.getObjectType(className).getClassName().startsWith("sun.instrument."))
-                return null;
-
-            if (Type.getObjectType(className).getClassName().startsWith("java.lang.Thread"))
-                return null;
-
             // register that class for later reconstruction of the trace
             final ReadClass readClass = new ReadClass(className, classfileBuffer);
             this.readClasses.add(readClass);
@@ -227,14 +221,17 @@ public class Tracer implements ClassFileTransformer, Serializable {
     }
 
     public TraceSequence newObjectTraceSequence() {
-        return new ObjectTraceSequence(newLongTraceSequence());
+        final int nextIndex = this.traceSequences.size();
+        final ObjectTraceSequence seq = new ObjectTraceSequence(new LongTraceSequence(nextIndex));
+        this.traceSequences.add(seq);
+        return seq;
     }
 
     public static void traceInteger(final int value, final int traceSequenceIndex) {
         if (!trace)
             return;
         trace = false;
-        System.out.println("Tracing " + traceSequenceIndex + "; " + value);
+        //System.out.println("Tracing " + traceSequenceIndex + "; " + value);
         try {
             final Tracer tracer = getInstance();
             assert traceSequenceIndex < tracer.traceSequences.size();
@@ -250,13 +247,13 @@ public class Tracer implements ClassFileTransformer, Serializable {
         if (!trace)
             return;
         trace = false;
-        System.out.println("Tracing " + traceSequenceIndex + "; " + obj);
+        //System.out.println("Tracing " + traceSequenceIndex + "; " + obj.getClass().getName() + "@" + System.identityHashCode(obj));
         try {
             final Tracer tracer = getInstance();
             assert traceSequenceIndex < tracer.traceSequences.size();
             final TraceSequence seq = tracer.traceSequences.get(traceSequenceIndex);
             assert seq instanceof ObjectTraceSequence;
-            //((ObjectTraceSequence) seq).trace(obj);
+            ((ObjectTraceSequence) seq).trace(obj);
         } finally {
             trace = true;
         }
