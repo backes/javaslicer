@@ -33,6 +33,8 @@ import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 
 public class Tracer implements ClassFileTransformer, Serializable {
 
+    private static final long serialVersionUID = 3853368930402145734L;
+
     private static Tracer instance = null;
 
     public static boolean debug = false;
@@ -78,7 +80,7 @@ public class Tracer implements ClassFileTransformer, Serializable {
             System.out.println("############################################");
             System.out.println("############################################");
             System.out.println("############################################");
-            for (final Class c1 : allLoadedClasses) {
+            for (final Class<?> c1 : allLoadedClasses) {
                 System.out.println(c1);
             }
             System.out.println("############################################");
@@ -91,19 +93,30 @@ public class Tracer implements ClassFileTransformer, Serializable {
             System.arraycopy(oldAllLoaded, 0, allLoadedClasses, 1, oldAllLoaded.length);
 
             try {
+                //trace = false;
                 inst.retransformClasses(allLoadedClasses);
+                System.out.println("Instrumentation ready");
             } catch (final UnmodifiableClassException e) {
                 throw new TracerException(e);
+            } finally {
+                //trace = true;
             }
-            System.out.println("Instrumentation ready");
         }
     }
 
     public synchronized byte[] transform(final ClassLoader loader, final String className,
             final Class<?> classBeingRedefined, final ProtectionDomain protectionDomain, final byte[] classfileBuffer) {
 
+        final boolean oldTrace = trace;
+        trace = false;
         try {
             if (Type.getObjectType(className).getClassName().startsWith(Tracer.class.getPackage().getName()))
+                return null;
+
+            if (Type.getObjectType(className).getClassName().startsWith("sun.instrument."))
+                return null;
+
+            if (Type.getObjectType(className).getClassName().startsWith("java.lang.Thread"))
                 return null;
 
             // register that class for later reconstruction of the trace
@@ -130,6 +143,8 @@ public class Tracer implements ClassFileTransformer, Serializable {
             System.err.println("Error transforming class " + className + ":");
             t.printStackTrace(System.err);
             return null;
+        } finally {
+            trace = oldTrace;
         }
     }
 
@@ -138,14 +153,8 @@ public class Tracer implements ClassFileTransformer, Serializable {
         final ClassReader cr = new ClassReader(newClassfileBuffer);
         cr.accept(new CheckClassAdapter(cn), ClassReader.SKIP_DEBUG);
 
-        /*
-         * final Type syperType = cn.superName == null ? null : Type.getObjectType(cn.superName);
-         */
         for (final Object methodObj : cn.methods) {
             final MethodNode method = (MethodNode) methodObj;
-            /*
-             * final Analyzer a = new Analyzer(new SimpleVerifier(Type.getObjectType(cn.name), syperType, false));
-             */
             final Analyzer a = new Analyzer(new BasicVerifier());
             try {
                 a.analyze(cn.name, method);
@@ -222,19 +231,35 @@ public class Tracer implements ClassFileTransformer, Serializable {
     }
 
     public static void traceInteger(final int value, final int traceSequenceIndex) {
-        final Tracer tracer = getInstance();
-        assert traceSequenceIndex < tracer.traceSequences.size();
-        final TraceSequence seq = tracer.traceSequences.get(traceSequenceIndex);
-        assert seq instanceof IntegerTraceSequence;
-        ((IntegerTraceSequence) seq).trace(value);
+        if (!trace)
+            return;
+        trace = false;
+        System.out.println("Tracing " + traceSequenceIndex + "; " + value);
+        try {
+            final Tracer tracer = getInstance();
+            assert traceSequenceIndex < tracer.traceSequences.size();
+            final TraceSequence seq = tracer.traceSequences.get(traceSequenceIndex);
+            assert seq instanceof IntegerTraceSequence;
+            ((IntegerTraceSequence) seq).trace(value);
+        } finally {
+            trace = true;
+        }
     }
 
     public static void traceObject(final Object obj, final int traceSequenceIndex) {
-        final Tracer tracer = getInstance();
-        assert traceSequenceIndex < tracer.traceSequences.size();
-        final TraceSequence seq = tracer.traceSequences.get(traceSequenceIndex);
-        assert seq instanceof ObjectTraceSequence;
-        ((ObjectTraceSequence) seq).trace(obj);
+        if (!trace)
+            return;
+        trace = false;
+        System.out.println("Tracing " + traceSequenceIndex + "; " + obj);
+        try {
+            final Tracer tracer = getInstance();
+            assert traceSequenceIndex < tracer.traceSequences.size();
+            final TraceSequence seq = tracer.traceSequences.get(traceSequenceIndex);
+            assert seq instanceof ObjectTraceSequence;
+            //((ObjectTraceSequence) seq).trace(obj);
+        } finally {
+            trace = true;
+        }
     }
 
 }

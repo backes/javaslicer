@@ -84,6 +84,7 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
             // top item on stack is the object reference: duplicate it
             super.visitInsn(DUP);
             index = this.tracer.newObjectTraceSequence().getIndex();
+            System.out.println("seq " + index + ": getField " + name + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             break;
 
         case PUTFIELD:
@@ -98,6 +99,7 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
                 super.visitInsn(DUP_X2);
             }
             index = this.tracer.newObjectTraceSequence().getIndex();
+            System.out.println("seq " + index + ": putField " + name + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             break;
 
         default:
@@ -138,6 +140,8 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
             // to trace array manipulations, we need two traces: one for the array, one for the index
             arrayTraceIndex = this.tracer.newObjectTraceSequence().getIndex();
             indexTraceIndex = this.tracer.newIntegerTraceSequence().getIndex();
+            System.out.println("seq " + arrayTraceIndex + ": array in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
+            System.out.println("seq " + indexTraceIndex + ": array index in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             // the top two words on the stack are the array index and the array reference
             super.visitInsn(DUP2);
             pushIntOnStack(indexTraceIndex);
@@ -152,6 +156,8 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
             // to trace array manipulations, we need two traces: one for the array, one for the index
             arrayTraceIndex = this.tracer.newObjectTraceSequence().getIndex();
             indexTraceIndex = this.tracer.newIntegerTraceSequence().getIndex();
+            System.out.println("seq " + arrayTraceIndex + ": array in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
+            System.out.println("seq " + indexTraceIndex + ": arrayindex in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             // top three words on the stack: value, array index, array reference
             // after our manipulation: array index, array reference, value, array index, array reference
             if (opcode == LASTORE || opcode == DASTORE) { // 2-word values
@@ -287,6 +293,7 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
         // whenever a label is crossed, it stores the instruction index we come from
         final int index = this.tracer.newIntegerTraceSequence().getIndex();
+        System.out.println("seq " + index + ": label " + label + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
         // at runtime: push last executed instruction index on stack, then the sequence index
         super.visitFieldInsn(GETSTATIC, Type.getInternalName(Tracer.class), "lastInstructionIndex",
                 Type.INT_TYPE.getDescriptor());

@@ -1,4 +1,5 @@
 package de.unisb.cs.st.javaslicer.tracer;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -9,8 +10,6 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
-
-
 
 public class InstrumentPersistent {
 
@@ -38,7 +37,7 @@ public class InstrumentPersistent {
 
     private static void manipulate(final Tracer tracer, final File sourceFile) throws IOException {
         if (sourceFile.isDirectory()) {
-            for (final File file: sourceFile.listFiles())
+            for (final File file : sourceFile.listFiles())
                 manipulate(tracer, file);
             return;
         }

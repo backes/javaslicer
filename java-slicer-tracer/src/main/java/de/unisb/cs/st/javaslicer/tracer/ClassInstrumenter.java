@@ -4,7 +4,6 @@ import org.objectweb.asm.ClassAdapter;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.commons.JSRInlinerAdapter;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
