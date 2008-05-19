@@ -276,6 +276,7 @@ public class Tracer implements ClassFileTransformer {
         for (final TraceSequence seq: this.traceSequences) {
             seq.writeOut(out);
         }
+        out.writeInt(lastInstructionIndex);
     }
 
     public TraceResult getResult() {

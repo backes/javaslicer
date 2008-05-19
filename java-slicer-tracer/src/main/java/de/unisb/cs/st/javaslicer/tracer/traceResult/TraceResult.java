@@ -13,10 +13,12 @@ public class TraceResult {
 
     private final List<ReadClass> readClasses;
     private final List<ConstantTraceSequence> sequences;
+    private final int lastInstructionIndex;
 
-    public TraceResult(final List<ReadClass> readClasses, final List<ConstantTraceSequence> sequences) {
+    public TraceResult(final List<ReadClass> readClasses, final List<ConstantTraceSequence> sequences, final int lastInstructionIndex) {
         this.readClasses = readClasses;
         this.sequences = sequences;
+        this.lastInstructionIndex = lastInstructionIndex;
     }
 
     public static TraceResult readFrom(final ObjectInputStream in) throws IOException {
@@ -29,8 +31,12 @@ public class TraceResult {
         final List<ConstantTraceSequence> sequences = new ArrayList<ConstantTraceSequence>(numSeq);
         while (numSeq-- > 0)
             sequences.add(ConstantTraceSequence.readFrom(in));
+        final int lastInstructionIndex = in.read();
 
-        return new TraceResult(readClasses, sequences);
+        if (in.read() != -1)
+            throw new IOException("Corrupt data");
+
+        return new TraceResult(readClasses, sequences, lastInstructionIndex);
     }
 
     public Iterator<Instruction> getBackwardIterator() {
