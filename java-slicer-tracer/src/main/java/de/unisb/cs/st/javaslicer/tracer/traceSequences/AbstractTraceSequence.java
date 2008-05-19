@@ -1,6 +1,6 @@
 package de.unisb.cs.st.javaslicer.tracer.traceSequences;
 
-public class AbstractTraceSequence implements TraceSequence {
+public abstract class AbstractTraceSequence implements TraceSequence {
 
     private final int index;
 

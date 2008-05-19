@@ -21,34 +21,7 @@ public class SequiturGrammar<T> {
             this.successorEntry = successorEntry;
         }
 
-        @Override
-        public int hashCode() {
-            final int prime = 31;
-            int result = 1;
-            result = prime * result + this.successorEntry.hashCode();
-            result = prime * result + this.symbol.hashCode();
-            return result;
-        }
-
-        @Override
-        public boolean equals(final Object obj) {
-            if (this == obj)
-                return true;
-            if (obj == null)
-                return false;
-            if (getClass() != obj.getClass())
-                return false;
-            final SymbolUse<?> other = (SymbolUse<?>) obj;
-            if (this.successorEntry == null) {
-                if (other.successorEntry != null)
-                    return false;
-            } else if (!this.successorEntry.equals(other.successorEntry))
-                return false;
-            if (!this.symbol.equals(other.symbol))
-                return false;
-            return true;
-        }
-
+        // hashcode and equals are NOT overridden!
     }
 
     private final Map<T, TerminalSymbol<T>> terminals = new WeakHashMap<T, TerminalSymbol<T>>();
@@ -78,7 +51,7 @@ public class SequiturGrammar<T> {
         Set<SymbolUse<T>> otherUses = this.symbols.get(usedSymbol);
         if (otherUses == null)
             this.symbols.put(usedSymbol, otherUses = new HashSet<SymbolUse<T>>());
-        otherUses.add(new SymbolUse<T>(usedSymbol, null));
+        otherUses.add(new SymbolUse<T>(sym, null));
 
         // change symbol use of preceding symbol
         if (it.hasPrevious()) {
@@ -108,27 +81,29 @@ public class SequiturGrammar<T> {
             final SymbolRuleEntry<T> precedingEntry = it.previous();
             it.next();
             final Set<SymbolUse<T>> usesOfPrecedingEntry = this.symbols.get(precedingEntry);
-            RuleSymbol<T> otherUseOfThisPair = null;
-            for (final Iterator<SymbolUse<T>> useIt = usesOfPrecedingEntry.iterator(); useIt.hasNext(); ) {
-                final SymbolUse<T> useOfPrecedingEntry = useIt.next();
-                if (thisEntry.equals(useOfPrecedingEntry.successorEntry) && !symbol.equals(useOfPrecedingEntry.symbol)) {
+            final Set<RuleSymbol<T>> otherUsesOfThisPair = new HashSet<RuleSymbol<T>>();
+            for (final SymbolUse<T> useOfPrecedingEntry: usesOfPrecedingEntry) {
+                if (thisEntry.equals(useOfPrecedingEntry.successorEntry)) {
                     assert useOfPrecedingEntry.symbol instanceof RuleSymbol<?>;
-                    otherUseOfThisPair = (RuleSymbol<T>) useOfPrecedingEntry.symbol;
+                    otherUsesOfThisPair.add((RuleSymbol<T>) useOfPrecedingEntry.symbol);
                     break;
                 }
             }
-            if (otherUseOfThisPair != null) {
+            if (!otherUsesOfThisPair.isEmpty()) {
                 // search the other symbol for the use of this pair
-                int minUseFst = -1;
-                int minUseSnd = -1;
-                for (final Iterator<SymbolRuleEntry<T>> it2 = otherUseOfThisPair.getRuleEntryIterator(); it2.hasNext(); ) {
-                    final SymbolRuleEntry<T> e = it2.next();
-                    if (e.getSymbol().equals(precedingEntry.getSymbol()) && it2.hasNext()) {
-                        // check if the next symbol entry matches too
-                        final SymbolRuleEntry<T> e2 = it2.next();
-                        if (e2.getSymbol().equals(thisEntry.getSymbol())) {
-                            minUseFst = Math.min(precedingEntry.getCount(), e.getCount());
-                            minUseSnd = Math.min(thisEntry.getCount(), e2.getCount());
+                int minUseFst = Integer.MAX_VALUE;
+                int minUseSnd = Integer.MAX_VALUE;
+                for (final RuleSymbol<T> otherUse: otherUsesOfThisPair) {
+                    for (final Iterator<SymbolRuleEntry<T>> it2 = otherUse.getRuleEntryIterator(); it2.hasNext();) {
+                        final SymbolRuleEntry<T> e = it2.next();
+                        // check if the first symbol matches
+                        if (e.getSymbol().equals(precedingEntry.getSymbol()) && it2.hasNext()) {
+                            // check if the next symbol entry matches too
+                            final SymbolRuleEntry<T> e2 = it2.next();
+                            if (e2.getSymbol().equals(thisEntry.getSymbol())) {
+                                minUseFst = Math.min(precedingEntry.getCount(), e.getCount());
+                                minUseSnd = Math.min(thisEntry.getCount(), e2.getCount());
+                            }
                         }
                     }
                 }

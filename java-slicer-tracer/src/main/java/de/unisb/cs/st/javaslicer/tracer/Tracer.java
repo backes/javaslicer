@@ -1,7 +1,11 @@
 package de.unisb.cs.st.javaslicer.tracer;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.PrintStream;
-import java.io.Serializable;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
@@ -26,18 +30,23 @@ import org.objectweb.asm.util.TraceMethodVisitor;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
+import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.IntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.LongTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.gzip.GZipTraceSequenceFactory;
 
-public class Tracer implements ClassFileTransformer, Serializable {
+public class Tracer implements ClassFileTransformer {
 
     private static final long serialVersionUID = 3853368930402145734L;
 
     private static Tracer instance = null;
 
     public static boolean debug = false;
+
+    private static TraceSequenceFactory seqFactory = new GZipTraceSequenceFactory();
 
     // this is the variable modified during runtime of the instrumented program
     public static int lastInstructionIndex = -1;
@@ -208,21 +217,21 @@ public class Tracer implements ClassFileTransformer, Serializable {
 
     public synchronized IntegerTraceSequence newIntegerTraceSequence() {
         final int nextIndex = this.traceSequences.size();
-        final IntegerTraceSequence seq = new IntegerTraceSequence(nextIndex);
+        final IntegerTraceSequence seq = seqFactory.createIntegerTraceSequence(nextIndex);
         this.traceSequences.add(seq);
         return seq;
     }
 
     public synchronized LongTraceSequence newLongTraceSequence() {
         final int nextIndex = this.traceSequences.size();
-        final LongTraceSequence seq = new LongTraceSequence(nextIndex);
+        final LongTraceSequence seq = seqFactory.createLongTraceSequence(nextIndex);
         this.traceSequences.add(seq);
         return seq;
     }
 
     public TraceSequence newObjectTraceSequence() {
         final int nextIndex = this.traceSequences.size();
-        final ObjectTraceSequence seq = new ObjectTraceSequence(new LongTraceSequence(nextIndex));
+        final ObjectTraceSequence seq = new ObjectTraceSequence(seqFactory.createLongTraceSequence(nextIndex));
         this.traceSequences.add(seq);
         return seq;
     }
@@ -256,6 +265,31 @@ public class Tracer implements ClassFileTransformer, Serializable {
             ((ObjectTraceSequence) seq).trace(obj);
         } finally {
             trace = true;
+        }
+    }
+
+    public void writeOut(final ObjectOutputStream out) throws IOException {
+        out.writeInt(this.readClasses.size());
+        for (final ReadClass rc: this.readClasses)
+            rc.writeOut(out);
+        out.writeInt(this.traceSequences.size());
+        for (final TraceSequence seq: this.traceSequences) {
+            seq.writeOut(out);
+        }
+    }
+
+    public TraceResult getResult() {
+        try {
+            final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            final ObjectOutputStream out = new ObjectOutputStream(buffer);
+            writeOut(out);
+            out.close();
+            final ByteArrayInputStream bufIn = new ByteArrayInputStream(buffer.toByteArray());
+            final ObjectInputStream in = new ObjectInputStream(bufIn);
+            return TraceResult.readFrom(in);
+        } catch (final IOException e) {
+            // should never happen
+            throw new RuntimeException(e);
         }
     }
 

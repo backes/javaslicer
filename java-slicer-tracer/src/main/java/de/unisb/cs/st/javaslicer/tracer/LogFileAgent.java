@@ -28,7 +28,7 @@ public class LogFileAgent {
             ObjectOutputStream str = null;
             try {
                 str = new ObjectOutputStream(new FileOutputStream(this.logFile));
-                str.writeObject(this.tracer);
+                this.tracer.writeOut(str);
             } catch (final IOException e) {
                 System.err.println("ERROR: can not write to \"" + this.logFile.getAbsolutePath() + "\": " + e);
                 return;
