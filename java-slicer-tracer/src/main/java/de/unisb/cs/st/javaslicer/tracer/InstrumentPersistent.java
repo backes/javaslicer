@@ -54,13 +54,15 @@ public class InstrumentPersistent {
         byte[] classBytes = out.toByteArray();
         in.close();
         out.close();
-        final ReadClass readClass = new ReadClass(sourceFile.getName(), classBytes);
+        final ReadClass readClass = new ReadClass(sourceFile.getName(), classBytes, tracer.getNextSequenceIndex());
 
         final ClassReader reader = new ClassReader(classBytes);
         final ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         final ClassInstrumenter instrumenter = new ClassInstrumenter(writer, tracer, readClass);
 
         reader.accept(instrumenter, 0);
+
+        readClass.setSequenceNumberEnd(tracer.getNextSequenceIndex());
 
         classBytes = writer.toByteArray();
 

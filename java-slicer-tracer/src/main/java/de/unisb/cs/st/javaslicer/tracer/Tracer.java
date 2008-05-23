@@ -123,7 +123,7 @@ public class Tracer implements ClassFileTransformer {
                 return null;
 
             // register that class for later reconstruction of the trace
-            final ReadClass readClass = new ReadClass(className, classfileBuffer);
+            final ReadClass readClass = new ReadClass(className, classfileBuffer, getNextSequenceIndex());
             this.readClasses.add(readClass);
 
             final ClassReader reader = new ClassReader(classfileBuffer);
@@ -134,6 +134,8 @@ public class Tracer implements ClassFileTransformer {
             final ClassVisitor instrumenter = new ClassInstrumenter(output, this, readClass);
 
             reader.accept(instrumenter, 0);
+
+            readClass.setSequenceNumberEnd(getNextSequenceIndex());
 
             final byte[] newClassfileBuffer = writer.toByteArray();
 
@@ -149,6 +151,10 @@ public class Tracer implements ClassFileTransformer {
         } finally {
             trace = oldTrace;
         }
+    }
+
+    public int getNextSequenceIndex() {
+        return this.traceSequences.size();
     }
 
     private boolean checkClass(final byte[] newClassfileBuffer, final String classname) {
@@ -216,14 +222,14 @@ public class Tracer implements ClassFileTransformer {
     }
 
     public synchronized IntegerTraceSequence newIntegerTraceSequence() {
-        final int nextIndex = this.traceSequences.size();
+        final int nextIndex = getNextSequenceIndex();
         final IntegerTraceSequence seq = seqFactory.createIntegerTraceSequence(nextIndex);
         this.traceSequences.add(seq);
         return seq;
     }
 
     public synchronized LongTraceSequence newLongTraceSequence() {
-        final int nextIndex = this.traceSequences.size();
+        final int nextIndex = getNextSequenceIndex();
         final LongTraceSequence seq = seqFactory.createLongTraceSequence(nextIndex);
         this.traceSequences.add(seq);
         return seq;
