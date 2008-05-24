@@ -1,5 +1,8 @@
 package de.unisb.cs.st.javaslicer.tracer;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodAdapter;
 import org.objectweb.asm.MethodVisitor;
@@ -18,6 +21,8 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.MethodInvocationInst
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.NewArrayInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.SimpleInstruction;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.IntegerTraceSequence;
+import de.unisb.cs.st.javaslicer.tracer.util.Pair;
 
 public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
@@ -28,6 +33,8 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
     private final Label startLabel = new Label();
     private final Label endLabel = new Label();
+    private final Map<Label, Pair<LabelMarker, IntegerTraceSequence>> labels =
+        new HashMap<Label, Pair<LabelMarker,IntegerTraceSequence>>();
 
     public MethodInstrumenter(final MethodVisitor mv, final Tracer tracer, final ReadMethod readMethod) {
         super(mv);
@@ -293,16 +300,32 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
         super.visitLabel(label);
 
         // whenever a label is crossed, it stores the instruction index we come from
-        final int index = this.tracer.newIntegerTraceSequence().getIndex();
+        final Pair<LabelMarker, IntegerTraceSequence> pair = getLabelMarker(label);
+        final LabelMarker lm = pair.getFirst();
+        final IntegerTraceSequence seq = pair.getSecond();
+        lm.setLineNumber(this.lineNumber);
+        lm.setAdditionalLabel(additionalLabel);
         //System.out.println("seq " + index + ": label " + label + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
         // at runtime: push last executed instruction index on stack, then the sequence index
         super.visitFieldInsn(GETSTATIC, Type.getInternalName(Tracer.class), "lastInstructionIndex",
                 Type.INT_TYPE.getDescriptor());
-        pushIntOnStack(index);
+        pushIntOnStack(seq.getIndex());
         super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceInteger", "(II)V");
 
-        // and *after* that, we store our new instruction index on the stack
-        registerInstruction(new LabelMarker(this.readMethod, this.lineNumber, label, index, additionalLabel));
+        // and *after* that, we store our new instruction index on the stack (on runtime)
+        registerInstruction(lm);
+    }
+
+    private Pair<LabelMarker, IntegerTraceSequence> getLabelMarker(final Label label) {
+        Pair<LabelMarker, IntegerTraceSequence> pair = this.labels.get(label);
+        if (pair == null) {
+            final IntegerTraceSequence seq = this.tracer.newIntegerTraceSequence();
+            pair = new Pair<LabelMarker, IntegerTraceSequence>(
+                    new LabelMarker(this.readMethod, -1, seq.getIndex(), false),
+                    seq);
+          this.labels.put(label, pair);
+        }
+        return pair;
     }
 
     private void registerInstruction(final Instruction instruction) {

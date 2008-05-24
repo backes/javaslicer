@@ -23,6 +23,12 @@ public class ClassInstrumenter extends ClassAdapter implements Opcodes {
 	}
 
 	@Override
+	public void visitSource(final String source, final String debug) {
+	    super.visitSource(source, debug);
+	    this.readClass.setSource(source);
+	}
+
+	@Override
 	public MethodVisitor visitMethod(final int access, final String name, final String desc, final String signature, final String[] exceptions) {
 		final MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
 

@@ -4,7 +4,7 @@ public class ArrayInstruction extends Instruction {
 
     public ArrayInstruction(final ReadMethod readMethod, final int lineNumber, final int opcode,
             final int arrayTraceIndex, final int indexTraceIndex) {
-        super(readMethod);
+        super(readMethod, opcode);
         // TODO Auto-generated constructor stub
     }
 

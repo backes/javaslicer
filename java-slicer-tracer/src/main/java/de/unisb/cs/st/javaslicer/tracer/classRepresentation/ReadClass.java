@@ -15,6 +15,7 @@ public class ReadClass {
     private final ArrayList<ReadMethod> methods = new ArrayList<ReadMethod>();
     private final int instructionNumberStart;
     private int instructionNumberEnd;
+    private String source = null;
 
     public ReadClass(final String internalClassName, final byte[] classBytecode, final int instructionNumberStart) {
         this.internalClassName = internalClassName;
@@ -55,6 +56,10 @@ public class ReadClass {
         return this.instructionNumberEnd;
     }
 
+    public void setSource(final String source) {
+        this.source = source;
+    }
+
     public void writeOut(final ObjectOutputStream out) throws IOException {
         out.writeObject(this.internalClassName);
         out.writeObject(this.className);
@@ -65,6 +70,14 @@ public class ReadClass {
         out.writeInt(this.methods.size());
         for (final ReadMethod rm: this.methods) {
             rm.writeOut(out);
+        }
+        if (this.source == null)
+            out.writeInt(-1);
+        else {
+            final char[] sourceChars = this.source.toCharArray();
+            out.writeInt(sourceChars.length);
+            for (final char ch: sourceChars)
+                out.writeChar(ch);
         }
     }
 
@@ -83,6 +96,13 @@ public class ReadClass {
             rc.methods.ensureCapacity(numMethods);
             while (numMethods-- > 0)
                 rc.methods.add(ReadMethod.readFrom(in, rc));
+            final int sourceCharLen = in.readInt();
+            if (sourceCharLen != -1) {
+                final char[] sourceChars = new char[sourceCharLen];
+                for (int i = 0; i < sourceCharLen; ++i)
+                    sourceChars[i] = in.readChar();
+                rc.setSource(new String(sourceChars));
+            }
             return rc;
         } catch (final ClassNotFoundException e) {
             throw new RuntimeException(e);
