@@ -62,7 +62,7 @@ public class InstrumentPersistent {
 
         reader.accept(instrumenter, 0);
 
-        readClass.setSequenceNumberEnd(tracer.getNextSequenceIndex());
+        readClass.setInstructionNumberEnd(tracer.getNextSequenceIndex());
 
         classBytes = writer.toByteArray();
 

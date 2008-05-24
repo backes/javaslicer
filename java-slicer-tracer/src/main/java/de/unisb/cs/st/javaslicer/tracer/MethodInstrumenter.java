@@ -69,6 +69,7 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
     public void visitEnd() {
         super.visitEnd();
         this.readMethod.ready();
+        this.readMethod.setInstructionNumberEnd(Instruction.getNextIndex());
     }
 
     @Override

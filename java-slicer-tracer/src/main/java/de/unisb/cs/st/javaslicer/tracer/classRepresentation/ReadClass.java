@@ -13,14 +13,14 @@ public class ReadClass {
     private final String className;
     private final byte[] classByteCode;
     private final ArrayList<ReadMethod> methods = new ArrayList<ReadMethod>();
-    private final int sequenceNumberStart;
-    private int sequenceNumberEnd;
+    private final int instructionNumberStart;
+    private int instructionNumberEnd;
 
-    public ReadClass(final String internalClassName, final byte[] classBytecode, final int sequenceNumberStart) {
+    public ReadClass(final String internalClassName, final byte[] classBytecode, final int instructionNumberStart) {
         this.internalClassName = internalClassName;
         this.className = Type.getObjectType(internalClassName).getClassName();
         this.classByteCode = classBytecode;
-        this.sequenceNumberStart = sequenceNumberStart;
+        this.instructionNumberStart = instructionNumberStart;
     }
 
     public void addMethod(final ReadMethod method) {
@@ -35,8 +35,24 @@ public class ReadClass {
         return this.className;
     }
 
-    public void setSequenceNumberEnd(final int sequenceNumberEnd) {
-        this.sequenceNumberEnd = sequenceNumberEnd;
+    public void setInstructionNumberEnd(final int instructionNumberEnd) {
+        this.instructionNumberEnd = instructionNumberEnd;
+    }
+
+    public String getInternalClassName() {
+        return this.internalClassName;
+    }
+
+    public ArrayList<ReadMethod> getMethods() {
+        return this.methods;
+    }
+
+    public int getInstructionNumberStart() {
+        return this.instructionNumberStart;
+    }
+
+    public int getInstructionNumberEnd() {
+        return this.instructionNumberEnd;
     }
 
     public void writeOut(final ObjectOutputStream out) throws IOException {
@@ -44,8 +60,8 @@ public class ReadClass {
         out.writeObject(this.className);
         out.writeInt(this.classByteCode.length);
         out.write(this.classByteCode);
-        out.writeInt(this.sequenceNumberStart);
-        out.writeInt(this.sequenceNumberEnd);
+        out.writeInt(this.instructionNumberStart);
+        out.writeInt(this.instructionNumberEnd);
         out.writeInt(this.methods.size());
         for (final ReadMethod rm: this.methods) {
             rm.writeOut(out);
@@ -58,10 +74,10 @@ public class ReadClass {
             final String className = (String) in.readObject();
             final byte[] bytecode = new byte[in.readInt()];
             in.read(bytecode, 0, bytecode.length);
-            final int sequenceNumberStart = in.readInt();
-            final int sequenceNumberEnd = in.readInt();
-            final ReadClass rc = new ReadClass(intName, bytecode, sequenceNumberStart);
-            rc.setSequenceNumberEnd(sequenceNumberEnd);
+            final int instructionNumberStart = in.readInt();
+            final int instructionNumberEnd = in.readInt();
+            final ReadClass rc = new ReadClass(intName, bytecode, instructionNumberStart);
+            rc.setInstructionNumberEnd(instructionNumberEnd);
             assert rc.className != null && rc.className.equals(className);
             int numMethods = in.readInt();
             rc.methods.ensureCapacity(numMethods);

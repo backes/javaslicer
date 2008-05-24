@@ -2,7 +2,7 @@ package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
 
 import org.objectweb.asm.Label;
 
-public class JumpInstruction extends AbstractInstruction implements Instruction {
+public class JumpInstruction extends Instruction {
 
     private final int opcode;
 

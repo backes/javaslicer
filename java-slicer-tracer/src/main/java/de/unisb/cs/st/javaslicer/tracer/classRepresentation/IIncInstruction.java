@@ -1,6 +1,6 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
 
-public class IIncInstruction extends AbstractInstruction implements Instruction {
+public class IIncInstruction extends Instruction {
 
     public IIncInstruction(final ReadMethod readMethod, final int var) {
         super(readMethod);
