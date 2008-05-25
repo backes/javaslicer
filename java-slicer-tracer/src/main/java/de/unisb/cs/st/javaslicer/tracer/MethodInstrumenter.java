@@ -2,6 +2,7 @@ package de.unisb.cs.st.javaslicer.tracer;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodAdapter;
@@ -22,7 +23,7 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.NewArrayInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.SimpleInstruction;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.IntegerTraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.util.Pair;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectTraceSequence;
 
 public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
@@ -33,8 +34,10 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
     private final Label startLabel = new Label();
     private final Label endLabel = new Label();
-    private final Map<Label, Pair<LabelMarker, IntegerTraceSequence>> labels =
-        new HashMap<Label, Pair<LabelMarker,IntegerTraceSequence>>();
+    private final Map<Label, LabelMarker> labels =
+        new HashMap<Label, LabelMarker>();
+    private final Map<JumpInstruction, Label> jumpInstructions =
+        new HashMap<JumpInstruction, Label>();
 
     public MethodInstrumenter(final MethodVisitor mv, final Tracer tracer, final ReadMethod readMethod) {
         super(mv);
@@ -50,7 +53,9 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
     @Override
     public void visitJumpInsn(final int opcode, final Label label) {
-        registerInstruction(new JumpInstruction(this.readMethod, this.lineNumber, opcode, label));
+        final JumpInstruction instr = new JumpInstruction(this.readMethod, this.lineNumber, opcode, null);
+        registerInstruction(instr);
+        this.jumpInstructions.put(instr, label);
         super.visitJumpInsn(opcode, label);
     }
 
@@ -77,11 +82,17 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
         super.visitEnd();
         this.readMethod.ready();
         this.readMethod.setInstructionNumberEnd(Instruction.getNextIndex());
+        for (final Entry<JumpInstruction, Label> instr: this.jumpInstructions.entrySet()) {
+            final LabelMarker lm = this.labels.get(instr.getValue());
+            assert lm != null;
+            instr.getKey().setLabel(lm);
+        }
     }
 
     @Override
     public void visitFieldInsn(final int opcode, final String owner, final String name, final String desc) {
-        int index = -1;
+        ObjectTraceSequence objectTrace = null;
+
         switch (opcode) {
         case PUTSTATIC:
         case GETSTATIC:
@@ -91,7 +102,7 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
         case GETFIELD:
             // top item on stack is the object reference: duplicate it
             super.visitInsn(DUP);
-            index = this.tracer.newObjectTraceSequence().getIndex();
+            objectTrace = this.tracer.newObjectTraceSequence();
             //System.out.println("seq " + index + ": getField " + name + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             break;
 
@@ -106,7 +117,7 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
                 super.visitInsn(POP2);
                 super.visitInsn(DUP_X2);
             }
-            index = this.tracer.newObjectTraceSequence().getIndex();
+            objectTrace = this.tracer.newObjectTraceSequence();
             //System.out.println("seq " + index + ": putField " + name + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             break;
 
@@ -114,26 +125,27 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
             break;
         }
 
-        if (index != -1) {
-            pushIntOnStack(index);
+        if (objectTrace != null) {
+            pushIntOnStack(objectTrace.getIndex());
             super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceObject",
                     "(Ljava/lang/Object;I)V");
         }
 
-        registerInstruction(new FieldInstruction(this.readMethod, opcode, owner, name, desc, index));
+        registerInstruction(new FieldInstruction(this.readMethod, opcode, this.lineNumber, owner, name, desc, objectTrace));
         super.visitFieldInsn(opcode, owner, name, desc);
     }
 
     @Override
     public void visitIincInsn(final int var, final int increment) {
-        registerInstruction(new IIncInstruction(this.readMethod, var));
+        registerInstruction(new IIncInstruction(this.readMethod, var, this.lineNumber));
         super.visitIincInsn(var, increment);
     }
 
     @Override
     public void visitInsn(final int opcode) {
-        int arrayTraceIndex = -1;
-        int indexTraceIndex = -1;
+        ObjectTraceSequence arrayTrace = null;
+        IntegerTraceSequence indexTrace = null;
+
         switch (opcode) {
         // the not interesting ones:
         case NOP:
@@ -146,15 +158,15 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
         // array load:
         case IALOAD: case LALOAD: case FALOAD: case DALOAD: case AALOAD: case BALOAD: case CALOAD: case SALOAD:
             // to trace array manipulations, we need two traces: one for the array, one for the index
-            arrayTraceIndex = this.tracer.newObjectTraceSequence().getIndex();
-            indexTraceIndex = this.tracer.newIntegerTraceSequence().getIndex();
+            arrayTrace = this.tracer.newObjectTraceSequence();
+            indexTrace = this.tracer.newIntegerTraceSequence();
             //System.out.println("seq " + arrayTraceIndex + ": array in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             //System.out.println("seq " + indexTraceIndex + ": array index in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             // the top two words on the stack are the array index and the array reference
             super.visitInsn(DUP2);
-            pushIntOnStack(indexTraceIndex);
+            pushIntOnStack(indexTrace.getIndex());
             super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceInteger", "(II)V");
-            pushIntOnStack(arrayTraceIndex);
+            pushIntOnStack(arrayTrace.getIndex());
             super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceObject",
                     "(Ljava/lang/Object;I)V");
             break;
@@ -162,8 +174,8 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
         // array store:
         case IASTORE: case LASTORE: case FASTORE: case DASTORE: case AASTORE: case BASTORE: case CASTORE: case SASTORE:
             // to trace array manipulations, we need two traces: one for the array, one for the index
-            arrayTraceIndex = this.tracer.newObjectTraceSequence().getIndex();
-            indexTraceIndex = this.tracer.newIntegerTraceSequence().getIndex();
+            arrayTrace = this.tracer.newObjectTraceSequence();
+            indexTrace = this.tracer.newIntegerTraceSequence();
             //System.out.println("seq " + arrayTraceIndex + ": array in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             //System.out.println("seq " + indexTraceIndex + ": arrayindex in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             // top three words on the stack: value, array index, array reference
@@ -177,9 +189,9 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
                 super.visitInsn(POP);
                 super.visitInsn(DUP2_X1);
             }
-            pushIntOnStack(indexTraceIndex);
+            pushIntOnStack(indexTrace.getIndex());
             super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceInteger", "(II)V");
-            pushIntOnStack(arrayTraceIndex);
+            pushIntOnStack(arrayTrace.getIndex());
             super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceObject",
                     "(Ljava/lang/Object;I)V");
             break;
@@ -216,9 +228,11 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
             assert false;
         }
 
-        if (arrayTraceIndex != -1) {
-            registerInstruction(new ArrayInstruction(this.readMethod, this.lineNumber, opcode, arrayTraceIndex, indexTraceIndex));
+        if (arrayTrace != null) {
+            assert indexTrace != null;
+            registerInstruction(new ArrayInstruction(this.readMethod, this.lineNumber, opcode, arrayTrace, indexTrace));
         } else {
+            assert indexTrace == null;
             registerInstruction(new SimpleInstruction(this.readMethod, this.lineNumber, opcode));
         }
 
@@ -238,9 +252,9 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
     }
 
     @Override
-    public void visitLdcInsn(final Object cst) {
-        registerInstruction(new LdcInstruction(this.readMethod, this.lineNumber, cst));
-        super.visitLdcInsn(cst);
+    public void visitLdcInsn(final Object constant) {
+        registerInstruction(new LdcInstruction(this.readMethod, this.lineNumber, constant));
+        super.visitLdcInsn(constant);
     }
 
     @Override
@@ -250,9 +264,9 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
     }
 
     @Override
-    public void visitLookupSwitchInsn(final Label dflt, final int[] keys, final Label[] labels) {
+    public void visitLookupSwitchInsn(final Label dflt, final int[] keys, final Label[] handlerLabels) {
         // TODO Auto-generated method stub
-        super.visitLookupSwitchInsn(dflt, keys, labels);
+        super.visitLookupSwitchInsn(dflt, keys, handlerLabels);
     }
 
     @Override
@@ -262,9 +276,9 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
     }
 
     @Override
-    public void visitTableSwitchInsn(final int min, final int max, final Label dflt, final Label[] labels) {
+    public void visitTableSwitchInsn(final int min, final int max, final Label dflt, final Label[] handlerLabels) {
         // TODO Auto-generated method stub
-        super.visitTableSwitchInsn(min, max, dflt, labels);
+        super.visitTableSwitchInsn(min, max, dflt, handlerLabels);
     }
 
     @Override
@@ -300,11 +314,9 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
         super.visitLabel(label);
 
         // whenever a label is crossed, it stores the instruction index we come from
-        final Pair<LabelMarker, IntegerTraceSequence> pair = getLabelMarker(label);
-        final LabelMarker lm = pair.getFirst();
-        final IntegerTraceSequence seq = pair.getSecond();
-        lm.setLineNumber(this.lineNumber);
-        lm.setAdditionalLabel(additionalLabel);
+        final IntegerTraceSequence seq = this.tracer.newIntegerTraceSequence();
+        final LabelMarker lm = new LabelMarker(this.readMethod, this.lineNumber, seq, additionalLabel);
+        this.labels.put(label, lm);
         //System.out.println("seq " + index + ": label " + label + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
         // at runtime: push last executed instruction index on stack, then the sequence index
         super.visitFieldInsn(GETSTATIC, Type.getInternalName(Tracer.class), "lastInstructionIndex",
@@ -314,18 +326,6 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
         // and *after* that, we store our new instruction index on the stack (on runtime)
         registerInstruction(lm);
-    }
-
-    private Pair<LabelMarker, IntegerTraceSequence> getLabelMarker(final Label label) {
-        Pair<LabelMarker, IntegerTraceSequence> pair = this.labels.get(label);
-        if (pair == null) {
-            final IntegerTraceSequence seq = this.tracer.newIntegerTraceSequence();
-            pair = new Pair<LabelMarker, IntegerTraceSequence>(
-                    new LabelMarker(this.readMethod, -1, seq.getIndex(), false),
-                    seq);
-          this.labels.put(label, pair);
-        }
-        return pair;
     }
 
     private void registerInstruction(final Instruction instruction) {

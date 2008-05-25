@@ -9,7 +9,7 @@ public abstract class Instruction {
     private final int index;
     protected final ReadMethod method;
     private final int opcode;
-    private int lineNumber;
+    private final int lineNumber;
 
     public Instruction(final ReadMethod readMethod, final int opcode, final int lineNumber) {
         this.index = nextIndex++;
@@ -34,10 +34,6 @@ public abstract class Instruction {
 
     public int getLineNumber() {
         return this.lineNumber;
-    }
-
-    public void setLineNumber(final int lineNumber) {
-        this.lineNumber = lineNumber;
     }
 
     public static int getNextIndex() {

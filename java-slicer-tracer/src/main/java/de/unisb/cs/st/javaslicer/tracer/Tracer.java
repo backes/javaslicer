@@ -236,7 +236,7 @@ public class Tracer implements ClassFileTransformer {
         return seq;
     }
 
-    public TraceSequence newObjectTraceSequence() {
+    public ObjectTraceSequence newObjectTraceSequence() {
         final int nextIndex = this.traceSequences.size();
         final ObjectTraceSequence seq = new ObjectTraceSequence(seqFactory.createLongTraceSequence(nextIndex));
         this.traceSequences.add(seq);

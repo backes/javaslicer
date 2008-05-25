@@ -1,11 +1,18 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
 
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.IntegerTraceSequence;
+
 
 public class LabelMarker extends Instruction {
 
-    public LabelMarker(final ReadMethod readMethod, final int lineNumber, final int index, final boolean additionalLabel) {
+    private final IntegerTraceSequence seq;
+    private final boolean additionalLabel;
+
+    public LabelMarker(final ReadMethod readMethod, final int lineNumber,
+            final IntegerTraceSequence seq, final boolean additionalLabel) {
         super(readMethod, -1, lineNumber);
-        // TODO Auto-generated constructor stub
+        this.seq = seq;
+        this.additionalLabel = additionalLabel;
     }
 
 }
