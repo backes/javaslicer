@@ -140,7 +140,7 @@
         <pluginRepository>
             <id>codehaus-m2-repository</id>
             <name>Codehaus Maven 2.x Repository</name>
-            <url>http://repository.codehaus.org</url>
+            <url>http://repository.codehaus.org/</url>
         </pluginRepository>
     </pluginRepositories>
 
@@ -161,27 +161,38 @@
                     <target>1.6</target>
                 </configuration>
             </plugin>
-            <!-- create Clover database before generating site -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-clover-plugin</artifactId>
+                <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
-                    <jdk>1.6</jdk>
+                    <source>1.6</source>
                 </configuration>
-                <executions>
-                    <execution>
-                        <phase>pre-site</phase>
-                        <goals>
-                            <goal>instrument</goal>
-                        </goals>
-                    </execution>
-                </executions>
+            </plugin>
+            <!-- TODO Update URL. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <configuration>
+                    <tagBase>https://svn.st.cs.uni-sb.de/svn/st/projects/maven-template-project/tags</tagBase>
+                </configuration>
             </plugin>
         </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <!-- We still use Beta 5 because of various bugs:
+                         http://jira.codehaus.org/ - MSITE-262, MSITE-293, MSITE-297 -->
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-site-plugin</artifactId>
+                    <version>2.0-beta-5</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
 
     <reporting>
         <plugins>
+            <!-- Maven Project Info Reports Plugin - http://maven.apache.org/plugins/maven-project-info-reports-plugin/ -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-project-info-reports-plugin</artifactId>
@@ -201,18 +212,24 @@
                     </reportSet>
                 </reportSets>
             </plugin>
+            <!-- Maven Changes Report Plugin - http://maven.apache.org/plugins/maven-changes-plugin/ -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-changes-plugin</artifactId>
+            </plugin>
             <!-- Checkstyle - http://maven.apache.org/plugins/maven-checkstyle-plugin/howto.html -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <configuration>
                     <configLocation>checkstyle.xml</configLocation>
+                    <headerLocation>checkstyle-license.txt</headerLocation>
                 </configuration>
             </plugin>
-            <!-- Clover - http://maven.apache.org/plugins/maven-clover-plugin/howto.html -->
+            <!-- Cobertura - http://mojo.codehaus.org/cobertura-maven-plugin/ -->
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-clover-plugin</artifactId>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>cobertura-maven-plugin</artifactId>
             </plugin>
             <!-- FindBugs - http://mojo.codehaus.org/findbugs-maven-plugin/howto.html -->
             <plugin>
@@ -231,17 +248,27 @@
                     <show>public</show>
                     <minmemory>128m</minmemory>
                     <maxmemory>512m</maxmemory>
+                    <!-- We want individual sets of Javadoc files for each project. -->
+                    <aggregate>false</aggregate>
                 </configuration>
             </plugin>
             <!-- JXR - http://maven.apache.org/plugins/maven-jxr-plugin/howto.html -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jxr-plugin</artifactId>
+                <configuration>
+                    <!-- We want individual sets of JXR files for each project. -->
+                    <aggregate>false</aggregate>
+                </configuration>
             </plugin>
             <!-- Surefire - http://maven.apache.org/plugins/maven-surefire-report-plugin/howto.html -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-report-plugin</artifactId>
+                <configuration>
+                    <!-- We want individual surefire reports for each project. -->
+                    <aggregate>false</aggregate>
+                </configuration>
             </plugin>
             <!-- JavaNCSS - http://mojo.codehaus.org/javancss-maven-plugin/introduction.html -->
             <!--plugin>
@@ -253,14 +280,19 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
                 <configuration>
+                    <!-- We want individual PMD reports for each project. -->
+                    <aggregate>false</aggregate>
                     <linkXref>true</linkXref>
                     <targetJdk>1.6</targetJdk>
                 </configuration>
             </plugin>
+            <!-- Taglist Maven Plugin - http://mojo.codehaus.org/taglist-maven-plugin/ -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>taglist-maven-plugin</artifactId>
                 <configuration>
+                    <!-- We want individual Taglist reports for each project. -->
+                    <aggregate>false</aggregate>
                     <tags>
                         <tag>TODO</tag>
                         <tag>FIXME</tag>
@@ -268,8 +300,31 @@
                     </tags>
                 </configuration>
             </plugin>
+            <!-- Maven Changes Report Plugin - http://maven.apache.org/plugins/maven-changelog-plugin/ -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-changelog-plugin</artifactId>
+                <configuration>
+                    <type>range</type>
+                    <range>730</range>
+                </configuration>
+            </plugin>
         </plugins>
     </reporting>
+
+    <!-- See: http://wiki.st.cs.uni-sb.de/wiki/Maven_Archiva -->
+    <distributionManagement>
+        <repository>
+            <id>chair-public-webdav</id>
+            <name>Chair's Public Repository</name>
+            <url>https://maven.st.cs.uni-sb.de/archiva/repository/public/</url>
+        </repository>
+        <site>
+            <id>chair-public-website</id>
+            <name>Chair's Projects Website</name>
+            <url>file:///tmp/maven-sites/java-slicer</url>
+        </site>
+    </distributionManagement>
 
 </project>
 

@@ -3,14 +3,14 @@
 
     <poweredBy>
         <logo name="Built by: Maven" href="http://maven.apache.org/"
-                img="images/maven-feather.png"/>
+                img="../images/maven-feather.png"/>
     </poweredBy>
 
     <publishDate position="left" format="yyyy-MM-dd HH:mm:ss z"/>
 
     <bannerLeft>
         <name>Software Engineering Group at Saarland University</name>
-        <src>images/sblogo-small.gif</src>
+        <src>../images/sblogo-small.gif</src>
         <href>http://www.st.cs.uni-sb.de/</href>
     </bannerLeft>
 
@@ -19,17 +19,14 @@
     </bannerRight>
 
     <body>
-        <links>
+        <!-- Is inherited in maven-site-plugin 2.0-beta-5: links>
             <item name="Software Engineering Group at Saarland University" href="http://www.st.cs.uni-sb.de/"/>
-        </links>
+        </links-->
 
-        <menu ref="modules" />
+        <menu ref="parent" />
 
-        <menu name="Quickstart">
-            <item name="Howto" href="howto.html"/>
-            <item name="Tips" href="tips.html"/>
-            <item name="FAQ" href="faq.html"/>
-            <item name="APT at a glance" href="apt-at-a-glance.html"/>
+        <menu name="Reference">
+            <item name="Options" href="options.html"/>
         </menu>
 
         <menu ref="reports" />
