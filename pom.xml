@@ -12,7 +12,7 @@
     <version>0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <url>http://www.st.cs.uni-sb.de/</url>
-    <inceptionYear>2007</inceptionYear>
+    <inceptionYear>2008</inceptionYear>
 
     <developers>
         <developer>
@@ -28,7 +28,7 @@
             </roles>
         </developer>
         <developer>
-            <id>vdallmeier</id>
+            <id>dallmeier</id>
             <name>Valentin Dallmeier</name>
             <email>dallmeier@st.cs.uni-sb.de</email>
             <url>http://www.st.cs.uni-sb.de/~dallmeier/</url>
@@ -61,6 +61,34 @@
             <distribution>manual</distribution>
         </license>
     </licenses-->
+
+    <ciManagement>
+        <system>hudson</system>
+        <url>http://kubrick:8070/</url>
+        <notifiers>
+            <!-- TODO Add another notifier with your contact data and remove orphan ones. -->
+            <notifier>
+                <type>mail</type>
+                <configuration>
+                    <recipients>mburger@cs.uni-sb.de</recipients>
+                </configuration>
+                <sendOnError>true</sendOnError>
+                <sendOnFailure>true</sendOnFailure>
+                <sendOnSuccess>false</sendOnSuccess>
+                <sendOnWarning>true</sendOnWarning>
+            </notifier>
+            <notifier>
+                <type>mail</type>
+                <configuration>
+                    <recipients>dallmeier@cs.uni-sb.de</recipients>
+                </configuration>
+                <sendOnError>true</sendOnError>
+                <sendOnFailure>true</sendOnFailure>
+                <sendOnSuccess>false</sendOnSuccess>
+                <sendOnWarning>true</sendOnWarning>
+            </notifier>
+        </notifiers>
+    </ciManagement>
 
     <scm>
         <connection>scm:svn:https://svn.st.cs.uni-sb.de/svn/st/projects/java-slicer/trunk/java-slicer</connection>
@@ -98,7 +126,7 @@
         <dependency>
             <groupId>commons-collections</groupId>
             <artifactId>commons-collections</artifactId>
-            <version>3.2</version>
+            <version>3.2.1</version>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>
@@ -271,10 +299,10 @@
                 </configuration>
             </plugin>
             <!-- JavaNCSS - http://mojo.codehaus.org/javancss-maven-plugin/introduction.html -->
-            <!--plugin>
+            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>javancss-maven-plugin</artifactId>
-            </plugin-->
+            </plugin>
             <!-- PMD - http://maven.apache.org/plugins/maven-pmd-plugin/ -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
