@@ -61,8 +61,8 @@ public class ReadClass {
     }
 
     public void writeOut(final ObjectOutputStream out) throws IOException {
-        out.writeObject(this.internalClassName);
-        out.writeObject(this.className);
+        out.writeUTF(this.internalClassName);
+        out.writeUTF(this.className);
         out.writeInt(this.classByteCode.length);
         out.write(this.classByteCode);
         out.writeInt(this.instructionNumberStart);
@@ -71,42 +71,27 @@ public class ReadClass {
         for (final ReadMethod rm: this.methods) {
             rm.writeOut(out);
         }
-        if (this.source == null)
-            out.writeInt(-1);
-        else {
-            final char[] sourceChars = this.source.toCharArray();
-            out.writeInt(sourceChars.length);
-            for (final char ch: sourceChars)
-                out.writeChar(ch);
-        }
+        out.writeUTF(this.source == null ? "" : this.source);
     }
 
     public static ReadClass readFrom(final ObjectInputStream in) throws IOException {
-        try {
-            final String intName = (String) in.readObject();
-            final String className = (String) in.readObject();
-            final byte[] bytecode = new byte[in.readInt()];
-            in.read(bytecode, 0, bytecode.length);
-            final int instructionNumberStart = in.readInt();
-            final int instructionNumberEnd = in.readInt();
-            final ReadClass rc = new ReadClass(intName, bytecode, instructionNumberStart);
-            rc.setInstructionNumberEnd(instructionNumberEnd);
-            assert rc.className != null && rc.className.equals(className);
-            int numMethods = in.readInt();
-            rc.methods.ensureCapacity(numMethods);
-            while (numMethods-- > 0)
-                rc.methods.add(ReadMethod.readFrom(in, rc));
-            final int sourceCharLen = in.readInt();
-            if (sourceCharLen != -1) {
-                final char[] sourceChars = new char[sourceCharLen];
-                for (int i = 0; i < sourceCharLen; ++i)
-                    sourceChars[i] = in.readChar();
-                rc.setSource(new String(sourceChars));
-            }
-            return rc;
-        } catch (final ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
+        final String intName = in.readUTF();
+        final String className = in.readUTF();
+        final byte[] bytecode = new byte[in.readInt()];
+        in.read(bytecode, 0, bytecode.length);
+        final int instructionNumberStart = in.readInt();
+        final int instructionNumberEnd = in.readInt();
+        final ReadClass rc = new ReadClass(intName, bytecode, instructionNumberStart);
+        rc.setInstructionNumberEnd(instructionNumberEnd);
+        assert rc.className != null && rc.className.equals(className);
+        int numMethods = in.readInt();
+        rc.methods.ensureCapacity(numMethods);
+        while (numMethods-- > 0)
+            rc.methods.add(ReadMethod.readFrom(in, rc));
+        final String source = in.readUTF();
+        if (source.length() > 0)
+            rc.setSource(source);
+        return rc;
     }
 
 }

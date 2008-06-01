@@ -59,31 +59,21 @@ public class ReadMethod {
     }
 
     public void writeOut(final ObjectOutputStream out) throws IOException {
-        final char[] nameChars = this.name.toCharArray();
-        out.writeInt(nameChars.length);
-        for (final char ch: nameChars)
-            out.writeChar(ch);
-        final char[] descChars = this.desc.toCharArray();
-        out.writeInt(descChars.length);
-        for (final char ch: descChars)
-            out.writeChar(ch);
+        out.writeUTF(this.name);
+        out.writeUTF(this.desc);
         out.writeInt(this.instructionNumberEnd);
         out.writeInt(this.instructionNumberStart);
         out.writeInt(this.instructions.size());
         for (final Instruction instr: this.instructions)
-            out.writeObject(instr);
+            instr.writeOut(out);
     }
 
     public static ReadMethod readFrom(final ObjectInputStream in, final ReadClass readClass) throws IOException {
-        final char[] nameChars = new char[in.readInt()];
-        for (int i = 0; i < nameChars.length; ++i)
-            nameChars[i] = in.readChar();
-        final char[] descChars = new char[in.readInt()];
-        for (int i = 0; i < descChars.length; ++i)
-            descChars[i] = in.readChar();
+        final String name = in.readUTF();
+        final String desc = in.readUTF();
         final int instructionNumberStart = in.readInt();
         final int instructionNumberEnd = in.readInt();
-        final ReadMethod rm = new ReadMethod(readClass, new String(nameChars), new String(descChars), instructionNumberStart);
+        final ReadMethod rm = new ReadMethod(readClass, name, desc, instructionNumberStart);
         rm.setInstructionNumberEnd(instructionNumberEnd);
         int numInstr = in.readInt();
         rm.instructions.ensureCapacity(numInstr);

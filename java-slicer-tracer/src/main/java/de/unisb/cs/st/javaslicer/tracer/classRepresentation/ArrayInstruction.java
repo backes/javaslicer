@@ -7,14 +7,12 @@ import java.io.ObjectOutputStream;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.ConstantIntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.ConstantLongTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.ConstantTraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.IntegerTraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectTraceSequence;
 
 public class ArrayInstruction extends Instruction {
 
     // when tracing, these two fields are set
-    private final ObjectTraceSequence arrayTrace;
-    private final IntegerTraceSequence indexTrace;
+    private final int arrayTraceSeqIndex;
+    private final int indexTraceSeqIndex;
 
     // after reloading the trace, these two fields are set
     private final ConstantLongTraceSequence constArrayTrace;
@@ -22,10 +20,10 @@ public class ArrayInstruction extends Instruction {
 
 
     public ArrayInstruction(final ReadMethod readMethod, final int lineNumber, final int opcode,
-            final ObjectTraceSequence arrayTrace, final IntegerTraceSequence indexTrace) {
+            final int arrayTraceSeqIndex, final int indexTraceSeqIndex) {
         super(readMethod, opcode, lineNumber);
-        this.arrayTrace = arrayTrace;
-        this.indexTrace = indexTrace;
+        this.arrayTraceSeqIndex = arrayTraceSeqIndex;
+        this.indexTraceSeqIndex = indexTraceSeqIndex;
         this.constArrayTrace = null;
         this.constIndexTrace = null;
     }
@@ -35,18 +33,18 @@ public class ArrayInstruction extends Instruction {
         super(readMethod, opcode, lineNumber, index);
         this.constArrayTrace = constArrayTrace;
         this.constIndexTrace = constIndexTrace;
-        this.arrayTrace = null;
-        this.indexTrace = null;
+        this.arrayTraceSeqIndex = -1;
+        this.indexTraceSeqIndex = -1;
     }
 
     @Override
     public void writeOut(final ObjectOutputStream out) throws IOException {
-        assert this.arrayTrace != null && this.indexTrace != null;
+        assert this.arrayTraceSeqIndex != -1 && this.indexTraceSeqIndex != -1;
         assert this.constArrayTrace == null && this.constIndexTrace == null;
 
         super.writeOut(out);
-        this.arrayTrace.writeOut(out);
-        this.indexTrace.writeOut(out);
+        out.writeInt(this.arrayTraceSeqIndex);
+        out.writeInt(this.indexTraceSeqIndex);
     }
 
     public static ArrayInstruction readFrom(final ObjectInputStream in, final ReadMethod readMethod, final int opcode, final int index, final int lineNumber) throws IOException {

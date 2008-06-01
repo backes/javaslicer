@@ -1,10 +1,10 @@
 package de.unisb.cs.st.javaslicer.tracer.traceSequences;
 
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.Type;
+
 
 public interface TraceSequenceFactory {
 
-    IntegerTraceSequence createIntegerTraceSequence(int index);
-
-    LongTraceSequence createLongTraceSequence(int index);
+    TraceSequence createTraceSequence(int traceSequenceIndex, Type type);
 
 }

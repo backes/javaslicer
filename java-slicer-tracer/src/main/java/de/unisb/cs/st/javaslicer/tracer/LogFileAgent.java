@@ -22,6 +22,7 @@ public class LogFileAgent {
 
         @Override
         public void run() {
+            this.tracer.tracingReady = true;
             if (Tracer.debug)
                 System.out.println("DEBUG: writing trace to output file: " + this.logFile.getAbsolutePath());
 

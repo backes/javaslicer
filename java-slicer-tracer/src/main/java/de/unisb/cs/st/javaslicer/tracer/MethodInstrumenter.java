@@ -22,8 +22,6 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.MethodInvocationInst
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.NewArrayInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.SimpleInstruction;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.IntegerTraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectTraceSequence;
 
 public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
@@ -91,7 +89,7 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
     @Override
     public void visitFieldInsn(final int opcode, final String owner, final String name, final String desc) {
-        ObjectTraceSequence objectTrace = null;
+        int objectTraceSeqIndex = -1;
 
         switch (opcode) {
         case PUTSTATIC:
@@ -101,14 +99,15 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
         case GETFIELD:
             // top item on stack is the object reference: duplicate it
-            super.visitInsn(DUP);
-            objectTrace = this.tracer.newObjectTraceSequence();
+            //super.visitInsn(DUP);
+            objectTraceSeqIndex = this.tracer.newObjectTraceSequence();
             //System.out.println("seq " + index + ": getField " + name + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             break;
 
         case PUTFIELD:
             // the second item on the stack is the object reference
             final int size = Type.getType(desc).getSize(); // either 1 or 2
+            /*
             if (size == 1) {
                 super.visitInsn(DUP2);
                 super.visitInsn(POP);
@@ -117,7 +116,8 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
                 super.visitInsn(POP2);
                 super.visitInsn(DUP_X2);
             }
-            objectTrace = this.tracer.newObjectTraceSequence();
+            */
+            objectTraceSeqIndex = this.tracer.newObjectTraceSequence();
             //System.out.println("seq " + index + ": putField " + name + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             break;
 
@@ -125,13 +125,15 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
             break;
         }
 
-        if (objectTrace != null) {
-            pushIntOnStack(objectTrace.getIndex());
+        if (objectTraceSeqIndex != -1) {
+            /*
+            pushIntOnStack(objectTraceSeqIndex);
             super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceObject",
                     "(Ljava/lang/Object;I)V");
+            */
         }
 
-        registerInstruction(new FieldInstruction(this.readMethod, opcode, this.lineNumber, owner, name, desc, objectTrace));
+        registerInstruction(new FieldInstruction(this.readMethod, opcode, this.lineNumber, owner, name, desc, objectTraceSeqIndex));
         super.visitFieldInsn(opcode, owner, name, desc);
     }
 
@@ -143,8 +145,8 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
     @Override
     public void visitInsn(final int opcode) {
-        ObjectTraceSequence arrayTrace = null;
-        IntegerTraceSequence indexTrace = null;
+        int arrayTraceSeqIndex = -1;
+        int indexTraceSeqIndex = -1;
 
         switch (opcode) {
         // the not interesting ones:
@@ -158,28 +160,31 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
         // array load:
         case IALOAD: case LALOAD: case FALOAD: case DALOAD: case AALOAD: case BALOAD: case CALOAD: case SALOAD:
             // to trace array manipulations, we need two traces: one for the array, one for the index
-            arrayTrace = this.tracer.newObjectTraceSequence();
-            indexTrace = this.tracer.newIntegerTraceSequence();
+            arrayTraceSeqIndex = this.tracer.newObjectTraceSequence();
+            indexTraceSeqIndex = this.tracer.newIntegerTraceSequence();
             //System.out.println("seq " + arrayTraceIndex + ": array in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             //System.out.println("seq " + indexTraceIndex + ": array index in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             // the top two words on the stack are the array index and the array reference
+            /*
             super.visitInsn(DUP2);
-            pushIntOnStack(indexTrace.getIndex());
+            pushIntOnStack(indexTraceSeqIndex);
             super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceInteger", "(II)V");
-            pushIntOnStack(arrayTrace.getIndex());
+            pushIntOnStack(arrayTraceSeqIndex);
             super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceObject",
                     "(Ljava/lang/Object;I)V");
+            */
             break;
 
         // array store:
         case IASTORE: case LASTORE: case FASTORE: case DASTORE: case AASTORE: case BASTORE: case CASTORE: case SASTORE:
             // to trace array manipulations, we need two traces: one for the array, one for the index
-            arrayTrace = this.tracer.newObjectTraceSequence();
-            indexTrace = this.tracer.newIntegerTraceSequence();
+            arrayTraceSeqIndex = this.tracer.newObjectTraceSequence();
+            indexTraceSeqIndex = this.tracer.newIntegerTraceSequence();
             //System.out.println("seq " + arrayTraceIndex + ": array in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             //System.out.println("seq " + indexTraceIndex + ": arrayindex in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             // top three words on the stack: value, array index, array reference
             // after our manipulation: array index, array reference, value, array index, array reference
+            /*
             if (opcode == LASTORE || opcode == DASTORE) { // 2-word values
                 super.visitInsn(DUP2_X2);
                 super.visitInsn(POP2);
@@ -189,11 +194,12 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
                 super.visitInsn(POP);
                 super.visitInsn(DUP2_X1);
             }
-            pushIntOnStack(indexTrace.getIndex());
+            pushIntOnStack(indexTraceSeqIndex);
             super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceInteger", "(II)V");
-            pushIntOnStack(arrayTrace.getIndex());
+            pushIntOnStack(arrayTraceSeqIndex);
             super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceObject",
                     "(Ljava/lang/Object;I)V");
+            */
             break;
 
         // stack manipulation:
@@ -228,11 +234,11 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
             assert false;
         }
 
-        if (arrayTrace != null) {
-            assert indexTrace != null;
-            registerInstruction(new ArrayInstruction(this.readMethod, this.lineNumber, opcode, arrayTrace, indexTrace));
+        if (arrayTraceSeqIndex != -1) {
+            assert indexTraceSeqIndex != -1;
+            registerInstruction(new ArrayInstruction(this.readMethod, this.lineNumber, opcode, arrayTraceSeqIndex, indexTraceSeqIndex));
         } else {
-            assert indexTrace == null;
+            assert indexTraceSeqIndex == -1;
             registerInstruction(new SimpleInstruction(this.readMethod, this.lineNumber, opcode));
         }
 
@@ -313,25 +319,28 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
     private void visitLabel(final Label label, final boolean additionalLabel) {
         super.visitLabel(label);
 
+        /*
         // whenever a label is crossed, it stores the instruction index we come from
-        final IntegerTraceSequence seq = this.tracer.newIntegerTraceSequence();
+        final int seq = this.tracer.newIntegerTraceSequence();
         final LabelMarker lm = new LabelMarker(this.readMethod, this.lineNumber, seq, additionalLabel);
         this.labels.put(label, lm);
         //System.out.println("seq " + index + ": label " + label + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
         // at runtime: push last executed instruction index on stack, then the sequence index
-        super.visitFieldInsn(GETSTATIC, Type.getInternalName(Tracer.class), "lastInstructionIndex",
-                Type.INT_TYPE.getDescriptor());
-        pushIntOnStack(seq.getIndex());
+        super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "getLastInstructionIndex",
+                "()I");
+        pushIntOnStack(seq);
         super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceInteger", "(II)V");
+        */
 
         // and *after* that, we store our new instruction index on the stack (on runtime)
-        registerInstruction(lm);
+        //registerInstruction(lm);
     }
 
     private void registerInstruction(final Instruction instruction) {
+        this.readMethod.addInstruction(instruction);
         pushIntOnStack(instruction.getIndex());
-        super.visitFieldInsn(PUTSTATIC, Type.getInternalName(Tracer.class), "lastInstructionIndex",
-                Type.INT_TYPE.getDescriptor());
+        //super.visitInsn(POP);
+        super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "setLastInstructionIndex", "(I)V");
     }
 
     private void pushIntOnStack(final int index) {
@@ -358,9 +367,9 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
             super.visitInsn(ICONST_5);
             break;
         default:
-            if ((index << 24) >> 24 == index)
+            if ((byte)index == index)
                 super.visitIntInsn(BIPUSH, index);
-            else if ((index << 16) >> 16 == index)
+            else if ((short)index == index)
                 super.visitIntInsn(SIPUSH, index);
             else
                 super.visitLdcInsn(index);

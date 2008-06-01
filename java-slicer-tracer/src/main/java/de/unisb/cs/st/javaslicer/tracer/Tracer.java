@@ -11,7 +11,7 @@ import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.objectweb.asm.ClassReader;
@@ -32,9 +32,6 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.IntegerTraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.LongTraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.gzip.GZipTraceSequenceFactory;
@@ -47,16 +44,19 @@ public class Tracer implements ClassFileTransformer {
 
     public static boolean debug = false;
 
-    private static TraceSequenceFactory seqFactory = new GZipTraceSequenceFactory();
+    public static final TraceSequenceFactory seqFactory = new GZipTraceSequenceFactory();
 
-    // this is the variable modified during runtime of the instrumented program
-    public static int lastInstructionIndex = -1;
-
-    public static boolean trace = true;
+    private final WeakThreadMap<ThreadTracer> threadTracers = new WeakThreadMap<ThreadTracer>();
+    private final ArrayList<ThreadTracer> allThreadTracers = new ArrayList<ThreadTracer>();
 
     private final List<ReadClass> readClasses = new ArrayList<ReadClass>();
 
-    private final List<TraceSequence> traceSequences = new ArrayList<TraceSequence>();
+    protected final List<TraceSequence.Type> traceSequenceTypes
+        = new ArrayList<TraceSequence.Type>();
+
+    private volatile boolean tracingEnabled = false;
+
+    public volatile boolean tracingReady = false;
 
     private Tracer() {
         // prevent instantiation
@@ -72,55 +72,63 @@ public class Tracer implements ClassFileTransformer {
         if (retransformClasses && !inst.isRetransformClassesSupported())
             throw new TracerException("Your JVM does not support retransformation of classes");
 
+        final Class<?>[] additionalClassesToRetransform = { java.security.Policy.class };
+
         inst.addTransformer(this, true);
 
         if (retransformClasses) {
-            Class<?>[] allLoadedClasses = inst.getAllLoadedClasses();
-            int k = 0;
-            for (final Class<?> class1 : allLoadedClasses) {
+            final ArrayList<Class<?>> classesToTransform = new ArrayList<Class<?>>();
+            for (final Class<?> class1 : inst.getAllLoadedClasses()) {
                 boolean modify = inst.isModifiableClass(class1) && !class1.isInterface();
                 modify &= !class1.getName().startsWith("de.unisb.cs.st.javaslicer.tracer");
                 if (modify)
-                    allLoadedClasses[k++] = class1;
+                    classesToTransform.add(class1);
             }
-            if (k < allLoadedClasses.length)
-                allLoadedClasses = Arrays.copyOf(allLoadedClasses, k);
+            for (final Class<?> class1: additionalClassesToRetransform) {
+                if (!classesToTransform.contains(class1))
+                    classesToTransform.add(class1);
+            }
 
-            System.out.println("all classes: ");
+            System.out.println("classes to transform:");
             System.out.println("############################################");
             System.out.println("############################################");
             System.out.println("############################################");
-            for (final Class<?> c1 : allLoadedClasses) {
+            for (final Class<?> c1 : classesToTransform) {
                 System.out.println(c1);
             }
             System.out.println("############################################");
             System.out.println("############################################");
             System.out.println("############################################");
 
-            final Class<?>[] oldAllLoaded = allLoadedClasses;
-            allLoadedClasses = new Class<?>[oldAllLoaded.length + 1];
-            allLoadedClasses[0] = Tracer.class;
-            System.arraycopy(oldAllLoaded, 0, allLoadedClasses, 1, oldAllLoaded.length);
-
             try {
-                //trace = false;
-                inst.retransformClasses(allLoadedClasses);
+                inst.retransformClasses(classesToTransform.toArray(new Class<?>[classesToTransform.size()]));
                 System.out.println("Instrumentation ready");
             } catch (final UnmodifiableClassException e) {
                 throw new TracerException(e);
-            } finally {
-                //trace = true;
             }
+            this.tracingEnabled = true;
         }
     }
 
     public synchronized byte[] transform(final ClassLoader loader, final String className,
             final Class<?> classBeingRedefined, final ProtectionDomain protectionDomain, final byte[] classfileBuffer) {
 
-        final boolean oldTrace = trace;
-        trace = false;
+        if (this.tracingReady)
+            return null;
+
+        final boolean oldEnabledState = this.tracingEnabled;
+        this.tracingEnabled = false;
         try {
             if (Type.getObjectType(className).getClassName().startsWith(Tracer.class.getPackage().getName()))
+                return null;
+
+            // Thread, ThreadLocal and ThreadLocalMap
+            if (Type.getObjectType(className).getClassName().startsWith("java.lang.Thread"))
+                return null;
+            // Object
+            if (Type.getObjectType(className).getClassName().equals("java.lang.Object"))
+                return null;
+            if (Type.getObjectType(className).getClassName().startsWith("java.lang.ref."))
                 return null;
 
             // register that class for later reconstruction of the trace
@@ -128,7 +136,7 @@ public class Tracer implements ClassFileTransformer {
             this.readClasses.add(readClass);
 
             final ClassReader reader = new ClassReader(classfileBuffer);
-            final ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+            final ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
 
             final ClassVisitor output = debug ? new CheckClassAdapter(writer) : writer;
 
@@ -150,12 +158,12 @@ public class Tracer implements ClassFileTransformer {
             t.printStackTrace(System.err);
             return null;
         } finally {
-            trace = oldTrace;
+            this.tracingEnabled = oldEnabledState;
         }
     }
 
     public int getNextSequenceIndex() {
-        return this.traceSequences.size();
+        return this.traceSequenceTypes.size();
     }
 
     private boolean checkClass(final byte[] newClassfileBuffer, final String classname) {
@@ -222,68 +230,75 @@ public class Tracer implements ClassFileTransformer {
         return n == -1 ? name : name.substring(n + 1, k);
     }
 
-    public synchronized IntegerTraceSequence newIntegerTraceSequence() {
-        final int nextIndex = getNextSequenceIndex();
-        final IntegerTraceSequence seq = seqFactory.createIntegerTraceSequence(nextIndex);
-        this.traceSequences.add(seq);
-        return seq;
+    public synchronized int newIntegerTraceSequence() {
+        return newTraceSequence(TraceSequence.Type.INTEGER);
     }
 
-    public synchronized LongTraceSequence newLongTraceSequence() {
-        final int nextIndex = getNextSequenceIndex();
-        final LongTraceSequence seq = seqFactory.createLongTraceSequence(nextIndex);
-        this.traceSequences.add(seq);
-        return seq;
+    public synchronized int newLongTraceSequence() {
+        return newTraceSequence(TraceSequence.Type.LONG);
     }
 
-    public ObjectTraceSequence newObjectTraceSequence() {
-        final int nextIndex = this.traceSequences.size();
-        final ObjectTraceSequence seq = new ObjectTraceSequence(seqFactory.createLongTraceSequence(nextIndex));
-        this.traceSequences.add(seq);
-        return seq;
+    public synchronized int newObjectTraceSequence() {
+        return newTraceSequence(TraceSequence.Type.OBJECT);
+    }
+
+    private synchronized int newTraceSequence(final TraceSequence.Type type) {
+        final int nextIndex = getNextSequenceIndex();
+        this.traceSequenceTypes.add(type);
+        return nextIndex;
     }
 
     public static void traceInteger(final int value, final int traceSequenceIndex) {
-        if (!trace)
+        final Tracer tracer = getInstance();
+        if (!tracer.tracingEnabled || tracer.tracingReady)
             return;
-        trace = false;
-        //System.out.println("Tracing " + traceSequenceIndex + "; " + value);
-        try {
-            final Tracer tracer = getInstance();
-            assert traceSequenceIndex < tracer.traceSequences.size();
-            final TraceSequence seq = tracer.traceSequences.get(traceSequenceIndex);
-            assert seq instanceof IntegerTraceSequence;
-            ((IntegerTraceSequence) seq).trace(value);
-        } finally {
-            trace = true;
-        }
+        tracer.getThreadTracer(Thread.currentThread()).traceInt(value, traceSequenceIndex);
+    }
+
+    private static ThreadTracer getThreadTracer() {
+        return getInstance().getThreadTracer(Thread.currentThread());
+    }
+
+    private ThreadTracer getThreadTracer(final Thread thread) {
+        final ThreadTracer tracer = this.threadTracers.get(thread);
+        if (tracer != null)
+            return tracer;
+        final ThreadTracer newTracer = new ThreadTracer(thread.getId(),
+                thread.getName(),
+                Collections.unmodifiableList(Tracer.this.traceSequenceTypes));
+        this.threadTracers.put(thread, newTracer);
+        this.allThreadTracers.add(newTracer);
+        return newTracer;
     }
 
     public static void traceObject(final Object obj, final int traceSequenceIndex) {
-        if (!trace)
+        final Tracer tracer = getInstance();
+        if (!tracer.tracingEnabled || tracer.tracingReady)
             return;
-        trace = false;
-        //System.out.println("Tracing " + traceSequenceIndex + "; " + obj.getClass().getName() + "@" + System.identityHashCode(obj));
-        try {
-            final Tracer tracer = getInstance();
-            assert traceSequenceIndex < tracer.traceSequences.size();
-            final TraceSequence seq = tracer.traceSequences.get(traceSequenceIndex);
-            assert seq instanceof ObjectTraceSequence;
-            ((ObjectTraceSequence) seq).trace(obj);
-        } finally {
-            trace = true;
-        }
+        tracer.getThreadTracer(Thread.currentThread()).traceObject(obj, traceSequenceIndex);
+    }
+
+    public static void setLastInstructionIndex(final int instructionIndex) {
+        final Tracer tracer = getInstance();
+        if (!tracer.tracingEnabled || tracer.tracingReady)
+            return;
+        tracer.tracingEnabled = false;
+        getThreadTracer().setLastInstructionIndex(instructionIndex);
+        tracer.tracingEnabled = true;
+    }
+
+    public static int getLastInstructionIndex() {
+        return getThreadTracer().getLastInstructionIndex();
     }
 
     public void writeOut(final ObjectOutputStream out) throws IOException {
+        this.tracingReady = true;
         out.writeInt(this.readClasses.size());
         for (final ReadClass rc: this.readClasses)
             rc.writeOut(out);
-        out.writeInt(this.traceSequences.size());
-        for (final TraceSequence seq: this.traceSequences) {
-            seq.writeOut(out);
-        }
-        out.writeInt(lastInstructionIndex);
+        out.writeInt(this.allThreadTracers.size());
+        for (final ThreadTracer t: this.allThreadTracers)
+            t.writeOut(out);
     }
 
     public TraceResult getResult() {

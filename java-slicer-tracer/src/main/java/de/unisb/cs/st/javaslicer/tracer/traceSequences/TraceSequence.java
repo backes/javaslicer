@@ -5,6 +5,8 @@ import java.io.ObjectOutputStream;
 
 public interface TraceSequence {
 
+    public static enum Type { INTEGER, LONG, OBJECT }
+
     // some constants
     public static byte FORMAT_SEQUITUR = 0;
     public static byte FORMAT_GZIP = 1;

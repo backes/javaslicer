@@ -4,6 +4,7 @@ import org.objectweb.asm.ClassAdapter;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.commons.JSRInlinerAdapter;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
@@ -43,8 +44,9 @@ public class ClassInstrumenter extends ClassAdapter implements Opcodes {
 		this.readClass.addMethod(readMethod);
 
         final MethodInstrumenter myInstrumenter = new MethodInstrumenter(mv, this.tracer, readMethod);
-        //return new JSRInlinerAdapter(myInstrumenter, access, name, desc, signature, exceptions);
-        return myInstrumenter;
+        // necessary for frame computation
+        return new JSRInlinerAdapter(myInstrumenter, access, name, desc, signature, exceptions);
+        //return myInstrumenter;
 	}
 
 	@Override
