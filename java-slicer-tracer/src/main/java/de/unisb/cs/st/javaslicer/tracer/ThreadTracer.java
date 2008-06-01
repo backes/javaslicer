@@ -2,15 +2,14 @@ package de.unisb.cs.st.javaslicer.tracer;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.IntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.Type;
+import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
 
 public class ThreadTracer {
 
@@ -23,8 +22,7 @@ public class ThreadTracer {
 
     private boolean trace = true;
 
-    // TODO replace by an own implementation that switch from map to list at a given fill ratio
-    private final Map<Integer, TraceSequence> sequences = new HashMap<Integer, TraceSequence>();
+    private final IntegerMap<TraceSequence> sequences = new IntegerMap<TraceSequence>();
 
     public ThreadTracer(final long threadId, final String threadName,
             final List<Type> threadSequenceTypes) {

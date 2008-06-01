@@ -125,8 +125,9 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
         if (objectTraceSeqIndex != -1) {
             pushIntOnStack(objectTraceSeqIndex);
-            super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceObject",
-                    "(Ljava/lang/Object;I)V");
+            //super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceObject",
+            //        "(Ljava/lang/Object;I)V");
+            super.visitInsn(POP2);
         }
 
         registerInstruction(new FieldInstruction(this.readMethod, opcode, this.lineNumber, owner, name, desc, objectTraceSeqIndex));
@@ -161,14 +162,14 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
             //System.out.println("seq " + arrayTraceIndex + ": array in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             //System.out.println("seq " + indexTraceIndex + ": array index in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             // the top two words on the stack are the array index and the array reference
-            /*
             super.visitInsn(DUP2);
             pushIntOnStack(indexTraceSeqIndex);
-            super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceInteger", "(II)V");
+            //super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceInteger", "(II)V");
+            super.visitInsn(POP2);
             pushIntOnStack(arrayTraceSeqIndex);
-            super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceObject",
-                    "(Ljava/lang/Object;I)V");
-            */
+            //super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceObject",
+            //        "(Ljava/lang/Object;I)V");
+            super.visitInsn(POP2);
             break;
 
         // array store:
@@ -180,7 +181,6 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
             //System.out.println("seq " + indexTraceIndex + ": arrayindex in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             // top three words on the stack: value, array index, array reference
             // after our manipulation: array index, array reference, value, array index, array reference
-            /*
             if (opcode == LASTORE || opcode == DASTORE) { // 2-word values
                 super.visitInsn(DUP2_X2);
                 super.visitInsn(POP2);
@@ -193,9 +193,9 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
             pushIntOnStack(indexTraceSeqIndex);
             super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceInteger", "(II)V");
             pushIntOnStack(arrayTraceSeqIndex);
-            super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceObject",
-                    "(Ljava/lang/Object;I)V");
-            */
+            //super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceObject",
+            //        "(Ljava/lang/Object;I)V");
+            super.visitInsn(POP2);
             break;
 
         // stack manipulation:
@@ -315,21 +315,20 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
     private void visitLabel(final Label label, final boolean additionalLabel) {
         super.visitLabel(label);
 
-        /*
         // whenever a label is crossed, it stores the instruction index we come from
         final int seq = this.tracer.newIntegerTraceSequence();
         final LabelMarker lm = new LabelMarker(this.readMethod, this.lineNumber, seq, additionalLabel);
         this.labels.put(label, lm);
         //System.out.println("seq " + index + ": label " + label + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
         // at runtime: push last executed instruction index on stack, then the sequence index
-        super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "getLastInstructionIndex",
-                "()I");
+        //super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "getLastInstructionIndex",
+        //        "()I");
         pushIntOnStack(seq);
-        super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceInteger", "(II)V");
-        */
+        super.visitInsn(POP);
+        //super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceInteger", "(II)V");
 
         // and *after* that, we store our new instruction index on the stack (on runtime)
-        //registerInstruction(lm);
+        registerInstruction(lm);
     }
 
     private void registerInstruction(final Instruction instruction) {

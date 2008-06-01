@@ -128,6 +128,14 @@ public class Tracer implements ClassFileTransformer {
             // Thread, ThreadLocal and ThreadLocalMap
             if (Type.getObjectType(className).getClassName().startsWith("java.lang.Thread"))
                 return null;
+            // because of Thread.getName()
+            if (Type.getObjectType(className).getClassName().equals("java.lang.String"))
+                return null;
+            if (Type.getObjectType(className).getClassName().equals("java.util.Arrays"))
+                return null;
+            if (Type.getObjectType(className).getClassName().equals("java.lang.Math"))
+                return null;
+
             // Object
             if (Type.getObjectType(className).getClassName().equals("java.lang.Object"))
                 return null;
@@ -283,7 +291,9 @@ public class Tracer implements ClassFileTransformer {
 
     public static void setLastInstructionIndex(final int instructionIndex) {
         final Tracer tracer = getInstance();
-        if (!tracer.tracingStarted || tracer.tracingReady)
+        if (!tracer.tracingStarted)
+            return;
+        if (tracer.tracingReady)
             return;
         tracer.tracingStarted = false;
         getThreadTracer().setLastInstructionIndex(instructionIndex);

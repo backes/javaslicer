@@ -10,8 +10,6 @@
 
 package de.unisb.cs.st.javaslicer.tracer.util;
 
-import java.lang.ref.ReferenceQueue;
-import java.lang.ref.WeakReference;
 import java.util.AbstractCollection;
 import java.util.AbstractSet;
 import java.util.Arrays;
@@ -22,7 +20,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-public class WeakThreadMap<V> implements Map<Thread, V> {
+public class IntegerMap<V> implements Map<Integer, V> {
 
     /**
      * The default initial capacity - MUST be a power of two.
@@ -40,12 +38,32 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
      */
     static final float DEFAULT_LOAD_FACTOR = 0.75f;
 
-    final ReferenceQueue<Thread> queue = new ReferenceQueue<Thread>();
+    static final float DEFAULT_SWITCH_TO_MAP_RATIO = 0.2f;
+
+    static final float DEFAULT_SWITCH_TO_LIST_RATIO = 0.4f;
+
+    /**
+     * Will switch back (from list to map) when the ratio (size/highest_int) is below this
+     * threshold.
+     */
+    private final float switchToMapRatio;
+
+    /**
+     * Will switch from map to list when the ratio (size/highest_int) is above this
+     * threshold.
+     */
+    private final float switchToListRatio;
 
     /**
      * The table, resized as necessary. Length MUST Always be a power of two.
      */
-    Entry<V>[] table;
+    Entry<V>[] mapTable;
+
+    V[] list;
+
+    // maintained when the map is used to notice when we can switch to list
+    private int minIndex = Integer.MAX_VALUE;
+    private int maxIndex = Integer.MIN_VALUE;
 
     /**
      * The number of key-value mappings contained in this map.
@@ -57,7 +75,7 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
      *
      * @serial
      */
-    private int threshold;
+    private int mapThreshold;
 
     /**
      * The load factor for the hash table.
@@ -84,11 +102,12 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
      *             if the initial capacity is negative or the load factor is nonpositive
      */
     @SuppressWarnings("unchecked")
-    public WeakThreadMap(final int initialCapacity, final float loadFactor) {
+    public IntegerMap(final int initialCapacity, final float loadFactor,
+            final float switchToMapRatio, final float switchToListRatio) {
         if (initialCapacity < 0)
             throw new IllegalArgumentException("Illegal initial capacity: " + initialCapacity);
         final int initCapacity = initialCapacity > MAXIMUM_CAPACITY ? MAXIMUM_CAPACITY : initialCapacity;
-        if (loadFactor <= 0 || Float.isNaN(loadFactor))
+        if (loadFactor <= 0 || (loadFactor != loadFactor)) // check for negative value or NaN
             throw new IllegalArgumentException("Illegal load factor: " + loadFactor);
 
         // Find a power of 2 >= initialCapacity
@@ -97,30 +116,29 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
             capacity <<= 1;
 
         this.loadFactor = loadFactor;
-        this.threshold = (int) (capacity * loadFactor);
-        this.table = new Entry[capacity];
+        this.mapThreshold = (int) (capacity * loadFactor);
+        this.mapTable = new Entry[capacity];
+        this.switchToMapRatio = switchToMapRatio;
+        this.switchToListRatio = switchToListRatio;
     }
 
     /**
      * Constructs an empty <tt>HashMap</tt> with the specified initial capacity and the default load factor (0.75).
      *
-     * @param initialCapacity
+     * @param initialMapCapacity
      *            the initial capacity.
      * @throws IllegalArgumentException
      *             if the initial capacity is negative.
      */
-    public WeakThreadMap(final int initialCapacity) {
-        this(initialCapacity, DEFAULT_LOAD_FACTOR);
+    public IntegerMap(final int initialMapCapacity) {
+        this(initialMapCapacity, DEFAULT_LOAD_FACTOR, DEFAULT_SWITCH_TO_MAP_RATIO, DEFAULT_SWITCH_TO_LIST_RATIO);
     }
 
     /**
      * Constructs an empty <tt>HashMap</tt> with the default initial capacity (16) and the default load factor (0.75).
      */
-    @SuppressWarnings("unchecked")
-    public WeakThreadMap() {
-        this.loadFactor = DEFAULT_LOAD_FACTOR;
-        this.threshold = (int) (DEFAULT_INITIAL_CAPACITY * DEFAULT_LOAD_FACTOR);
-        this.table = new Entry[DEFAULT_INITIAL_CAPACITY];
+    public IntegerMap() {
+        this(DEFAULT_INITIAL_CAPACITY);
     }
 
     /**
@@ -158,12 +176,21 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
      * @see #put(Object, Object)
      */
     public V get(final Object key) {
-        if (key instanceof Thread) {
-            final int index = ((int)((Thread)key).getId()) & (this.table.length-1);
-            for (Entry<V> e = this.table[index]; e != null; e = e.next)
-                if (key == e.getKey())
-                    return e.value;
+        if (key instanceof Integer)
+            return get(((Integer)key).intValue());
+        return null;
+    }
+
+    public V get(final int key) {
+        if (this.list != null) {
+            if (key >= 0 && key < this.list.length)
+                return this.list[key];
+            return null;
         }
+        final int index = key & (this.mapTable.length-1);
+        for (Entry<V> e = this.mapTable[index]; e != null; e = e.next)
+            if (key == e.getKey())
+                return e.value;
         return null;
     }
 
@@ -183,12 +210,21 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
      * mapping for the key.
      */
     final Entry<V> getEntry(final Object key) {
-        if (key instanceof Thread) {
-            final int index = ((int) ((Thread) key).getId()) & (this.table.length - 1);
-            for (Entry<V> e = this.table[index]; e != null; e = e.next)
-                if (e.getKey() == key)
-                    return e;
+        if (key instanceof Integer)
+            return getEntry(((Integer)key).intValue());
+        return null;
+    }
+
+    final Entry<V> getEntry(final int key) {
+        if (this.list != null) {
+            if (key >= 0 && key < this.list.length)
+                return new Entry<V>(key, this.list[key], null);
+            return null;
         }
+        final int index = key & (this.mapTable.length - 1);
+        for (Entry<V> e = this.mapTable[index]; e != null; e = e.next)
+            if (e.getKey() == key)
+                return e;
         return null;
     }
 
@@ -196,26 +232,72 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
      * Associates the specified value with the specified key in this map. If the map previously contained a mapping for
      * the key, the old value is replaced.
      *
-     * @param thread
+     * @param key
      *            key with which the specified value is to be associated
      * @param value
      *            value to be associated with the specified key
      * @return the previous value associated with <tt>key</tt>, or <tt>null</tt> if there was no mapping for
      *         <tt>key</tt>.
      */
-    public V put(final Thread thread, final V value) {
-        expungeStaleEntries();
-        final int index = ((int) thread.getId()) & (this.table.length - 1);
-        for (Entry<V> e = this.table[index]; e != null; e = e.next) {
-            if (e.getKey() == thread) {
+    public V put(final Integer key, final V value) {
+        return put(key.intValue(), value);
+    }
+
+    public V put(final int key, final V value) {
+        if (value == null)
+            throw new NullPointerException();
+        if (this.list != null) {
+            if (key >= 0 && key < this.list.length) {
+                final V old = this.list[key];
+                this.list[key] = value;
+                if (old == null)
+                    ++this.size;
+                return old;
+            }
+            final boolean switchToMap = key < 0
+                || (size() / key < this.switchToMapRatio);
+            if (switchToMap) {
+                switchToMap();
+                // and continue with the map code below...
+            } else {
+                final int newSize = 3 * key / 2;
+                this.list = Arrays.copyOf(this.list, newSize);
+                this.list[key] = value;
+                this.size++;
+                return null;
+            }
+        }
+        final int index = key & (this.mapTable.length - 1);
+        for (Entry<V> e = this.mapTable[index]; e != null; e = e.next) {
+            if (e.key == key) {
                 final V oldValue = e.value;
                 e.value = value;
                 return oldValue;
             }
         }
         this.modCount++;
-        addEntry(thread, value, index);
+        addEntry(key, value, index);
         return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void switchToMap() {
+        this.modCount++;
+        final int minTableSize = (int)(1.1*this.list.length/this.loadFactor);
+        int mapTableSize = 1;
+        while (mapTableSize < minTableSize)
+            mapTableSize <<= 1;
+
+        this.mapTable = new Entry[mapTableSize];
+        for (int key = 0; key < this.list.length; ++key) {
+            final V value = this.list[key];
+            if (value == null)
+                continue;
+            final int index = key & (mapTableSize-1);
+            this.mapTable[index] = new Entry<V>(key, value, this.mapTable[index]);
+        }
+        this.list = null;
+        this.modCount++;
     }
 
     /**
@@ -230,25 +312,25 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
      *            capacity is MAXIMUM_CAPACITY (in which case value is irrelevant).
      */
     @SuppressWarnings("unchecked")
-    void resize(final int newCapacity) {
-        final Entry<V>[] oldTable = this.table;
+    void resizeMap(final int newCapacity) {
+        final Entry<V>[] oldTable = this.mapTable;
         final int oldCapacity = oldTable.length;
         if (oldCapacity == MAXIMUM_CAPACITY) {
-            this.threshold = Integer.MAX_VALUE;
+            this.mapThreshold = Integer.MAX_VALUE;
             return;
         }
 
         final Entry<V>[] newTable = new Entry[newCapacity];
-        transfer(newTable);
-        this.table = newTable;
-        this.threshold = (int) (newCapacity * this.loadFactor);
+        transferMap(newTable);
+        this.mapTable = newTable;
+        this.mapThreshold = (int) (newCapacity * this.loadFactor);
     }
 
     /**
      * Transfers all entries from current table to newTable.
      */
-    private void transfer(final Entry<V>[] newTable) {
-        final Entry<V>[] src = this.table;
+    private void transferMap(final Entry<V>[] newTable) {
+        final Entry<V>[] src = this.mapTable;
         final int newCapacity = newTable.length;
         for (int j = 0; j < src.length; j++) {
             Entry<V> e = src[j];
@@ -256,7 +338,7 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
                 src[j] = null;
                 do {
                     final Entry<V> next = e.next;
-                    final int newIndex = ((int) e.getKey().getId()) & (newCapacity - 1);
+                    final int newIndex = e.key & (newCapacity - 1);
                     e.next = newTable[newIndex];
                     newTable[newIndex] = e;
                     e = next;
@@ -274,36 +356,9 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
      * @throws NullPointerException
      *             if the specified map is null
      */
-    public void putAll(final Map<? extends Thread, ? extends V> m) {
-        final int numKeysToBeAdded = m.size();
-        if (numKeysToBeAdded == 0)
-            return;
-
-        /*
-         * Expand the map if the map if the number of mappings to be added
-         * is greater than or equal to threshold.  This is conservative; the
-         * obvious condition is (m.size() + size) >= threshold, but this
-         * condition could result in a map with twice the appropriate capacity,
-         * if the keys to be added overlap with the keys already in this map.
-         * By using the conservative calculation, we subject ourself
-         * to at most one extra resize.
-         */
-        if (numKeysToBeAdded > this.threshold) {
-            int targetCapacity = (int) (numKeysToBeAdded / this.loadFactor + 1);
-            if (targetCapacity > MAXIMUM_CAPACITY)
-                targetCapacity = MAXIMUM_CAPACITY;
-            int newCapacity = this.table.length;
-            while (newCapacity < targetCapacity)
-                newCapacity <<= 1;
-            if (newCapacity > this.table.length)
-                resize(newCapacity);
-        }
-
-        for (final Iterator<? extends Map.Entry<? extends Thread, ? extends V>> i = m.entrySet().iterator(); i
-                .hasNext();) {
-            final Map.Entry<? extends Thread, ? extends V> e = i.next();
+    public void putAll(final Map<? extends Integer, ? extends V> m) {
+        for (final Map.Entry<? extends Integer, ? extends V> e: m.entrySet())
             put(e.getKey(), e.getValue());
-        }
     }
 
     /**
@@ -316,81 +371,74 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
      *         <tt>null</tt> with <tt>key</tt>.)
      */
     public V remove(final Object key) {
-        final Entry<V> e = removeEntryForKey(key);
-        return (e == null ? null : e.value);
+        if (key instanceof Integer)
+            return remove(((Integer)key).intValue());
+        return null;
     }
 
-    /**
-     * Removes and returns the entry associated with the specified key in the HashMap. Returns null if the HashMap
-     * contains no mapping for this key.
-     */
-    final Entry<V> removeEntryForKey(final Object key) {
-        if (!(key instanceof Thread))
-            return null;
-        final Thread thread = (Thread) key;
-        final int index = ((int) thread.getId()) & (this.table.length - 1);
-        Entry<V> prev = this.table[index];
+    public V remove(final int key) {
+        if (this.list != null) {
+            if (key < 0 || key >= this.list.length)
+                return null;
+            final V old = this.list[key];
+            this.list[key] = null;
+            this.size--;
+            return old;
+        }
+
+        final int index = key & (this.mapTable.length - 1);
+        Entry<V> prev = this.mapTable[index];
         Entry<V> e = prev;
 
         while (e != null) {
             final Entry<V> next = e.next;
-            final Thread k = e.getKey();
-            if (k == key) {
+            if (e.key == key) {
                 this.modCount++;
                 this.size--;
                 if (prev == e)
-                    this.table[index] = next;
+                    this.mapTable[index] = next;
                 else
                     prev.next = next;
-                return e;
+                if (e.key == this.minIndex || e.key == this.maxIndex) {
+                    recomputeMinMaxIndexes();
+                }
+                return e.value;
             }
             prev = e;
             e = next;
         }
 
-        return e;
+        return null;
     }
 
-    /**
-     * Special version of remove for EntrySet.
-     */
-    final Entry<V> removeMapping(final Map.Entry<Thread, V> entry) {
-        final Thread thread = entry.getKey();
-        final int index = ((int) thread.getId()) & (this.table.length - 1);
-        Entry<V> prev = this.table[index];
-        Entry<V> e = prev;
-
-        while (e != null) {
-            final Entry<V> next = e.next;
-            if (e.getKey() == entry.getKey()) {
-                this.modCount++;
-                this.size--;
-                if (prev == e)
-                    this.table[index] = next;
-                else
-                    prev.next = next;
-                return e;
+    private void recomputeMinMaxIndexes() {
+        this.minIndex = Integer.MAX_VALUE;
+        this.maxIndex = Integer.MIN_VALUE;
+        for (Entry<V> e: this.mapTable) {
+            while (e != null) {
+                if (e.key < this.minIndex)
+                    this.minIndex = e.key;
+                if (e.key > this.maxIndex)
+                    this.maxIndex = e.key;
+                e = e.next;
             }
-            prev = e;
-            e = next;
         }
-
-        return e;
     }
 
     /**
      * Removes all of the mappings from this map. The map will be empty after this call returns.
      */
+    @SuppressWarnings("unchecked")
     public void clear() {
-        // clear out the reference queue
-        while (this.queue.poll() != null)
-            continue;
-
         this.modCount++;
-        final Entry<V>[] tab = this.table;
-        for (int i = 0; i < tab.length; i++)
-            tab[i] = null;
         this.size = 0;
+        if (this.list != null) {
+            this.list = (V[]) new Object[this.list.length];
+        } else {
+            this.mapTable = new Entry[this.mapTable.length];
+            this.minIndex = Integer.MAX_VALUE;
+            this.maxIndex = Integer.MIN_VALUE;
+        }
     }
 
     /**
@@ -401,7 +449,17 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
      * @return <tt>true</tt> if this map maps one or more keys to the specified value
      */
     public boolean containsValue(final Object value) {
-        final Entry<V>[] tab = this.table;
+        if (value == null)
+            return false;
+
+        if (this.list != null) {
+            for (final V val: this.list)
+                if (val != null && val.equals(value))
+                    return true;
+            return false;
+        }
+
+        final Entry<V>[] tab = this.mapTable;
         for (int i = 0; i < tab.length; i++)
             for (Entry<V> e = tab[i]; e != null; e = e.next)
                 if (value.equals(e.value))
@@ -409,10 +467,9 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
         return false;
     }
 
-    private static final class Entry<V> extends WeakReference<Thread> implements Map.Entry<Thread, V> {
+    private static final class Entry<V> implements Map.Entry<Integer, V> {
 
-        // needed only in expungeStaleEntries()
-        final int id;
+        final int key;
 
         V value;
 
@@ -421,15 +478,14 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
         /**
          * Creates new entry.
          */
-        Entry(final Thread thread, final V value, final Entry<V> next, final ReferenceQueue<Thread> queue) {
-            super(thread, queue);
-            this.id = (int) thread.getId();
+        Entry(final int key, final V value, final Entry<V> next) {
+            this.key = key;
             this.value = value;
             this.next = next;
         }
 
-        public final Thread getKey() {
-            return get();
+        public final Integer getKey() {
+            return this.key;
         }
 
         public final V getValue() {
@@ -447,9 +503,9 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
             if (!(o instanceof Map.Entry))
                 return false;
             final Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
-            final Thread k1 = getKey();
+            final Integer k1 = getKey();
             final Object k2 = e.getKey();
-            if (k1 == k2) {
+            if (k1 == null ? k2 == null : k1.equals(k2)) {
                 final Object v1 = getValue();
                 final Object v2 = e.getValue();
                 if (v1 == v2 || (v1 != null && v1.equals(v2)))
@@ -460,13 +516,12 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
 
         @Override
         public final int hashCode() {
-            final Thread t = getKey();
-            return (t == null ? 0 : t.hashCode()) ^ (this.value == null ? 0 : this.value.hashCode());
+            return this.key ^ (this.value == null ? 0 : this.value.hashCode());
         }
 
         @Override
         public final String toString() {
-            return getKey() + "=" + getValue();
+            return this.key + "=" + getValue();
         }
 
     }
@@ -474,43 +529,52 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
     /**
      * Adds a new entry with the specified key, value and hash code to the specified bucket. It is the responsibility of
      * this method to resize the table if appropriate.
-     *
-     * Subclass overrides this to alter the behavior of put method.
      */
-    void addEntry(final Thread key, final V value, final int bucketIndex) {
-        this.table[bucketIndex] = new Entry<V>(key, value, this.table[bucketIndex], this.queue);
-        if (this.size++ >= this.threshold)
-            resize(2 * this.table.length);
+    private void addEntry(final int key, final V value, final int index) {
+        this.mapTable[index] = new Entry<V>(key, value, this.mapTable[index]);
+        this.size++;
+        if (key < this.minIndex)
+            this.minIndex = key;
+        if (key > this.maxIndex)
+            this.maxIndex = key;
+        if (checkSwitchToList())
+            return;
+        if (this.size >= this.mapThreshold)
+            resizeMap(2 * this.mapTable.length);
     }
 
-    /**
-     * Expunges stale entries from the table.
-     */
+    private boolean checkSwitchToList() {
+        if (this.minIndex >= 0 && this.size / this.maxIndex > this.switchToListRatio) {
+            switchToList();
+            return true;
+        }
+        return false;
+    }
+
     @SuppressWarnings("unchecked")
-    private void expungeStaleEntries() {
-        Entry<V> e;
-        while ((e = (Entry<V>) this.queue.poll()) != null) {
-            Entry<V> prev = this.table[e.id];
-            Entry<V> p = prev;
-            while (p != null) {
-                final Entry<V> next = p.next;
-                if (p == e) {
-                    if (prev == e)
-                        this.table[e.id] = next;
-                    else
-                        prev.next = next;
-                    e.next = null; // Help GC
-                    e.value = null; // " "
-                    this.size--;
-                    break;
-                }
-                prev = p;
-                p = next;
+    private void switchToList() {
+        this.modCount++;
+        final int minListSize = (int) (1.1*this.maxIndex+1);
+        int listSize = 1;
+        while (listSize < minListSize)
+            listSize <<= 1;
+
+        this.list = (V[]) new Object[listSize];
+        for (Entry<V> e: this.mapTable) {
+            while (e != null) {
+                if (e.key >= this.minIndex && e.key <= this.maxIndex)
+                    throw new ConcurrentModificationException();
+                this.list[e.key] = e.value;
+                e = e.next;
             }
         }
+        this.mapTable = null;
+        this.minIndex = Integer.MAX_VALUE;
+        this.maxIndex = Integer.MIN_VALUE;
+        this.modCount++;
     }
 
-    private abstract class HashIterator<E> implements Iterator<E> {
+    private class MapIterator implements Iterator<Map.Entry<Integer, V>> {
         Entry<V> next; // next entry to return
 
         int expectedModCount; // For fast-fail
@@ -519,29 +583,25 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
 
         Entry<V> current; // current entry
 
-        HashIterator() {
-            this.expectedModCount = WeakThreadMap.this.modCount;
-            if (WeakThreadMap.this.size > 0) { // advance to first entry
-                final Entry<V>[] t = WeakThreadMap.this.table;
+        MapIterator() {
+            this.expectedModCount = IntegerMap.this.modCount;
+            if (IntegerMap.this.size > 0) { // advance to first entry
+                final Entry<V>[] t = IntegerMap.this.mapTable;
                 while (this.index < t.length && (this.next = t[this.index++]) == null) {
                     continue;
                 }
             }
         }
 
-        public final boolean hasNext() {
-            return this.next != null;
-        }
-
-        final Entry<V> nextEntry() {
-            if (WeakThreadMap.this.modCount != this.expectedModCount)
+        public Map.Entry<Integer, V> next() {
+            if (IntegerMap.this.modCount != this.expectedModCount)
                 throw new ConcurrentModificationException();
             final Entry<V> e = this.next;
             if (e == null)
                 throw new NoSuchElementException();
 
             if ((this.next = e.next) == null) {
-                final Entry<V>[] t = WeakThreadMap.this.table;
+                final Entry<V>[] t = IntegerMap.this.mapTable;
                 while (this.index < t.length && (this.next = t[this.index++]) == null)
                     continue;
             }
@@ -549,35 +609,21 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
             return e;
         }
 
+        public final boolean hasNext() {
+            return this.next != null;
+        }
+
         public void remove() {
             if (this.current == null)
                 throw new IllegalStateException();
-            if (WeakThreadMap.this.modCount != this.expectedModCount)
+            if (IntegerMap.this.modCount != this.expectedModCount)
                 throw new ConcurrentModificationException();
-            final Object k = this.current.getKey();
+            final int k = this.current.key;
             this.current = null;
-            WeakThreadMap.this.removeEntryForKey(k);
-            this.expectedModCount = WeakThreadMap.this.modCount;
+            IntegerMap.this.remove(k);
+            this.expectedModCount = IntegerMap.this.modCount;
         }
 
-    }
-
-    final class ValueIterator extends HashIterator<V> {
-        public V next() {
-            return nextEntry().value;
-        }
-    }
-
-    final class KeyIterator extends HashIterator<Thread> {
-        public Thread next() {
-            return nextEntry().getKey();
-        }
-    }
-
-    final class EntryIterator extends HashIterator<Map.Entry<Thread, V>> {
-        public Map.Entry<Thread, V> next() {
-            return nextEntry();
-        }
     }
 
     /**
@@ -588,21 +634,77 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
      * <tt>Iterator.remove</tt>, <tt>Set.remove</tt>, <tt>removeAll</tt>, <tt>retainAll</tt>, and
      * <tt>clear</tt> operations. It does not support the <tt>add</tt> or <tt>addAll</tt> operations.
      */
-    public Set<Thread> keySet() {
-        return new AbstractSet<Thread>() {
+    public Set<Integer> keySet() {
+        return new AbstractSet<Integer>() {
             @Override
-            public Iterator<Thread> iterator() {
-                return new KeyIterator();
+            public Iterator<Integer> iterator() {
+                if (IntegerMap.this.list != null) {
+                    return new Iterator<Integer>() {
+
+                        int nextCursor = getNextCursor(0);
+                        int expectedModCount = IntegerMap.this.modCount;
+                        int lastKey = -1;
+
+                        private int getNextCursor(final int i) {
+                            int next = i;
+                            while (next < IntegerMap.this.list.length && IntegerMap.this.list[next] == null)
+                                ++next;
+                            return next;
+                        }
+
+                        public boolean hasNext() {
+                            if (this.expectedModCount != IntegerMap.this.modCount)
+                                throw new ConcurrentModificationException();
+                            return this.nextCursor < IntegerMap.this.list.length;
+                        }
+
+                        public Integer next() {
+                            if (this.expectedModCount != IntegerMap.this.modCount)
+                                throw new ConcurrentModificationException();
+                            if (!hasNext())
+                                throw new NoSuchElementException();
+                            this.lastKey = this.nextCursor;
+                            this.nextCursor = getNextCursor(this.nextCursor+1);
+                            return this.lastKey;
+                        }
+
+                        public void remove() {
+                            if (this.expectedModCount != IntegerMap.this.modCount)
+                                throw new ConcurrentModificationException();
+                            if (this.lastKey == -1)
+                                throw new IllegalStateException();
+                            IntegerMap.this.remove(this.lastKey);
+                        }
+
+                    };
+                }
+                // else:
+
+                return new Iterator<Integer>() {
+                    private final Iterator<Map.Entry<Integer, V>> i = new MapIterator();
+
+                    public boolean hasNext() {
+                        return this.i.hasNext();
+                    }
+
+                    public Integer next() {
+                        return this.i.next().getKey();
+                    }
+
+                    public void remove() {
+                        this.i.remove();
+                    }
+                };
             }
 
             @Override
             public int size() {
-                return WeakThreadMap.this.size();
+                return IntegerMap.this.size();
             }
 
             @Override
             public boolean contains(final Object k) {
-                return WeakThreadMap.this.containsKey(k);
+                return IntegerMap.this.containsKey(k);
             }
         };
     }
@@ -620,17 +722,73 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
         return new AbstractCollection<V>() {
             @Override
             public Iterator<V> iterator() {
-                return new ValueIterator();
+                if (IntegerMap.this.list != null) {
+                    return new Iterator<V>() {
+
+                        int nextCursor = getNextCursor(0);
+                        int expectedModCount = IntegerMap.this.modCount;
+                        int lastKey = -1;
+
+                        private int getNextCursor(final int i) {
+                            int next = i;
+                            while (next < IntegerMap.this.list.length && IntegerMap.this.list[next] == null)
+                                ++next;
+                            return next;
+                        }
+
+                        public boolean hasNext() {
+                            if (this.expectedModCount != IntegerMap.this.modCount)
+                                throw new ConcurrentModificationException();
+                            return this.nextCursor < IntegerMap.this.list.length;
+                        }
+
+                        public V next() {
+                            if (this.expectedModCount != IntegerMap.this.modCount)
+                                throw new ConcurrentModificationException();
+                            if (!hasNext())
+                                throw new NoSuchElementException();
+                            this.lastKey = this.nextCursor;
+                            this.nextCursor = getNextCursor(this.nextCursor+1);
+                            return IntegerMap.this.list[this.lastKey];
+                        }
+
+                        public void remove() {
+                            if (this.expectedModCount != IntegerMap.this.modCount)
+                                throw new ConcurrentModificationException();
+                            if (this.lastKey == -1)
+                                throw new IllegalStateException();
+                            IntegerMap.this.remove(this.lastKey);
+                        }
+
+                    };
+                }
+                // else:
+
+                return new Iterator<V>() {
+                    private final Iterator<Map.Entry<Integer, V>> i = new MapIterator();
+
+                    public boolean hasNext() {
+                        return this.i.hasNext();
+                    }
+
+                    public V next() {
+                        return this.i.next().getValue();
+                    }
+
+                    public void remove() {
+                        this.i.remove();
+                    }
+                };
             }
 
             @Override
             public int size() {
-                return WeakThreadMap.this.size();
+                return IntegerMap.this.size();
             }
 
             @Override
             public boolean contains(final Object v) {
-                return WeakThreadMap.this.containsValue(v);
+                return IntegerMap.this.containsValue(v);
             }
         };
     }
@@ -646,14 +804,56 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
      *
      * @return a set view of the mappings contained in this map
      */
-    public Set<Map.Entry<Thread, V>> entrySet() {
+    public Set<Map.Entry<Integer, V>> entrySet() {
         return new EntrySet();
     }
 
-    final class EntrySet implements Set<Map.Entry<Thread, V>> {
+    final class EntrySet implements Set<Map.Entry<Integer, V>> {
 
-        public Iterator<Map.Entry<Thread, V>> iterator() {
-            return new EntryIterator();
+        public Iterator<Map.Entry<Integer, V>> iterator() {
+            if (IntegerMap.this.list != null) {
+                return new Iterator<Map.Entry<Integer, V>>() {
+
+                    int nextCursor = getNextCursor(0);
+                    int expectedModCount = IntegerMap.this.modCount;
+                    int lastKey = -1;
+
+                    private int getNextCursor(final int i) {
+                        int next = i;
+                        while (next < IntegerMap.this.list.length && IntegerMap.this.list[next] == null)
+                            ++next;
+                        return next;
+                    }
+
+                    public boolean hasNext() {
+                        if (this.expectedModCount != IntegerMap.this.modCount)
+                            throw new ConcurrentModificationException();
+                        return this.nextCursor < IntegerMap.this.list.length;
+                    }
+
+                    public Entry<V> next() {
+                        if (this.expectedModCount != IntegerMap.this.modCount)
+                            throw new ConcurrentModificationException();
+                        if (!hasNext())
+                            throw new NoSuchElementException();
+                        this.lastKey = this.nextCursor;
+                        this.nextCursor = getNextCursor(this.nextCursor+1);
+                        return new Entry<V>(this.lastKey, IntegerMap.this.list[this.lastKey], null);
+                    }
+
+                    public void remove() {
+                        if (this.expectedModCount != IntegerMap.this.modCount)
+                            throw new ConcurrentModificationException();
+                        if (this.lastKey == -1)
+                            throw new IllegalStateException();
+                        IntegerMap.this.remove(this.lastKey);
+                    }
+
+                };
+            }
+            // else:
+
+            return new MapIterator();
         }
 
         @SuppressWarnings("unchecked")
@@ -667,24 +867,24 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
 
         @SuppressWarnings("unchecked")
         public boolean remove(final Object o) {
-            if (o instanceof Map.Entry)
-                return removeMapping((Map.Entry<Thread, V>) o) != null;
+            if (o instanceof Entry)
+                return IntegerMap.this.remove(((Entry)o).key) != null;
             return false;
         }
 
         public int size() {
-            return WeakThreadMap.this.size;
+            return IntegerMap.this.size;
         }
 
         public void clear() {
-            WeakThreadMap.this.clear();
+            IntegerMap.this.clear();
         }
 
-        public boolean add(final java.util.Map.Entry<Thread, V> e) {
+        public boolean add(final java.util.Map.Entry<Integer, V> e) {
             throw new UnsupportedOperationException();
         }
 
-        public boolean addAll(final Collection<? extends java.util.Map.Entry<Thread, V>> c) {
+        public boolean addAll(final Collection<? extends Map.Entry<Integer, V>> c) {
             throw new UnsupportedOperationException();
         }
 
@@ -696,7 +896,7 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
         }
 
         public boolean isEmpty() {
-            return WeakThreadMap.this.isEmpty();
+            return IntegerMap.this.isEmpty();
         }
 
         public boolean removeAll(final Collection<?> c) {
@@ -708,7 +908,7 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
         }
 
         public boolean retainAll(final Collection<?> c) {
-            final Iterator<Map.Entry<Thread, V>> e = iterator();
+            final Iterator<Map.Entry<Integer, V>> e = iterator();
             boolean changed = false;
             while (e.hasNext())
                 if (!c.contains(e.next())) {
@@ -720,7 +920,7 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
 
         public Object[] toArray() {
             final Object[] r = new Object[size()];
-            final Iterator<Map.Entry<Thread, V>> it = iterator();
+            final Iterator<Map.Entry<Integer, V>> it = iterator();
             for (int i = 0; i < r.length; i++) {
                 if (!it.hasNext()) // fewer elements than expected
                     return Arrays.copyOf(r, i);
@@ -733,7 +933,7 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
         public <T> T[] toArray(final T[] a) {
             final T[] r = a.length >= size() ? a : (T[]) java.lang.reflect.Array.newInstance(a.getClass().getComponentType(),
                     size());
-            final Iterator<Map.Entry<Thread, V>> it = iterator();
+            final Iterator<Map.Entry<Integer, V>> it = iterator();
 
             for (int i = 0; i < r.length; i++) {
                 if (!it.hasNext()) { // fewer elements than expected
