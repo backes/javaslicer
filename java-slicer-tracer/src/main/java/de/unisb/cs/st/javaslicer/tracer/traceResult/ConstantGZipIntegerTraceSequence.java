@@ -32,7 +32,7 @@ public class ConstantGZipIntegerTraceSequence extends ConstantIntegerTraceSequen
         int read;
         int lastVal = 0;
         while ((read = gzipIn.read(nextInt)) == 4) {
-            read = (nextInt[0] << 24) | (nextInt[1] << 16) | (nextInt[2] << 8) | nextInt[3];
+            read = (nextInt[0] << 24) + (nextInt[1] << 16) + (nextInt[2] << 8) + nextInt[3];
             if (dataCnt != 0) {
                 read += lastVal;
             }

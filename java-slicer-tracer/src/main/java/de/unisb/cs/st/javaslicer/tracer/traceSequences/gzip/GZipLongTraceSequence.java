@@ -1,6 +1,7 @@
 package de.unisb.cs.st.javaslicer.tracer.traceSequences.gzip;
 
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.zip.GZIPOutputStream;
@@ -17,6 +18,7 @@ public class GZipLongTraceSequence extends LongTraceSequence {
 
     private ByteArrayOutputStream rawOut;
     private GZIPOutputStream zipOut;
+    private DataOutputStream dataOut;
 
     public GZipLongTraceSequence(final int index) {
         super(index);
@@ -33,27 +35,17 @@ public class GZipLongTraceSequence extends LongTraceSequence {
                 // should never occur
                 throw new RuntimeException(e);
             }
+            this.dataOut = new DataOutputStream(this.zipOut);
             this.started = true;
         } else if (this.ready) {
             throw new RuntimeException("Trace cannot be extended any more");
         } else {
             diffVal -= this.lastValue;
-            this.lastValue = value;
         }
+        this.lastValue = value;
 
-        final byte[] buf = new byte[8];
-        if (diffVal != 0) {
-            buf[0] = (byte) (diffVal >> 56);
-            buf[1] = (byte) (diffVal >> 48);
-            buf[2] = (byte) (diffVal >> 40);
-            buf[3] = (byte) (diffVal >> 32);
-            buf[4] = (byte) (diffVal >> 24);
-            buf[5] = (byte) (diffVal >> 16);
-            buf[6] = (byte) (diffVal >> 8);
-            buf[7] = (byte) diffVal;
-        }
         try {
-            this.zipOut.write(buf, 0, 8);
+            this.dataOut.writeLong(diffVal);
         } catch (final IOException e) {
             // should never occur
             throw new RuntimeException(e);
@@ -66,7 +58,7 @@ public class GZipLongTraceSequence extends LongTraceSequence {
             data = new byte[0];
         } else {
             if (!this.ready) {
-                this.zipOut.close();
+                this.dataOut.close();
                 this.ready = true;
             }
             data = this.rawOut.toByteArray();

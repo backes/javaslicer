@@ -164,12 +164,10 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
             // the top two words on the stack are the array index and the array reference
             super.visitInsn(DUP2);
             pushIntOnStack(indexTraceSeqIndex);
-            //super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceInteger", "(II)V");
-            super.visitInsn(POP2);
+            super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceInteger", "(II)V");
             pushIntOnStack(arrayTraceSeqIndex);
-            //super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceObject",
-            //        "(Ljava/lang/Object;I)V");
-            super.visitInsn(POP2);
+            super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceObject",
+                    "(Ljava/lang/Object;I)V");
             break;
 
         // array store:
@@ -193,9 +191,8 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
             pushIntOnStack(indexTraceSeqIndex);
             super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceInteger", "(II)V");
             pushIntOnStack(arrayTraceSeqIndex);
-            //super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceObject",
-            //        "(Ljava/lang/Object;I)V");
-            super.visitInsn(POP2);
+            super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceObject",
+                    "(Ljava/lang/Object;I)V");
             break;
 
         // stack manipulation:

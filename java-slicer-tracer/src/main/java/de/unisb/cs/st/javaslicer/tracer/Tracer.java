@@ -290,14 +290,16 @@ public class Tracer implements ClassFileTransformer {
     }
 
     public static void setLastInstructionIndex(final int instructionIndex) {
+        /*
         final Tracer tracer = getInstance();
         if (!tracer.tracingStarted)
             return;
         if (tracer.tracingReady)
             return;
         tracer.tracingStarted = false;
+        */
         getThreadTracer().setLastInstructionIndex(instructionIndex);
-        tracer.tracingStarted = true;
+        //tracer.tracingStarted = true;
     }
 
     public static int getLastInstructionIndex() {

@@ -43,14 +43,12 @@ public class IntegerMap<V> implements Map<Integer, V> {
     static final float DEFAULT_SWITCH_TO_LIST_RATIO = 0.4f;
 
     /**
-     * Will switch back (from list to map) when the ratio (size/highest_int) is below this
-     * threshold.
+     * Will switch back (from list to map) when the ratio (size/highest_int) is below this threshold.
      */
     private final float switchToMapRatio;
 
     /**
-     * Will switch from map to list when the ratio (size/highest_int) is above this
-     * threshold.
+     * Will switch from map to list when the ratio (size/highest_int) is above this threshold.
      */
     private final float switchToListRatio;
 
@@ -63,6 +61,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
 
     // maintained when the map is used to notice when we can switch to list
     private int minIndex = Integer.MAX_VALUE;
+
     private int maxIndex = Integer.MIN_VALUE;
 
     /**
@@ -102,8 +101,8 @@ public class IntegerMap<V> implements Map<Integer, V> {
      *             if the initial capacity is negative or the load factor is nonpositive
      */
     @SuppressWarnings("unchecked")
-    public IntegerMap(final int initialCapacity, final float loadFactor,
-            final float switchToMapRatio, final float switchToListRatio) {
+    public IntegerMap(final int initialCapacity, final float loadFactor, final float switchToMapRatio,
+            final float switchToListRatio) {
         if (initialCapacity < 0)
             throw new IllegalArgumentException("Illegal initial capacity: " + initialCapacity);
         final int initCapacity = initialCapacity > MAXIMUM_CAPACITY ? MAXIMUM_CAPACITY : initialCapacity;
@@ -177,7 +176,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
      */
     public V get(final Object key) {
         if (key instanceof Integer)
-            return get(((Integer)key).intValue());
+            return get(((Integer) key).intValue());
         return null;
     }
 
@@ -187,7 +186,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
                 return this.list[key];
             return null;
         }
-        final int index = key & (this.mapTable.length-1);
+        final int index = key & (this.mapTable.length - 1);
         for (Entry<V> e = this.mapTable[index]; e != null; e = e.next)
             if (key == e.getKey())
                 return e.value;
@@ -211,7 +210,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
      */
     final Entry<V> getEntry(final Object key) {
         if (key instanceof Integer)
-            return getEntry(((Integer)key).intValue());
+            return getEntry(((Integer) key).intValue());
         return null;
     }
 
@@ -254,8 +253,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
                     ++this.size;
                 return old;
             }
-            final boolean switchToMap = key < 0
-                || (size() / key < this.switchToMapRatio);
+            final boolean switchToMap = key < 0 || (size() / key < this.switchToMapRatio);
             if (switchToMap) {
                 switchToMap();
                 // and continue with the map code below...
@@ -283,7 +281,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
     @SuppressWarnings("unchecked")
     private void switchToMap() {
         this.modCount++;
-        final int minTableSize = (int)(1.1*this.list.length/this.loadFactor);
+        final int minTableSize = (int) (1.1 * this.list.length / this.loadFactor);
         int mapTableSize = 1;
         while (mapTableSize < minTableSize)
             mapTableSize <<= 1;
@@ -293,7 +291,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
             final V value = this.list[key];
             if (value == null)
                 continue;
-            final int index = key & (mapTableSize-1);
+            final int index = key & (mapTableSize - 1);
             this.mapTable[index] = new Entry<V>(key, value, this.mapTable[index]);
         }
         this.list = null;
@@ -357,7 +355,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
      *             if the specified map is null
      */
     public void putAll(final Map<? extends Integer, ? extends V> m) {
-        for (final Map.Entry<? extends Integer, ? extends V> e: m.entrySet())
+        for (final Map.Entry<? extends Integer, ? extends V> e : m.entrySet())
             put(e.getKey(), e.getValue());
     }
 
@@ -372,7 +370,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
      */
     public V remove(final Object key) {
         if (key instanceof Integer)
-            return remove(((Integer)key).intValue());
+            return remove(((Integer) key).intValue());
         return null;
     }
 
@@ -414,7 +412,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
     private void recomputeMinMaxIndexes() {
         this.minIndex = Integer.MAX_VALUE;
         this.maxIndex = Integer.MIN_VALUE;
-        for (Entry<V> e: this.mapTable) {
+        for (Entry<V> e : this.mapTable) {
             while (e != null) {
                 if (e.key < this.minIndex)
                     this.minIndex = e.key;
@@ -453,7 +451,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
             return false;
 
         if (this.list != null) {
-            for (final V val: this.list)
+            for (final V val : this.list)
                 if (val != null && val.equals(value))
                     return true;
             return false;
@@ -554,13 +552,13 @@ public class IntegerMap<V> implements Map<Integer, V> {
     @SuppressWarnings("unchecked")
     private void switchToList() {
         this.modCount++;
-        final int minListSize = (int) (1.1*this.maxIndex+1);
+        final int minListSize = (int) (1.1 * this.maxIndex + 1);
         int listSize = 1;
         while (listSize < minListSize)
             listSize <<= 1;
 
         this.list = (V[]) new Object[listSize];
-        for (Entry<V> e: this.mapTable) {
+        for (Entry<V> e : this.mapTable) {
             while (e != null) {
                 if (e.key >= this.minIndex && e.key <= this.maxIndex)
                     throw new ConcurrentModificationException();
@@ -642,7 +640,9 @@ public class IntegerMap<V> implements Map<Integer, V> {
                     return new Iterator<Integer>() {
 
                         int nextCursor = getNextCursor(0);
+
                         int expectedModCount = IntegerMap.this.modCount;
+
                         int lastKey = -1;
 
                         private int getNextCursor(final int i) {
@@ -664,7 +664,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
                             if (!hasNext())
                                 throw new NoSuchElementException();
                             this.lastKey = this.nextCursor;
-                            this.nextCursor = getNextCursor(this.nextCursor+1);
+                            this.nextCursor = getNextCursor(this.nextCursor + 1);
                             return this.lastKey;
                         }
 
@@ -726,7 +726,9 @@ public class IntegerMap<V> implements Map<Integer, V> {
                     return new Iterator<V>() {
 
                         int nextCursor = getNextCursor(0);
+
                         int expectedModCount = IntegerMap.this.modCount;
+
                         int lastKey = -1;
 
                         private int getNextCursor(final int i) {
@@ -748,7 +750,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
                             if (!hasNext())
                                 throw new NoSuchElementException();
                             this.lastKey = this.nextCursor;
-                            this.nextCursor = getNextCursor(this.nextCursor+1);
+                            this.nextCursor = getNextCursor(this.nextCursor + 1);
                             return IntegerMap.this.list[this.lastKey];
                         }
 
@@ -815,7 +817,9 @@ public class IntegerMap<V> implements Map<Integer, V> {
                 return new Iterator<Map.Entry<Integer, V>>() {
 
                     int nextCursor = getNextCursor(0);
+
                     int expectedModCount = IntegerMap.this.modCount;
+
                     int lastKey = -1;
 
                     private int getNextCursor(final int i) {
@@ -837,7 +841,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
                         if (!hasNext())
                             throw new NoSuchElementException();
                         this.lastKey = this.nextCursor;
-                        this.nextCursor = getNextCursor(this.nextCursor+1);
+                        this.nextCursor = getNextCursor(this.nextCursor + 1);
                         return new Entry<V>(this.lastKey, IntegerMap.this.list[this.lastKey], null);
                     }
 
@@ -868,7 +872,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
         @SuppressWarnings("unchecked")
         public boolean remove(final Object o) {
             if (o instanceof Entry)
-                return IntegerMap.this.remove(((Entry)o).key) != null;
+                return IntegerMap.this.remove(((Entry) o).key) != null;
             return false;
         }
 
@@ -889,7 +893,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
         }
 
         public boolean containsAll(final Collection<?> c) {
-            for (final Object o: c)
+            for (final Object o : c)
                 if (!contains(o))
                     return false;
             return true;
@@ -901,7 +905,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
 
         public boolean removeAll(final Collection<?> c) {
             boolean changed = false;
-            for (final Object o: c)
+            for (final Object o : c)
                 if (remove(o))
                     changed = true;
             return changed;
@@ -913,7 +917,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
             while (e.hasNext())
                 if (!c.contains(e.next())) {
                     e.remove();
-                    changed  = true;
+                    changed = true;
                 }
             return changed;
         }
@@ -931,8 +935,8 @@ public class IntegerMap<V> implements Map<Integer, V> {
 
         @SuppressWarnings("unchecked")
         public <T> T[] toArray(final T[] a) {
-            final T[] r = a.length >= size() ? a : (T[]) java.lang.reflect.Array.newInstance(a.getClass().getComponentType(),
-                    size());
+            final T[] r = a.length >= size() ? a : (T[]) java.lang.reflect.Array.newInstance(a.getClass()
+                    .getComponentType(), size());
             final Iterator<Map.Entry<Integer, V>> it = iterator();
 
             for (int i = 0; i < r.length; i++) {
@@ -948,14 +952,15 @@ public class IntegerMap<V> implements Map<Integer, V> {
         }
 
         /**
-         * Reallocates the array being used within toArray when the iterator
-         * returned more elements than expected, and finishes filling it from
-         * the iterator.
+         * Reallocates the array being used within toArray when the iterator returned more elements than expected, and
+         * finishes filling it from the iterator.
          *
-         * @param r the array, replete with previously stored elements
-         * @param it the in-progress iterator over this collection
-         * @return array containing the elements in the given array, plus any
-         *         further elements returned by the iterator, trimmed to size
+         * @param r
+         *            the array, replete with previously stored elements
+         * @param it
+         *            the in-progress iterator over this collection
+         * @return array containing the elements in the given array, plus any further elements returned by the iterator,
+         *         trimmed to size
          */
         @SuppressWarnings("unchecked")
         private <T> T[] finishToArray(final T[] r, final Iterator<?> it) {
@@ -978,6 +983,64 @@ public class IntegerMap<V> implements Map<Integer, V> {
             return (i == a.length) ? a : Arrays.copyOf(a, i);
         }
 
+    }
+
+    @Override
+    public String toString() {
+        final Iterator<Map.Entry<Integer, V>> i = entrySet().iterator();
+        if (!i.hasNext())
+            return "{}";
+
+        final StringBuilder sb = new StringBuilder();
+        sb.append('{');
+        while (true) {
+            final Map.Entry<Integer, V> e = i.next();
+            final Integer key = e.getKey();
+            final V value = e.getValue();
+            sb.append(key).append('=').append(value == this ? "(this Map)" : value);
+            if (!i.hasNext())
+                return sb.append('}').toString();
+            sb.append(", ");
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        int h = 0;
+        final Iterator<Map.Entry<Integer, V>> i = entrySet().iterator();
+        while (i.hasNext())
+            h += i.next().hashCode();
+        return h;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public boolean equals(final Object o) {
+        if (o == this)
+            return true;
+
+        if (!(o instanceof Map))
+            return false;
+        final Map<Integer, V> m = (Map<Integer, V>) o;
+        if (m.size() != size())
+            return false;
+
+        try {
+            final Iterator<Map.Entry<Integer, V>> i = entrySet().iterator();
+            while (i.hasNext()) {
+                final Map.Entry<Integer, V> e = i.next();
+                final Integer key = e.getKey();
+                final V value = e.getValue();
+                if (!value.equals(m.get(key)))
+                    return false;
+            }
+        } catch (final ClassCastException unused) {
+            return false;
+        } catch (final NullPointerException unused) {
+            return false;
+        }
+
+        return true;
     }
 
 }

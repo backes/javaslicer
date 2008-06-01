@@ -1,6 +1,7 @@
 package de.unisb.cs.st.javaslicer.tracer.traceSequences.gzip;
 
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.zip.GZIPOutputStream;
@@ -17,6 +18,7 @@ public class GZipIntegerTraceSequence extends IntegerTraceSequence {
 
     private ByteArrayOutputStream rawOut;
     private GZIPOutputStream zipOut;
+    private DataOutputStream dataOut;
 
     public GZipIntegerTraceSequence(final int index) {
         super(index);
@@ -33,23 +35,17 @@ public class GZipIntegerTraceSequence extends IntegerTraceSequence {
                 // should never occur
                 throw new RuntimeException(e);
             }
+            this.dataOut = new DataOutputStream(this.zipOut);
             this.started = true;
         } else if (this.ready) {
             throw new RuntimeException("Trace cannot be extended any more");
         } else {
             diffVal -= this.lastValue;
-            this.lastValue = value;
         }
+        this.lastValue = value;
 
-        final byte[] buf = new byte[4];
-        if (diffVal != 0) {
-            buf[0] = (byte) (diffVal >> 24);
-            buf[1] = (byte) (diffVal >> 16);
-            buf[2] = (byte) (diffVal >> 8);
-            buf[3] = (byte) diffVal;
-        }
         try {
-            this.zipOut.write(buf, 0, 4);
+            this.dataOut.writeInt(diffVal);
         } catch (final IOException e) {
             // should never occur
             throw new RuntimeException(e);
@@ -62,7 +58,7 @@ public class GZipIntegerTraceSequence extends IntegerTraceSequence {
             data = new byte[0];
         } else {
             if (!this.ready) {
-                this.zipOut.close();
+                this.dataOut.close();
                 this.ready = true;
             }
             data = this.rawOut.toByteArray();
