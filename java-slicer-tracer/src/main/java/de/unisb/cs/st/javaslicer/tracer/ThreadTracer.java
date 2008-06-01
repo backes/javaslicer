@@ -52,26 +52,32 @@ public class ThreadTracer {
     }
 
     public void traceObject(final Object obj, final int traceSequenceIndex) {
-        TraceSequence seq = this.sequences.get(traceSequenceIndex);
-        if (seq == null) {
-            seq = Tracer.seqFactory.createTraceSequence(traceSequenceIndex,
-                    this.threadSequenceTypes.get(traceSequenceIndex));
-            this.sequences.put(traceSequenceIndex, seq);
+        if (!this.trace)
+            return;
+        this.trace = false;
+        try {
+            TraceSequence seq = this.sequences.get(traceSequenceIndex);
+            if (seq == null) {
+                seq = Tracer.seqFactory.createTraceSequence(traceSequenceIndex,
+                        this.threadSequenceTypes.get(traceSequenceIndex));
+                this.sequences.put(traceSequenceIndex, seq);
+            }
+            assert seq instanceof ObjectTraceSequence;
+            ((ObjectTraceSequence) seq).trace(obj);
+        } finally {
+            this.trace = true;
         }
-        assert seq instanceof ObjectTraceSequence;
-        ((ObjectTraceSequence) seq).trace(obj);
     }
 
     public void setLastInstructionIndex(final int lastInstructionIndex) {
+        if (!this.trace)
+            return;
         this.lastInstructionIndex = lastInstructionIndex;
     }
 
     public void writeOut(final ObjectOutputStream out) throws IOException {
         out.writeLong(this.threadId);
-        final char[] nameChars = this.threadName.toCharArray();
-        out.writeInt(nameChars.length);
-        for (final char ch: nameChars)
-            out.writeChar(ch);
+        out.writeUTF(this.threadName);
         out.writeInt(this.sequences.size());
         for (final Entry<Integer, TraceSequence> seq: this.sequences.entrySet()) {
             out.writeInt(seq.getKey());
@@ -82,6 +88,13 @@ public class ThreadTracer {
 
     public int getLastInstructionIndex() {
         return this.lastInstructionIndex;
+    }
+
+    public boolean setTracingEnabled(boolean newState) {
+        if (this.trace == newState)
+            return this.trace;
+        this.trace = newState;
+        return !newState;
     }
 
 }

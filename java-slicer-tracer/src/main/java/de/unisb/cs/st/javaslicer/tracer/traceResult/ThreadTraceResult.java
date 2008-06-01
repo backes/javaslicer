@@ -39,10 +39,7 @@ public class ThreadTraceResult {
 
     public static ThreadTraceResult readFrom(final ObjectInputStream in, final TraceResult traceResult) throws IOException {
         final long threadId = in.readLong();
-        final int numNameChars = in.readInt();
-        final char[] nameChars = new char[numNameChars];
-        for (int i = 0; i < numNameChars; ++i)
-            nameChars[i] = in.readChar();
+        final String name = in.readUTF();
         int numSequences = in.readInt();
         // TODO replace by other map?
         final Map<Integer, ConstantTraceSequence> sequences = new HashMap<Integer, ConstantTraceSequence>();
@@ -52,7 +49,7 @@ public class ThreadTraceResult {
             sequences.put(nr, seq);
         }
         final int lastInstructionIndex = in.readInt();
-        return new ThreadTraceResult(threadId, new String(nameChars), sequences, lastInstructionIndex, traceResult);
+        return new ThreadTraceResult(threadId, name, sequences, lastInstructionIndex, traceResult);
     }
 
     public Iterator<Instruction> getBackwardIterator() {

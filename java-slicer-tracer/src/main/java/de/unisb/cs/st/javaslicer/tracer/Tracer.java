@@ -11,7 +11,6 @@ import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.objectweb.asm.ClassReader;
@@ -35,6 +34,8 @@ import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.gzip.GZipTraceSequenceFactory;
+import de.unisb.cs.st.javaslicer.tracer.util.SimpleArrayList;
+import de.unisb.cs.st.javaslicer.tracer.util.WeakThreadMap;
 
 public class Tracer implements ClassFileTransformer {
 
@@ -47,14 +48,14 @@ public class Tracer implements ClassFileTransformer {
     public static final TraceSequenceFactory seqFactory = new GZipTraceSequenceFactory();
 
     private final WeakThreadMap<ThreadTracer> threadTracers = new WeakThreadMap<ThreadTracer>();
-    private final ArrayList<ThreadTracer> allThreadTracers = new ArrayList<ThreadTracer>();
+    private final List<ThreadTracer> allThreadTracers = new SimpleArrayList<ThreadTracer>();
 
     private final List<ReadClass> readClasses = new ArrayList<ReadClass>();
 
     protected final List<TraceSequence.Type> traceSequenceTypes
         = new ArrayList<TraceSequence.Type>();
 
-    private volatile boolean tracingEnabled = false;
+    private volatile boolean tracingStarted = false;
 
     public volatile boolean tracingReady = false;
 
@@ -106,7 +107,7 @@ public class Tracer implements ClassFileTransformer {
             } catch (final UnmodifiableClassException e) {
                 throw new TracerException(e);
             }
-            this.tracingEnabled = true;
+            this.tracingStarted = true;
         }
     }
 
@@ -116,8 +117,10 @@ public class Tracer implements ClassFileTransformer {
         if (this.tracingReady)
             return null;
 
-        final boolean oldEnabledState = this.tracingEnabled;
-        this.tracingEnabled = false;
+        // disable tracing for the thread tracer of this thread
+        final ThreadTracer tt = getThreadTracer();
+        final boolean oldEnabledState = tt.setTracingEnabled(false);
+
         try {
             if (Type.getObjectType(className).getClassName().startsWith(Tracer.class.getPackage().getName()))
                 return null;
@@ -158,7 +161,7 @@ public class Tracer implements ClassFileTransformer {
             t.printStackTrace(System.err);
             return null;
         } finally {
-            this.tracingEnabled = oldEnabledState;
+            tt.setTracingEnabled(oldEnabledState);
         }
     }
 
@@ -250,7 +253,7 @@ public class Tracer implements ClassFileTransformer {
 
     public static void traceInteger(final int value, final int traceSequenceIndex) {
         final Tracer tracer = getInstance();
-        if (!tracer.tracingEnabled || tracer.tracingReady)
+        if (!tracer.tracingStarted || tracer.tracingReady)
             return;
         tracer.getThreadTracer(Thread.currentThread()).traceInt(value, traceSequenceIndex);
     }
@@ -265,7 +268,7 @@ public class Tracer implements ClassFileTransformer {
             return tracer;
         final ThreadTracer newTracer = new ThreadTracer(thread.getId(),
                 thread.getName(),
-                Collections.unmodifiableList(Tracer.this.traceSequenceTypes));
+                Tracer.this.traceSequenceTypes);
         this.threadTracers.put(thread, newTracer);
         this.allThreadTracers.add(newTracer);
         return newTracer;
@@ -273,18 +276,18 @@ public class Tracer implements ClassFileTransformer {
 
     public static void traceObject(final Object obj, final int traceSequenceIndex) {
         final Tracer tracer = getInstance();
-        if (!tracer.tracingEnabled || tracer.tracingReady)
+        if (!tracer.tracingStarted || tracer.tracingReady)
             return;
         tracer.getThreadTracer(Thread.currentThread()).traceObject(obj, traceSequenceIndex);
     }
 
     public static void setLastInstructionIndex(final int instructionIndex) {
         final Tracer tracer = getInstance();
-        if (!tracer.tracingEnabled || tracer.tracingReady)
+        if (!tracer.tracingStarted || tracer.tracingReady)
             return;
-        tracer.tracingEnabled = false;
+        tracer.tracingStarted = false;
         getThreadTracer().setLastInstructionIndex(instructionIndex);
-        tracer.tracingEnabled = true;
+        tracer.tracingStarted = true;
     }
 
     public static int getLastInstructionIndex() {
