@@ -95,23 +95,38 @@ public class Tracer implements ClassFileTransformer {
                     classesToTransform.add(class1);
             }
 
-            System.out.println("classes to transform:");
-            System.out.println("############################################");
-            System.out.println("############################################");
-            System.out.println("############################################");
-            for (final Class<?> c1 : classesToTransform) {
-                System.out.println(c1);
+            if (debug) {
+                System.out.println("classes to transform:");
+                System.out.println("############################################");
+                System.out.println("############################################");
+                System.out.println("############################################");
+                for (final Class<?> c1 : classesToTransform) {
+                    System.out.println(c1);
+                }
+                System.out.println("############################################");
+                System.out.println("############################################");
+                System.out.println("############################################");
             }
-            System.out.println("############################################");
-            System.out.println("############################################");
-            System.out.println("############################################");
 
             try {
                 inst.retransformClasses(classesToTransform.toArray(new Class<?>[classesToTransform.size()]));
-                System.out.println("Instrumentation ready");
+                if (debug)
+                    System.out.println("Instrumentation ready");
             } catch (final UnmodifiableClassException e) {
                 throw new TracerException(e);
             }
+
+            if (debug) {
+                // print statistics once now and once when all finished
+                MethodInstrumenter.printStats(System.out);
+                Runtime.getRuntime().addShutdownHook(new Thread() {
+                    @Override
+                    public void run() {
+                        MethodInstrumenter.printStats(System.out);
+                    }
+                });
+            }
+
             this.tracingStarted = true;
         }
     }
