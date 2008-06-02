@@ -62,8 +62,10 @@ public class MultiplexedFileReader {
 
         private void moveToNextBlock() throws IOException {
             long read = this.pos[0]-8;
-            for (int i = 1; i <= this.depth; ++i)
-                read = BLOCK_SIZE*read+this.pos[i];
+            for (int i = 1; i < this.depth; ++i)
+                read = BLOCK_SIZE*read + this.pos[i];
+            if (this.depth > 0)
+                read = read*BLOCK_SIZE/4 + this.pos[this.depth];
             final long remaining = this.dataLength - read;
             if (remaining <= 0)
                 return;
@@ -71,7 +73,7 @@ public class MultiplexedFileReader {
             int moved = this.depth-1;
             while (moved >= 0) {
                 if (this.pos[moved] < BLOCK_SIZE) {
-                    this.pos[moved]++;
+                    this.pos[moved] += 4;
                     break;
                 }
                 this.pos[moved] = 0;
@@ -93,6 +95,8 @@ public class MultiplexedFileReader {
                 MultiplexedFileReader.this.file.seek(this.blockAddr[this.depth]*BLOCK_SIZE);
                 MultiplexedFileReader.this.file.read(this.currentBlock);
             }
+            this.remainingInCurrentBlock = (int) Math.min(remaining, BLOCK_SIZE);
+            this.pos[this.depth] = 0;
             return;
         }
 

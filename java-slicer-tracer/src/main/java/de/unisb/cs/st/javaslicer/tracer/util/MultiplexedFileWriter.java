@@ -44,7 +44,7 @@ public class MultiplexedFileWriter {
 
             // first, write back the current block
             synchronized (MultiplexedFileWriter.this.file) {
-                MultiplexedFileWriter.this.file.seek(this.blockAddr[this.depth]);
+                MultiplexedFileWriter.this.file.seek(this.blockAddr[this.depth]*BLOCK_SIZE);
                 MultiplexedFileWriter.this.file.write(this.currentBlock);
             }
 
@@ -60,6 +60,8 @@ public class MultiplexedFileWriter {
                         MultiplexedFileWriter.this.file.writeInt(freeBlockNr);
                     }
                     this.full[inserted] += 4;
+                    this.full[this.depth] = 0;
+                    break;
                 }
                 --inserted;
             }
@@ -85,23 +87,23 @@ public class MultiplexedFileWriter {
                     // set the full values correctly
                     this.full[0] = 12;
                     this.full[1] = BLOCK_SIZE-8;
+                    this.dataLength -= BLOCK_SIZE-8; // would otherwise be counted twice
                     inserted = 0;
                 }
             }
 
             // fill up the tree again
-            while (++inserted < this.depth) {
-                this.blockAddr[inserted] = freeBlockNr;
+            for (int down = inserted+1; down < this.depth; ++down) {
+                this.blockAddr[down] = freeBlockNr;
                 final int freeBlockNr2 = MultiplexedFileWriter.this.nextBlockAddr.getAndIncrement();
                 synchronized (MultiplexedFileWriter.this.file) {
                     MultiplexedFileWriter.this.file.seek(freeBlockNr*BLOCK_SIZE);
                     MultiplexedFileWriter.this.file.writeInt(freeBlockNr2);
                 }
-                this.full[inserted] = 4;
+                this.full[down] = 4;
                 freeBlockNr = freeBlockNr2;
             }
-            this.blockAddr[inserted] = freeBlockNr;
-            this.full[inserted] = 0;
+            this.blockAddr[this.depth] = freeBlockNr;
             return;
         }
 
