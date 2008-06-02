@@ -15,7 +15,7 @@ public class MultiplexedFileReader {
         private final long dataLength;
         private final int[] blockAddr;
         private final int[] pos;
-        private final int remainingInCurrentBlock;
+        private int remainingInCurrentBlock;
         private final byte[] currentBlock = new byte[BLOCK_SIZE];
 
         protected MultiplexInputStream(final int id, final int beginningBlockAddr) throws IOException {
@@ -45,7 +45,7 @@ public class MultiplexedFileReader {
             }
             synchronized (MultiplexedFileReader.this.file) {
                 MultiplexedFileReader.this.file.seek(this.blockAddr[this.depth]*BLOCK_SIZE);
-                MultiplexedFileReader.this.file.read(this.currentBlock);
+                MultiplexedFileReader.this.file.read(this.currentBlock, 0, this.remainingInCurrentBlock+(this.depth==0?8:0));
             }
         }
 
@@ -56,11 +56,12 @@ public class MultiplexedFileReader {
                 if (this.remainingInCurrentBlock <= 0)
                     return -1;
             }
-            return this.currentBlock[this.pos[this.depth]++];
+            --this.remainingInCurrentBlock;
+            return this.currentBlock[this.pos[this.depth]++] & 0xff;
         }
 
         private void moveToNextBlock() throws IOException {
-            long read = this.pos[0];
+            long read = this.pos[0]-8;
             for (int i = 1; i <= this.depth; ++i)
                 read = BLOCK_SIZE*read+this.pos[i];
             final long remaining = this.dataLength - read;
@@ -99,6 +100,10 @@ public class MultiplexedFileReader {
             return this.id;
         }
 
+        public long getDataLength() {
+            return this.dataLength;
+        }
+
         @Override
         public void close() {
             // nothing to do
@@ -124,6 +129,7 @@ public class MultiplexedFileReader {
         for (int i = 0; i < noStreams; ++i) {
             this.streamBeginningBlocks[i] = str.readInt();
         }
+        str.close();
     }
 
     public MultiplexedFileReader(final File filename) throws IOException {

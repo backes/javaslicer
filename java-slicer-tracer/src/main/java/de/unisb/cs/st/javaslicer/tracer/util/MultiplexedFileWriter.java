@@ -18,8 +18,9 @@ public class MultiplexedFileWriter {
         private int depth = 0;
         private long dataLength = -8; // is increased to at least 0 on close
         protected int[] blockAddr = new int[MAX_DEPTH];
-        private int[] full = new int[MAX_DEPTH];
-        private byte[] currentBlock = new byte[BLOCK_SIZE];
+        private final int[] full = new int[MAX_DEPTH];
+        private final byte[] currentBlock = new byte[BLOCK_SIZE];
+        private boolean streamClosed = false;
 
         protected MultiplexOutputStream(final int id, final int beginningBlockAddr) {
             this.id = id;
@@ -29,7 +30,7 @@ public class MultiplexedFileWriter {
 
         @Override
         public void write(final int b) throws IOException {
-            if (this.full == null)
+            if (this.streamClosed)
                 throw new IOException("stream closed");
             if (this.full[this.depth] == BLOCK_SIZE) {
                 // current block is full...
@@ -110,28 +111,24 @@ public class MultiplexedFileWriter {
 
         @Override
         public void close() throws IOException {
-            if (this.currentBlock == null && this.full == null && this.blockAddr == null)
+            if (this.streamClosed)
                 return;
-            if (this.currentBlock == null || this.full == null || this.blockAddr == null)
-                throw new IOException("stream in inconsistent state");
+            this.streamClosed = true;
 
             this.dataLength += this.full[this.depth];
             synchronized (MultiplexedFileWriter.this.file) {
                 // write back the current block
-                MultiplexedFileWriter.this.file.seek(this.blockAddr[this.depth]);
-                MultiplexedFileWriter.this.file.write(this.currentBlock);
+                MultiplexedFileWriter.this.file.seek(this.blockAddr[this.depth]*BLOCK_SIZE);
+                MultiplexedFileWriter.this.file.write(this.currentBlock, 0, this.full[this.depth]);
 
                 // write length and depth information
                 // (first writing 8 bytes length (high byte first), then
                 // overwriting the 0th byte by the depth)
-                MultiplexedFileWriter.this.file.seek(this.blockAddr[0]);
+                MultiplexedFileWriter.this.file.seek(this.blockAddr[0]*BLOCK_SIZE);
                 MultiplexedFileWriter.this.file.writeLong(this.dataLength);
-                MultiplexedFileWriter.this.file.seek(this.blockAddr[0]);
+                MultiplexedFileWriter.this.file.seek(this.blockAddr[0]*BLOCK_SIZE);
                 MultiplexedFileWriter.this.file.writeByte(this.depth);
             }
-            this.currentBlock = null;
-            this.full = null;
-            this.blockAddr = null;
         }
 
     }
@@ -144,17 +141,16 @@ public class MultiplexedFileWriter {
 
     protected final RandomAccessFile file;
 
+    // 0 is reserved to the stream definition block
     protected final AtomicInteger nextBlockAddr = new AtomicInteger(1);
 
     // holds stream beginning (block) addresses
     private final List<MultiplexOutputStream> streams = new ArrayList<MultiplexOutputStream>();
-    private final MultiplexOutputStream streamDefStream;
 
     private boolean closed = false;
 
     public MultiplexedFileWriter(final RandomAccessFile file) {
         this.file = file;
-        this.streamDefStream = new MultiplexOutputStream(-1, 0);
     }
 
     public MultiplexedFileWriter(final File filename) throws FileNotFoundException {
@@ -164,11 +160,10 @@ public class MultiplexedFileWriter {
     public MultiplexOutputStream newOutputStream() {
         if (this.closed)
             throw new IllegalStateException(getClass().getSimpleName() + " closed");
-        final int nextFreeBlock = this.nextBlockAddr.getAndIncrement();
         MultiplexOutputStream newStream;
         synchronized (this.streams) {
             final int streamNr = this.streams.size();
-            newStream = new MultiplexOutputStream(streamNr, nextFreeBlock);
+            newStream = new MultiplexOutputStream(streamNr, this.nextBlockAddr.getAndIncrement());
             this.streams.add(newStream);
         }
         return newStream;
@@ -178,13 +173,13 @@ public class MultiplexedFileWriter {
         this.closed = true;
 
         // write the stream defs
-        final DataOutputStream str = new DataOutputStream(this.streamDefStream);
+        final DataOutputStream str = new DataOutputStream(new MultiplexOutputStream(-1, 0));
         str.writeInt(this.streams.size());
         for (final MultiplexOutputStream stream: this.streams) {
             stream.close();
             str.writeInt(stream.blockAddr[0]);
         }
-        this.streamDefStream.close();
+        str.close();
         this.file.close();
     }
 
