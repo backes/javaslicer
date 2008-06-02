@@ -66,7 +66,16 @@
         <system>hudson</system>
         <url>http://kubrick:8070/</url>
         <notifiers>
-            <!-- TODO Add another notifier with your contact data and remove orphan ones. -->
+            <notifier>
+                <type>mail</type>
+                <configuration>
+                    <recipients>hammacher@st.cs.uni-sb.de</recipients>
+                </configuration>
+                <sendOnError>true</sendOnError>
+                <sendOnFailure>true</sendOnFailure>
+                <sendOnSuccess>true</sendOnSuccess>
+                <sendOnWarning>true</sendOnWarning>
+            </notifier>
             <notifier>
                 <type>mail</type>
                 <configuration>
@@ -196,12 +205,11 @@
                     <source>1.6</source>
                 </configuration>
             </plugin>
-            <!-- TODO Update URL. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-release-plugin</artifactId>
                 <configuration>
-                    <tagBase>https://svn.st.cs.uni-sb.de/svn/st/projects/maven-template-project/tags</tagBase>
+                    <tagBase>https://svn.st.cs.uni-sb.de/svn/st/projects/java-slicer/tags</tagBase>
                 </configuration>
             </plugin>
         </plugins>

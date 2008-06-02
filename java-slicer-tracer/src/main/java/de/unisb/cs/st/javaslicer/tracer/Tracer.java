@@ -47,8 +47,13 @@ public class Tracer implements ClassFileTransformer {
 
     public static final TraceSequenceFactory seqFactory = new GZipTraceSequenceFactory();
 
-    private final WeakThreadMap<ThreadTracer> threadTracers = new WeakThreadMap<ThreadTracer>();
     private final List<ThreadTracer> allThreadTracers = new SimpleArrayList<ThreadTracer>();
+    private final WeakThreadMap<ThreadTracer> threadTracers = new WeakThreadMap<ThreadTracer>() {
+        @Override
+        protected void removing(ThreadTracer value) {
+            value.finish();
+        }
+    };
 
     private final List<ReadClass> readClasses = new ArrayList<ReadClass>();
 
@@ -274,8 +279,7 @@ public class Tracer implements ClassFileTransformer {
         final ThreadTracer tracer = this.threadTracers.get(thread);
         if (tracer != null)
             return tracer;
-        final ThreadTracer newTracer = new ThreadTracer(thread.getId(),
-                thread.getName(),
+        final ThreadTracer newTracer = new ThreadTracer(thread,
                 Tracer.this.traceSequenceTypes);
         this.threadTracers.put(thread, newTracer);
         this.allThreadTracers.add(newTracer);

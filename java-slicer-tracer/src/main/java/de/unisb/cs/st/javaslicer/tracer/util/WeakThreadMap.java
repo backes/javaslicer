@@ -490,6 +490,7 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
     private void expungeStaleEntries() {
         Entry<V> e;
         while ((e = (Entry<V>) this.queue.poll()) != null) {
+            removing(e.value);
             Entry<V> prev = this.table[e.id];
             Entry<V> p = prev;
             while (p != null) {
@@ -508,6 +509,11 @@ public class WeakThreadMap<V> implements Map<Thread, V> {
                 p = next;
             }
         }
+    }
+
+    // hook for subclasses
+    protected void removing(final V value) {
+        // nothing
     }
 
     private abstract class HashIterator<E> implements Iterator<E> {

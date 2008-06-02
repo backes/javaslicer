@@ -318,11 +318,11 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
         this.labels.put(label, lm);
         //System.out.println("seq " + index + ": label " + label + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
         // at runtime: push last executed instruction index on stack, then the sequence index
-        //super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "getLastInstructionIndex",
-        //        "()I");
+        super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "getLastInstructionIndex",
+                "()I");
         pushIntOnStack(seq);
         super.visitInsn(POP);
-        //super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceInteger", "(II)V");
+        super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceInteger", "(II)V");
 
         // and *after* that, we store our new instruction index on the stack (on runtime)
         registerInstruction(lm);

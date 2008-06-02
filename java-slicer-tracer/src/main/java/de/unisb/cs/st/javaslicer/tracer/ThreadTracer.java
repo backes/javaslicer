@@ -24,10 +24,10 @@ public class ThreadTracer {
 
     private final IntegerMap<TraceSequence> sequences = new IntegerMap<TraceSequence>();
 
-    public ThreadTracer(final long threadId, final String threadName,
+    public ThreadTracer(final Thread thread,
             final List<Type> threadSequenceTypes) {
-        this.threadId = threadId;
-        this.threadName = threadName;
+        this.threadId = thread.getId();
+        this.threadName = thread.getName();
         this.threadSequenceTypes = threadSequenceTypes;
     }
 
@@ -74,6 +74,7 @@ public class ThreadTracer {
     }
 
     public void writeOut(final ObjectOutputStream out) throws IOException {
+        finish();
         out.writeLong(this.threadId);
         out.writeUTF(this.threadName);
         out.writeInt(this.sequences.size());
@@ -82,6 +83,12 @@ public class ThreadTracer {
             seq.getValue().writeOut(out);
         }
         out.writeInt(this.lastInstructionIndex);
+    }
+
+    public void finish() {
+        this.trace = false;
+        // TODO Auto-generated method stub
+
     }
 
     public int getLastInstructionIndex() {
