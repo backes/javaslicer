@@ -188,7 +188,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
         }
         final int index = key & (this.mapTable.length - 1);
         for (Entry<V> e = this.mapTable[index]; e != null; e = e.next)
-            if (key == e.getKey())
+            if (key == e.key)
                 return e.value;
         return null;
     }
@@ -222,7 +222,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
         }
         final int index = key & (this.mapTable.length - 1);
         for (Entry<V> e = this.mapTable[index]; e != null; e = e.next)
-            if (e.getKey() == key)
+            if (e.key == key)
                 return e;
         return null;
     }
@@ -862,10 +862,10 @@ public class IntegerMap<V> implements Map<Integer, V> {
 
         @SuppressWarnings("unchecked")
         public boolean contains(final Object o) {
-            if (!(o instanceof Map.Entry))
+            if (!(o instanceof Entry))
                 return false;
-            final Map.Entry<Thread, V> e = (Map.Entry<Thread, V>) o;
-            final Entry<V> candidate = getEntry(e.getKey());
+            final Entry<V> e = (Entry<V>) o;
+            final Entry<V> candidate = getEntry(e.key);
             return candidate != null && candidate.equals(e);
         }
 

@@ -1,26 +1,20 @@
 package de.unisb.cs.st.javaslicer.tracer.traceSequences;
 
+import java.io.DataOutput;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.util.Collections;
-import java.util.Map;
+import java.util.EnumSet;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.collections.Factory;
-import org.apache.commons.collections.map.AbstractReferenceMap;
-import org.apache.commons.collections.map.LazyMap;
-import org.apache.commons.collections.map.ReferenceIdentityMap;
+import de.unisb.cs.st.javaslicer.tracer.util.ConcurrentReferenceHashMap;
 
-@SuppressWarnings("unchecked")
 public class ObjectTraceSequence implements TraceSequence {
 
-    protected static final Map<Object, Long> objectMap = Collections.synchronizedMap(
-            LazyMap.decorate(
-                    new ReferenceIdentityMap(AbstractReferenceMap.SOFT, AbstractReferenceMap.HARD),
-                    new Factory() {
-                        public Object create() {
-                            return new Long(objectMap.size());
-                        }
-                    }));
+    private static final ConcurrentMap<Object, Long> objectMap =
+        new ConcurrentReferenceHashMap<Object, Long>(65536, 0.75f, 16, ConcurrentReferenceHashMap.ReferenceType.SOFT,
+                ConcurrentReferenceHashMap.ReferenceType.STRONG, EnumSet.of(ConcurrentReferenceHashMap.Option.IDENTITY_COMPARISONS));
+
+    private static final AtomicLong nextId = new AtomicLong(0);
 
     private final LongTraceSequence longTraceSequence;
 
@@ -32,12 +26,33 @@ public class ObjectTraceSequence implements TraceSequence {
         return this.longTraceSequence.getIndex();
     }
 
-    public void trace(final Object obj) {
-        this.longTraceSequence.trace(objectMap.get(obj));
+    public void trace(final Object obj) throws IOException {
+        Long id = objectMap.get(obj);
+        if (id == null) {
+            id = getIdUnderLock(obj);
+        }
+        this.longTraceSequence.trace(id);
     }
 
-    public void writeOut(final ObjectOutputStream out) throws IOException {
+    private static synchronized Long getIdUnderLock(final Object obj) {
+        // re-try to get id from map
+        Long id = objectMap.get(obj);
+
+        if (id == null) {
+            id = nextId.getAndIncrement();
+            if (objectMap.put(obj, id) != null)
+                throw new AssertionError("illegal non-synchronized map modification");
+        }
+
+        return id;
+    }
+
+    public void writeOut(final DataOutput out) throws IOException {
         this.longTraceSequence.writeOut(out);
+    }
+
+    public void finish() throws IOException {
+        this.longTraceSequence.finish();
     }
 
 }

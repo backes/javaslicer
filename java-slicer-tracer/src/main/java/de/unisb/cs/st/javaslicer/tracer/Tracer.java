@@ -1,10 +1,8 @@
 package de.unisb.cs.st.javaslicer.tracer;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.PrintStream;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
@@ -12,6 +10,7 @@ import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -33,9 +32,11 @@ import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.gzip.GZipTraceSequenceFactory;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.uncompressed.UncompressedTraceSequenceFactory;
+import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter;
 import de.unisb.cs.st.javaslicer.tracer.util.SimpleArrayList;
 import de.unisb.cs.st.javaslicer.tracer.util.WeakThreadMap;
+import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter.MultiplexOutputStream;
 
 public class Tracer implements ClassFileTransformer {
 
@@ -45,13 +46,17 @@ public class Tracer implements ClassFileTransformer {
 
     public static boolean debug = false;
 
-    public static final TraceSequenceFactory seqFactory = new GZipTraceSequenceFactory();
+    public static final TraceSequenceFactory seqFactory = new UncompressedTraceSequenceFactory();
 
     private final List<ThreadTracer> allThreadTracers = new SimpleArrayList<ThreadTracer>();
     private final WeakThreadMap<ThreadTracer> threadTracers = new WeakThreadMap<ThreadTracer>() {
         @Override
         protected void removing(ThreadTracer value) {
-            value.finish();
+            try {
+                value.finish();
+            } catch (IOException e) {
+                error(e);
+            }
         }
     };
 
@@ -64,13 +69,37 @@ public class Tracer implements ClassFileTransformer {
 
     public volatile boolean tracingReady = false;
 
-    private Tracer() {
-        // prevent instantiation
+    private final File filename;
+    private final MultiplexedFileWriter file;
+    private final DataOutputStream mainOutStream;
+
+    private static final AtomicInteger errorCount = new AtomicInteger(0);
+    private static String lastErrorString;
+
+
+    private Tracer(final File filename) throws IOException {
+        this.filename = filename;
+        this.file = new MultiplexedFileWriter(filename);
+        final MultiplexOutputStream stream = this.file.newOutputStream();
+        if (stream.getId() != 0)
+            throw new AssertionError("MultiplexedFileWriter does not initially return stream id 0");
+        this.mainOutStream = new DataOutputStream(stream);
+    }
+
+    public static void error(final Exception e) {
+        lastErrorString = e.toString();
+        errorCount.getAndIncrement();
+    }
+
+    public static void newInstance(final File filename) throws IOException {
+        if (instance != null)
+            throw new IllegalStateException("Tracer instance already exists");
+        instance = new Tracer(filename);
     }
 
     public static Tracer getInstance() {
         if (instance == null)
-            instance = new Tracer();
+            throw new IllegalStateException("Tracer instance not created");
         return instance;
     }
 
@@ -78,6 +107,8 @@ public class Tracer implements ClassFileTransformer {
         if (retransformClasses && !inst.isRetransformClassesSupported())
             throw new TracerException("Your JVM does not support retransformation of classes");
 
+        // there are classes needed while retransforming.
+        // these must be loaded a-priori, otherwise circular dependencies may occur
         final Class<?>[] additionalClassesToRetransform = { java.security.Policy.class };
 
         inst.addTransformer(this, true);
@@ -145,6 +176,10 @@ public class Tracer implements ClassFileTransformer {
             if (Type.getObjectType(className).getClassName().startsWith(Tracer.class.getPackage().getName()))
                 return null;
 
+            //////////////////////////////////////////////////////////////////
+            // NOTE: these will be cleaned up when the system runs stable
+            //////////////////////////////////////////////////////////////////
+
             // Thread, ThreadLocal and ThreadLocalMap
             if (Type.getObjectType(className).getClassName().startsWith("java.lang.Thread"))
                 return null;
@@ -163,7 +198,7 @@ public class Tracer implements ClassFileTransformer {
                 return null;
 
             // register that class for later reconstruction of the trace
-            final ReadClass readClass = new ReadClass(className, classfileBuffer, Instruction.getNextIndex());
+            final ReadClass readClass = new ReadClass(className, Instruction.getNextIndex());
             this.readClasses.add(readClass);
 
             final ClassReader reader = new ClassReader(classfileBuffer);
@@ -261,15 +296,15 @@ public class Tracer implements ClassFileTransformer {
         return n == -1 ? name : name.substring(n + 1, k);
     }
 
-    public synchronized int newIntegerTraceSequence() {
+    public int newIntegerTraceSequence() {
         return newTraceSequence(TraceSequence.Type.INTEGER);
     }
 
-    public synchronized int newLongTraceSequence() {
+    public int newLongTraceSequence() {
         return newTraceSequence(TraceSequence.Type.LONG);
     }
 
-    public synchronized int newObjectTraceSequence() {
+    public int newObjectTraceSequence() {
         return newTraceSequence(TraceSequence.Type.OBJECT);
     }
 
@@ -295,7 +330,7 @@ public class Tracer implements ClassFileTransformer {
         if (tracer != null)
             return tracer;
         final ThreadTracer newTracer = new ThreadTracer(thread,
-                Tracer.this.traceSequenceTypes);
+                Tracer.this.traceSequenceTypes, this);
         this.threadTracers.put(thread, newTracer);
         this.allThreadTracers.add(newTracer);
         return newTracer;
@@ -309,44 +344,49 @@ public class Tracer implements ClassFileTransformer {
     }
 
     public static void setLastInstructionIndex(final int instructionIndex) {
-        /*
-        final Tracer tracer = getInstance();
-        if (!tracer.tracingStarted)
-            return;
-        if (tracer.tracingReady)
-            return;
-        tracer.tracingStarted = false;
-        */
         getThreadTracer().setLastInstructionIndex(instructionIndex);
-        //tracer.tracingStarted = true;
     }
 
     public static int getLastInstructionIndex() {
         return getThreadTracer().getLastInstructionIndex();
     }
 
-    public void writeOut(final ObjectOutputStream out) throws IOException {
+    public void finish() throws IOException {
+        if (this.tracingReady)
+            return;
         this.tracingReady = true;
-        out.writeInt(this.readClasses.size());
+        this.mainOutStream.writeInt(this.readClasses.size());
         for (final ReadClass rc: this.readClasses)
-            rc.writeOut(out);
-        out.writeInt(this.allThreadTracers.size());
+            rc.writeOut(this.mainOutStream);
+        this.mainOutStream.writeInt(this.allThreadTracers.size());
         for (final ThreadTracer t: this.allThreadTracers)
-            t.writeOut(out);
+            t.writeOut(this.mainOutStream);
+        this.mainOutStream.close();
     }
 
     public TraceResult getResult() {
         try {
-            final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-            final ObjectOutputStream out = new ObjectOutputStream(buffer);
-            writeOut(out);
-            out.close();
-            final ByteArrayInputStream bufIn = new ByteArrayInputStream(buffer.toByteArray());
-            final ObjectInputStream in = new ObjectInputStream(bufIn);
-            return TraceResult.readFrom(in);
+            finish();
+            return TraceResult.readFrom(this.filename);
         } catch (final IOException e) {
             // should never happen
             throw new RuntimeException(e);
+        }
+    }
+
+    public MultiplexOutputStream newOutputStream() throws IOException {
+        return this.file.newOutputStream();
+    }
+
+    public static void printFinalUserInfo() {
+        if (errorCount.get() == 1) {
+            System.out.println("There was an error while tracing: " + lastErrorString);
+        } else if (errorCount.get() > 1) {
+            System.out.println("There were several errors (" + errorCount.get() + " while tracing.");
+            System.out.println("Last error message: " + lastErrorString);
+        } else {
+            if (Tracer.debug)
+                System.out.println("DEBUG: trace written successfully");
         }
     }
 

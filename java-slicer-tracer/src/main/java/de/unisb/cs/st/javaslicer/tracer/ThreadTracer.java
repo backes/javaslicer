@@ -1,7 +1,7 @@
 package de.unisb.cs.st.javaslicer.tracer;
 
+import java.io.DataOutput;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -23,48 +23,62 @@ public class ThreadTracer {
     private boolean trace = true;
 
     private final IntegerMap<TraceSequence> sequences = new IntegerMap<TraceSequence>();
+    private final Tracer tracer;
 
     public ThreadTracer(final Thread thread,
-            final List<Type> threadSequenceTypes) {
+            final List<Type> threadSequenceTypes, final Tracer tracer) {
         this.threadId = thread.getId();
         this.threadName = thread.getName();
         this.threadSequenceTypes = threadSequenceTypes;
+        this.tracer = tracer;
     }
 
     public void traceInt(final int value, final int traceSequenceIndex) {
         if (!this.trace)
             return;
         this.trace = false;
+
+        TraceSequence seq = this.sequences.get(traceSequenceIndex);
         try {
-            TraceSequence seq = this.sequences.get(traceSequenceIndex);
             if (seq == null) {
                 seq = Tracer.seqFactory.createTraceSequence(traceSequenceIndex,
-                        this.threadSequenceTypes.get(traceSequenceIndex));
+                        this.threadSequenceTypes.get(traceSequenceIndex), this.tracer);
                 this.sequences.put(traceSequenceIndex, seq);
             }
             assert seq instanceof IntegerTraceSequence;
+
             ((IntegerTraceSequence) seq).trace(value);
-        } finally {
-            this.trace = true;
+        } catch (final IOException e) {
+            System.err.println("Error writing the trace: " + e.getMessage());
+            // and do _NOT_ set trace to true
+            return;
         }
+
+        this.trace = true;
     }
 
     public void traceObject(final Object obj, final int traceSequenceIndex) {
         if (!this.trace)
             return;
         this.trace = false;
+
+        TraceSequence seq = this.sequences.get(traceSequenceIndex);
         try {
-            TraceSequence seq = this.sequences.get(traceSequenceIndex);
             if (seq == null) {
                 seq = Tracer.seqFactory.createTraceSequence(traceSequenceIndex,
-                        this.threadSequenceTypes.get(traceSequenceIndex));
+                        this.threadSequenceTypes.get(traceSequenceIndex), this.tracer);
                 this.sequences.put(traceSequenceIndex, seq);
             }
             assert seq instanceof ObjectTraceSequence;
+
             ((ObjectTraceSequence) seq).trace(obj);
-        } finally {
-            this.trace = true;
+        } catch (final IOException e) {
+            System.err.println("Error writing the trace: " + e.getMessage());
+            // and do _NOT_ set trace to true
+            return;
         }
+
+        this.trace = true;
     }
 
     public void setLastInstructionIndex(final int lastInstructionIndex) {
@@ -73,7 +87,7 @@ public class ThreadTracer {
         this.lastInstructionIndex = lastInstructionIndex;
     }
 
-    public void writeOut(final ObjectOutputStream out) throws IOException {
+    public void writeOut(final DataOutput out) throws IOException {
         finish();
         out.writeLong(this.threadId);
         out.writeUTF(this.threadName);
@@ -85,10 +99,10 @@ public class ThreadTracer {
         out.writeInt(this.lastInstructionIndex);
     }
 
-    public void finish() {
+    public void finish() throws IOException {
         this.trace = false;
-        // TODO Auto-generated method stub
-
+        for (final TraceSequence seq: this.sequences.values())
+            seq.finish();
     }
 
     public int getLastInstructionIndex() {

@@ -1,8 +1,8 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 
 import org.objectweb.asm.Type;
@@ -11,16 +11,14 @@ public class ReadClass {
 
     private final String internalClassName;
     private final String className;
-    private final byte[] classByteCode;
     private final ArrayList<ReadMethod> methods = new ArrayList<ReadMethod>();
     private final int instructionNumberStart;
     private int instructionNumberEnd;
     private String source = null;
 
-    public ReadClass(final String internalClassName, final byte[] classBytecode, final int instructionNumberStart) {
+    public ReadClass(final String internalClassName, final int instructionNumberStart) {
         this.internalClassName = internalClassName;
         this.className = Type.getObjectType(internalClassName).getClassName();
-        this.classByteCode = classBytecode;
         this.instructionNumberStart = instructionNumberStart;
     }
 
@@ -60,11 +58,9 @@ public class ReadClass {
         this.source = source;
     }
 
-    public void writeOut(final ObjectOutputStream out) throws IOException {
+    public void writeOut(final DataOutput out) throws IOException {
         out.writeUTF(this.internalClassName);
         out.writeUTF(this.className);
-        out.writeInt(this.classByteCode.length);
-        out.write(this.classByteCode);
         out.writeInt(this.instructionNumberStart);
         out.writeInt(this.instructionNumberEnd);
         out.writeInt(this.methods.size());
@@ -74,14 +70,12 @@ public class ReadClass {
         out.writeUTF(this.source == null ? "" : this.source);
     }
 
-    public static ReadClass readFrom(final ObjectInputStream in) throws IOException {
+    public static ReadClass readFrom(final DataInput in) throws IOException {
         final String intName = in.readUTF();
         final String className = in.readUTF();
-        final byte[] bytecode = new byte[in.readInt()];
-        in.read(bytecode, 0, bytecode.length);
         final int instructionNumberStart = in.readInt();
         final int instructionNumberEnd = in.readInt();
-        final ReadClass rc = new ReadClass(intName, bytecode, instructionNumberStart);
+        final ReadClass rc = new ReadClass(intName, instructionNumberStart);
         rc.setInstructionNumberEnd(instructionNumberEnd);
         assert rc.className != null && rc.className.equals(className);
         int numMethods = in.readInt();

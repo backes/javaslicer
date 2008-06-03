@@ -1,8 +1,8 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 
 public class ReadMethod {
@@ -58,7 +58,7 @@ public class ReadMethod {
         this.instructionNumberEnd = instructionNumberEnd;
     }
 
-    public void writeOut(final ObjectOutputStream out) throws IOException {
+    public void writeOut(final DataOutput out) throws IOException {
         out.writeUTF(this.name);
         out.writeUTF(this.desc);
         out.writeInt(this.instructionNumberEnd);
@@ -68,7 +68,7 @@ public class ReadMethod {
             instr.writeOut(out);
     }
 
-    public static ReadMethod readFrom(final ObjectInputStream in, final ReadClass readClass) throws IOException {
+    public static ReadMethod readFrom(final DataInput in, final ReadClass readClass) throws IOException {
         final String name = in.readUTF();
         final String desc = in.readUTF();
         final int instructionNumberStart = in.readInt();
@@ -78,11 +78,7 @@ public class ReadMethod {
         int numInstr = in.readInt();
         rm.instructions.ensureCapacity(numInstr);
         while (numInstr-- > 0)
-            try {
-                rm.instructions.add((Instruction)in.readObject());
-            } catch (final ClassNotFoundException e) {
-                throw new RuntimeException(e);
-            }
+            rm.instructions.add(Instruction.readFrom(in, rm));
 
         return rm;
     }

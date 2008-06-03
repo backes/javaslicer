@@ -1,72 +1,27 @@
 package de.unisb.cs.st.javaslicer.tracer.traceSequences.gzip;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.util.zip.GZIPOutputStream;
 
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.LongTraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
+import de.unisb.cs.st.javaslicer.tracer.Tracer;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.uncompressed.UncompressedLongTraceSequence;
+import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter.MultiplexOutputStream;
 
-public class GZipLongTraceSequence extends LongTraceSequence {
+public class GZipLongTraceSequence extends UncompressedLongTraceSequence {
 
-    private boolean started = false;
-    private boolean ready = false;
-
-    private long lastValue;
-
-    private ByteArrayOutputStream rawOut;
-    private GZIPOutputStream zipOut;
-    private DataOutputStream dataOut;
-
-    public GZipLongTraceSequence(final int index) {
-        super(index);
+    public GZipLongTraceSequence(final int index, final Tracer tracer) throws IOException {
+        super(index, tracer);
     }
 
     @Override
-    public void trace(final long value) {
-        long diffVal = value;
-        if (!this.started) {
-            this.rawOut = new ByteArrayOutputStream();
-            try {
-                this.zipOut = new GZIPOutputStream(this.rawOut);
-            } catch (final IOException e) {
-                // should never occur
-                throw new RuntimeException(e);
-            }
-            this.dataOut = new DataOutputStream(this.zipOut);
-            this.started = true;
-        } else if (this.ready) {
-            throw new RuntimeException("Trace cannot be extended any more");
-        } else {
-            diffVal -= this.lastValue;
-        }
-        this.lastValue = value;
-
-        try {
-            this.dataOut.writeLong(diffVal);
-        } catch (final IOException e) {
-            // should never occur
-            throw new RuntimeException(e);
-        }
+    protected OutputStream getOutputStream(final MultiplexOutputStream out) throws IOException {
+        return new GZIPOutputStream(out);
     }
 
-    public void writeOut(final ObjectOutputStream out) throws IOException {
-        final byte[] data;
-        if (!this.started) {
-            data = new byte[0];
-        } else {
-            if (!this.ready) {
-                this.dataOut.close();
-                this.ready = true;
-            }
-            data = this.rawOut.toByteArray();
-        }
-        out.writeByte(TraceSequence.FORMAT_GZIP);
-        out.writeByte(TraceSequence.TYPE_LONG);
-        out.writeInt(data.length);
-        out.write(data);
+    @Override
+    protected byte getFormat() {
+        return FORMAT_GZIP;
     }
 
 }

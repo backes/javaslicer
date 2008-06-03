@@ -1,8 +1,9 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
@@ -60,7 +61,7 @@ public abstract class Instruction {
         return this.index - 1;
     }
 
-    public void writeOut(final ObjectOutputStream out) throws IOException {
+    public void writeOut(final DataOutput out) throws IOException {
         // write out type of the instruction
         boolean typeFound = false;
         for (int i = 0; i < instructions.length; ++i) {
@@ -77,7 +78,7 @@ public abstract class Instruction {
         out.writeInt(this.opcode);
     }
 
-    public static Instruction readFrom(final ObjectInputStream in, final ReadMethod readMethod) throws IOException {
+    public static Instruction readFrom(final DataInput in, final ReadMethod readMethod) throws IOException {
         // first determine the type
         final byte type = in.readByte();
         if (type < 0 || type >= instructions.length)

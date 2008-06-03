@@ -111,7 +111,7 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
             // top item on stack is the object reference: duplicate it
             super.visitInsn(DUP);
             objectTraceSeqIndex = this.tracer.newObjectTraceSequence();
-            ++this.getField;
+            ++MethodInstrumenter.getField;
             //System.out.println("seq " + index + ": getField " + name + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             break;
 
@@ -127,7 +127,7 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
                 super.visitInsn(DUP_X2);
             }
             objectTraceSeqIndex = this.tracer.newObjectTraceSequence();
-            ++this.putField;
+            ++MethodInstrumenter.putField;
             //System.out.println("seq " + index + ": putField " + name + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             break;
 
@@ -179,7 +179,7 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
             pushIntOnStack(arrayTraceSeqIndex);
             super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceObject",
                     "(Ljava/lang/Object;I)V");
-            ++this.arrayLoad;
+            ++MethodInstrumenter.arrayLoad;
             break;
 
         // array store:
@@ -205,7 +205,7 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
             pushIntOnStack(arrayTraceSeqIndex);
             super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceObject",
                     "(Ljava/lang/Object;I)V");
-            ++this.arrayStore;
+            ++MethodInstrumenter.arrayStore;
             break;
 
         // stack manipulation:
@@ -338,9 +338,9 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
         // stats
         if (additionalLabel)
-            this.labelsAdditional++;
+            MethodInstrumenter.labelsAdditional++;
         else
-            this.labelsStd++;
+            MethodInstrumenter.labelsStd++;
 
         // and *after* that, we store our new instruction index on the stack (on runtime)
         registerInstruction(lm);
@@ -350,7 +350,7 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
         this.readMethod.addInstruction(instruction);
         pushIntOnStack(instruction.getIndex());
         super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "setLastInstructionIndex", "(I)V");
-        ++this.instructions;
+        ++MethodInstrumenter.instructions;
     }
 
     private void pushIntOnStack(final int index) {

@@ -1,7 +1,7 @@
 package de.unisb.cs.st.javaslicer.tracer.traceSequences;
 
+import java.io.DataOutput;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 
 public interface TraceSequence {
 
@@ -10,6 +10,7 @@ public interface TraceSequence {
     // some constants
     public static byte FORMAT_SEQUITUR = 0;
     public static byte FORMAT_GZIP = 1;
+    public static byte FORMAT_UNCOMPRESSED = 2;
 
     public static byte TYPE_INTEGER = 0;
     public static byte TYPE_LONG = 1;
@@ -20,6 +21,8 @@ public interface TraceSequence {
      */
     int getIndex();
 
-    void writeOut(ObjectOutputStream out) throws IOException;
+    void writeOut(DataOutput out) throws IOException;
+
+    void finish() throws IOException;
 
 }

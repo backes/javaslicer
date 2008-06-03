@@ -1,9 +1,8 @@
 package de.unisb.cs.st.javaslicer.tracer.traceResult;
 
+import java.io.DataInput;
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -11,6 +10,8 @@ import java.util.NoSuchElementException;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
+import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;
 
 public class ThreadTraceResult {
 
@@ -37,16 +38,16 @@ public class ThreadTraceResult {
         return this.threadName;
     }
 
-    public static ThreadTraceResult readFrom(final ObjectInputStream in, final TraceResult traceResult) throws IOException {
+    public static ThreadTraceResult readFrom(final DataInput in, final TraceResult traceResult, final MultiplexedFileReader file) throws IOException {
         final long threadId = in.readLong();
         final String name = in.readUTF();
         int numSequences = in.readInt();
-        // TODO replace by other map?
-        final Map<Integer, ConstantTraceSequence> sequences = new HashMap<Integer, ConstantTraceSequence>();
+        final Map<Integer, ConstantTraceSequence> sequences = new IntegerMap<ConstantTraceSequence>();
         while (numSequences-- > 0) {
             final int nr = in.readInt();
-            final ConstantTraceSequence seq = ConstantTraceSequence.readFrom(in);
-            sequences.put(nr, seq);
+            final ConstantTraceSequence seq = ConstantTraceSequence.readFrom(in, file);
+            if (sequences.put(nr, seq) != null)
+                throw new IOException("corrupted data");
         }
         final int lastInstructionIndex = in.readInt();
         return new ThreadTraceResult(threadId, name, sequences, lastInstructionIndex, traceResult);
