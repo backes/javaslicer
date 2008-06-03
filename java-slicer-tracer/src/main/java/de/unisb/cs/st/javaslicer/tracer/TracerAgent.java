@@ -6,7 +6,7 @@ import java.lang.instrument.Instrumentation;
 
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 
-public class LogFileAgent {
+public class TracerAgent {
 
     public static class WriteTracefileThread extends Thread {
 
@@ -21,9 +21,9 @@ public class LogFileAgent {
             try {
                 this.tracer.finish();
             } catch (final IOException e) {
-                this.tracer.error(e);
+                Tracer.error(e);
             }
-            this.tracer.printFinalUserInfo();
+            Tracer.printFinalUserInfo();
         }
 
     }

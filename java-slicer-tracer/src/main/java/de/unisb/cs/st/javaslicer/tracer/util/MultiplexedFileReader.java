@@ -27,7 +27,7 @@ public class MultiplexedFileReader {
                 MultiplexedFileReader.this.file.seek(beginningBlockAddr*MultiplexedFileReader.this.blockSize);
                 this.dataLength = MultiplexedFileReader.this.file.readLong();
                 // compute the depth needed to store the data
-                this.depth = (int)Math.ceil(Math.log(this.dataLength+8)/Math.log(MultiplexedFileReader.this.blockSize))-1;
+                this.depth = compDepth(this.dataLength);
             }
 
             this.pos = new int[this.depth+1];
@@ -51,6 +51,16 @@ public class MultiplexedFileReader {
                     throw new EOFException();
                 }
             }
+        }
+
+        private int compDepth(final long len) {
+            int d = 0;
+            long max = MultiplexedFileReader.this.blockSize-8;
+            while (max < len) {
+                d++;
+                max *= 1024/4;
+            }
+            return d;
         }
 
         @Override

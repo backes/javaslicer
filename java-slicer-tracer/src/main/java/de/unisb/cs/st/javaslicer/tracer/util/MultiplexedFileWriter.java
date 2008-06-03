@@ -99,7 +99,7 @@ public class MultiplexedFileWriter {
                 System.arraycopy(this.full, 1, this.full, 2, MultiplexedFileWriter.this.maxDepth-2);
                 System.arraycopy(this.blockAddr, 1, this.blockAddr, 2, MultiplexedFileWriter.this.maxDepth-2);
                 // we need a new block to insert between the 0th and the 1st (now 2nd) depth
-                final int freeBlockNr = MultiplexedFileWriter.this.nextBlockAddr.getAndIncrement();
+                final int freeBlockNr = nextFreeBlockNr();
                 this.blockAddr[1] = freeBlockNr;
 
                 synchronized (MultiplexedFileWriter.this.file) {
@@ -125,7 +125,7 @@ public class MultiplexedFileWriter {
             // fill up the tree again
             for (int down = insert; down < this.depth; ++down) {
                 // we need another free block on this depth
-                final int nextFreeBlockNr = MultiplexedFileWriter.this.nextBlockAddr.getAndIncrement();
+                final int nextFreeBlockNr = nextFreeBlockNr();
                 synchronized (MultiplexedFileWriter.this.file) {
                     MultiplexedFileWriter.this.file.seek(this.blockAddr[down]*MultiplexedFileWriter.this.blockSize+this.full[down]);
                     MultiplexedFileWriter.this.file.writeInt(nextFreeBlockNr);
@@ -162,13 +162,12 @@ public class MultiplexedFileWriter {
 
     private static final int DEFAULT_BLOCK_SIZE = 1024; // MUST be divideable by 4
 
-    // one stream can hold at most (blockSize)^maxDepth - 8 bytes
     private static final int DEFAULT_MAX_DEPTH = 5;
 
     protected final RandomAccessFile file;
 
     // 0 is reserved to the stream definition block
-    protected final AtomicInteger nextBlockAddr = new AtomicInteger(1);
+    private final AtomicInteger nextBlockAddr = new AtomicInteger(1);
 
     private int nextStreamNr = 0;
 
@@ -195,10 +194,9 @@ public class MultiplexedFileWriter {
     /**
      * Constructs a new multiplexed file writer with all options available.
      *
-     * // TODO fix this
-     * Each stream will have a limit of <code>blockSize^maxDepth-8</code> bytes.
+     * Each stream will have a limit of <code>(blockSize-8)*(blockSize/4)^(maxDepth-1)</code> bytes.
      *
-     * The whole file can have at most 2^32*blockSize bytes.
+     * The whole file can have at most 2^31*blockSize bytes.
      *
      * @param file the file to write the multiplexed streams to
      * @param blockSize the block size of the file (each stream will allocate
@@ -211,6 +209,10 @@ public class MultiplexedFileWriter {
             throw new NullPointerException();
         if ((blockSize & 0x3) != 0)
             throw new IllegalArgumentException("blockSize must be dividable by 4");
+        if (blockSize < 12)
+            throw new IllegalArgumentException("blockSize must be >= 12");
+        if (maxDepth < 1)
+            throw new IllegalArgumentException("maxDepth must be > 0");
 
         this.file = file;
         this.blockSize = blockSize;
@@ -225,6 +227,13 @@ public class MultiplexedFileWriter {
 
     public MultiplexedFileWriter(final File filename) throws IOException {
         this(new RandomAccessFile(filename, "rw"));
+    }
+
+    protected int nextFreeBlockNr() throws IOException {
+        final int blockNr = this.nextBlockAddr.getAndIncrement();
+        if (blockNr < 0)
+            throw new IOException("Maximum total file size reached");
+        return blockNr;
     }
 
     public synchronized MultiplexOutputStream newOutputStream() throws IOException {
