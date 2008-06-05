@@ -1,6 +1,6 @@
 package de.unisb.cs.st.javaslicer.tracer.exceptions;
 
-public class TracerException extends Exception {
+public class TracerException extends RuntimeException {
 
     private static final long serialVersionUID = -8175726329711097102L;
 

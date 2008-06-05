@@ -26,7 +26,7 @@ import org.objectweb.asm.tree.analysis.Frame;
 import org.objectweb.asm.util.CheckClassAdapter;
 import org.objectweb.asm.util.TraceMethodVisitor;
 
-import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
@@ -198,7 +198,7 @@ public class Tracer implements ClassFileTransformer {
                 return null;
 
             // register that class for later reconstruction of the trace
-            final ReadClass readClass = new ReadClass(className, Instruction.getNextIndex());
+            final ReadClass readClass = new ReadClass(className, AbstractInstruction.getNextIndex());
             this.readClasses.add(readClass);
 
             final ClassReader reader = new ClassReader(classfileBuffer);
@@ -210,7 +210,7 @@ public class Tracer implements ClassFileTransformer {
 
             reader.accept(instrumenter, 0);
 
-            readClass.setInstructionNumberEnd(Instruction.getNextIndex());
+            readClass.setInstructionNumberEnd(AbstractInstruction.getNextIndex());
 
             final byte[] newClassfileBuffer = writer.toByteArray();
 
@@ -362,6 +362,7 @@ public class Tracer implements ClassFileTransformer {
         for (final ThreadTracer t: this.allThreadTracers)
             t.writeOut(this.mainOutStream);
         this.mainOutStream.close();
+        this.file.close();
     }
 
     public TraceResult getResult() {

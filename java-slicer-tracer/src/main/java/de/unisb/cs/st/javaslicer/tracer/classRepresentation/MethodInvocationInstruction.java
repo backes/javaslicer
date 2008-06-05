@@ -1,11 +1,48 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
 
-public class MethodInvocationInstruction extends Instruction {
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+public class MethodInvocationInstruction extends AbstractInstruction {
+
+    private final String internalClassName;
+    private final String methodName;
+    private final String methodDesc;
 
     public MethodInvocationInstruction(final ReadMethod readMethod, final int lineNumber, final int opcode,
-            final String owner, final String name, final String desc) {
+            final String internalClassName, final String methodName, final String methodDesc) {
         super(readMethod, opcode, lineNumber);
-        // TODO Auto-generated constructor stub
+        this.internalClassName = internalClassName;
+        this.methodName = methodName;
+        this.methodDesc = methodDesc;
+    }
+
+    public String getInternalClassName() {
+        return this.internalClassName;
+    }
+
+    public String getMethodName() {
+        return this.methodName;
+    }
+
+    public String getMethodDesc() {
+        return this.methodDesc;
+    }
+
+    @Override
+    public void writeOut(final DataOutput out) throws IOException {
+        super.writeOut(out);
+        out.writeUTF(this.internalClassName);
+        out.writeUTF(this.methodDesc);
+        out.writeUTF(this.methodName);
+    }
+
+    public static MethodInvocationInstruction readFrom(final DataInput in, final ReadMethod readMethod, final int opcode, final int index, final int lineNumber) throws IOException {
+        final String internalClassName = in.readUTF();
+        final String methodDesc = in.readUTF();
+        final String methodName = in.readUTF();
+        return new MethodInvocationInstruction(readMethod, lineNumber, opcode, internalClassName, methodDesc, methodName);
     }
 
 }

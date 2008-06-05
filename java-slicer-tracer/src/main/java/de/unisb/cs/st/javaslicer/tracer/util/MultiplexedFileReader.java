@@ -153,7 +153,7 @@ public class MultiplexedFileReader {
                     if (this.remainingInCurrentBlock == 0)
                         return ptr-off;
                 } else {
-                    this.pos[this.depth] = read;
+                    this.pos[this.depth] += read;
                     break;
                 }
             }
@@ -234,12 +234,17 @@ public class MultiplexedFileReader {
         if (file.length() < 12)
             throw new IOException("corrupted data");
         file.seek(8);
-        this.blockSize = file.readInt();
+        // TODO fix
+        //this.blockSize = file.readInt();
+        this.blockSize = 1024;
 
         // read the stream defs
         final MultiplexInputStream streamDefStream = new MultiplexInputStream(-1, 0);
         final DataInputStream str = new DataInputStream(streamDefStream);
-        this.streamBeginningBlocks = new int[(int) (streamDefStream.getDataLength()/4)-1];
+        final int numInts = (int) (streamDefStream.getDataLength()/4);
+        if (numInts < 1)
+            throw new IOException("corrupted data");
+        this.streamBeginningBlocks = new int[numInts-1];
         if (str.readInt() != this.blockSize)
             throw new IOException("corrupted data");
         for (int i = 0; i < this.streamBeginningBlocks.length; ++i)

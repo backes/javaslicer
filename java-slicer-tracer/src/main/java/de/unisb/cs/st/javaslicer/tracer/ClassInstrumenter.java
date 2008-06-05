@@ -6,7 +6,7 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.commons.JSRInlinerAdapter;
 
-import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 
@@ -40,7 +40,7 @@ public class ClassInstrumenter extends ClassAdapter implements Opcodes {
 		if ((access & ACC_ABSTRACT) != 0 || (access & ACC_NATIVE) != 0)
 		    return mv;
 
-		final ReadMethod readMethod = new ReadMethod(this.readClass, name, desc, Instruction.getNextIndex());
+		final ReadMethod readMethod = new ReadMethod(this.readClass, name, desc, AbstractInstruction.getNextIndex());
 		this.readClass.addMethod(readMethod);
 
         final MethodInstrumenter myInstrumenter = new MethodInstrumenter(mv, this.tracer, readMethod);

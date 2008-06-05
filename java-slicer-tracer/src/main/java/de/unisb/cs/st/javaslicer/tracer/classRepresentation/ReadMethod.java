@@ -7,7 +7,7 @@ import java.util.ArrayList;
 
 public class ReadMethod {
 
-    private final ArrayList<Instruction> instructions = new ArrayList<Instruction>();
+    private final ArrayList<AbstractInstruction> instructions = new ArrayList<AbstractInstruction>();
     private final ReadClass readClass;
     private final String name;
     private final String desc;
@@ -21,7 +21,7 @@ public class ReadMethod {
         this.instructionNumberStart = instructionNumberStart;
     }
 
-    public int addInstruction(final Instruction instruction) {
+    public int addInstruction(final AbstractInstruction instruction) {
         this.instructions.add(instruction);
         return this.instructions.size()-1;
     }
@@ -30,7 +30,7 @@ public class ReadMethod {
         this.instructions.trimToSize();
     }
 
-    public ArrayList<Instruction> getInstructions() {
+    public ArrayList<AbstractInstruction> getInstructions() {
         return this.instructions;
     }
 
@@ -61,8 +61,8 @@ public class ReadMethod {
     public void writeOut(final DataOutput out) throws IOException {
         out.writeUTF(this.name);
         out.writeUTF(this.desc);
-        out.writeInt(this.instructionNumberEnd);
         out.writeInt(this.instructionNumberStart);
+        out.writeInt(this.instructionNumberEnd);
         out.writeInt(this.instructions.size());
         for (final Instruction instr: this.instructions)
             instr.writeOut(out);
@@ -78,7 +78,7 @@ public class ReadMethod {
         int numInstr = in.readInt();
         rm.instructions.ensureCapacity(numInstr);
         while (numInstr-- > 0)
-            rm.instructions.add(Instruction.readFrom(in, rm));
+            rm.instructions.add(AbstractInstruction.readFrom(in, rm));
 
         return rm;
     }

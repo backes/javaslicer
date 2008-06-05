@@ -248,6 +248,8 @@ public class MultiplexedFileWriter {
     }
 
     public synchronized void close() throws IOException {
+        if (this.closed)
+            return;
         this.closed = true;
 
         for (final MultiplexOutputStream str: this.openStreams.keySet())

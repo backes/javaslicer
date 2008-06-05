@@ -14,7 +14,7 @@ import org.objectweb.asm.Type;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ArrayInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.FieldInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.IIncInstruction;
-import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.IntPush;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.JumpInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.LabelMarker;
@@ -89,7 +89,7 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
     public void visitEnd() {
         super.visitEnd();
         this.readMethod.ready();
-        this.readMethod.setInstructionNumberEnd(Instruction.getNextIndex());
+        this.readMethod.setInstructionNumberEnd(AbstractInstruction.getNextIndex());
         for (final Entry<JumpInstruction, Label> instr: this.jumpInstructions.entrySet()) {
             final LabelMarker lm = this.labels.get(instr.getValue());
             assert lm != null;
@@ -346,7 +346,7 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
         registerInstruction(lm);
     }
 
-    private void registerInstruction(final Instruction instruction) {
+    private void registerInstruction(final AbstractInstruction instruction) {
         this.readMethod.addInstruction(instruction);
         pushIntOnStack(instruction.getIndex());
         super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "setLastInstructionIndex", "(I)V");
