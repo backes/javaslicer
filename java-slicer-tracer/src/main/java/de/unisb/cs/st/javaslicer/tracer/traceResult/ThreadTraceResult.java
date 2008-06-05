@@ -112,11 +112,6 @@ public class ThreadTraceResult {
 
         // we can just compute the offset of the instruction
         final int offset = instructionIndex - instrMethod.getInstructionNumberStart();
-        if (offset >= instrMethod.getInstructionNumberEnd()) {
-            // then this instruction does not exist
-            return null;
-        }
-
         final Instruction instr = instructions.get(offset);
         assert instr.getIndex() == instructionIndex;
 
@@ -153,7 +148,7 @@ public class ThreadTraceResult {
             final ReadClass oldClass = oldMethod.getReadClass();
             final int backwardInstructionIndex = old.getBackwardInstructionIndex(this);
             final Instruction backwardInstruction = findInstruction(backwardInstructionIndex, oldClass, oldMethod);
-            if (backwardInstruction instanceof LabelMarker)
+            while (backwardInstruction instanceof LabelMarker)
                 return getNextInstruction(backwardInstruction);
             return backwardInstruction.getNextInstance(this);
         }

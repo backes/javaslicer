@@ -97,6 +97,7 @@ public class TraceResult {
             }
         }
 
+        System.out.println("Opening and reading trace file...");
         TraceResult tr = null;
         try {
             tr = readFrom(traceFile);

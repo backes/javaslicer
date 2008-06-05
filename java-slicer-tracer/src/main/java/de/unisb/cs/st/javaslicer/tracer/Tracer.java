@@ -358,8 +358,9 @@ public class Tracer implements ClassFileTransformer {
         this.mainOutStream.writeInt(this.readClasses.size());
         for (final ReadClass rc: this.readClasses)
             rc.writeOut(this.mainOutStream);
-        this.mainOutStream.writeInt(this.allThreadTracers.size());
-        for (final ThreadTracer t: this.allThreadTracers)
+        final ThreadTracer[] tmp = this.allThreadTracers.toArray(new ThreadTracer[this.allThreadTracers.size()]);
+        this.mainOutStream.writeInt(tmp.length);
+        for (final ThreadTracer t: tmp)
             t.writeOut(this.mainOutStream);
         this.mainOutStream.close();
         this.file.close();

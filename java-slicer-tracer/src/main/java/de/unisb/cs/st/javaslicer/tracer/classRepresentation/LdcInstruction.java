@@ -13,7 +13,7 @@ public class LdcInstruction extends AbstractInstruction {
 
     public LdcInstruction(final ReadMethod readMethod, final int lineNumber, final Object constant) {
         super(readMethod, Opcodes.LDC, lineNumber);
-        assert constant instanceof Number || constant instanceof String;
+        assert constant instanceof Number || constant instanceof String || constant instanceof Type;
         this.constant = constant;
     }
 

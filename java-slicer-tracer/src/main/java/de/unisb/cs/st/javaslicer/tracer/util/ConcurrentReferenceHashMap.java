@@ -1007,8 +1007,7 @@ public class ConcurrentReferenceHashMap<K, V> extends AbstractMap<K, V>
         for (int i = 0; i < segments.length; ++i) {
             if (segments[i].count != 0)
                 return false;
-            else
-                mcsum += mc[i] = segments[i].modCount;
+            mcsum += mc[i] = segments[i].modCount;
         }
         // If mcsum happens to be zero, then we know we got a snapshot
         // before any modifications at all were made. This is
@@ -1068,8 +1067,7 @@ public class ConcurrentReferenceHashMap<K, V> extends AbstractMap<K, V>
         }
         if (sum > Integer.MAX_VALUE)
             return Integer.MAX_VALUE;
-        else
-            return (int) sum;
+        return (int) sum;
     }
 
     /**

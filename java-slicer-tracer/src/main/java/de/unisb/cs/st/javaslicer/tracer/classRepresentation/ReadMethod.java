@@ -79,6 +79,7 @@ public class ReadMethod {
         rm.instructions.ensureCapacity(numInstr);
         while (numInstr-- > 0)
             rm.instructions.add(AbstractInstruction.readFrom(in, rm));
+        rm.instructions.trimToSize();
 
         return rm;
     }
