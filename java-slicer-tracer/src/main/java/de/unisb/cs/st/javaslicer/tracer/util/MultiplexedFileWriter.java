@@ -20,7 +20,7 @@ public class MultiplexedFileWriter {
         protected int[] blockAddr = new int[MultiplexedFileWriter.this.maxDepth];
         private final int[] full = new int[MultiplexedFileWriter.this.maxDepth];
         private final byte[] currentBlock = new byte[MultiplexedFileWriter.this.blockSize];
-        private boolean streamClosed = false;
+        private volatile boolean streamClosed = false;
 
         protected MultiplexOutputStream(final int id, final int beginningBlockAddr) {
             this.id = id;

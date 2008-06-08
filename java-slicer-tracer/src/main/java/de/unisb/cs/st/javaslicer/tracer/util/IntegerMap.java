@@ -40,7 +40,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
 
     static final float DEFAULT_SWITCH_TO_MAP_RATIO = 0.2f;
 
-    static final float DEFAULT_SWITCH_TO_LIST_RATIO = 0.4f;
+    static final float DEFAULT_SWITCH_TO_LIST_RATIO = 0.5f;
 
     /**
      * Will switch back (from list to map) when the ratio (size/highest_int) is below this threshold.
@@ -253,12 +253,12 @@ public class IntegerMap<V> implements Map<Integer, V> {
                     ++this.size;
                 return old;
             }
-            final boolean switchToMap = key < 0 || (size() / key < this.switchToMapRatio);
+            final boolean switchToMap = key < 0 || this.size < this.switchToMapRatio * (key+1);
             if (switchToMap) {
                 switchToMap();
                 // and continue with the map code below...
             } else {
-                final int newSize = 3 * key / 2;
+                final int newSize = 3 * key / 2 + 1;
                 this.list = Arrays.copyOf(this.list, newSize);
                 this.list[key] = value;
                 this.size++;
@@ -287,10 +287,16 @@ public class IntegerMap<V> implements Map<Integer, V> {
             mapTableSize <<= 1;
 
         this.mapTable = new Entry[mapTableSize];
+        boolean minSet = false;
         for (int key = 0; key < this.list.length; ++key) {
             final V value = this.list[key];
             if (value == null)
                 continue;
+            if (!minSet) {
+                minSet = true;
+                this.minIndex = key;
+            }
+            this.maxIndex = key;
             final int index = key & (mapTableSize - 1);
             this.mapTable[index] = new Entry<V>(key, value, this.mapTable[index]);
         }
@@ -542,7 +548,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
     }
 
     private boolean checkSwitchToList() {
-        if (this.minIndex >= 0 && this.size / this.maxIndex > this.switchToListRatio) {
+        if (this.minIndex >= 0 && this.size > 3 && this.size > this.switchToListRatio * (this.maxIndex+1)) {
             switchToList();
             return true;
         }
@@ -560,7 +566,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
         this.list = (V[]) new Object[listSize];
         for (Entry<V> e : this.mapTable) {
             while (e != null) {
-                if (e.key >= this.minIndex && e.key <= this.maxIndex)
+                if (e.key < this.minIndex || e.key > this.maxIndex)
                     throw new ConcurrentModificationException();
                 this.list[e.key] = e.value;
                 e = e.next;

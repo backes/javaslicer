@@ -205,7 +205,8 @@ public class WeakIdentityHashMap<K, V> implements Map<K, V> {
      */
     public V put(final K key, final V value) {
         expungeStaleEntries();
-        final int index = hash(key) & (this.table.length - 1);
+        final int hash = hash(key);
+        final int index = hash & (this.table.length - 1);
         for (Entry<K, V> e = this.table[index]; e != null; e = e.next) {
             if (e.getKey() == key) {
                 final V oldValue = e.value;
@@ -214,7 +215,7 @@ public class WeakIdentityHashMap<K, V> implements Map<K, V> {
             }
         }
         this.modCount++;
-        addEntry(key, value, index);
+        addEntry(key, value, hash, index);
         return null;
     }
 
@@ -470,8 +471,8 @@ public class WeakIdentityHashMap<K, V> implements Map<K, V> {
      *
      * Subclass overrides this to alter the behavior of put method.
      */
-    void addEntry(final K key, final V value, final int bucketIndex) {
-        this.table[bucketIndex] = new Entry<K, V>(key, hash(key), value, this.table[bucketIndex], this.queue);
+    void addEntry(final K key, final V value, final int hash, final int bucketIndex) {
+        this.table[bucketIndex] = new Entry<K, V>(key, hash, value, this.table[bucketIndex], this.queue);
         if (this.size++ >= this.threshold)
             resize(2 * this.table.length);
     }
@@ -484,13 +485,14 @@ public class WeakIdentityHashMap<K, V> implements Map<K, V> {
         Entry<K, V> e;
         while ((e = (Entry<K, V>) this.queue.poll()) != null) {
             removing(e.value);
-            Entry<K, V> prev = this.table[e.hash];
+            final int index = e.hash & (this.table.length-1);
+            Entry<K, V> prev = this.table[index];
             Entry<K, V> p = prev;
             while (p != null) {
                 final Entry<K, V> next = p.next;
                 if (p == e) {
                     if (prev == e)
-                        this.table[e.hash] = next;
+                        this.table[index] = next;
                     else
                         prev.next = next;
                     e.next = null; // Help GC

@@ -134,7 +134,8 @@ public class TraceResult {
             final Instruction instr = it.next();
             final ReadMethod method = instr.getMethod();
             final ReadClass class0 = method.getReadClass();
-            System.out.format("%-70s: %s%n", class0.getClassName()+"."+method.getName(), instr);
+            System.out.format("%-50s: %s%n", class0.getClassName()+"."
+                    +method.getName()+":"+instr.getLineNumber(), instr);
         }
 
     }
