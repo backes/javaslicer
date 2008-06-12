@@ -18,7 +18,7 @@ public abstract class ConstantIntegerTraceSequence extends ConstantTraceSequence
         } else if (format == TraceSequence.FORMAT_UNCOMPRESSED) {
             return ConstantUncompressedIntegerTraceSequence.readFrom(in, file);
         } else {
-            throw new RuntimeException("Unknown format: " + format);
+            throw new IOException("corrupted data (unknown format: " + format + ")");
         }
     }
 

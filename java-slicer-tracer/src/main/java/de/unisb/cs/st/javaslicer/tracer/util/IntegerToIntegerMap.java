@@ -236,16 +236,20 @@ public class IntegerToIntegerMap implements Map<Integer, Integer>, Cloneable {
     public int put(final int key, final int value) {
         if (this.list != null) {
             if (key >= 0 && key < this.list.length) {
-                final int old = this.list[key];
+                int old = this.list[key];
                 this.list[key] = value;
-                if (old == 0 && (this.listEntriesWithZeroValue == null || !this.listEntriesWithZeroValue[key]))
-                    ++this.size;
+                if (old == 0) {
+                    if (this.listEntriesWithZeroValue == null || !this.listEntriesWithZeroValue[key]) {
+                        ++this.size;
+                        old = this.defaultValue;
+                    } else if (value != 0) {
+                        this.listEntriesWithZeroValue[key] = false;
+                    }
+                }
                 if (value == 0) {
                     if (this.listEntriesWithZeroValue == null)
                         this.listEntriesWithZeroValue = new boolean[this.list.length];
                     this.listEntriesWithZeroValue[key] = true;
-                } else if (old == 0 && this.listEntriesWithZeroValue != null) {
-                    this.listEntriesWithZeroValue[key] = false;
                 }
                 return old;
             }
@@ -258,6 +262,11 @@ public class IntegerToIntegerMap implements Map<Integer, Integer>, Cloneable {
                 final int[] oldList = this.list;
                 this.list = new int[newSize];
                 System.arraycopy(oldList, 0, this.list, 0, oldList.length);
+                if (this.listEntriesWithZeroValue != null) {
+                    final boolean[] oldListEntries = this.listEntriesWithZeroValue;
+                    this.listEntriesWithZeroValue = new boolean[newSize];
+                    System.arraycopy(oldListEntries, 0, this.listEntriesWithZeroValue, 0, oldListEntries.length);
+                }
                 this.list[key] = value;
                 this.size++;
                 if (value == 0) {
@@ -754,8 +763,8 @@ public class IntegerToIntegerMap implements Map<Integer, Integer>, Cloneable {
                             int next = i;
                             while (next < IntegerToIntegerMap.this.list.length
                                     && IntegerToIntegerMap.this.list[next] == 0
-                                    && IntegerToIntegerMap.this.listEntriesWithZeroValue != null
-                                    && !IntegerToIntegerMap.this.listEntriesWithZeroValue[next])
+                                    && (IntegerToIntegerMap.this.listEntriesWithZeroValue == null
+                                        || !IntegerToIntegerMap.this.listEntriesWithZeroValue[next]))
                                 ++next;
                             return next;
                         }
@@ -843,8 +852,8 @@ public class IntegerToIntegerMap implements Map<Integer, Integer>, Cloneable {
                             int next = i;
                             while (next < IntegerToIntegerMap.this.list.length
                                     && IntegerToIntegerMap.this.list[next] == 0
-                                    && IntegerToIntegerMap.this.listEntriesWithZeroValue != null
-                                    && !IntegerToIntegerMap.this.listEntriesWithZeroValue[next])
+                                    && (IntegerToIntegerMap.this.listEntriesWithZeroValue == null
+                                        || !IntegerToIntegerMap.this.listEntriesWithZeroValue[next]))
                                 ++next;
                             return next;
                         }
@@ -937,8 +946,8 @@ public class IntegerToIntegerMap implements Map<Integer, Integer>, Cloneable {
                         int next = i;
                         while (next < IntegerToIntegerMap.this.list.length
                                 && IntegerToIntegerMap.this.list[next] == 0
-                                && IntegerToIntegerMap.this.listEntriesWithZeroValue != null
-                                && !IntegerToIntegerMap.this.listEntriesWithZeroValue[next])
+                                && (IntegerToIntegerMap.this.listEntriesWithZeroValue == null
+                                    || !IntegerToIntegerMap.this.listEntriesWithZeroValue[next]))
                             ++next;
                         return next;
                     }

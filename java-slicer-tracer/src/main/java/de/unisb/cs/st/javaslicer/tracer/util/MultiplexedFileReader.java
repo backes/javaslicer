@@ -148,14 +148,12 @@ public class MultiplexedFileReader {
                 System.arraycopy(this.currentBlock, this.pos[this.depth], b, ptr, read);
                 ptr += read;
                 this.remainingInCurrentBlock -= read;
-                if (ptr < end) {
-                    moveToNextBlock();
-                    if (this.remainingInCurrentBlock == 0)
-                        return ptr-off;
-                } else {
-                    this.pos[this.depth] += read;
+                this.pos[this.depth] += read;
+                if (ptr >= end)
                     break;
-                }
+                moveToNextBlock();
+                if (this.remainingInCurrentBlock == 0)
+                    return ptr-off;
             }
             return len;
         }
@@ -193,7 +191,7 @@ public class MultiplexedFileReader {
             synchronized (MultiplexedFileReader.this.file) {
                 MultiplexedFileReader.this.file.seek(this.blockAddr[this.depth]*MultiplexedFileReader.this.blockSize);
                 if (MultiplexedFileReader.this.file.read(this.currentBlock, 0, this.remainingInCurrentBlock) < this.remainingInCurrentBlock)
-                    throw new EOFException();
+                    throw new IOException("corrupted data");
             }
             this.pos[this.depth] = 0;
             return;

@@ -40,7 +40,9 @@ public class FieldInstruction extends AbstractInstruction {
 
     @Override
     public Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException, EOFException {
-        return new Instance(this, backwardInstructionIterator.getNextLong(this.objectTraceSeqIndex),
+        final long objectId = this.objectTraceSeqIndex == -1 ? -1 :
+            backwardInstructionIterator.getNextLong(this.objectTraceSeqIndex);
+        return new Instance(this, objectId,
                 backwardInstructionIterator.getNextInstructionOccurenceNumber(getIndex()));
     }
 

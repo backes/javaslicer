@@ -16,7 +16,7 @@ public abstract class ConstantTraceSequence {
         else if (type == TraceSequence.TYPE_LONG)
             return ConstantLongTraceSequence.readFrom(in, format, file);
         else
-            throw new RuntimeException("Unknown type: " + type);
+            throw new IOException("corrupted data (unknown trace type)");
     }
 
 }

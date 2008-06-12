@@ -59,7 +59,7 @@ public class ThreadTraceResult {
                 throw new IOException("corrupted data");
         }
         int numInstructionsOccured = in.readInt();
-        final IntegerToLongMap instructionOccurences = new IntegerToLongMap(128,
+        final IntegerToLongMap instructionOccurences = new IntegerToLongMap(8,
                 IntegerToIntegerMap.DEFAULT_LOAD_FACTOR, IntegerToIntegerMap.DEFAULT_SWITCH_TO_MAP_RATIO,
                 IntegerToIntegerMap.DEFAULT_SWITCH_TO_LIST_RATIO, -1);
         while (numInstructionsOccured-- > 0) {
@@ -128,6 +128,9 @@ public class ThreadTraceResult {
 
         // we can just compute the offset of the instruction
         final int offset = instructionIndex - instrMethod.getInstructionNumberStart();
+        if (offset < 0 || offset >= instructions.size())
+            return null; // no instruction found
+
         final Instruction instr = instructions.get(offset);
         assert instr.getIndex() == instructionIndex;
 
@@ -142,15 +145,15 @@ public class ThreadTraceResult {
         private final IntegerToLongMap instructionNextOccurenceNumber;
 
         public BackwardInstructionIterator() throws TracerException {
-            final Instruction tmp = findInstruction(ThreadTraceResult.this.lastInstructionIndex, null, null);
-            try {
-                this.nextInstruction = tmp.getNextInstance(this);
-            } catch (final EOFException e) {
-                this.nextInstruction = null;
-            }
             this.integerSequenceBackwardIterators = new IntegerMap<Iterator<Integer>>();
             this.longSequenceBackwardIterators = new IntegerMap<Iterator<Long>>();
             this.instructionNextOccurenceNumber = ThreadTraceResult.this.instructionOccurences.clone();
+            final Instruction tmp = findInstruction(ThreadTraceResult.this.lastInstructionIndex, null, null);
+            try {
+                this.nextInstruction = tmp == null ? null : tmp.getNextInstance(this);
+            } catch (final EOFException e) {
+                this.nextInstruction = null;
+            }
         }
 
         public boolean hasNext() {
@@ -170,6 +173,8 @@ public class ThreadTraceResult {
             final ReadClass oldClass = oldMethod.getReadClass();
             final int backwardInstructionIndex = old.getBackwardInstructionIndex(this);
             final Instruction backwardInstruction = findInstruction(backwardInstructionIndex, oldClass, oldMethod);
+            if (backwardInstruction == null)
+                return null;
             while (backwardInstruction instanceof LabelMarker)
                 return getNextInstruction(backwardInstruction);
             try {
