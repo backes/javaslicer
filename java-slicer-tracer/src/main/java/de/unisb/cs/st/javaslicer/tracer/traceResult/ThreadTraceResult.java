@@ -14,6 +14,8 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
+import de.unisb.cs.st.javaslicer.tracer.util.IntegerToIntegerMap;
+import de.unisb.cs.st.javaslicer.tracer.util.IntegerToLongMap;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;
 
 public class ThreadTraceResult {
@@ -50,6 +52,16 @@ public class ThreadTraceResult {
             final int nr = in.readInt();
             final ConstantTraceSequence seq = ConstantTraceSequence.readFrom(in, file);
             if (sequences.put(nr, seq) != null)
+                throw new IOException("corrupted data");
+        }
+        int numInstructionsOccured = in.readInt();
+        final IntegerToLongMap instructionOccurences = new IntegerToLongMap(128,
+                IntegerToIntegerMap.DEFAULT_LOAD_FACTOR, IntegerToIntegerMap.DEFAULT_SWITCH_TO_MAP_RATIO,
+                IntegerToIntegerMap.DEFAULT_SWITCH_TO_LIST_RATIO, -1);
+        while (numInstructionsOccured-- > 0) {
+            final int nr = in.readInt();
+            final long occured = in.readLong();
+            if (instructionOccurences.put(nr, occured) != -1)
                 throw new IOException("corrupted data");
         }
         final int lastInstructionIndex = in.readInt();

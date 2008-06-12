@@ -10,6 +10,8 @@ import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.Type;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
+import de.unisb.cs.st.javaslicer.tracer.util.IntegerToIntegerMap;
+import de.unisb.cs.st.javaslicer.tracer.util.IntegerToLongMap;
 
 public class ThreadTracer {
 
@@ -23,6 +25,10 @@ public class ThreadTracer {
     private boolean trace = true;
 
     private final IntegerMap<TraceSequence> sequences = new IntegerMap<TraceSequence>();
+    private final IntegerToLongMap instructionOccurences = new IntegerToLongMap(128,
+            IntegerToIntegerMap.DEFAULT_LOAD_FACTOR, IntegerToIntegerMap.DEFAULT_SWITCH_TO_MAP_RATIO,
+            IntegerToIntegerMap.DEFAULT_SWITCH_TO_LIST_RATIO, 0);
+
     private final Tracer tracer;
 
     public ThreadTracer(final Thread thread,
@@ -81,10 +87,28 @@ public class ThreadTracer {
         this.trace = true;
     }
 
-    public void setLastInstructionIndex(final int lastInstructionIndex) {
+    public void traceLastInstructionIndex(final int traceSequenceIndex) {
+        traceInt(this.lastInstructionIndex, traceSequenceIndex);
+    }
+
+    public void passInstruction(final int instructionIndex) {
         if (!this.trace)
             return;
-        this.lastInstructionIndex = lastInstructionIndex;
+        this.lastInstructionIndex = instructionIndex;
+        this.instructionOccurences.increment(instructionIndex);
+    }
+
+    public void finish() throws IOException {
+        this.trace = false;
+        for (final TraceSequence seq: this.sequences.values())
+            seq.finish();
+    }
+
+    public boolean setTracingEnabled(boolean newState) {
+        if (this.trace == newState)
+            return this.trace;
+        this.trace = newState;
+        return !newState;
     }
 
     public void writeOut(final DataOutput out) throws IOException {
@@ -96,24 +120,12 @@ public class ThreadTracer {
             out.writeInt(seq.getKey());
             seq.getValue().writeOut(out);
         }
+        out.writeInt(this.instructionOccurences.size());
+        for (final Entry<Integer, Long> seq: this.instructionOccurences.entrySet()) {
+            out.writeInt(seq.getKey());
+            out.writeLong(seq.getValue());
+        }
         out.writeInt(this.lastInstructionIndex);
-    }
-
-    public void finish() throws IOException {
-        this.trace = false;
-        for (final TraceSequence seq: this.sequences.values())
-            seq.finish();
-    }
-
-    public int getLastInstructionIndex() {
-        return this.lastInstructionIndex;
-    }
-
-    public boolean setTracingEnabled(boolean newState) {
-        if (this.trace == newState)
-            return this.trace;
-        this.trace = newState;
-        return !newState;
     }
 
 }

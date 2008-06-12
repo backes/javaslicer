@@ -11,10 +11,10 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ArrayInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.FieldInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.IIncInstruction;
-import de.unisb.cs.st.javaslicer.tracer.classRepresentation.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.IntPush;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.JumpInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.LabelMarker;
@@ -331,10 +331,9 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
         this.labels.put(label, lm);
         //System.out.println("seq " + index + ": label " + label + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
         // at runtime: push last executed instruction index on stack, then the sequence index
-        super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "getLastInstructionIndex",
-                "()I");
         pushIntOnStack(seq);
-        super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceInteger", "(II)V");
+        super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceLastInstructionIndex",
+                "(I)V");
 
         // stats
         if (additionalLabel)
@@ -349,7 +348,7 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
     private void registerInstruction(final AbstractInstruction instruction) {
         this.readMethod.addInstruction(instruction);
         pushIntOnStack(instruction.getIndex());
-        super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "setLastInstructionIndex", "(I)V");
+        super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "passInstruction", "(I)V");
         ++MethodInstrumenter.instructions;
     }
 

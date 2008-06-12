@@ -1,13 +1,3 @@
-/*
- *  @(#)HashMap.java    1.73 07/03/13
- *
- * Copyright 2006 Sun Microsystems, Inc. All rights reserved.
- * SUN PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
- *
- * THIS COPY IS HERE FOR NOT BEING INSTRUMENTED!
- *
- */
-
 package de.unisb.cs.st.javaslicer.tracer.util;
 
 import java.util.AbstractCollection;
@@ -20,12 +10,12 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-public class IntegerMap<V> implements Map<Integer, V> {
+public class IntegerToIntegerMap implements Map<Integer, Integer> {
 
     /**
      * The default initial capacity - MUST be a power of two.
      */
-    static final int DEFAULT_INITIAL_CAPACITY = 16;
+    public static final int DEFAULT_INITIAL_CAPACITY = 16;
 
     /**
      * The maximum capacity, used if a higher value is implicitly specified by either of the constructors with
@@ -36,11 +26,11 @@ public class IntegerMap<V> implements Map<Integer, V> {
     /**
      * The load factor used when none specified in constructor.
      */
-    static final float DEFAULT_LOAD_FACTOR = 0.75f;
+    public static final float DEFAULT_LOAD_FACTOR = 0.75f;
 
-    static final float DEFAULT_SWITCH_TO_MAP_RATIO = 0.2f;
+    public static final float DEFAULT_SWITCH_TO_MAP_RATIO = 0.15f;
 
-    static final float DEFAULT_SWITCH_TO_LIST_RATIO = 0.5f;
+    public static final float DEFAULT_SWITCH_TO_LIST_RATIO = 0.25f;
 
     /**
      * Will switch back (from list to map) when the ratio (size/highest_int) is below this threshold.
@@ -55,9 +45,11 @@ public class IntegerMap<V> implements Map<Integer, V> {
     /**
      * The table, resized as necessary. Length MUST Always be a power of two.
      */
-    Entry<V>[] mapTable;
+    Entry[] mapTable;
 
-    V[] list;
+    int[] list = null;
+
+    boolean[] listEntriesWithZeroValue = null;
 
     // maintained when the map is used to notice when we can switch to list
     private int minIndex = Integer.MAX_VALUE;
@@ -90,6 +82,8 @@ public class IntegerMap<V> implements Map<Integer, V> {
      */
     volatile int modCount;
 
+    protected final int defaultValue;
+
     /**
      * Constructs an empty <tt>HashMap</tt> with the specified initial capacity and load factor.
      *
@@ -101,8 +95,8 @@ public class IntegerMap<V> implements Map<Integer, V> {
      *             if the initial capacity is negative or the load factor is nonpositive
      */
     @SuppressWarnings("unchecked")
-    public IntegerMap(final int initialCapacity, final float loadFactor, final float switchToMapRatio,
-            final float switchToListRatio) {
+    public IntegerToIntegerMap(final int initialCapacity, final float loadFactor, final float switchToMapRatio,
+            final float switchToListRatio, final int defaultValue) {
         if (initialCapacity < 0)
             throw new IllegalArgumentException("Illegal initial capacity: " + initialCapacity);
         final int initCapacity = initialCapacity > MAXIMUM_CAPACITY ? MAXIMUM_CAPACITY : initialCapacity;
@@ -119,6 +113,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
         this.mapTable = new Entry[capacity];
         this.switchToMapRatio = switchToMapRatio;
         this.switchToListRatio = switchToListRatio;
+        this.defaultValue = defaultValue;
     }
 
     /**
@@ -129,14 +124,14 @@ public class IntegerMap<V> implements Map<Integer, V> {
      * @throws IllegalArgumentException
      *             if the initial capacity is negative.
      */
-    public IntegerMap(final int initialMapCapacity) {
-        this(initialMapCapacity, DEFAULT_LOAD_FACTOR, DEFAULT_SWITCH_TO_MAP_RATIO, DEFAULT_SWITCH_TO_LIST_RATIO);
+    public IntegerToIntegerMap(final int initialMapCapacity) {
+        this(initialMapCapacity, DEFAULT_LOAD_FACTOR, DEFAULT_SWITCH_TO_MAP_RATIO, DEFAULT_SWITCH_TO_LIST_RATIO, Integer.MIN_VALUE);
     }
 
     /**
      * Constructs an empty <tt>HashMap</tt> with the default initial capacity (16) and the default load factor (0.75).
      */
-    public IntegerMap() {
+    public IntegerToIntegerMap() {
         this(DEFAULT_INITIAL_CAPACITY);
     }
 
@@ -159,38 +154,31 @@ public class IntegerMap<V> implements Map<Integer, V> {
     }
 
     /**
-     * Returns the value to which the specified key is mapped, or {@code null} if this map contains no mapping for the
-     * key.
-     *
-     * <p>
-     * More formally, if this map contains a mapping from a key {@code k} to a value {@code v} such that
-     * {@code (key==null ? k==null : key.equals(k))}, then this method returns {@code v}; otherwise it returns
-     * {@code null}. (There can be at most one such mapping.)
-     *
-     * <p>
-     * A return value of {@code null} does not <i>necessarily</i> indicate that the map contains no mapping for the
-     * key; it's also possible that the map explicitly maps the key to {@code null}. The
-     * {@link #containsKey containsKey} operation may be used to distinguish these two cases.
-     *
-     * @see #put(Object, Object)
+     * Returns the value to which the specified key is mapped, or defaultValue() if this map contains no
+     * mapping for the key.
+     * Returns <code>null</code> if the key is not of type Integer;
      */
-    public V get(final Object key) {
+    public Integer get(final Object key) {
         if (key instanceof Integer)
-            return get(((Integer) key).intValue());
+            return getInt(((Integer) key).intValue());
         return null;
     }
 
-    public V get(final int key) {
+    public int getInt(final int key) {
         if (this.list != null) {
-            if (key >= 0 && key < this.list.length)
-                return this.list[key];
-            return null;
+            if (key >= 0 && key < this.list.length) {
+                final int val = this.list[key];
+                if (val == 0 && (this.listEntriesWithZeroValue == null || !this.listEntriesWithZeroValue[key]))
+                    return this.defaultValue;
+                return val;
+            }
+            return this.defaultValue;
         }
         final int index = key & (this.mapTable.length - 1);
-        for (Entry<V> e = this.mapTable[index]; e != null; e = e.next)
+        for (Entry e = this.mapTable[index]; e != null; e = e.next)
             if (key == e.key)
                 return e.value;
-        return null;
+        return this.defaultValue;
     }
 
     /**
@@ -208,20 +196,24 @@ public class IntegerMap<V> implements Map<Integer, V> {
      * Returns the entry associated with the specified key in the HashMap. Returns null if the HashMap contains no
      * mapping for the key.
      */
-    final Entry<V> getEntry(final Object key) {
+    final protected Entry getEntry(final Object key) {
         if (key instanceof Integer)
             return getEntry(((Integer) key).intValue());
         return null;
     }
 
-    final Entry<V> getEntry(final int key) {
+    final protected Entry getEntry(final int key) {
         if (this.list != null) {
-            if (key >= 0 && key < this.list.length)
-                return new Entry<V>(key, this.list[key], null);
+            if (key >= 0 && key < this.list.length) {
+                final int val = this.list[key];
+                if (val == 0 && (this.listEntriesWithZeroValue == null || !this.listEntriesWithZeroValue[key]))
+                    return null;
+                return new Entry(key, val, null);
+            }
             return null;
         }
         final int index = key & (this.mapTable.length - 1);
-        for (Entry<V> e = this.mapTable[index]; e != null; e = e.next)
+        for (Entry e = this.mapTable[index]; e != null; e = e.next)
             if (e.key == key)
                 return e;
         return null;
@@ -235,22 +227,27 @@ public class IntegerMap<V> implements Map<Integer, V> {
      *            key with which the specified value is to be associated
      * @param value
      *            value to be associated with the specified key
-     * @return the previous value associated with <tt>key</tt>, or <tt>null</tt> if there was no mapping for
+     * @return the previous value associated with <tt>key</tt>, or <tt>defaultValue</tt> if there was no mapping for
      *         <tt>key</tt>.
      */
-    public V put(final Integer key, final V value) {
-        return put(key.intValue(), value);
+    public Integer put(final Integer key, final Integer value) {
+        return put(key.intValue(), value.intValue());
     }
 
-    public V put(final int key, final V value) {
-        if (value == null)
-            throw new NullPointerException();
+    public int put(final int key, final int value) {
         if (this.list != null) {
             if (key >= 0 && key < this.list.length) {
-                final V old = this.list[key];
+                final int old = this.list[key];
                 this.list[key] = value;
-                if (old == null)
+                if (old == 0 && (this.listEntriesWithZeroValue == null || !this.listEntriesWithZeroValue[key]))
                     ++this.size;
+                if (value == 0) {
+                    if (this.listEntriesWithZeroValue == null)
+                        this.listEntriesWithZeroValue = new boolean[this.list.length];
+                    this.listEntriesWithZeroValue[key] = true;
+                } else if (old == 0 && this.listEntriesWithZeroValue != null) {
+                    this.listEntriesWithZeroValue[key] = false;
+                }
                 return old;
             }
             final boolean switchToMap = key < 0 || this.size < this.switchToMapRatio * (key+1);
@@ -262,20 +259,25 @@ public class IntegerMap<V> implements Map<Integer, V> {
                 this.list = Arrays.copyOf(this.list, newSize);
                 this.list[key] = value;
                 this.size++;
-                return null;
+                if (value == 0) {
+                    if (this.listEntriesWithZeroValue == null)
+                        this.listEntriesWithZeroValue = new boolean[this.list.length];
+                    this.listEntriesWithZeroValue[key] = true;
+                }
+                return this.defaultValue;
             }
         }
         final int index = key & (this.mapTable.length - 1);
-        for (Entry<V> e = this.mapTable[index]; e != null; e = e.next) {
+        for (Entry e = this.mapTable[index]; e != null; e = e.next) {
             if (e.key == key) {
-                final V oldValue = e.value;
+                final int oldValue = e.value;
                 e.value = value;
                 return oldValue;
             }
         }
         this.modCount++;
         addEntry(key, value, index);
-        return null;
+        return this.defaultValue;
     }
 
     @SuppressWarnings("unchecked")
@@ -289,8 +291,10 @@ public class IntegerMap<V> implements Map<Integer, V> {
         this.mapTable = new Entry[mapTableSize];
         boolean minSet = false;
         for (int key = 0; key < this.list.length; ++key) {
-            final V value = this.list[key];
-            if (value == null)
+            final int value = this.list[key];
+            if (value == 0 && (
+                    this.listEntriesWithZeroValue == null
+                    || !this.listEntriesWithZeroValue[key]))
                 continue;
             if (!minSet) {
                 minSet = true;
@@ -298,9 +302,10 @@ public class IntegerMap<V> implements Map<Integer, V> {
             }
             this.maxIndex = key;
             final int index = key & (mapTableSize - 1);
-            this.mapTable[index] = new Entry<V>(key, value, this.mapTable[index]);
+            this.mapTable[index] = new Entry(key, value, this.mapTable[index]);
         }
         this.list = null;
+        this.listEntriesWithZeroValue = null;
         this.modCount++;
     }
 
@@ -317,14 +322,14 @@ public class IntegerMap<V> implements Map<Integer, V> {
      */
     @SuppressWarnings("unchecked")
     void resizeMap(final int newCapacity) {
-        final Entry<V>[] oldTable = this.mapTable;
+        final Entry[] oldTable = this.mapTable;
         final int oldCapacity = oldTable.length;
         if (oldCapacity == MAXIMUM_CAPACITY) {
             this.mapThreshold = Integer.MAX_VALUE;
             return;
         }
 
-        final Entry<V>[] newTable = new Entry[newCapacity];
+        final Entry[] newTable = new Entry[newCapacity];
         transferMap(newTable);
         this.mapTable = newTable;
         this.mapThreshold = (int) (newCapacity * this.loadFactor);
@@ -333,15 +338,15 @@ public class IntegerMap<V> implements Map<Integer, V> {
     /**
      * Transfers all entries from current table to newTable.
      */
-    private void transferMap(final Entry<V>[] newTable) {
-        final Entry<V>[] src = this.mapTable;
+    private void transferMap(final Entry[] newTable) {
+        final Entry[] src = this.mapTable;
         final int newCapacity = newTable.length;
         for (int j = 0; j < src.length; j++) {
-            Entry<V> e = src[j];
+            Entry e = src[j];
             if (e != null) {
                 src[j] = null;
                 do {
-                    final Entry<V> next = e.next;
+                    final Entry next = e.next;
                     final int newIndex = e.key & (newCapacity - 1);
                     e.next = newTable[newIndex];
                     newTable[newIndex] = e;
@@ -360,8 +365,8 @@ public class IntegerMap<V> implements Map<Integer, V> {
      * @throws NullPointerException
      *             if the specified map is null
      */
-    public void putAll(final Map<? extends Integer, ? extends V> m) {
-        for (final Map.Entry<? extends Integer, ? extends V> e : m.entrySet())
+    public void putAll(final Map<? extends Integer, ? extends Integer> m) {
+        for (final Map.Entry<? extends Integer, ? extends Integer> e : m.entrySet())
             put(e.getKey(), e.getValue());
     }
 
@@ -370,33 +375,35 @@ public class IntegerMap<V> implements Map<Integer, V> {
      *
      * @param key
      *            key whose mapping is to be removed from the map
-     * @return the previous value associated with <tt>key</tt>, or <tt>null</tt> if there was no mapping for
-     *         <tt>key</tt>. (A <tt>null</tt> return can also indicate that the map previously associated
-     *         <tt>null</tt> with <tt>key</tt>.)
+     * @return the previous value associated with <tt>key</tt>, or <tt>defaultValue</tt> if there was no mapping for
+     *         <tt>key</tt>. A <tt>null</tt> is returned if the key is not of type Integer.
      */
-    public V remove(final Object key) {
+    public Integer remove(final Object key) {
         if (key instanceof Integer)
             return remove(((Integer) key).intValue());
         return null;
     }
 
-    public V remove(final int key) {
+    public int remove(final int key) {
         if (this.list != null) {
             if (key < 0 || key >= this.list.length)
-                return null;
-            final V old = this.list[key];
-            this.list[key] = null;
-            if (old != null)
+                return this.defaultValue;
+            final int old = this.list[key];
+            if (old != 0 || (this.listEntriesWithZeroValue != null && this.listEntriesWithZeroValue[key])) {
                 this.size--;
+            }
+            if (this.listEntriesWithZeroValue != null)
+                this.listEntriesWithZeroValue[key] = false;
+            this.list[key] = 0;
             return old;
         }
 
         final int index = key & (this.mapTable.length - 1);
-        Entry<V> prev = this.mapTable[index];
-        Entry<V> e = prev;
+        Entry prev = this.mapTable[index];
+        Entry e = prev;
 
         while (e != null) {
-            final Entry<V> next = e.next;
+            final Entry next = e.next;
             if (e.key == key) {
                 this.modCount++;
                 this.size--;
@@ -413,13 +420,13 @@ public class IntegerMap<V> implements Map<Integer, V> {
             e = next;
         }
 
-        return null;
+        return this.defaultValue;
     }
 
     private void recomputeMinMaxIndexes() {
         this.minIndex = Integer.MAX_VALUE;
         this.maxIndex = Integer.MIN_VALUE;
-        for (Entry<V> e : this.mapTable) {
+        for (Entry e : this.mapTable) {
             while (e != null) {
                 if (e.key < this.minIndex)
                     this.minIndex = e.key;
@@ -438,7 +445,8 @@ public class IntegerMap<V> implements Map<Integer, V> {
         this.modCount++;
         this.size = 0;
         if (this.list != null) {
-            this.list = (V[]) new Object[this.list.length];
+            this.list = new int[this.list.length];
+            this.listEntriesWithZeroValue = null;
         } else {
             this.mapTable = new Entry[this.mapTable.length];
             this.minIndex = Integer.MAX_VALUE;
@@ -454,36 +462,120 @@ public class IntegerMap<V> implements Map<Integer, V> {
      * @return <tt>true</tt> if this map maps one or more keys to the specified value
      */
     public boolean containsValue(final Object value) {
-        if (value == null)
-            return false;
+        if (value instanceof Integer)
+            return containsValue(((Integer)value).intValue());
+        return false;
+    }
+
+    public boolean containsValue(final int value) {
 
         if (this.list != null) {
-            for (final V val : this.list)
-                if (val != null && val.equals(value))
+            if (value == 0) {
+                if (this.listEntriesWithZeroValue != null)
+                    for (final boolean b: this.listEntriesWithZeroValue)
+                        if (b)
+                            return true;
+                return false;
+            }
+            for (final int val : this.list)
+                if (val == value)
                     return true;
             return false;
         }
 
-        final Entry<V>[] tab = this.mapTable;
+        final Entry[] tab = this.mapTable;
         for (int i = 0; i < tab.length; i++)
-            for (Entry<V> e = tab[i]; e != null; e = e.next)
-                if (value.equals(e.value))
+            for (Entry e = tab[i]; e != null; e = e.next)
+                if (value == e.value)
                     return true;
         return false;
     }
 
-    private static final class Entry<V> implements Map.Entry<Integer, V> {
+    public int incrementAndGet(final int key, final int addValue) {
+        if (this.list != null) {
+            if (key >= 0 && key < this.list.length) {
+                final int val = this.list[key];
+                if (val == 0) {
+                    if (this.listEntriesWithZeroValue != null && this.listEntriesWithZeroValue[key]) {
+                        this.listEntriesWithZeroValue[key] = false;
+                        this.list[key] = addValue;
+                        return addValue;
+                    }
+                    // otherwise go to the put below
+                } else {
+                    final int newVal = val + addValue;
+                    if (newVal == 0) {
+                        if (this.listEntriesWithZeroValue == null)
+                            this.listEntriesWithZeroValue = new boolean[this.list.length];
+                        this.listEntriesWithZeroValue[key] = true;
+                    }
+                    this.list[key] = newVal;
+                    return newVal;
+                }
+            }
+
+        } else {
+
+            final int index = key & (this.mapTable.length - 1);
+            for (Entry e = this.mapTable[index]; e != null; e = e.next) {
+                if (e.key == key) {
+                    e.value += addValue;
+                    return e.value;
+                }
+            }
+        }
+        put(key, addValue);
+        return addValue;
+    }
+
+    public void increment(final int key) {
+        if (this.list != null) {
+            if (key >= 0 && key < this.list.length) {
+                int val = this.list[key];
+                if (val == 0) {
+                    if (this.listEntriesWithZeroValue != null && this.listEntriesWithZeroValue[key]) {
+                        this.listEntriesWithZeroValue[key] = false;
+                        this.list[key] = 1;
+                        return;
+                    }
+                    // otherwise go to the put below
+                } else {
+                    ++val;
+                    if (val == 0) {
+                        if (this.listEntriesWithZeroValue == null)
+                            this.listEntriesWithZeroValue = new boolean[this.list.length];
+                        this.listEntriesWithZeroValue[key] = true;
+                    }
+                    this.list[key] = val;
+                    return;
+                }
+            }
+
+        } else {
+
+            final int index = key & (this.mapTable.length - 1);
+            for (Entry e = this.mapTable[index]; e != null; e = e.next) {
+                if (e.key == key) {
+                    e.value++;
+                    return;
+                }
+            }
+        }
+        put(key, 1);
+    }
+
+    private static final class Entry implements Map.Entry<Integer, Integer> {
 
         final int key;
 
-        V value;
+        int value;
 
-        Entry<V> next;
+        Entry next;
 
         /**
          * Creates new entry.
          */
-        Entry(final int key, final V value, final Entry<V> next) {
+        Entry(final int key, final int value, final Entry next) {
             this.key = key;
             this.value = value;
             this.next = next;
@@ -493,12 +585,12 @@ public class IntegerMap<V> implements Map<Integer, V> {
             return this.key;
         }
 
-        public final V getValue() {
+        public final Integer getValue() {
             return this.value;
         }
 
-        public final V setValue(final V newValue) {
-            final V oldValue = this.value;
+        public final Integer setValue(final Integer newValue) {
+            final int oldValue = this.value;
             this.value = newValue;
             return oldValue;
         }
@@ -521,12 +613,12 @@ public class IntegerMap<V> implements Map<Integer, V> {
 
         @Override
         public final int hashCode() {
-            return this.key ^ (this.value == null ? 0 : this.value.hashCode());
+            return this.key ^ this.value;
         }
 
         @Override
         public final String toString() {
-            return this.key + "=" + getValue();
+            return this.key + "=" + this.value;
         }
 
     }
@@ -535,8 +627,8 @@ public class IntegerMap<V> implements Map<Integer, V> {
      * Adds a new entry with the specified key, value and hash code to the specified bucket. It is the responsibility of
      * this method to resize the table if appropriate.
      */
-    private void addEntry(final int key, final V value, final int index) {
-        this.mapTable[index] = new Entry<V>(key, value, this.mapTable[index]);
+    private void addEntry(final int key, final int value, final int index) {
+        this.mapTable[index] = new Entry(key, value, this.mapTable[index]);
         this.size++;
         if (key < this.minIndex)
             this.minIndex = key;
@@ -564,12 +656,17 @@ public class IntegerMap<V> implements Map<Integer, V> {
         while (listSize < minListSize)
             listSize <<= 1;
 
-        this.list = (V[]) new Object[listSize];
-        for (Entry<V> e : this.mapTable) {
+        this.list = new int[listSize];
+        for (Entry e : this.mapTable) {
             while (e != null) {
                 if (e.key < this.minIndex || e.key > this.maxIndex)
                     throw new ConcurrentModificationException();
-                this.list[e.key] = e.value;
+                if (e.value == 0) {
+                    if (this.listEntriesWithZeroValue == null)
+                        this.listEntriesWithZeroValue = new boolean[listSize];
+                    this.listEntriesWithZeroValue[e.key] = true;
+                } else
+                    this.list[e.key] = e.value;
                 e = e.next;
             }
         }
@@ -579,34 +676,34 @@ public class IntegerMap<V> implements Map<Integer, V> {
         this.modCount++;
     }
 
-    private class MapIterator implements Iterator<Map.Entry<Integer, V>> {
-        Entry<V> next; // next entry to return
+    private class MapIterator implements Iterator<Map.Entry<Integer, Integer>> {
+        Entry next; // next entry to return
 
         int expectedModCount; // For fast-fail
 
         int index; // current slot
 
-        Entry<V> current; // current entry
+        Entry current; // current entry
 
-        MapIterator() {
-            this.expectedModCount = IntegerMap.this.modCount;
-            if (IntegerMap.this.size > 0) { // advance to first entry
-                final Entry<V>[] t = IntegerMap.this.mapTable;
+        protected MapIterator() {
+            this.expectedModCount = IntegerToIntegerMap.this.modCount;
+            if (IntegerToIntegerMap.this.size > 0) { // advance to first entry
+                final Entry[] t = IntegerToIntegerMap.this.mapTable;
                 while (this.index < t.length && (this.next = t[this.index++]) == null) {
                     continue;
                 }
             }
         }
 
-        public Entry<V> next() {
-            if (IntegerMap.this.modCount != this.expectedModCount)
+        public Entry next() {
+            if (IntegerToIntegerMap.this.modCount != this.expectedModCount)
                 throw new ConcurrentModificationException();
-            final Entry<V> e = this.next;
+            final Entry e = this.next;
             if (e == null)
                 throw new NoSuchElementException();
 
             if ((this.next = e.next) == null) {
-                final Entry<V>[] t = IntegerMap.this.mapTable;
+                final Entry[] t = IntegerToIntegerMap.this.mapTable;
                 while (this.index < t.length && (this.next = t[this.index++]) == null)
                     continue;
             }
@@ -621,12 +718,12 @@ public class IntegerMap<V> implements Map<Integer, V> {
         public void remove() {
             if (this.current == null)
                 throw new IllegalStateException();
-            if (IntegerMap.this.modCount != this.expectedModCount)
+            if (IntegerToIntegerMap.this.modCount != this.expectedModCount)
                 throw new ConcurrentModificationException();
             final int k = this.current.key;
             this.current = null;
-            IntegerMap.this.remove(k);
-            this.expectedModCount = IntegerMap.this.modCount;
+            IntegerToIntegerMap.this.remove(k);
+            this.expectedModCount = IntegerToIntegerMap.this.modCount;
         }
 
     }
@@ -643,30 +740,33 @@ public class IntegerMap<V> implements Map<Integer, V> {
         return new AbstractSet<Integer>() {
             @Override
             public Iterator<Integer> iterator() {
-                if (IntegerMap.this.list != null) {
+                if (IntegerToIntegerMap.this.list != null) {
                     return new Iterator<Integer>() {
 
                         int nextCursor = getNextCursor(0);
 
-                        int expectedModCount = IntegerMap.this.modCount;
+                        int expectedModCount = IntegerToIntegerMap.this.modCount;
 
                         int lastKey = -1;
 
                         private int getNextCursor(final int i) {
                             int next = i;
-                            while (next < IntegerMap.this.list.length && IntegerMap.this.list[next] == null)
+                            while (next < IntegerToIntegerMap.this.list.length
+                                    && IntegerToIntegerMap.this.list[next] == 0
+                                    && IntegerToIntegerMap.this.listEntriesWithZeroValue != null
+                                    && !IntegerToIntegerMap.this.listEntriesWithZeroValue[next])
                                 ++next;
                             return next;
                         }
 
                         public boolean hasNext() {
-                            if (this.expectedModCount != IntegerMap.this.modCount)
+                            if (this.expectedModCount != IntegerToIntegerMap.this.modCount)
                                 throw new ConcurrentModificationException();
-                            return this.nextCursor < IntegerMap.this.list.length;
+                            return this.nextCursor < IntegerToIntegerMap.this.list.length;
                         }
 
                         public Integer next() {
-                            if (this.expectedModCount != IntegerMap.this.modCount)
+                            if (this.expectedModCount != IntegerToIntegerMap.this.modCount)
                                 throw new ConcurrentModificationException();
                             if (!hasNext())
                                 throw new NoSuchElementException();
@@ -676,11 +776,11 @@ public class IntegerMap<V> implements Map<Integer, V> {
                         }
 
                         public void remove() {
-                            if (this.expectedModCount != IntegerMap.this.modCount)
+                            if (this.expectedModCount != IntegerToIntegerMap.this.modCount)
                                 throw new ConcurrentModificationException();
                             if (this.lastKey == -1)
                                 throw new IllegalStateException();
-                            IntegerMap.this.remove(this.lastKey);
+                            IntegerToIntegerMap.this.remove(this.lastKey);
                         }
 
                     };
@@ -688,7 +788,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
                 // else:
 
                 return new Iterator<Integer>() {
-                    private final Iterator<Map.Entry<Integer, V>> i = new MapIterator();
+                    private final Iterator<Map.Entry<Integer, Integer>> i = new MapIterator();
 
                     public boolean hasNext() {
                         return this.i.hasNext();
@@ -706,12 +806,12 @@ public class IntegerMap<V> implements Map<Integer, V> {
 
             @Override
             public int size() {
-                return IntegerMap.this.size();
+                return IntegerToIntegerMap.this.size();
             }
 
             @Override
             public boolean contains(final Object k) {
-                return IntegerMap.this.containsKey(k);
+                return IntegerToIntegerMap.this.containsKey(k);
             }
         };
     }
@@ -725,62 +825,65 @@ public class IntegerMap<V> implements Map<Integer, V> {
      * <tt>retainAll</tt> and <tt>clear</tt> operations. It does not support the <tt>add</tt> or <tt>addAll</tt>
      * operations.
      */
-    public Collection<V> values() {
-        return new AbstractCollection<V>() {
+    public Collection<Integer> values() {
+        return new AbstractCollection<Integer>() {
             @Override
-            public Iterator<V> iterator() {
-                if (IntegerMap.this.list != null) {
-                    return new Iterator<V>() {
+            public Iterator<Integer> iterator() {
+                if (IntegerToIntegerMap.this.list != null) {
+                    return new Iterator<Integer>() {
 
                         int nextCursor = getNextCursor(0);
 
-                        int expectedModCount = IntegerMap.this.modCount;
+                        int expectedModCount = IntegerToIntegerMap.this.modCount;
 
                         int lastKey = -1;
 
                         private int getNextCursor(final int i) {
                             int next = i;
-                            while (next < IntegerMap.this.list.length && IntegerMap.this.list[next] == null)
+                            while (next < IntegerToIntegerMap.this.list.length
+                                    && IntegerToIntegerMap.this.list[next] == 0
+                                    && IntegerToIntegerMap.this.listEntriesWithZeroValue != null
+                                    && !IntegerToIntegerMap.this.listEntriesWithZeroValue[next])
                                 ++next;
                             return next;
                         }
 
                         public boolean hasNext() {
-                            if (this.expectedModCount != IntegerMap.this.modCount)
+                            if (this.expectedModCount != IntegerToIntegerMap.this.modCount)
                                 throw new ConcurrentModificationException();
-                            return this.nextCursor < IntegerMap.this.list.length;
+                            return this.nextCursor < IntegerToIntegerMap.this.list.length;
                         }
 
-                        public V next() {
-                            if (this.expectedModCount != IntegerMap.this.modCount)
+                        public Integer next() {
+                            if (this.expectedModCount != IntegerToIntegerMap.this.modCount)
                                 throw new ConcurrentModificationException();
                             if (!hasNext())
                                 throw new NoSuchElementException();
                             this.lastKey = this.nextCursor;
                             this.nextCursor = getNextCursor(this.nextCursor + 1);
-                            return IntegerMap.this.list[this.lastKey];
+                            return IntegerToIntegerMap.this.list[this.lastKey];
                         }
 
                         public void remove() {
-                            if (this.expectedModCount != IntegerMap.this.modCount)
+                            if (this.expectedModCount != IntegerToIntegerMap.this.modCount)
                                 throw new ConcurrentModificationException();
                             if (this.lastKey == -1)
                                 throw new IllegalStateException();
-                            IntegerMap.this.remove(this.lastKey);
+                            IntegerToIntegerMap.this.remove(this.lastKey);
                         }
 
                     };
                 }
                 // else:
 
-                return new Iterator<V>() {
-                    private final Iterator<Map.Entry<Integer, V>> i = new MapIterator();
+                return new Iterator<Integer>() {
+                    private final Iterator<Map.Entry<Integer, Integer>> i = new MapIterator();
 
                     public boolean hasNext() {
                         return this.i.hasNext();
                     }
 
-                    public V next() {
+                    public Integer next() {
                         return this.i.next().getValue();
                     }
 
@@ -792,12 +895,12 @@ public class IntegerMap<V> implements Map<Integer, V> {
 
             @Override
             public int size() {
-                return IntegerMap.this.size();
+                return IntegerToIntegerMap.this.size();
             }
 
             @Override
             public boolean contains(final Object v) {
-                return IntegerMap.this.containsValue(v);
+                return IntegerToIntegerMap.this.containsValue(v);
             }
         };
     }
@@ -813,51 +916,54 @@ public class IntegerMap<V> implements Map<Integer, V> {
      *
      * @return a set view of the mappings contained in this map
      */
-    public Set<Map.Entry<Integer, V>> entrySet() {
+    public Set<Map.Entry<Integer, Integer>> entrySet() {
         return new EntrySet();
     }
 
-    final class EntrySet implements Set<Map.Entry<Integer, V>> {
+    final class EntrySet implements Set<Map.Entry<Integer, Integer>> {
 
-        public Iterator<Map.Entry<Integer, V>> iterator() {
-            if (IntegerMap.this.list != null) {
-                return new Iterator<Map.Entry<Integer, V>>() {
+        public Iterator<Map.Entry<Integer, Integer>> iterator() {
+            if (IntegerToIntegerMap.this.list != null) {
+                return new Iterator<Map.Entry<Integer, Integer>>() {
 
                     int nextCursor = getNextCursor(0);
 
-                    int expectedModCount = IntegerMap.this.modCount;
+                    int expectedModCount = IntegerToIntegerMap.this.modCount;
 
                     int lastKey = -1;
 
                     private int getNextCursor(final int i) {
                         int next = i;
-                        while (next < IntegerMap.this.list.length && IntegerMap.this.list[next] == null)
+                        while (next < IntegerToIntegerMap.this.list.length
+                                && IntegerToIntegerMap.this.list[next] == 0
+                                && IntegerToIntegerMap.this.listEntriesWithZeroValue != null
+                                && !IntegerToIntegerMap.this.listEntriesWithZeroValue[next])
                             ++next;
                         return next;
                     }
 
                     public boolean hasNext() {
-                        if (this.expectedModCount != IntegerMap.this.modCount)
+                        if (this.expectedModCount != IntegerToIntegerMap.this.modCount)
                             throw new ConcurrentModificationException();
-                        return this.nextCursor < IntegerMap.this.list.length;
+                        return this.nextCursor < IntegerToIntegerMap.this.list.length;
                     }
 
-                    public Entry<V> next() {
-                        if (this.expectedModCount != IntegerMap.this.modCount)
+                    public Entry next() {
+                        if (this.expectedModCount != IntegerToIntegerMap.this.modCount)
                             throw new ConcurrentModificationException();
                         if (!hasNext())
                             throw new NoSuchElementException();
                         this.lastKey = this.nextCursor;
                         this.nextCursor = getNextCursor(this.nextCursor + 1);
-                        return new Entry<V>(this.lastKey, IntegerMap.this.list[this.lastKey], null);
+                        return new Entry(this.lastKey, IntegerToIntegerMap.this.list[this.lastKey], null);
                     }
 
                     public void remove() {
-                        if (this.expectedModCount != IntegerMap.this.modCount)
+                        if (this.expectedModCount != IntegerToIntegerMap.this.modCount)
                             throw new ConcurrentModificationException();
                         if (this.lastKey == -1)
                             throw new IllegalStateException();
-                        IntegerMap.this.remove(this.lastKey);
+                        IntegerToIntegerMap.this.remove(this.lastKey);
                     }
 
                 };
@@ -871,31 +977,34 @@ public class IntegerMap<V> implements Map<Integer, V> {
         public boolean contains(final Object o) {
             if (!(o instanceof Entry))
                 return false;
-            final Entry<V> e = (Entry<V>) o;
-            final Entry<V> candidate = getEntry(e.key);
+            final Entry e = (Entry) o;
+            final Entry candidate = getEntry(e.key);
             return candidate != null && candidate.equals(e);
         }
 
         @SuppressWarnings("unchecked")
         public boolean remove(final Object o) {
-            if (o instanceof Entry)
-                return IntegerMap.this.remove(((Entry) o).key) != null;
+            if (o instanceof Entry) {
+                final int key = ((Entry)o).key;
+                return IntegerToIntegerMap.this.containsKey(key)
+                    && IntegerToIntegerMap.this.remove(((Entry) o).key) == IntegerToIntegerMap.this.defaultValue;
+            }
             return false;
         }
 
         public int size() {
-            return IntegerMap.this.size;
+            return IntegerToIntegerMap.this.size;
         }
 
         public void clear() {
-            IntegerMap.this.clear();
+            IntegerToIntegerMap.this.clear();
         }
 
-        public boolean add(final java.util.Map.Entry<Integer, V> e) {
+        public boolean add(final java.util.Map.Entry<Integer, Integer> e) {
             throw new UnsupportedOperationException();
         }
 
-        public boolean addAll(final Collection<? extends Map.Entry<Integer, V>> c) {
+        public boolean addAll(final Collection<? extends Map.Entry<Integer, Integer>> c) {
             throw new UnsupportedOperationException();
         }
 
@@ -907,7 +1016,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
         }
 
         public boolean isEmpty() {
-            return IntegerMap.this.isEmpty();
+            return IntegerToIntegerMap.this.isEmpty();
         }
 
         public boolean removeAll(final Collection<?> c) {
@@ -919,7 +1028,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
         }
 
         public boolean retainAll(final Collection<?> c) {
-            final Iterator<Map.Entry<Integer, V>> e = iterator();
+            final Iterator<Map.Entry<Integer, Integer>> e = iterator();
             boolean changed = false;
             while (e.hasNext())
                 if (!c.contains(e.next())) {
@@ -931,7 +1040,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
 
         public Object[] toArray() {
             final Object[] r = new Object[size()];
-            final Iterator<Map.Entry<Integer, V>> it = iterator();
+            final Iterator<Map.Entry<Integer, Integer>> it = iterator();
             for (int i = 0; i < r.length; i++) {
                 if (!it.hasNext()) // fewer elements than expected
                     return Arrays.copyOf(r, i);
@@ -944,7 +1053,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
         public <T> T[] toArray(final T[] a) {
             final T[] r = a.length >= size() ? a : (T[]) java.lang.reflect.Array.newInstance(a.getClass()
                     .getComponentType(), size());
-            final Iterator<Map.Entry<Integer, V>> it = iterator();
+            final Iterator<Map.Entry<Integer, Integer>> it = iterator();
 
             for (int i = 0; i < r.length; i++) {
                 if (!it.hasNext()) { // fewer elements than expected
@@ -994,17 +1103,17 @@ public class IntegerMap<V> implements Map<Integer, V> {
 
     @Override
     public String toString() {
-        final Iterator<Map.Entry<Integer, V>> i = entrySet().iterator();
+        final Iterator<Map.Entry<Integer, Integer>> i = entrySet().iterator();
         if (!i.hasNext())
             return "{}";
 
         final StringBuilder sb = new StringBuilder();
         sb.append('{');
         while (true) {
-            final Map.Entry<Integer, V> e = i.next();
+            final Map.Entry<Integer, Integer> e = i.next();
             final Integer key = e.getKey();
-            final V value = e.getValue();
-            sb.append(key).append('=').append(value == this ? "(this Map)" : value);
+            final Integer value = e.getValue();
+            sb.append(key).append('=').append(value);
             if (!i.hasNext())
                 return sb.append('}').toString();
             sb.append(", ");
@@ -1014,7 +1123,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
     @Override
     public int hashCode() {
         int h = 0;
-        final Iterator<Map.Entry<Integer, V>> i = entrySet().iterator();
+        final Iterator<Map.Entry<Integer, Integer>> i = entrySet().iterator();
         while (i.hasNext())
             h += i.next().hashCode();
         return h;
@@ -1028,16 +1137,16 @@ public class IntegerMap<V> implements Map<Integer, V> {
 
         if (!(o instanceof Map))
             return false;
-        final Map<Integer, V> m = (Map<Integer, V>) o;
+        final Map<Integer, Integer> m = (Map<Integer, Integer>) o;
         if (m.size() != size())
             return false;
 
         try {
-            final Iterator<Map.Entry<Integer, V>> i = entrySet().iterator();
+            final Iterator<Map.Entry<Integer, Integer>> i = entrySet().iterator();
             while (i.hasNext()) {
-                final Map.Entry<Integer, V> e = i.next();
+                final Map.Entry<Integer, Integer> e = i.next();
                 final Integer key = e.getKey();
-                final V value = e.getValue();
+                final Integer value = e.getValue();
                 if (!value.equals(m.get(key)))
                     return false;
             }

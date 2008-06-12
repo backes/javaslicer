@@ -180,6 +180,9 @@ public class Tracer implements ClassFileTransformer {
             // NOTE: these will be cleaned up when the system runs stable
             //////////////////////////////////////////////////////////////////
 
+            if (!className.equals("Test"))
+                return null;
+
             // Thread, ThreadLocal and ThreadLocalMap
             if (Type.getObjectType(className).getClassName().startsWith("java.lang.Thread"))
                 return null;
@@ -343,12 +346,18 @@ public class Tracer implements ClassFileTransformer {
         tracer.getThreadTracer(Thread.currentThread()).traceObject(obj, traceSequenceIndex);
     }
 
-    public static void setLastInstructionIndex(final int instructionIndex) {
-        getThreadTracer().setLastInstructionIndex(instructionIndex);
+    public static void passInstruction(final int instructionIndex) {
+        final Tracer tracer = getInstance();
+        if (!tracer.tracingStarted || tracer.tracingReady)
+            return;
+        tracer.getThreadTracer(Thread.currentThread()).passInstruction(instructionIndex);
     }
 
-    public static int getLastInstructionIndex() {
-        return getThreadTracer().getLastInstructionIndex();
+    public static void traceLastInstructionIndex(final int traceSeqIndex) {
+        final Tracer tracer = getInstance();
+        if (!tracer.tracingStarted || tracer.tracingReady)
+            return;
+        tracer.getThreadTracer(Thread.currentThread()).traceLastInstructionIndex(traceSeqIndex);
     }
 
     public void finish() throws IOException {
