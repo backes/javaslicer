@@ -2,6 +2,7 @@ package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
 
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.IOException;
 
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
@@ -38,8 +39,9 @@ public class FieldInstruction extends AbstractInstruction {
     }
 
     @Override
-    public Instruction getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException {
-        return new Instance(this, backwardInstructionIterator.getNextLong(this.objectTraceSeqIndex));
+    public Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException, EOFException {
+        return new Instance(this, backwardInstructionIterator.getNextLong(this.objectTraceSeqIndex),
+                backwardInstructionIterator.getNextInstructionOccurenceNumber(getIndex()));
     }
 
     @Override
@@ -59,12 +61,12 @@ public class FieldInstruction extends AbstractInstruction {
         return new FieldInstruction(readMethod, opcode, lineNumber, ownerInternalClassName, fieldName, fieldDesc, objectTraceSeqIndex);
     }
 
-    public static class Instance extends InstructionWrapper {
+    public static class Instance extends AbstractInstance {
 
         private final long objectId;
 
-        public Instance(final FieldInstruction fieldInstr, final long objectId) {
-            super(fieldInstr);
+        public Instance(final FieldInstruction fieldInstr, final long objectId, final long occurenceNumber) {
+            super(fieldInstr, occurenceNumber);
             this.objectId = objectId;
         }
 

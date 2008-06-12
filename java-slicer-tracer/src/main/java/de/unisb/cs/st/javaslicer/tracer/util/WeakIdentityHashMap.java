@@ -1,20 +1,9 @@
-/*
- *  @(#)HashMap.java    1.73 07/03/13
- *
- * Copyright 2006 Sun Microsystems, Inc. All rights reserved.
- * SUN PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
- *
- * THIS COPY IS HERE FOR NOT BEING INSTRUMENTED!
- *
- */
-
 package de.unisb.cs.st.javaslicer.tracer.util;
 
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.util.AbstractCollection;
 import java.util.AbstractSet;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
@@ -723,8 +712,11 @@ public class WeakIdentityHashMap<K, V> implements Map<K, V> {
             final Object[] r = new Object[size()];
             final Iterator<Map.Entry<K, V>> it = iterator();
             for (int i = 0; i < r.length; i++) {
-                if (!it.hasNext()) // fewer elements than expected
-                    return Arrays.copyOf(r, i);
+                if (!it.hasNext()) { // fewer elements than expected
+                    final Object[] r2 = new Object[i];
+                    System.arraycopy(r, 0, r2, 0, i);
+                    return r2;
+                }
                 r[i] = it.next();
             }
             return it.hasNext() ? finishToArray(r, it) : r;
@@ -738,8 +730,12 @@ public class WeakIdentityHashMap<K, V> implements Map<K, V> {
 
             for (int i = 0; i < r.length; i++) {
                 if (!it.hasNext()) { // fewer elements than expected
-                    if (a != r)
-                        return Arrays.copyOf(r, i);
+                    if (a != r) {
+                        final T[] r2 = (T[]) java.lang.reflect.Array.newInstance(a.getClass()
+                            .getComponentType(), i);
+                        System.arraycopy(r, 0, r2, 0, i);
+                        return r2;
+                    }
                     r[i] = null; // null-terminate
                     return r;
                 }
@@ -772,12 +768,20 @@ public class WeakIdentityHashMap<K, V> implements Map<K, V> {
                             throw new OutOfMemoryError("Required array size too large");
                         newCap = Integer.MAX_VALUE;
                     }
-                    a = Arrays.copyOf(a, newCap);
+                    final T[] old = a;
+                    a = (T[]) java.lang.reflect.Array.newInstance(a.getClass()
+                        .getComponentType(), newCap);
+                    System.arraycopy(old, 0, a, 0, newCap);
                 }
                 a[i++] = (T) it.next();
             }
             // trim if overallocated
-            return (i == a.length) ? a : Arrays.copyOf(a, i);
+            if (i == a.length)
+                return a;
+            final T[] newA = (T[]) java.lang.reflect.Array.newInstance(a.getClass()
+                .getComponentType(), i);
+            System.arraycopy(a, 0, newA, 0, i);
+            return newA;
         }
 
     }

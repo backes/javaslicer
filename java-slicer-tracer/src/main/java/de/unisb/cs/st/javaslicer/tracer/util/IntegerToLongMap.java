@@ -2,7 +2,6 @@ package de.unisb.cs.st.javaslicer.tracer.util;
 
 import java.util.AbstractCollection;
 import java.util.AbstractSet;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
@@ -10,7 +9,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-public class IntegerToLongMap implements Map<Integer, Long> {
+public class IntegerToLongMap implements Map<Integer, Long>, Cloneable {
 
     /**
      * The default initial capacity - MUST be a power of two.
@@ -256,7 +255,9 @@ public class IntegerToLongMap implements Map<Integer, Long> {
                 // and continue with the map code below...
             } else {
                 final int newSize = 3 * key / 2 + 1;
-                this.list = Arrays.copyOf(this.list, newSize);
+                final long[] oldList = this.list;
+                this.list = new long[newSize];
+                System.arraycopy(oldList, 0, this.list, 0, oldList.length);
                 this.list[key] = value;
                 this.size++;
                 if (value == 0) {
@@ -1042,8 +1043,11 @@ public class IntegerToLongMap implements Map<Integer, Long> {
             final Object[] r = new Object[size()];
             final Iterator<Map.Entry<Integer, Long>> it = iterator();
             for (int i = 0; i < r.length; i++) {
-                if (!it.hasNext()) // fewer elements than expected
-                    return Arrays.copyOf(r, i);
+                if (!it.hasNext()) { // fewer elements than expected
+                    final Object[] r2 = new Object[i];
+                    System.arraycopy(r, 0, r2, 0, i);
+                    return r2;
+                }
                 r[i] = it.next();
             }
             return it.hasNext() ? finishToArray(r, it) : r;
@@ -1057,8 +1061,12 @@ public class IntegerToLongMap implements Map<Integer, Long> {
 
             for (int i = 0; i < r.length; i++) {
                 if (!it.hasNext()) { // fewer elements than expected
-                    if (a != r)
-                        return Arrays.copyOf(r, i);
+                    if (a != r) {
+                        final T[] r2 = (T[]) java.lang.reflect.Array.newInstance(a.getClass()
+                            .getComponentType(), i);
+                        System.arraycopy(r, 0, r2, 0, i);
+                        return r2;
+                    }
                     r[i] = null; // null-terminate
                     return r;
                 }
@@ -1091,12 +1099,20 @@ public class IntegerToLongMap implements Map<Integer, Long> {
                             throw new OutOfMemoryError("Required array size too large");
                         newCap = Integer.MAX_VALUE;
                     }
-                    a = Arrays.copyOf(a, newCap);
+                    final T[] old = a;
+                    a = (T[]) java.lang.reflect.Array.newInstance(a.getClass()
+                        .getComponentType(), newCap);
+                    System.arraycopy(old, 0, a, 0, newCap);
                 }
                 a[i++] = (T) it.next();
             }
             // trim if overallocated
-            return (i == a.length) ? a : Arrays.copyOf(a, i);
+            if (i == a.length)
+                return a;
+            final T[] newA = (T[]) java.lang.reflect.Array.newInstance(a.getClass()
+                .getComponentType(), i);
+            System.arraycopy(a, 0, newA, 0, i);
+            return newA;
         }
 
     }
@@ -1157,6 +1173,37 @@ public class IntegerToLongMap implements Map<Integer, Long> {
         }
 
         return true;
+    }
+
+    @Override
+    public IntegerToLongMap clone() {
+        IntegerToLongMap clone;
+        try {
+            clone = (IntegerToLongMap) super.clone();
+        } catch (final CloneNotSupportedException e) {
+            // this should never occur since we are cloneable!!
+            throw new RuntimeException(e);
+        }
+        if (this.list != null) {
+            clone.list = new long[this.list.length];
+            System.arraycopy(this.list, 0, clone.list, 0, this.list.length);
+        }
+        if (this.listEntriesWithZeroValue != null) {
+            clone.listEntriesWithZeroValue = new boolean[this.listEntriesWithZeroValue.length];
+            System.arraycopy(this.listEntriesWithZeroValue, 0, clone.listEntriesWithZeroValue, 0, this.listEntriesWithZeroValue.length);
+        }
+        if (this.mapTable != null) {
+            final Entry[] newTable = new Entry[this.mapTable.length];
+            for (int j = 0; j < this.mapTable.length; ++j) {
+                Entry e = this.mapTable[j];
+                while (e != null) {
+                    newTable[j] = new Entry(e.key, e.value, newTable[j]);
+                    e = e.next;
+                }
+            }
+            clone.mapTable = newTable;
+        }
+        return clone;
     }
 
 }

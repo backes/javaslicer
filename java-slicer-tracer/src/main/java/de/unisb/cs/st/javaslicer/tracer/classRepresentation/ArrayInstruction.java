@@ -2,6 +2,7 @@ package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
 
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.IOException;
 
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
@@ -21,10 +22,10 @@ public class ArrayInstruction extends AbstractInstruction {
     }
 
     @Override
-    public Instruction getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException {
+    public Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException, EOFException {
         final long objectId = backwardInstructionIterator.getNextLong(this.arrayTraceSeqIndex);
         final int index = backwardInstructionIterator.getNextInteger(this.indexTraceSeqIndex);
-        return new Instance(this, objectId, index);
+        return new Instance(this, objectId, index, backwardInstructionIterator.getNextInstructionOccurenceNumber(getIndex()));
     }
 
     @Override
@@ -40,13 +41,13 @@ public class ArrayInstruction extends AbstractInstruction {
         return new ArrayInstruction(readMethod, lineNumber, opcode, arrayTraceSeqIndex, indexTraceSeqIndex);
     }
 
-    public static class Instance extends InstructionWrapper {
+    public static class Instance extends AbstractInstance {
 
         private final long arrayId;
         private final int arrayIndex;
 
-        public Instance(final ArrayInstruction arrayInstr, final long arrayId, final int arrayIndex) {
-            super(arrayInstr);
+        public Instance(final ArrayInstruction arrayInstr, final long arrayId, final int arrayIndex, final long occurenceNumber) {
+            super(arrayInstr, occurenceNumber);
             this.arrayId = arrayId;
             this.arrayIndex = arrayIndex;
         }

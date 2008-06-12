@@ -1,6 +1,7 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
 
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.IOException;
 
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
@@ -18,8 +19,14 @@ public interface Instruction {
 
     int getBackwardInstructionIndex(final BackwardInstructionIterator backwardInstructionIterator);
 
-    Instruction getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException;
+    Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException, EOFException;
 
     void writeOut(final DataOutput out) throws IOException;
+
+    public interface Instance extends Instruction {
+
+        long getOccurenceNumber();
+
+    }
 
 }

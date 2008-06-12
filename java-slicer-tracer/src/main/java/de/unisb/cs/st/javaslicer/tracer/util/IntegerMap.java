@@ -1,18 +1,7 @@
-/*
- *  @(#)HashMap.java    1.73 07/03/13
- *
- * Copyright 2006 Sun Microsystems, Inc. All rights reserved.
- * SUN PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
- *
- * THIS COPY IS HERE FOR NOT BEING INSTRUMENTED!
- *
- */
-
 package de.unisb.cs.st.javaslicer.tracer.util;
 
 import java.util.AbstractCollection;
 import java.util.AbstractSet;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
@@ -20,7 +9,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-public class IntegerMap<V> implements Map<Integer, V> {
+public class IntegerMap<V> implements Map<Integer, V>, Cloneable {
 
     /**
      * The default initial capacity - MUST be a power of two.
@@ -242,6 +231,7 @@ public class IntegerMap<V> implements Map<Integer, V> {
         return put(key.intValue(), value);
     }
 
+    @SuppressWarnings("unchecked")
     public V put(final int key, final V value) {
         if (value == null)
             throw new NullPointerException();
@@ -259,7 +249,9 @@ public class IntegerMap<V> implements Map<Integer, V> {
                 // and continue with the map code below...
             } else {
                 final int newSize = 3 * key / 2 + 1;
-                this.list = Arrays.copyOf(this.list, newSize);
+                final V[] oldList = this.list;
+                this.list = (V[]) new Object[newSize];
+                System.arraycopy(oldList, 0, this.list, 0, oldList.length);
                 this.list[key] = value;
                 this.size++;
                 return null;
@@ -933,8 +925,11 @@ public class IntegerMap<V> implements Map<Integer, V> {
             final Object[] r = new Object[size()];
             final Iterator<Map.Entry<Integer, V>> it = iterator();
             for (int i = 0; i < r.length; i++) {
-                if (!it.hasNext()) // fewer elements than expected
-                    return Arrays.copyOf(r, i);
+                if (!it.hasNext()) { // fewer elements than expected
+                    final Object[] r2 = new Object[i];
+                    System.arraycopy(r, 0, r2, 0, i);
+                    return r2;
+                }
                 r[i] = it.next();
             }
             return it.hasNext() ? finishToArray(r, it) : r;
@@ -948,8 +943,12 @@ public class IntegerMap<V> implements Map<Integer, V> {
 
             for (int i = 0; i < r.length; i++) {
                 if (!it.hasNext()) { // fewer elements than expected
-                    if (a != r)
-                        return Arrays.copyOf(r, i);
+                    if (a != r) {
+                        final T[] r2 = (T[]) java.lang.reflect.Array.newInstance(a.getClass()
+                            .getComponentType(), i);
+                        System.arraycopy(r, 0, r2, 0, i);
+                        return r2;
+                    }
                     r[i] = null; // null-terminate
                     return r;
                 }
@@ -982,12 +981,20 @@ public class IntegerMap<V> implements Map<Integer, V> {
                             throw new OutOfMemoryError("Required array size too large");
                         newCap = Integer.MAX_VALUE;
                     }
-                    a = Arrays.copyOf(a, newCap);
+                    final T[] old = a;
+                    a = (T[]) java.lang.reflect.Array.newInstance(a.getClass()
+                        .getComponentType(), newCap);
+                    System.arraycopy(old, 0, a, 0, newCap);
                 }
                 a[i++] = (T) it.next();
             }
             // trim if overallocated
-            return (i == a.length) ? a : Arrays.copyOf(a, i);
+            if (i == a.length)
+                return a;
+            final T[] newA = (T[]) java.lang.reflect.Array.newInstance(a.getClass()
+                .getComponentType(), i);
+            System.arraycopy(a, 0, newA, 0, i);
+            return newA;
         }
 
     }
@@ -1048,6 +1055,34 @@ public class IntegerMap<V> implements Map<Integer, V> {
         }
 
         return true;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public IntegerMap<V> clone() {
+        IntegerMap<V> clone;
+        try {
+            clone = (IntegerMap<V>) super.clone();
+        } catch (final CloneNotSupportedException e) {
+            // this should never occur since we are cloneable!!
+            throw new RuntimeException(e);
+        }
+        if (this.list != null) {
+            clone.list = (V[]) new Object[this.list.length];
+            System.arraycopy(this.list, 0, clone.list, 0, this.list.length);
+        }
+        if (this.mapTable != null) {
+            final Entry<V>[] newTable = new Entry[this.mapTable.length];
+            for (int j = 0; j < this.mapTable.length; ++j) {
+                Entry<V> e = this.mapTable[j];
+                while (e != null) {
+                    newTable[j] = new Entry<V>(e.key, e.value, newTable[j]);
+                    e = e.next;
+                }
+            }
+            clone.mapTable = newTable;
+        }
+        return clone;
     }
 
 }

@@ -7,9 +7,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;
 
 public class TraceResult {
@@ -64,7 +64,7 @@ public class TraceResult {
         return traceResult;
     }
 
-    public Iterator<Instruction> getBackwardIterator(final long threadId) {
+    public Iterator<Instance> getBackwardIterator(final long threadId) {
         for (final ThreadTraceResult res: this.threadTraces)
             if (res.getThreadId() == threadId)
                 return res.getBackwardIterator();
@@ -129,13 +129,14 @@ public class TraceResult {
 
         System.out.println();
         System.out.println("The backward trace:");
-        final Iterator<Instruction> it = tr.getBackwardIterator(tracing.getThreadId());
+        final Iterator<Instance> it = tr.getBackwardIterator(tracing.getThreadId());
         while (it.hasNext()) {
-            final Instruction instr = it.next();
-            final ReadMethod method = instr.getMethod();
+            final Instance inst = it.next();
+            final ReadMethod method = inst.getMethod();
             final ReadClass class0 = method.getReadClass();
-            System.out.format("%-50s: %s%n", class0.getClassName()+"."
-                    +method.getName()+":"+instr.getLineNumber(), instr);
+            System.out.format("%-50s: (%12d) %s%n", class0.getClassName()+"."
+                    +method.getName()+":"+inst.getLineNumber(),
+                    inst.getOccurenceNumber(), inst.toString());
         }
 
     }

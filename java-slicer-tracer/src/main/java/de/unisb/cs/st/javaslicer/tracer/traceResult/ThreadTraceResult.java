@@ -1,6 +1,7 @@
 package de.unisb.cs.st.javaslicer.tracer.traceResult;
 
 import java.io.DataInput;
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -12,6 +13,7 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.LabelMarker;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerToIntegerMap;
@@ -23,14 +25,16 @@ public class ThreadTraceResult {
     private final long threadId;
     private final String threadName;
     protected final IntegerMap<ConstantTraceSequence> sequences;
+    protected final IntegerToLongMap instructionOccurences;
     protected final int lastInstructionIndex;
 
     private final TraceResult traceResult;
 
-    public ThreadTraceResult(final long threadId, final String threadName, final IntegerMap<ConstantTraceSequence> sequences, final int lastInstructionIndex, final TraceResult traceResult) {
+    public ThreadTraceResult(final long threadId, final String threadName, final IntegerMap<ConstantTraceSequence> sequences, final IntegerToLongMap instructionOccurences, final int lastInstructionIndex, final TraceResult traceResult) {
         this.threadId = threadId;
         this.threadName = threadName;
         this.sequences = sequences;
+        this.instructionOccurences = instructionOccurences;
         this.lastInstructionIndex = lastInstructionIndex;
         this.traceResult = traceResult;
     }
@@ -65,10 +69,10 @@ public class ThreadTraceResult {
                 throw new IOException("corrupted data");
         }
         final int lastInstructionIndex = in.readInt();
-        return new ThreadTraceResult(threadId, name, sequences, lastInstructionIndex, traceResult);
+        return new ThreadTraceResult(threadId, name, sequences, instructionOccurences, lastInstructionIndex, traceResult);
     }
 
-    public Iterator<Instruction> getBackwardIterator() {
+    public Iterator<Instance> getBackwardIterator() {
         return new BackwardInstructionIterator();
     }
 
@@ -130,39 +134,49 @@ public class ThreadTraceResult {
         return instr;
     }
 
-    public class BackwardInstructionIterator implements Iterator<Instruction> {
+    public class BackwardInstructionIterator implements Iterator<Instance> {
 
-        Instruction nextInstruction;
+        Instance nextInstruction;
         private final Map<Integer, Iterator<Integer>> integerSequenceBackwardIterators;
         private final Map<Integer, Iterator<Long>> longSequenceBackwardIterators;
+        private final IntegerToLongMap instructionNextOccurenceNumber;
 
         public BackwardInstructionIterator() throws TracerException {
             final Instruction tmp = findInstruction(ThreadTraceResult.this.lastInstructionIndex, null, null);
-            this.nextInstruction = tmp.getNextInstance(this);
+            try {
+                this.nextInstruction = tmp.getNextInstance(this);
+            } catch (final EOFException e) {
+                this.nextInstruction = null;
+            }
             this.integerSequenceBackwardIterators = new IntegerMap<Iterator<Integer>>();
             this.longSequenceBackwardIterators = new IntegerMap<Iterator<Long>>();
+            this.instructionNextOccurenceNumber = ThreadTraceResult.this.instructionOccurences.clone();
         }
 
         public boolean hasNext() {
             return this.nextInstruction != null;
         }
 
-        public Instruction next() throws TracerException {
+        public Instance next() throws TracerException {
             if (this.nextInstruction == null)
                 throw new NoSuchElementException();
-            final Instruction old = this.nextInstruction;
+            final Instance old = this.nextInstruction;
             this.nextInstruction = getNextInstruction(this.nextInstruction);
             return old;
         }
 
-        private Instruction getNextInstruction(final Instruction old) throws TracerException {
+        private Instance getNextInstruction(final Instruction old) throws TracerException {
             final ReadMethod oldMethod = old.getMethod();
             final ReadClass oldClass = oldMethod.getReadClass();
             final int backwardInstructionIndex = old.getBackwardInstructionIndex(this);
             final Instruction backwardInstruction = findInstruction(backwardInstructionIndex, oldClass, oldMethod);
             while (backwardInstruction instanceof LabelMarker)
                 return getNextInstruction(backwardInstruction);
-            return backwardInstruction.getNextInstance(this);
+            try {
+                return backwardInstruction.getNextInstance(this);
+            } catch (final EOFException e) {
+                return null;
+            }
         }
 
         public void remove() {
@@ -189,6 +203,13 @@ public class ThreadTraceResult {
             if (!it.hasNext())
                 throw new TracerException("corrupted data (cannot trace backwards)");
             return it.next();
+        }
+
+        public long getNextInstructionOccurenceNumber(final int instructionIndex) throws EOFException {
+            final long nr = this.instructionNextOccurenceNumber.incrementAndGet(instructionIndex, -1);
+            if (nr < 0)
+                throw new EOFException("reached beginning of the trace");
+            return nr;
         }
 
     }

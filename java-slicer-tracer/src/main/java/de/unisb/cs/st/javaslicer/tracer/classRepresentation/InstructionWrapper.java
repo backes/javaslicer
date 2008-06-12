@@ -1,6 +1,7 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
 
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.IOException;
 
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
@@ -11,6 +12,8 @@ public class InstructionWrapper implements Instruction {
     private final Instruction wrappedInstruction;
 
     public InstructionWrapper(final Instruction wrappedInstruction) {
+        if (wrappedInstruction == null)
+            throw new NullPointerException();
         this.wrappedInstruction = wrappedInstruction;
     }
 
@@ -30,7 +33,7 @@ public class InstructionWrapper implements Instruction {
         return this.wrappedInstruction.getMethod();
     }
 
-    public Instruction getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException {
+    public Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException, EOFException {
         return this.wrappedInstruction.getNextInstance(backwardInstructionIterator);
     }
 
@@ -40,6 +43,28 @@ public class InstructionWrapper implements Instruction {
 
     public void writeOut(final DataOutput out) throws IOException {
         this.wrappedInstruction.writeOut(out);
+    }
+
+    @Override
+    public int hashCode() {
+        return 31 + this.wrappedInstruction.hashCode();
+    }
+
+    @Override
+    public boolean equals(final Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        final InstructionWrapper other = (InstructionWrapper) obj;
+        return this.wrappedInstruction.equals(other.wrappedInstruction);
+    }
+
+    @Override
+    public String toString() {
+        return this.wrappedInstruction.toString();
     }
 
 }
