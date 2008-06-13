@@ -5,12 +5,10 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.NoSuchElementException;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
-import de.unisb.cs.st.javaslicer.tracer.classRepresentation.LabelMarker;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance;
@@ -140,8 +138,8 @@ public class ThreadTraceResult {
     public class BackwardInstructionIterator implements Iterator<Instance> {
 
         Instance nextInstruction;
-        private final Map<Integer, Iterator<Integer>> integerSequenceBackwardIterators;
-        private final Map<Integer, Iterator<Long>> longSequenceBackwardIterators;
+        private final IntegerMap<Iterator<Integer>> integerSequenceBackwardIterators;
+        private final IntegerMap<Iterator<Long>> longSequenceBackwardIterators;
         private final IntegerToLongMap instructionNextOccurenceNumber;
 
         public BackwardInstructionIterator() throws TracerException {
@@ -164,23 +162,27 @@ public class ThreadTraceResult {
             if (this.nextInstruction == null)
                 throw new NoSuchElementException();
             final Instance old = this.nextInstruction;
-            this.nextInstruction = getNextInstruction(this.nextInstruction);
+            try {
+                this.nextInstruction = getNextInstruction(this.nextInstruction);
+            } catch (final EOFException e) {
+                this.nextInstruction = null;
+            }
             return old;
         }
 
-        private Instance getNextInstruction(final Instruction old) throws TracerException {
-            final ReadMethod oldMethod = old.getMethod();
-            final ReadClass oldClass = oldMethod.getReadClass();
-            final int backwardInstructionIndex = old.getBackwardInstructionIndex(this);
-            final Instruction backwardInstruction = findInstruction(backwardInstructionIndex, oldClass, oldMethod);
-            if (backwardInstruction == null)
-                return null;
-            while (backwardInstruction instanceof LabelMarker)
-                return getNextInstruction(backwardInstruction);
-            try {
-                return backwardInstruction.getNextInstance(this);
-            } catch (final EOFException e) {
-                return null;
+        private Instance getNextInstruction(final Instruction old) throws TracerException, EOFException {
+            Instruction instr = old;
+            while (true) {
+                final ReadMethod oldMethod = instr.getMethod();
+                final ReadClass oldClass = oldMethod.getReadClass();
+                final int backwardInstructionIndex = instr.getBackwardInstructionIndex(this);
+                final Instruction backwardInstruction = findInstruction(backwardInstructionIndex, oldClass, oldMethod);
+                if (backwardInstruction == null)
+                    return null;
+                final Instance instance = backwardInstruction.getNextInstance(this);
+                if (instance != null)
+                    return instance;
+                instr = backwardInstruction;
             }
         }
 

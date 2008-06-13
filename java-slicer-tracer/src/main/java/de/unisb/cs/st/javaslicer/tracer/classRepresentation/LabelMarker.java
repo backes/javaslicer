@@ -2,8 +2,10 @@ package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
 
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.IOException;
 
+import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
 
 
@@ -22,6 +24,12 @@ public class LabelMarker extends AbstractInstruction {
     @Override
     public int getBackwardInstructionIndex(final BackwardInstructionIterator backwardInstructionIterator) {
         return backwardInstructionIterator.getNextInteger(this.traceSeqIndex);
+    }
+
+    @Override
+    public Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException,
+            EOFException {
+        return this.additionalLabel ? null : super.getNextInstance(backwardInstructionIterator);
     }
 
     @Override

@@ -94,8 +94,10 @@ public class ThreadTracer {
     public void passInstruction(final int instructionIndex) {
         if (!this.trace)
             return;
+        this.trace = false;
         this.lastInstructionIndex = instructionIndex;
         this.instructionOccurences.increment(instructionIndex);
+        this.trace = true;
     }
 
     public void finish() throws IOException {

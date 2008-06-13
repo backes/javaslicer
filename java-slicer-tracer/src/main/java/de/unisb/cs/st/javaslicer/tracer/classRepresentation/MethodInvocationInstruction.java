@@ -4,6 +4,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.objectweb.asm.Opcodes;
+
 public class MethodInvocationInstruction extends AbstractInstruction {
 
     private final String internalClassName;
@@ -28,6 +30,23 @@ public class MethodInvocationInstruction extends AbstractInstruction {
 
     public String getMethodDesc() {
         return this.methodDesc;
+    }
+
+    @Override
+    public String toString() {
+        switch (getOpcode()) {
+        case Opcodes.INVOKEVIRTUAL:
+            return "INVOKEVIRTUAL";
+        case Opcodes.INVOKESPECIAL:
+            return "INVOKESPECIAL";
+        case Opcodes.INVOKESTATIC:
+            return "INVOKESTATIC";
+        case Opcodes.INVOKEINTERFACE:
+            return "INVOKEINTERFACE";
+        default:
+            assert false;
+            return "--ERROR--";
+        }
     }
 
     @Override
