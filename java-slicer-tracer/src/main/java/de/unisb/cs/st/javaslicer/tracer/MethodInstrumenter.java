@@ -38,6 +38,9 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
     private final Map<JumpInstruction, Label> jumpInstructions =
         new HashMap<JumpInstruction, Label>();
 
+    private int nextLabelNr = 0;
+    private int nextAdditionalLabelNr = Integer.MAX_VALUE;
+
     // statistics
     private static int labelsAdditional = 0;
     private static int labelsStd = 0;
@@ -327,7 +330,8 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
         // whenever a label is crossed, it stores the instruction index we come from
         final int seq = this.tracer.newIntegerTraceSequence();
-        final LabelMarker lm = new LabelMarker(this.readMethod, this.lineNumber, seq, additionalLabel);
+        final int labelNr = additionalLabel ? this.nextAdditionalLabelNr-- : this.nextLabelNr++;
+        final LabelMarker lm = new LabelMarker(this.readMethod, this.lineNumber, seq, additionalLabel, labelNr);
         this.labels.put(label, lm);
         //System.out.println("seq " + index + ": label " + label + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
         // at runtime: push last executed instruction index on stack, then the sequence index

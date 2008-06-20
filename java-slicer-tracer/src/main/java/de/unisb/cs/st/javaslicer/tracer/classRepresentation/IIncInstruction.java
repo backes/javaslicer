@@ -30,4 +30,9 @@ public class IIncInstruction extends AbstractInstruction {
         return new IIncInstruction(readMethod, localVarIndex, lineNumber);
     }
 
+    @Override
+    public String toString() {
+        return "IINC";
+    }
+
 }

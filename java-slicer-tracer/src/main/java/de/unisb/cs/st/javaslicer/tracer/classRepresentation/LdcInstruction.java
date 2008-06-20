@@ -73,4 +73,9 @@ public class LdcInstruction extends AbstractInstruction {
         return new LdcInstruction(readMethod, lineNumber, constant);
     }
 
+    @Override
+    public String toString() {
+        return "LDC " + this.constant;
+    }
+
 }

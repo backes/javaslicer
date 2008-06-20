@@ -87,5 +87,10 @@ public class ReadClass {
             rc.setSource(source);
         return rc;
     }
+    
+    @Override
+    public String toString() {
+        return className;
+    }
 
 }

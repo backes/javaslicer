@@ -84,4 +84,9 @@ public class ReadMethod {
         return rm;
     }
 
+    @Override
+    public String toString() {
+        return this.name + this.desc;
+    }
+
 }

@@ -13,8 +13,6 @@ public class UncompressedLongTraceSequence extends LongTraceSequence {
 
     private boolean ready = false;
 
-    private long lastValue = 0;
-
     private final DataOutputStream dataOut;
 
     private final int streamIndex;
@@ -37,10 +35,8 @@ public class UncompressedLongTraceSequence extends LongTraceSequence {
     public void trace(final long value) throws IOException {
         if (this.ready)
             throw new RuntimeException("Trace cannot be extended any more");
-        final long diffVal = value - this.lastValue;
-        this.lastValue = value;
 
-        this.dataOut.writeLong(diffVal);
+        this.dataOut.writeLong(value);
     }
 
     public void writeOut(final DataOutput out) throws IOException {
@@ -59,7 +55,6 @@ public class UncompressedLongTraceSequence extends LongTraceSequence {
         if (this.ready)
             return;
         this.ready = true;
-        this.dataOut.writeLong(this.lastValue);
         this.dataOut.close();
     }
 

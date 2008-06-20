@@ -33,23 +33,6 @@ public class MethodInvocationInstruction extends AbstractInstruction {
     }
 
     @Override
-    public String toString() {
-        switch (getOpcode()) {
-        case Opcodes.INVOKEVIRTUAL:
-            return "INVOKEVIRTUAL";
-        case Opcodes.INVOKESPECIAL:
-            return "INVOKESPECIAL";
-        case Opcodes.INVOKESTATIC:
-            return "INVOKESTATIC";
-        case Opcodes.INVOKEINTERFACE:
-            return "INVOKEINTERFACE";
-        default:
-            assert false;
-            return "--ERROR--";
-        }
-    }
-
-    @Override
     public void writeOut(final DataOutput out) throws IOException {
         super.writeOut(out);
         out.writeUTF(this.internalClassName);
@@ -61,7 +44,33 @@ public class MethodInvocationInstruction extends AbstractInstruction {
         final String internalClassName = in.readUTF();
         final String methodDesc = in.readUTF();
         final String methodName = in.readUTF();
-        return new MethodInvocationInstruction(readMethod, lineNumber, opcode, internalClassName, methodDesc, methodName);
+        return new MethodInvocationInstruction(readMethod, lineNumber, opcode, internalClassName, methodName, methodDesc);
+    }
+
+    @Override
+    public String toString() {
+        String type;
+        switch (getOpcode()) {
+        case Opcodes.INVOKEVIRTUAL:
+            type = "INVOKEVIRTUAL";
+            break;
+        case Opcodes.INVOKESPECIAL:
+            type = "INVOKESPECIAL";
+            break;
+        case Opcodes.INVOKESTATIC:
+            type = "INVOKESTATIC";
+            break;
+        case Opcodes.INVOKEINTERFACE:
+            type = "INVOKEINTERFACE";
+            break;
+        default:
+            assert false;
+            type = "--ERROR--";
+        }
+
+        final StringBuilder sb = new StringBuilder(type.length() + this.internalClassName.length() + this.methodName.length() + this.methodDesc.length() + 2);
+        sb.append(type).append(' ').append(this.internalClassName).append('.').append(this.methodName).append(this.methodDesc);
+        return sb.toString();
     }
 
 }

@@ -13,8 +13,6 @@ public class UncompressedIntegerTraceSequence extends IntegerTraceSequence {
 
     private boolean ready = false;
 
-    private int lastValue = 0;
-
     private final DataOutputStream dataOut;
 
     private final int streamIndex;
@@ -37,10 +35,8 @@ public class UncompressedIntegerTraceSequence extends IntegerTraceSequence {
     public void trace(final int value) throws IOException {
         if (this.ready)
             throw new RuntimeException("Trace cannot be extended any more");
-        final int diffVal = value - this.lastValue;
-        this.lastValue = value;
 
-        this.dataOut.writeInt(diffVal);
+        this.dataOut.writeInt(value);
     }
 
     public void writeOut(final DataOutput out) throws IOException {
@@ -59,7 +55,6 @@ public class UncompressedIntegerTraceSequence extends IntegerTraceSequence {
         if (this.ready)
             return;
         this.ready = true;
-        this.dataOut.writeInt(this.lastValue);
         this.dataOut.close();
     }
 

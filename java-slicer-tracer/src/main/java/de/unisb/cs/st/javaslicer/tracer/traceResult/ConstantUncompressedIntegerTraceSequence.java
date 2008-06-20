@@ -54,7 +54,7 @@ public class ConstantUncompressedIntegerTraceSequence extends ConstantIntegerTra
         }
 
         public Integer next() {
-            if (this.nextPos <= 0)
+            if (this.nextPos < 0)
                 throw new NoSuchElementException();
             try {
                 this.iStream.seek(this.nextPos);

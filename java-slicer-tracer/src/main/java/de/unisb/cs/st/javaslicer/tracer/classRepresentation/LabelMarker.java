@@ -13,12 +13,14 @@ public class LabelMarker extends AbstractInstruction {
 
     private final int traceSeqIndex;
     private final boolean additionalLabel;
+    private final int labelNr;
 
     public LabelMarker(final ReadMethod readMethod, final int lineNumber,
-            final int traceSeqIndex, final boolean additionalLabel) {
+            final int traceSeqIndex, final boolean additionalLabel, final int labelNr) {
         super(readMethod, -1, lineNumber);
         this.traceSeqIndex = traceSeqIndex;
         this.additionalLabel = additionalLabel;
+        this.labelNr = labelNr;
     }
 
     @Override
@@ -37,13 +39,31 @@ public class LabelMarker extends AbstractInstruction {
         super.writeOut(out);
         out.writeInt(this.traceSeqIndex);
         out.writeBoolean(this.additionalLabel);
+        out.writeInt(this.labelNr);
     }
 
     public static LabelMarker readFrom(final DataInput in, final ReadMethod readMethod, final int opcode, final int index, final int lineNumber) throws IOException {
         final int traceSeqIndex = in.readInt();
         final boolean additionalLabel = in.readBoolean();
-        return new LabelMarker(readMethod, lineNumber, traceSeqIndex, additionalLabel);
+        final int labelNr = in.readInt();
+        return new LabelMarker(readMethod, lineNumber, traceSeqIndex, additionalLabel, labelNr);
     }
 
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder(this.additionalLabel ? 23 : 10);
+        sb.append('L').append(this.labelNr);
+        if (this.additionalLabel)
+            sb.append(" (additional)");
+        return sb.toString();
+    }
+
+    public String getLabelName() {
+        return "L" + this.labelNr;
+    }
+
+    public int getLabelNr() {
+        return this.labelNr;
+    }
 
 }
