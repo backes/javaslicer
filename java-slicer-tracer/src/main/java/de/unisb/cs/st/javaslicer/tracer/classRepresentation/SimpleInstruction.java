@@ -95,7 +95,7 @@ public class SimpleInstruction extends AbstractInstruction {
         case Opcodes.POP2:
             return "POP2";
         case Opcodes.DUP:
-            return "DUT";
+            return "DUP";
         case Opcodes.DUP_X1:
             return "DUP_X1";
         case Opcodes.DUP_X2:

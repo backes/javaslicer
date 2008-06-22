@@ -56,6 +56,15 @@ public class TracerAgent {
                         System.err.println("ERROR: illegal value for \"debug\" argument: \"" + value + "\"");
                         System.exit(1);
                     }
+                } else if ("check".equalsIgnoreCase(key)) {
+                    if (value == null || "true".equalsIgnoreCase(value)) {
+                        Tracer.check = true;
+                    } else if ("false".equalsIgnoreCase(value)) {
+                        Tracer.check = false;
+                    } else {
+                        System.err.println("ERROR: illegal value for \"check\" argument: \"" + value + "\"");
+                        System.exit(1);
+                    }
                 } else {
                     System.err.println("Unknown argument: " + key);
                     System.exit(1);

@@ -534,7 +534,7 @@ public class IntegerToLongMap implements Map<Integer, Long>, Cloneable {
                 }
             }
         }
-        put(key, 1);
+        put(key, this.defaultValue + 1);
     }
 
     public long incrementAndGet(final int key, final long addValue) {
@@ -570,7 +570,7 @@ public class IntegerToLongMap implements Map<Integer, Long>, Cloneable {
                 }
             }
         }
-        put(key, addValue);
+        put(key, this.defaultValue + addValue);
         return addValue;
     }
 

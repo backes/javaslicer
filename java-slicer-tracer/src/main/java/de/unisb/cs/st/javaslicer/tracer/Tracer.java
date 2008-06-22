@@ -1,9 +1,12 @@
 package de.unisb.cs.st.javaslicer.tracer;
 
+import java.io.BufferedWriter;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
@@ -45,9 +48,13 @@ public class Tracer implements ClassFileTransformer {
     private static Tracer instance = null;
 
     public static boolean debug = false;
+    public static boolean check = false;
+
+    private final int instrumentationCount = 0;
 
     public static final TraceSequenceFactory seqFactory = new UncompressedTraceSequenceFactory();
 
+    // TODO get rid of this list - it leads to linear memory consumption w.r.t. the thread count
     private final List<ThreadTracer> allThreadTracers = new SimpleArrayList<ThreadTracer>();
     private final WeakThreadMap<ThreadTracer> threadTracers = new WeakThreadMap<ThreadTracer>() {
         @Override
@@ -75,6 +82,23 @@ public class Tracer implements ClassFileTransformer {
 
     private static final AtomicInteger errorCount = new AtomicInteger(0);
     private static String lastErrorString;
+
+    // TODO remove
+    private static PrintWriter debugFile;
+    static {
+        try {
+            debugFile = new PrintWriter(new BufferedWriter(new FileWriter(new File("debug.log")), 8192));
+        } catch (final IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
+            public void run() {
+                debugFile.close();
+            }
+        });
+    }
 
 
     private Tracer(final File filename) throws IOException {
@@ -180,7 +204,12 @@ public class Tracer implements ClassFileTransformer {
             // NOTE: these will be cleaned up when the system runs stable
             //////////////////////////////////////////////////////////////////
 
+            /*
             if (!className.equals("Test"))
+                return null;
+            */
+
+            if (Type.getObjectType(className).getClassName().equals("java.lang.System"))
                 return null;
 
             // Thread, ThreadLocal and ThreadLocalMap
@@ -207,7 +236,7 @@ public class Tracer implements ClassFileTransformer {
             final ClassReader reader = new ClassReader(classfileBuffer);
             final ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
 
-            final ClassVisitor output = debug ? new CheckClassAdapter(writer) : writer;
+            final ClassVisitor output = check ? new CheckClassAdapter(writer) : writer;
 
             final ClassVisitor instrumenter = new ClassInstrumenter(output, this, readClass);
 
@@ -217,7 +246,7 @@ public class Tracer implements ClassFileTransformer {
 
             final byte[] newClassfileBuffer = writer.toByteArray();
 
-            if (debug) {
+            if (check) {
                 checkClass(newClassfileBuffer, readClass.getClassName());
             }
 
@@ -350,6 +379,11 @@ public class Tracer implements ClassFileTransformer {
         final Tracer tracer = getInstance();
         if (!tracer.tracingStarted || tracer.tracingReady)
             return;
+        tracer.tracingStarted = false;
+        if (Thread.currentThread().getId() == 1) {
+            debugFile.println(instructionIndex);
+        }
+        tracer.tracingStarted = true;
         tracer.getThreadTracer(Thread.currentThread()).passInstruction(instructionIndex);
     }
 
@@ -375,14 +409,9 @@ public class Tracer implements ClassFileTransformer {
         this.file.close();
     }
 
-    public TraceResult getResult() {
-        try {
-            finish();
-            return TraceResult.readFrom(this.filename);
-        } catch (final IOException e) {
-            // should never happen
-            throw new RuntimeException(e);
-        }
+    public TraceResult getResult() throws IOException {
+        finish();
+        return TraceResult.readFrom(this.filename);
     }
 
     public MultiplexOutputStream newOutputStream() throws IOException {

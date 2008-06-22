@@ -8,8 +8,6 @@ import java.io.RandomAccessFile;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import de.unisb.cs.st.javaslicer.tracer.Tracer;
-
 public class MultiplexedFileWriter {
 
     public class MultiplexOutputStream extends OutputStream {
@@ -171,6 +169,10 @@ public class MultiplexedFileWriter {
 
     private int nextStreamNr = 0;
 
+    // may be set when an error occurs asynchronously. is thrown on the next
+    // operation on this file.
+    protected IOException exception = null;
+
     // holds stream beginning (block) addresses
     private final Map<MultiplexOutputStream, MultiplexOutputStream> openStreams =
         new WeakIdentityHashMap<MultiplexOutputStream, MultiplexOutputStream>() {
@@ -179,7 +181,9 @@ public class MultiplexedFileWriter {
                 try {
                     value.close();
                 } catch (IOException e) {
-                    Tracer.error(e);
+                    synchronized (MultiplexedFileWriter.this) {
+                        MultiplexedFileWriter.this.exception = e;
+                    }
                 }
             }
         };
@@ -214,6 +218,9 @@ public class MultiplexedFileWriter {
         if (maxDepth < 1)
             throw new IllegalArgumentException("maxDepth must be > 0");
 
+        // first, set the file size to 0
+        file.setLength(0);
+
         this.file = file;
         this.blockSize = blockSize;
         this.maxDepth = maxDepth;
@@ -237,6 +244,7 @@ public class MultiplexedFileWriter {
     }
 
     public synchronized MultiplexOutputStream newOutputStream() throws IOException {
+        checkException();
         if (this.closed)
             throw new IllegalStateException(getClass().getSimpleName() + " closed");
         final int streamNr = this.nextStreamNr++;
@@ -247,7 +255,8 @@ public class MultiplexedFileWriter {
         return newStream;
     }
 
-    public synchronized void close() throws IOException {
+    public void close() throws IOException {
+        checkException();
         if (this.closed)
             return;
         this.closed = true;
@@ -264,6 +273,15 @@ public class MultiplexedFileWriter {
             this.file.setLength(fileLength);
 
         this.file.close();
+        checkException();
+    }
+
+    private synchronized void checkException() throws IOException {
+        if (this.exception != null) {
+            final IOException e = this.exception;
+            this.exception = null;
+            throw e;
+        }
     }
 
 }

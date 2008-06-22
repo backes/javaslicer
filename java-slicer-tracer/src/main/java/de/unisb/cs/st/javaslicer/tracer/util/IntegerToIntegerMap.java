@@ -534,7 +534,7 @@ public class IntegerToIntegerMap implements Map<Integer, Integer>, Cloneable {
                 }
             }
         }
-        put(key, addValue);
+        put(key, this.defaultValue + addValue);
         return addValue;
     }
 
@@ -571,7 +571,7 @@ public class IntegerToIntegerMap implements Map<Integer, Integer>, Cloneable {
                 }
             }
         }
-        put(key, 1);
+        put(key, this.defaultValue + 1);
     }
 
     private static final class Entry implements Map.Entry<Integer, Integer> {

@@ -31,5 +31,10 @@ public class IntPush extends AbstractInstruction {
         return new IntPush(readMethod, lineNumber, opcode, operand);
     }
 
+    @Override
+    public String toString() {
+        return new StringBuilder(18).append(getOpcode() == Opcodes.BIPUSH ? "BIPUSH " : "SIPUSH ")
+            .append(this.operand).toString();
+    }
 
 }

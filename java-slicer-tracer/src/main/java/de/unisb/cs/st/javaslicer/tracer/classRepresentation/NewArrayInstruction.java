@@ -38,4 +38,38 @@ public class NewArrayInstruction extends AbstractInstruction {
         return new NewArrayInstruction(readMethod, lineNumber, arrayElemType);
     }
 
+    @Override
+    public String toString() {
+        String elemType;
+        switch (this.arrayElemType) {
+        case Opcodes.T_BOOLEAN:
+            elemType = "T_BOOLEAN";
+            break;
+        case Opcodes.T_CHAR:
+            elemType = "T_CHAR";
+            break;
+        case Opcodes.T_FLOAT:
+            elemType = "T_FLOAT";
+            break;
+        case Opcodes.T_DOUBLE:
+            elemType = "T_DOUBLE";
+            break;
+        case Opcodes.T_BYTE:
+            elemType = "T_BYTE";
+            break;
+        case Opcodes.T_SHORT:
+            elemType = "T_SHORT";
+            break;
+        case Opcodes.T_INT:
+            elemType = "T_INT";
+            break;
+        case Opcodes.T_LONG:
+            elemType = "T_LONG";
+            break;
+        default:
+            elemType = "--ERROR--";
+        }
+        return new StringBuilder(elemType.length() + 9).append("NEWARRAY ").append(elemType).toString();
+    }
+
 }

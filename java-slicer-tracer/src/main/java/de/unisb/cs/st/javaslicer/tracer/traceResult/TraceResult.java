@@ -130,14 +130,18 @@ public class TraceResult {
         System.out.println();
         System.out.println("The backward trace:");
         final Iterator<Instance> it = tr.getBackwardIterator(tracing.getThreadId());
+        int i = 0;
         while (it.hasNext()) {
             final Instance inst = it.next();
+            System.out.println(i++);
             final ReadMethod method = inst.getMethod();
             final ReadClass class0 = method.getReadClass();
             System.out.format("%-50s -> %12d %s%n", class0.getClassName()+"."
                     +method.getName()+":"+inst.getLineNumber(),
                     inst.getOccurenceNumber(), inst.toString());
         }
+
+        System.out.println("Ready");
 
     }
 

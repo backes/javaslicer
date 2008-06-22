@@ -54,7 +54,7 @@ public class ConstantUncompressedLongTraceSequence extends ConstantLongTraceSequ
         }
 
         public Long next() {
-            if (this.nextPos <= 0)
+            if (this.nextPos < 0)
                 throw new NoSuchElementException();
             try {
                 this.iStream.seek(this.nextPos);
