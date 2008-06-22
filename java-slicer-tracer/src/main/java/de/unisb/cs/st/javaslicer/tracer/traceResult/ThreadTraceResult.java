@@ -137,18 +137,20 @@ public class ThreadTraceResult {
 
     public class BackwardInstructionIterator implements Iterator<Instance> {
 
-        Instance nextInstruction;
+        private Instance nextInstruction;
         private final IntegerMap<Iterator<Integer>> integerSequenceBackwardIterators;
         private final IntegerMap<Iterator<Long>> longSequenceBackwardIterators;
         private final IntegerToLongMap instructionNextOccurenceNumber;
+
+        private int instructionCount = 0;
+        private int additionalInstructionCount = 0;
 
         public BackwardInstructionIterator() throws TracerException {
             this.integerSequenceBackwardIterators = new IntegerMap<Iterator<Integer>>();
             this.longSequenceBackwardIterators = new IntegerMap<Iterator<Long>>();
             this.instructionNextOccurenceNumber = ThreadTraceResult.this.instructionOccurences.clone();
-            final Instruction tmp = findInstruction(ThreadTraceResult.this.lastInstructionIndex, null, null);
             try {
-                this.nextInstruction = tmp == null ? null : tmp.getNextInstance(this);
+                this.nextInstruction = getNextInstruction(null, ThreadTraceResult.this.lastInstructionIndex);
             } catch (final EOFException e) {
                 this.nextInstruction = null;
             }
@@ -171,18 +173,25 @@ public class ThreadTraceResult {
         }
 
         private Instance getNextInstruction(final Instruction old) throws TracerException, EOFException {
-            Instruction instr = old;
+            final ReadMethod method = old.getMethod();
+            return getNextInstruction(method, old.getBackwardInstructionIndex(this));
+        }
+
+        private Instance getNextInstruction(final ReadMethod oldMethod, final int nextIndex) throws TracerException, EOFException {
+            int index = nextIndex;
             while (true) {
-                final ReadMethod oldMethod = instr.getMethod();
-                final ReadClass oldClass = oldMethod.getReadClass();
-                final int backwardInstructionIndex = instr.getBackwardInstructionIndex(this);
-                final Instruction backwardInstruction = findInstruction(backwardInstructionIndex, oldClass, oldMethod);
+                final Instruction backwardInstruction = findInstruction(index,
+                        oldMethod == null ? null : oldMethod.getReadClass(), oldMethod);
                 if (backwardInstruction == null)
                     return null;
                 final Instance instance = backwardInstruction.getNextInstance(this);
-                if (instance != null)
+                if (instance == null) {
+                    ++this.additionalInstructionCount;
+                } else {
+                    ++this.instructionCount;
                     return instance;
-                instr = backwardInstruction;
+                }
+                index = backwardInstruction.getBackwardInstructionIndex(this);
             }
         }
 
@@ -217,6 +226,14 @@ public class ThreadTraceResult {
             if (nr < 0)
                 throw new EOFException("reached beginning of the trace");
             return nr;
+        }
+
+        public int getNoInstructions() {
+            return this.instructionCount;
+        }
+
+        public int getNoAdditionalInstructions() {
+            return this.additionalInstructionCount;
         }
 
     }

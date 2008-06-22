@@ -1,7 +1,11 @@
 package de.unisb.cs.st.javaslicer.tracer;
 
+import java.io.BufferedWriter;
 import java.io.DataOutput;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -22,14 +26,30 @@ public class ThreadTracer {
     // this is the variable modified during runtime of the instrumented program
     private int lastInstructionIndex = -1;
 
-    private boolean trace = true;
-
     private final IntegerMap<TraceSequence> sequences = new IntegerMap<TraceSequence>();
     private final IntegerToLongMap instructionOccurences = new IntegerToLongMap(128,
             IntegerToIntegerMap.DEFAULT_LOAD_FACTOR, IntegerToIntegerMap.DEFAULT_SWITCH_TO_MAP_RATIO,
             IntegerToIntegerMap.DEFAULT_SWITCH_TO_LIST_RATIO, 0);
 
     private final Tracer tracer;
+    private int paused = 0;
+
+    // TODO remove
+    protected static PrintWriter debugFile;
+    static {
+        try {
+            debugFile = new PrintWriter(new BufferedWriter(new FileWriter(new File("debug.log")), 8192));
+        } catch (final IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
+            public void run() {
+                debugFile.close();
+            }
+        });
+    }
 
     public ThreadTracer(final Thread thread,
             final List<Type> threadSequenceTypes, final Tracer tracer) {
@@ -40,9 +60,9 @@ public class ThreadTracer {
     }
 
     public void traceInt(final int value, final int traceSequenceIndex) {
-        if (!this.trace)
+        if (this.paused > 0)
             return;
-        this.trace = false;
+        ++this.paused;
 
         TraceSequence seq = this.sequences.get(traceSequenceIndex);
         try {
@@ -60,13 +80,13 @@ public class ThreadTracer {
             return;
         }
 
-        this.trace = true;
+        --this.paused;
     }
 
     public void traceObject(final Object obj, final int traceSequenceIndex) {
-        if (!this.trace)
+        if (this.paused > 0)
             return;
-        this.trace = false;
+        this.paused++;
 
         TraceSequence seq = this.sequences.get(traceSequenceIndex);
         try {
@@ -84,7 +104,7 @@ public class ThreadTracer {
             return;
         }
 
-        this.trace = true;
+        --this.paused;
     }
 
     public void traceLastInstructionIndex(final int traceSequenceIndex) {
@@ -92,25 +112,21 @@ public class ThreadTracer {
     }
 
     public void passInstruction(final int instructionIndex) {
-        if (!this.trace)
+        if (this.paused > 0)
             return;
-        this.trace = false;
+        ++this.paused;
+        if (this.threadId == 1) {
+            debugFile.println(instructionIndex);
+        }
         this.lastInstructionIndex = instructionIndex;
         this.instructionOccurences.increment(instructionIndex);
-        this.trace = true;
+        --this.paused;
     }
 
     public void finish() throws IOException {
-        this.trace = false;
+        this.paused++;
         for (final TraceSequence seq: this.sequences.values())
             seq.finish();
-    }
-
-    public boolean setTracingEnabled(boolean newState) {
-        if (this.trace == newState)
-            return this.trace;
-        this.trace = newState;
-        return !newState;
     }
 
     public void writeOut(final DataOutput out) throws IOException {
@@ -128,6 +144,15 @@ public class ThreadTracer {
             out.writeLong(seq.getValue());
         }
         out.writeInt(this.lastInstructionIndex);
+    }
+
+    public void pauseTracing() {
+        ++this.paused;
+    }
+
+    public void unpauseTracing() {
+        if (--this.paused  < 0)
+            throw new RuntimeException("unpaused more than paused");
     }
 
 }

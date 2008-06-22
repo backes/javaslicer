@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer.tracer;
+package de.unisb.cs.st.javaslicer.tracer.instrumenter.trace;
 
 import java.io.PrintStream;
 import java.util.HashMap;
@@ -11,6 +11,7 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
+import de.unisb.cs.st.javaslicer.tracer.Tracer;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ArrayInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.FieldInstruction;

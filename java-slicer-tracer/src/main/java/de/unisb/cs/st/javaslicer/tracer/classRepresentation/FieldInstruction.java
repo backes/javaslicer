@@ -90,8 +90,8 @@ public class FieldInstruction extends AbstractInstruction {
             break;
         }
 
-        final StringBuilder sb = new StringBuilder(type.length() + this.ownerInternalClassName.length() + this.fieldName.length() + this.fieldDesc.length() + 2);
-        sb.append(type).append(' ').append(this.ownerInternalClassName).append('.').append(this.fieldName).append(this.fieldDesc);
+        final StringBuilder sb = new StringBuilder(type.length() + this.ownerInternalClassName.length() + this.fieldName.length() + this.fieldDesc.length() + 3);
+        sb.append(type).append(' ').append(this.ownerInternalClassName).append('.').append(this.fieldName).append(' ').append(this.fieldDesc);
         return sb.toString();
     }
 

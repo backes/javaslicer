@@ -10,6 +10,7 @@ import java.util.List;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;
 
 public class TraceResult {
@@ -130,16 +131,21 @@ public class TraceResult {
         System.out.println();
         System.out.println("The backward trace:");
         final Iterator<Instance> it = tr.getBackwardIterator(tracing.getThreadId());
-        int i = 0;
         while (it.hasNext()) {
             final Instance inst = it.next();
-            System.out.println(i++);
             final ReadMethod method = inst.getMethod();
             final ReadClass class0 = method.getReadClass();
             System.out.format("%-50s -> %12d %s%n", class0.getClassName()+"."
                     +method.getName()+":"+inst.getLineNumber(),
                     inst.getOccurenceNumber(), inst.toString());
         }
+
+        final BackwardInstructionIterator it2 = (BackwardInstructionIterator) it;
+
+        System.out.println("No instructions: " + it2.getNoInstructions()
+                + " (+ " + it2.getNoAdditionalInstructions() + " additional = "
+                + (it2.getNoInstructions() + it2.getNoAdditionalInstructions())
+                + " total instructions)");
 
         System.out.println("Ready");
 

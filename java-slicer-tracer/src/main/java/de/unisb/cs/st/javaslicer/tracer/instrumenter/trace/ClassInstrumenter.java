@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer.tracer;
+package de.unisb.cs.st.javaslicer.tracer.instrumenter.trace;
 
 import org.objectweb.asm.ClassAdapter;
 import org.objectweb.asm.ClassVisitor;
@@ -6,6 +6,7 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.commons.JSRInlinerAdapter;
 
+import de.unisb.cs.st.javaslicer.tracer.Tracer;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
@@ -20,7 +21,7 @@ public class ClassInstrumenter extends ClassAdapter implements Opcodes {
 		this.tracer = tracer;
 		this.readClass = readClass;
 		if (Tracer.debug)
-		    System.out.println("instrumenting: " + readClass.getClassName());
+		    System.out.println("instrumenting " + readClass.getClassName());
 	}
 
 	@Override
