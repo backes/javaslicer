@@ -31,7 +31,12 @@ public class LabelMarker extends AbstractInstruction {
     @Override
     public Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException,
             EOFException {
-        return this.additionalLabel ? null : super.getNextInstance(backwardInstructionIterator);
+        if (this.additionalLabel) {
+            // decrease the instruction counter...
+            backwardInstructionIterator.getNextInstructionOccurenceNumber(getIndex());
+            return null;
+        }
+        return super.getNextInstance(backwardInstructionIterator);
     }
 
     @Override

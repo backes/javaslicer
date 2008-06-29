@@ -142,6 +142,7 @@ public class TraceResult {
 
         final BackwardInstructionIterator it2 = (BackwardInstructionIterator) it;
 
+        System.out.println();
         System.out.println("No instructions: " + it2.getNoInstructions()
                 + " (+ " + it2.getNoAdditionalInstructions() + " additional = "
                 + (it2.getNoInstructions() + it2.getNoAdditionalInstructions())

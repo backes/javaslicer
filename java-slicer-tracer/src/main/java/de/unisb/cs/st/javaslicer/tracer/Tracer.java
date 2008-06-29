@@ -4,6 +4,7 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
@@ -25,6 +26,7 @@ import org.objectweb.asm.tree.analysis.AnalyzerException;
 import org.objectweb.asm.tree.analysis.BasicVerifier;
 import org.objectweb.asm.tree.analysis.Frame;
 import org.objectweb.asm.util.CheckClassAdapter;
+import org.objectweb.asm.util.TraceClassVisitor;
 import org.objectweb.asm.util.TraceMethodVisitor;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.AbstractInstruction;
@@ -68,10 +70,10 @@ public class Tracer implements ClassFileTransformer {
     private final List<ThreadTracer> allThreadTracers = new SimpleArrayList<ThreadTracer>();
     private final WeakThreadMap<ThreadTracer> threadTracers = new WeakThreadMap<ThreadTracer>() {
         @Override
-        protected void removing(ThreadTracer value) {
+        protected void removing(final ThreadTracer value) {
             try {
                 value.finish();
-            } catch (IOException e) {
+            } catch (final IOException e) {
                 error(e);
             }
         }
@@ -121,6 +123,22 @@ public class Tracer implements ClassFileTransformer {
     }
 
     public void add(final Instrumentation inst, final boolean retransformClasses) throws TracerException {
+
+        // check the JRE version we run on
+        final String javaVersion = System.getProperty("java.version");
+        final int secondPointPos = javaVersion.indexOf('.', javaVersion.indexOf('.')+1);
+        try {
+            if (secondPointPos != -1) {
+                final double javaVersionDouble = Double.valueOf(javaVersion.substring(0, secondPointPos));
+                if (javaVersionDouble < 1.59) {
+                    System.err.println("This tracer requires JRE >= 1.6, you are running " + javaVersion + ".");
+                    System.exit(-1);
+                }
+            }
+        } catch (final NumberFormatException e) {
+            // ignore (no check...)
+        }
+
         if (retransformClasses && !inst.isRetransformClassesSupported())
             throw new TracerException("Your JVM does not support retransformation of classes");
 
@@ -212,6 +230,8 @@ public class Tracer implements ClassFileTransformer {
 
             if (Type.getObjectType(className).getClassName().equals("java.lang.System"))
                 return null;
+            if (Type.getObjectType(className).getClassName().equals("java.lang.VerifyError"))
+                return null;
 
             // Thread, ThreadLocal and ThreadLocalMap
             if (Type.getObjectType(className).getClassName().startsWith("java.lang.Thread"))
@@ -242,19 +262,19 @@ public class Tracer implements ClassFileTransformer {
                     Class<?> c, d;
                     try {
                         c = Class.forName(type1.replace('/', '.'));
-                    } catch (ClassNotFoundException e) {
+                    } catch (final ClassNotFoundException e) {
                         try {
                             c = ClassLoader.getSystemClassLoader().loadClass(type1.replace('/', '.'));
-                        } catch (ClassNotFoundException e1) {
+                        } catch (final ClassNotFoundException e1) {
                             throw new RuntimeException(e1);
                         }
                     }
                     try {
                         d = Class.forName(type2.replace('/', '.'));
-                    } catch (ClassNotFoundException e) {
+                    } catch (final ClassNotFoundException e) {
                         try {
                             d = ClassLoader.getSystemClassLoader().loadClass(type2.replace('/', '.'));
-                        } catch (ClassNotFoundException e1) {
+                        } catch (final ClassNotFoundException e1) {
                             throw new RuntimeException(e1);
                         }
                     }
@@ -293,8 +313,11 @@ public class Tracer implements ClassFileTransformer {
                 checkClass(newClassfileBuffer, readClass.getClassName());
             }
 
-//            if (className.equals("java/lang/ClassLoader"))
-//                printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
+//          if (className.equals("java/lang/ClassLoader"))
+//          printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
+
+            if (className.equals("de/unisb/cs/depend/ccs_sem/utils/WeakIdentityHashMap$1"))
+                printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
 
             return newClassfileBuffer;
         } catch (final Throwable t) {
@@ -387,6 +410,13 @@ public class Tracer implements ClassFileTransformer {
             }
             System.out.println();
         }
+
+        System.out.println();
+        System.out.println();
+        System.out.println("New view:");
+
+        final TraceClassVisitor v = new TraceClassVisitor(new PrintWriter(System.out));
+        new ClassReader(classfileBuffer).accept(v, ClassReader.SKIP_DEBUG);
     }
 
     private static String getShortName(final String name) {
