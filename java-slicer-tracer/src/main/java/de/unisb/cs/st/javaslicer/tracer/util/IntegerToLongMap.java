@@ -93,7 +93,6 @@ public class IntegerToLongMap implements Map<Integer, Long>, Cloneable {
      * @throws IllegalArgumentException
      *             if the initial capacity is negative or the load factor is nonpositive
      */
-    @SuppressWarnings("unchecked")
     public IntegerToLongMap(final int initialCapacity, final float loadFactor, final float switchToMapRatio,
             final float switchToListRatio, final long defaultValue) {
         if (initialCapacity < 0)
@@ -290,7 +289,6 @@ public class IntegerToLongMap implements Map<Integer, Long>, Cloneable {
         return this.defaultValue;
     }
 
-    @SuppressWarnings("unchecked")
     private void switchToMap() {
         this.modCount++;
         final int minTableSize = (int) (1.1 * this.list.length / this.loadFactor);
@@ -330,7 +328,6 @@ public class IntegerToLongMap implements Map<Integer, Long>, Cloneable {
      *            the new capacity, MUST be a power of two; must be greater than current capacity unless current
      *            capacity is MAXIMUM_CAPACITY (in which case value is irrelevant).
      */
-    @SuppressWarnings("unchecked")
     void resizeMap(final int newCapacity) {
         final Entry[] oldTable = this.mapTable;
         final int oldCapacity = oldTable.length;
@@ -450,7 +447,6 @@ public class IntegerToLongMap implements Map<Integer, Long>, Cloneable {
     /**
      * Removes all of the mappings from this map. The map will be empty after this call returns.
      */
-    @SuppressWarnings("unchecked")
     public void clear() {
         this.modCount++;
         this.size = 0;
@@ -658,7 +654,6 @@ public class IntegerToLongMap implements Map<Integer, Long>, Cloneable {
         return false;
     }
 
-    @SuppressWarnings("unchecked")
     private void switchToList() {
         this.modCount++;
         final int minListSize = (int) (1.1 * this.maxIndex + 1);
@@ -983,7 +978,6 @@ public class IntegerToLongMap implements Map<Integer, Long>, Cloneable {
             return new MapIterator();
         }
 
-        @SuppressWarnings("unchecked")
         public boolean contains(final Object o) {
             if (!(o instanceof Entry))
                 return false;
@@ -992,7 +986,6 @@ public class IntegerToLongMap implements Map<Integer, Long>, Cloneable {
             return candidate != null && candidate.equals(e);
         }
 
-        @SuppressWarnings("unchecked")
         public boolean remove(final Object o) {
             if (o instanceof Entry) {
                 final int key = ((Entry)o).key;
