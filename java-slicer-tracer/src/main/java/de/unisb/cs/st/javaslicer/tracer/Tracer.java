@@ -12,6 +12,7 @@ import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.objectweb.asm.ClassReader;
@@ -45,6 +46,49 @@ import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter.MultiplexOutp
 
 public class Tracer implements ClassFileTransformer {
 
+    private static final class FixedClassWriter extends ClassWriter {
+        protected FixedClassWriter(final int flags) {
+            super(flags);
+        }
+
+        @Override
+        protected String getCommonSuperClass(final String type1, final String type2)
+        {
+            Class<?> c, d;
+            try {
+                c = Class.forName(type1.replace('/', '.'));
+            } catch (final ClassNotFoundException e) {
+                try {
+                    c = ClassLoader.getSystemClassLoader().loadClass(type1.replace('/', '.'));
+                } catch (final ClassNotFoundException e1) {
+                    throw new RuntimeException(e1);
+                }
+            }
+            try {
+                d = Class.forName(type2.replace('/', '.'));
+            } catch (final ClassNotFoundException e) {
+                try {
+                    d = ClassLoader.getSystemClassLoader().loadClass(type2.replace('/', '.'));
+                } catch (final ClassNotFoundException e1) {
+                    throw new RuntimeException(e1);
+                }
+            }
+            if (c.isAssignableFrom(d)) {
+                return type1;
+            }
+            if (d.isAssignableFrom(c)) {
+                return type2;
+            }
+            if (c.isInterface() || d.isInterface()) {
+                return "java/lang/Object";
+            }
+            do {
+                c = c.getSuperclass();
+            } while (!c.isAssignableFrom(d));
+            return c.getName().replace('.', '/');
+        }
+    }
+
     private static final long serialVersionUID = 3853368930402145734L;
 
     private static Tracer instance = null;
@@ -68,16 +112,16 @@ public class Tracer implements ClassFileTransformer {
 
     // TODO get rid of this list - it leads to linear memory consumption w.r.t. the thread count
     private final List<ThreadTracer> allThreadTracers = new SimpleArrayList<ThreadTracer>();
-    private final WeakThreadMap<ThreadTracer> threadTracers = new WeakThreadMap<ThreadTracer>() {
-        @Override
-        protected void removing(final ThreadTracer value) {
-            try {
-                value.finish();
-            } catch (final IOException e) {
-                error(e);
+    private final Map<Thread, ThreadTracer> threadTracers = new WeakThreadMap<ThreadTracer>() {
+            @Override
+            protected void removing(final ThreadTracer value) {
+                try {
+                    value.finish();
+                } catch (final IOException e) {
+                    error(e);
+                }
             }
-        }
-    };
+        };
 
     private final List<ReadClass> readClasses = new ArrayList<ReadClass>();
 
@@ -233,6 +277,9 @@ public class Tracer implements ClassFileTransformer {
             if (Type.getObjectType(className).getClassName().equals("java.lang.VerifyError"))
                 return null;
 
+            if (Type.getObjectType(className).getClassName().startsWith("java.util.Collections"))
+                return null;
+
             // Thread, ThreadLocal and ThreadLocalMap
             if (Type.getObjectType(className).getClassName().startsWith("java.lang.Thread"))
                 return null;
@@ -255,44 +302,8 @@ public class Tracer implements ClassFileTransformer {
             this.readClasses.add(readClass);
 
             final ClassReader reader = new ClassReader(classfileBuffer);
-            final ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES) {
-                @Override
-                protected String getCommonSuperClass(final String type1, final String type2)
-                {
-                    Class<?> c, d;
-                    try {
-                        c = Class.forName(type1.replace('/', '.'));
-                    } catch (final ClassNotFoundException e) {
-                        try {
-                            c = ClassLoader.getSystemClassLoader().loadClass(type1.replace('/', '.'));
-                        } catch (final ClassNotFoundException e1) {
-                            throw new RuntimeException(e1);
-                        }
-                    }
-                    try {
-                        d = Class.forName(type2.replace('/', '.'));
-                    } catch (final ClassNotFoundException e) {
-                        try {
-                            d = ClassLoader.getSystemClassLoader().loadClass(type2.replace('/', '.'));
-                        } catch (final ClassNotFoundException e1) {
-                            throw new RuntimeException(e1);
-                        }
-                    }
-                    if (c.isAssignableFrom(d)) {
-                        return type1;
-                    }
-                    if (d.isAssignableFrom(c)) {
-                        return type2;
-                    }
-                    if (c.isInterface() || d.isInterface()) {
-                        return "java/lang/Object";
-                    }
-                    do {
-                        c = c.getSuperclass();
-                    } while (!c.isAssignableFrom(d));
-                    return c.getName().replace('.', '/');
-                }
-            };
+            //final ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES) {
+            final ClassWriter writer = new FixedClassWriter(ClassWriter.COMPUTE_MAXS);
 
             final ClassVisitor output = check ? new CheckClassAdapter(writer) : writer;
 
@@ -315,8 +326,9 @@ public class Tracer implements ClassFileTransformer {
 
 //          if (className.equals("java/lang/ClassLoader"))
 //          printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
-
             if (className.equals("de/unisb/cs/depend/ccs_sem/utils/WeakIdentityHashMap$1"))
+                printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
+            if (className.equals("A"))
                 printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
 
             return newClassfileBuffer;
@@ -389,32 +401,6 @@ public class Tracer implements ClassFileTransformer {
     }
 
     private void printClass(final byte[] classfileBuffer, final String classname) {
-        final ClassNode cn = new ClassNode();
-        final ClassReader cr = new ClassReader(classfileBuffer);
-        cr.accept(new CheckClassAdapter(cn), ClassReader.SKIP_DEBUG);
-
-        for (final Object methodObj : cn.methods) {
-            final MethodNode method = (MethodNode) methodObj;
-            System.out.println(classname + "." + method.name + method.desc);
-            final TraceMethodVisitor mv = new TraceMethodVisitor();
-
-            for (int j = 0; j < method.instructions.size(); ++j) {
-                method.instructions.get(j).accept(mv);
-
-                System.out.print(Integer.toString(j + 100000).substring(1));
-                System.out.print("   " + mv.text.get(j));
-            }
-            for (int j = 0; j < method.tryCatchBlocks.size(); ++j) {
-                ((TryCatchBlockNode) method.tryCatchBlocks.get(j)).accept(mv);
-                System.out.print(" " + mv.text.get(j));
-            }
-            System.out.println();
-        }
-
-        System.out.println();
-        System.out.println();
-        System.out.println("New view:");
-
         final TraceClassVisitor v = new TraceClassVisitor(new PrintWriter(System.out));
         new ClassReader(classfileBuffer).accept(v, ClassReader.SKIP_DEBUG);
     }

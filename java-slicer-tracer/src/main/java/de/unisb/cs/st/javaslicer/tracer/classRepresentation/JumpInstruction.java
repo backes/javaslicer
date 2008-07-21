@@ -6,33 +6,32 @@ import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
+
 
 public class JumpInstruction extends AbstractInstruction {
 
-    private int labelNr;
+    private final LabelMarker label;
 
-    public JumpInstruction(final ReadMethod readMethod, final int lineNumber, final int opcode, final LabelMarker label) {
-        this(readMethod, lineNumber, opcode, label == null ? -1 : label.getLabelNr());
+    public JumpInstruction(final ReadMethod readMethod, final int opcode, final LabelMarker label) {
+        super(readMethod, opcode);
+        this.label = label;
     }
 
-    private JumpInstruction(final ReadMethod readMethod, final int lineNumber, final int opcode, final int labelNr) {
-        super(readMethod, opcode, lineNumber);
-        this.labelNr = labelNr;
-    }
-
-    public void setLabel(final LabelMarker label) {
-        this.labelNr = label.getLabelNr();
+    private JumpInstruction(final ReadMethod readMethod, final int lineNumber, final int opcode, final LabelMarker label, final int index) {
+        super(readMethod, opcode, lineNumber, index);
+        this.label = label;
     }
 
     @Override
     public void writeOut(final DataOutput out) throws IOException {
         super.writeOut(out);
-        out.writeInt(this.labelNr);
+        out.writeInt(this.label.getLabelNr());
     }
 
-    public static JumpInstruction readFrom(final DataInput in, final ReadMethod readMethod, final int opcode, final int index, final int lineNumber) throws IOException {
+    public static JumpInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
         final int labelNr = in.readInt();
-        return new JumpInstruction(readMethod, lineNumber, opcode, labelNr);
+        return new JumpInstruction(methodInfo.getMethod(), lineNumber, opcode, methodInfo.getLabel(labelNr), index);
     }
 
     @Override
@@ -99,6 +98,6 @@ public class JumpInstruction extends AbstractInstruction {
             break;
         }
 
-        return condition + " L" + this.labelNr;
+        return condition + " " + this.label;
     }
 }

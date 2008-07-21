@@ -6,12 +6,19 @@ import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
+
 public class IIncInstruction extends AbstractInstruction {
 
     private final int localVarIndex;
 
-    public IIncInstruction(final ReadMethod readMethod, final int localVarIndex, final int lineNumber) {
-        super(readMethod, Opcodes.IINC, lineNumber);
+    public IIncInstruction(final ReadMethod readMethod, final int localVarIndex) {
+        super(readMethod, Opcodes.IINC);
+        this.localVarIndex = localVarIndex;
+    }
+
+    private IIncInstruction(final ReadMethod readMethod, final int localVarIndex, final int lineNumber, final int index) {
+        super(readMethod, Opcodes.IINC, lineNumber, index);
         this.localVarIndex = localVarIndex;
     }
 
@@ -25,9 +32,9 @@ public class IIncInstruction extends AbstractInstruction {
         out.writeInt(this.localVarIndex);
     }
 
-    public static IIncInstruction readFrom(final DataInput in, final ReadMethod readMethod, final int opcode, final int index, final int lineNumber) throws IOException {
+    public static IIncInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
         final int localVarIndex = in.readInt();
-        return new IIncInstruction(readMethod, localVarIndex, lineNumber);
+        return new IIncInstruction(methodInfo.getMethod(), localVarIndex, lineNumber, index);
     }
 
     @Override

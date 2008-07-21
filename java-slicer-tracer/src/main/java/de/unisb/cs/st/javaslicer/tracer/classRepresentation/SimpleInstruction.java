@@ -4,15 +4,21 @@ import java.io.DataInput;
 
 import org.objectweb.asm.Opcodes;
 
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
+
 public class SimpleInstruction extends AbstractInstruction {
 
-    public SimpleInstruction(final ReadMethod readMethod, final int lineNumber, final int opcode) {
-        super(readMethod, opcode, lineNumber);
+    public SimpleInstruction(final ReadMethod readMethod, final int opcode) {
+        super(readMethod, opcode);
     }
 
-    public static SimpleInstruction readFrom(final DataInput in, final ReadMethod readMethod, final int opcode,
+    private SimpleInstruction(final ReadMethod readMethod, final int lineNumber, final int opcode, final int index) {
+        super(readMethod, opcode, lineNumber, index);
+    }
+
+    public static SimpleInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode,
             final int index, final int lineNumber) {
-        return new SimpleInstruction(readMethod, lineNumber, opcode);
+        return new SimpleInstruction(methodInfo.getMethod(), lineNumber, opcode, index);
     }
 
     @Override

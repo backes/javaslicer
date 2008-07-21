@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
 
@@ -16,9 +17,16 @@ public class ArrayInstruction extends AbstractInstruction {
     private final int arrayTraceSeqIndex;
     private final int indexTraceSeqIndex;
 
-    public ArrayInstruction(final ReadMethod readMethod, final int lineNumber, final int opcode,
+    public ArrayInstruction(final ReadMethod readMethod, final int opcode,
             final int arrayTraceSeqIndex, final int indexTraceSeqIndex) {
-        super(readMethod, opcode, lineNumber);
+        super(readMethod, opcode);
+        this.arrayTraceSeqIndex = arrayTraceSeqIndex;
+        this.indexTraceSeqIndex = indexTraceSeqIndex;
+    }
+
+    private ArrayInstruction(final ReadMethod readMethod, final int lineNumber, final int opcode,
+            final int arrayTraceSeqIndex, final int indexTraceSeqIndex, final int index) {
+        super(readMethod, opcode, lineNumber, index);
         this.arrayTraceSeqIndex = arrayTraceSeqIndex;
         this.indexTraceSeqIndex = indexTraceSeqIndex;
     }
@@ -37,10 +45,10 @@ public class ArrayInstruction extends AbstractInstruction {
         out.writeInt(this.indexTraceSeqIndex);
     }
 
-    public static ArrayInstruction readFrom(final DataInput in, final ReadMethod readMethod, final int opcode, final int index, final int lineNumber) throws IOException {
+    public static ArrayInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
         final int arrayTraceSeqIndex = in.readInt();
         final int indexTraceSeqIndex = in.readInt();
-        return new ArrayInstruction(readMethod, lineNumber, opcode, arrayTraceSeqIndex, indexTraceSeqIndex);
+        return new ArrayInstruction(methodInfo.getMethod(), lineNumber, opcode, arrayTraceSeqIndex, indexTraceSeqIndex, index);
     }
 
     @Override

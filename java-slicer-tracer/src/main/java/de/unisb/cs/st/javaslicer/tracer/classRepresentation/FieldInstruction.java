@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
 
@@ -18,10 +19,20 @@ public class FieldInstruction extends AbstractInstruction {
     private final String fieldDesc;
     private final int objectTraceSeqIndex;
 
-    public FieldInstruction(final ReadMethod readMethod, final int opcode, final int lineNumber,
+    public FieldInstruction(final ReadMethod readMethod, final int opcode,
             final String ownerInternalClassName, final String fieldName,
             final String fieldDesc, final int objectTraceSeqIndex) {
-        super(readMethod, opcode, lineNumber);
+        super(readMethod, opcode);
+        this.ownerInternalClassName = ownerInternalClassName;
+        this.fieldName = fieldName;
+        this.fieldDesc = fieldDesc;
+        this.objectTraceSeqIndex = objectTraceSeqIndex;
+    }
+
+    private FieldInstruction(final ReadMethod readMethod, final int opcode, final int lineNumber,
+            final String ownerInternalClassName, final String fieldName,
+            final String fieldDesc, final int objectTraceSeqIndex, final int index) {
+        super(readMethod, opcode, lineNumber, index);
         this.ownerInternalClassName = ownerInternalClassName;
         this.fieldName = fieldName;
         this.fieldDesc = fieldDesc;
@@ -57,12 +68,12 @@ public class FieldInstruction extends AbstractInstruction {
         out.writeUTF(this.ownerInternalClassName);
     }
 
-    public static FieldInstruction readFrom(final DataInput in, final ReadMethod readMethod, final int opcode, final int index, final int lineNumber) throws IOException {
+    public static FieldInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
         final String fieldDesc = in.readUTF();
         final String fieldName = in.readUTF();
         final int objectTraceSeqIndex = in.readInt();
         final String ownerInternalClassName = in.readUTF();
-        return new FieldInstruction(readMethod, opcode, lineNumber, ownerInternalClassName, fieldName, fieldDesc, objectTraceSeqIndex);
+        return new FieldInstruction(methodInfo.getMethod(), opcode, lineNumber, ownerInternalClassName, fieldName, fieldDesc, objectTraceSeqIndex, index);
     }
 
     @Override

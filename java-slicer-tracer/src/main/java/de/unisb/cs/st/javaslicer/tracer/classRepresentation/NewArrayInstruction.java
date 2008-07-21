@@ -6,12 +6,27 @@ import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
+
 public class NewArrayInstruction extends AbstractInstruction {
 
     private final int arrayElemType;
 
-    public NewArrayInstruction(final ReadMethod readMethod, final int lineNumber, final int arrayElemType) {
-        super(readMethod, Opcodes.NEWARRAY, lineNumber);
+    public NewArrayInstruction(final ReadMethod readMethod, final int arrayElemType) {
+        super(readMethod, Opcodes.NEWARRAY);
+        assert arrayElemType == Opcodes.T_BOOLEAN
+            || arrayElemType == Opcodes.T_CHAR
+            || arrayElemType == Opcodes.T_FLOAT
+            || arrayElemType == Opcodes.T_DOUBLE
+            || arrayElemType == Opcodes.T_BYTE
+            || arrayElemType == Opcodes.T_SHORT
+            || arrayElemType == Opcodes.T_INT
+            || arrayElemType == Opcodes.T_LONG;
+        this.arrayElemType = arrayElemType;
+    }
+
+    private NewArrayInstruction(final ReadMethod readMethod, final int lineNumber, final int arrayElemType, final int index) {
+        super(readMethod, Opcodes.NEWARRAY, lineNumber, index);
         assert arrayElemType == Opcodes.T_BOOLEAN
             || arrayElemType == Opcodes.T_CHAR
             || arrayElemType == Opcodes.T_FLOAT
@@ -33,9 +48,9 @@ public class NewArrayInstruction extends AbstractInstruction {
         out.writeInt(this.arrayElemType);
     }
 
-    public static NewArrayInstruction readFrom(final DataInput in, final ReadMethod readMethod, final int opcode, final int index, final int lineNumber) throws IOException {
+    public static NewArrayInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
         final int arrayElemType = in.readInt();
-        return new NewArrayInstruction(readMethod, lineNumber, arrayElemType);
+        return new NewArrayInstruction(methodInfo.getMethod(), lineNumber, arrayElemType, index);
     }
 
     @Override

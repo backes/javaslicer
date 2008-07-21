@@ -25,7 +25,9 @@ public class UncompressedIntegerTraceSequence extends IntegerTraceSequence {
     }
 
     /**
-     * Subclasses may override this
+     * Subclasses may override this.
+     *
+     * @throws IOException if an I/O error occures
      */
     protected OutputStream getOutputStream(final MultiplexOutputStream out) throws IOException {
         return out;

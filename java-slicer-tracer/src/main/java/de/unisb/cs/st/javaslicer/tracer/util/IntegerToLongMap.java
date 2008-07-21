@@ -647,7 +647,7 @@ public class IntegerToLongMap implements Map<Integer, Long>, Cloneable {
     }
 
     private boolean checkSwitchToList() {
-        if (this.minIndex >= 0 && this.size > 3 && this.size > this.switchToListRatio * (this.maxIndex+1)) {
+        if (this.minIndex >= 0 && this.size > 3 && this.size > this.switchToListRatio * (this.maxIndex+1f)) {
             switchToList();
             return true;
         }

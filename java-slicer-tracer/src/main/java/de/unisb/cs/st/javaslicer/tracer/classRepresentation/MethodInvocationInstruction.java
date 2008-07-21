@@ -6,15 +6,25 @@ import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
+
 public class MethodInvocationInstruction extends AbstractInstruction {
 
     private final String internalClassName;
     private final String methodName;
     private final String methodDesc;
 
-    public MethodInvocationInstruction(final ReadMethod readMethod, final int lineNumber, final int opcode,
+    public MethodInvocationInstruction(final ReadMethod readMethod, final int opcode,
             final String internalClassName, final String methodName, final String methodDesc) {
-        super(readMethod, opcode, lineNumber);
+        super(readMethod, opcode);
+        this.internalClassName = internalClassName;
+        this.methodName = methodName;
+        this.methodDesc = methodDesc;
+    }
+
+    private MethodInvocationInstruction(final ReadMethod readMethod, final int lineNumber, final int opcode,
+            final String internalClassName, final String methodName, final String methodDesc, final int index) {
+        super(readMethod, opcode, lineNumber, index);
         this.internalClassName = internalClassName;
         this.methodName = methodName;
         this.methodDesc = methodDesc;
@@ -40,11 +50,11 @@ public class MethodInvocationInstruction extends AbstractInstruction {
         out.writeUTF(this.methodName);
     }
 
-    public static MethodInvocationInstruction readFrom(final DataInput in, final ReadMethod readMethod, final int opcode, final int index, final int lineNumber) throws IOException {
+    public static MethodInvocationInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
         final String internalClassName = in.readUTF();
         final String methodDesc = in.readUTF();
         final String methodName = in.readUTF();
-        return new MethodInvocationInstruction(readMethod, lineNumber, opcode, internalClassName, methodName, methodDesc);
+        return new MethodInvocationInstruction(methodInfo.getMethod(), lineNumber, opcode, internalClassName, methodName, methodDesc, index);
     }
 
     @Override

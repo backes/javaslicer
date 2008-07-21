@@ -7,12 +7,20 @@ import java.io.IOException;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
+
 public class LdcInstruction extends AbstractInstruction {
 
     private final Object constant;
 
-    public LdcInstruction(final ReadMethod readMethod, final int lineNumber, final Object constant) {
-        super(readMethod, Opcodes.LDC, lineNumber);
+    public LdcInstruction(final ReadMethod readMethod, final Object constant) {
+        super(readMethod, Opcodes.LDC);
+        assert constant instanceof Number || constant instanceof String || constant instanceof Type;
+        this.constant = constant;
+    }
+
+    private LdcInstruction(final ReadMethod readMethod, final int lineNumber, final Object constant, final int index) {
+        super(readMethod, Opcodes.LDC, lineNumber, index);
         assert constant instanceof Number || constant instanceof String || constant instanceof Type;
         this.constant = constant;
     }
@@ -45,7 +53,7 @@ public class LdcInstruction extends AbstractInstruction {
         }
     }
 
-    public static LdcInstruction readFrom(final DataInput in, final ReadMethod readMethod, final int opcode, final int index, final int lineNumber) throws IOException {
+    public static LdcInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
         final byte type = in.readByte();
         Object constant;
         switch (type) {
@@ -70,7 +78,7 @@ public class LdcInstruction extends AbstractInstruction {
         default:
             throw new IOException("corrupted data");
         }
-        return new LdcInstruction(readMethod, lineNumber, constant);
+        return new LdcInstruction(methodInfo.getMethod(), lineNumber, constant, index);
     }
 
     @Override

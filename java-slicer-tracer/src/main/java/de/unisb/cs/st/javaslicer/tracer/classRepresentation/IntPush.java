@@ -6,12 +6,20 @@ import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
+
 public class IntPush extends AbstractInstruction {
 
     private final int operand;
 
-    public IntPush(final ReadMethod readMethod, final int lineNumber, final int opcode, final int operand) {
-        super(readMethod, opcode, lineNumber);
+    public IntPush(final ReadMethod readMethod, final int opcode, final int operand) {
+        super(readMethod, opcode);
+        assert opcode == Opcodes.BIPUSH || opcode == Opcodes.SIPUSH;
+        this.operand = operand;
+    }
+
+    private IntPush(final ReadMethod readMethod, final int lineNumber, final int opcode, final int operand, final int index) {
+        super(readMethod, opcode, lineNumber, index);
         assert opcode == Opcodes.BIPUSH || opcode == Opcodes.SIPUSH;
         this.operand = operand;
     }
@@ -26,9 +34,9 @@ public class IntPush extends AbstractInstruction {
         out.writeInt(this.operand);
     }
 
-    public static IntPush readFrom(final DataInput in, final ReadMethod readMethod, final int opcode, final int index, final int lineNumber) throws IOException {
+    public static IntPush readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
         final int operand = in.readInt();
-        return new IntPush(readMethod, lineNumber, opcode, operand);
+        return new IntPush(methodInfo.getMethod(), lineNumber, opcode, operand, index);
     }
 
     @Override

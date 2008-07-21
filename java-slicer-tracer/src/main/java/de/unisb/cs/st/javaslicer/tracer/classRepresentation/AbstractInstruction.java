@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
 
@@ -14,21 +15,31 @@ public abstract class AbstractInstruction implements Instruction {
 
     private static int nextIndex = 0;
 
+    // TODO optimize this
     private static final Class<?>[] instructions =
         new Class<?>[] {
-            ArrayInstruction.class, FieldInstruction.class, IIncInstruction.class,
-            IntPush.class, JumpInstruction.class, LabelMarker.class,
-            LdcInstruction.class, MethodInvocationInstruction.class,
-            NewArrayInstruction.class, SimpleInstruction.class
+            ArrayInstruction.class,
+            FieldInstruction.class,
+            IIncInstruction.class,
+            IntPush.class,
+            JumpInstruction.class,
+            LabelMarker.class,
+            LdcInstruction.class,
+            LookupSwitchInstruction.class,
+            MethodInvocationInstruction.class,
+            MultiANewArrayInstruction.class,
+            NewArrayInstruction.class,
+            SimpleInstruction.class,
+            TableSwitchInstruction.class
         };
 
     private final int index;
     protected final ReadMethod method;
     private final int opcode;
-    private final int lineNumber;
+    private int lineNumber;
 
-    public AbstractInstruction(final ReadMethod readMethod, final int opcode, final int lineNumber) {
-        this(readMethod, opcode, lineNumber, nextIndex++);
+    public AbstractInstruction(final ReadMethod readMethod, final int opcode) {
+        this(readMethod, opcode, -1, nextIndex++);
         if (nextIndex < 0)
             throw new RuntimeException("Integer overflow in instruction index");
     }
@@ -56,6 +67,10 @@ public abstract class AbstractInstruction implements Instruction {
         return this.lineNumber;
     }
 
+    public void setLineNumber(final int lineNumber) {
+        this.lineNumber = lineNumber;
+    }
+
     public static int getNextIndex() {
         return nextIndex;
     }
@@ -81,7 +96,7 @@ public abstract class AbstractInstruction implements Instruction {
         out.writeInt(this.opcode);
     }
 
-    public static AbstractInstruction readFrom(final DataInput in, final ReadMethod readMethod) throws IOException {
+    public static AbstractInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo) throws IOException {
         // first determine the type
         final byte type = in.readByte();
         if (type < 0 || type >= instructions.length)
@@ -93,8 +108,8 @@ public abstract class AbstractInstruction implements Instruction {
         final Class<?> instrClass = instructions[type];
         try {
             final Method readFromMethod = instrClass.getMethod("readFrom",
-                    DataInput.class, ReadMethod.class, int.class, int.class, int.class);
-            final Object o = readFromMethod.invoke(null, in, readMethod, opcode, index, lineNumber);
+                    DataInput.class, MethodReadInformation.class, int.class, int.class, int.class);
+            final Object o = readFromMethod.invoke(null, in, methodInfo, opcode, index, lineNumber);
             if (o instanceof AbstractInstruction)
                 return (AbstractInstruction)o;
             throw new RuntimeException("readFrom does not return Instruction");

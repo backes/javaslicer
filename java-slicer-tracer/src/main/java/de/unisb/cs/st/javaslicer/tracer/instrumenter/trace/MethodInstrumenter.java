@@ -1,9 +1,10 @@
 package de.unisb.cs.st.javaslicer.tracer.instrumenter.trace;
 
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodAdapter;
@@ -20,24 +21,28 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.IntPush;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.JumpInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.LabelMarker;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.LdcInstruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.LookupSwitchInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.MethodInvocationInstruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.MultiANewArrayInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.NewArrayInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.SimpleInstruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.TableSwitchInstruction;
+import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
 
 public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
     private final Tracer tracer;
     private final ReadMethod readMethod;
 
-    private int lineNumber = -1;
+    private LabelMarker lastVisitedLabel = null;
+    private final Map<LabelMarker, Integer> labelLineNumbers = new HashMap<LabelMarker, Integer>();
+    private final List<LabelMarker> preceedingLabels = new ArrayList<LabelMarker>();
 
     private final Label startLabel = new Label();
     private final Label endLabel = new Label();
     private final Map<Label, LabelMarker> labels =
         new HashMap<Label, LabelMarker>();
-    private final Map<JumpInstruction, Label> jumpInstructions =
-        new HashMap<JumpInstruction, Label>();
 
     private int nextLabelNr = 0;
     private int nextAdditionalLabelNr = Integer.MAX_VALUE;
@@ -65,15 +70,13 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
     @Override
     public void visitJumpInsn(final int opcode, final Label label) {
-        final JumpInstruction instr = new JumpInstruction(this.readMethod, this.lineNumber, opcode, null);
-        registerInstruction(instr);
-        this.jumpInstructions.put(instr, label);
+        registerInstruction(new JumpInstruction(this.readMethod, opcode, getLabelMarker(label, false)));
         super.visitJumpInsn(opcode, label);
     }
 
     @Override
     public void visitMethodInsn(final int opcode, final String owner, final String name, final String desc) {
-        registerInstruction(new MethodInvocationInstruction(this.readMethod, this.lineNumber, opcode, owner, name, desc));
+        registerInstruction(new MethodInvocationInstruction(this.readMethod, opcode, owner, name, desc));
 
         super.visitMethodInsn(opcode, owner, name, desc);
 
@@ -92,13 +95,16 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
     @Override
     public void visitEnd() {
         super.visitEnd();
+        // if there are labels that where not visited (should not occure...),
+        // then assign them a number now
+        for (final LabelMarker lm: this.labels.values()) {
+            if (lm.getLabelNr() == -1) {
+                final int labelNr = lm.isAdditionalLabel() ? this.nextAdditionalLabelNr-- : this.nextLabelNr++;
+                lm.setLabelNr(labelNr);
+            }
+        }
         this.readMethod.ready();
         this.readMethod.setInstructionNumberEnd(AbstractInstruction.getNextIndex());
-        for (final Entry<JumpInstruction, Label> instr: this.jumpInstructions.entrySet()) {
-            final LabelMarker lm = this.labels.get(instr.getValue());
-            assert lm != null;
-            instr.getKey().setLabel(lm);
-        }
     }
 
     @Override
@@ -145,13 +151,13 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
                     "(Ljava/lang/Object;I)V");
         }
 
-        registerInstruction(new FieldInstruction(this.readMethod, opcode, this.lineNumber, owner, name, desc, objectTraceSeqIndex));
+        registerInstruction(new FieldInstruction(this.readMethod, opcode, owner, name, desc, objectTraceSeqIndex));
         super.visitFieldInsn(opcode, owner, name, desc);
     }
 
     @Override
     public void visitIincInsn(final int var, final int increment) {
-        registerInstruction(new IIncInstruction(this.readMethod, var, this.lineNumber));
+        registerInstruction(new IIncInstruction(this.readMethod, var));
         super.visitIincInsn(var, increment);
     }
 
@@ -246,10 +252,10 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
         if (arrayTraceSeqIndex != -1) {
             assert indexTraceSeqIndex != -1;
-            registerInstruction(new ArrayInstruction(this.readMethod, this.lineNumber, opcode, arrayTraceSeqIndex, indexTraceSeqIndex));
+            registerInstruction(new ArrayInstruction(this.readMethod, opcode, arrayTraceSeqIndex, indexTraceSeqIndex));
         } else {
             assert indexTraceSeqIndex == -1;
-            registerInstruction(new SimpleInstruction(this.readMethod, this.lineNumber, opcode));
+            registerInstruction(new SimpleInstruction(this.readMethod, opcode));
         }
 
         super.visitInsn(opcode);
@@ -258,10 +264,10 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
     @Override
     public void visitIntInsn(final int opcode, final int operand) {
         if (opcode == NEWARRAY) {
-            registerInstruction(new NewArrayInstruction(this.readMethod, this.lineNumber, operand));
+            registerInstruction(new NewArrayInstruction(this.readMethod, operand));
         } else {
             assert opcode == BIPUSH || opcode == SIPUSH;
-            registerInstruction(new IntPush(this.readMethod, this.lineNumber, opcode, operand));
+            registerInstruction(new IntPush(this.readMethod, opcode, operand));
         }
 
         super.visitIntInsn(opcode, operand);
@@ -269,31 +275,49 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
     @Override
     public void visitLdcInsn(final Object constant) {
-        registerInstruction(new LdcInstruction(this.readMethod, this.lineNumber, constant));
+        registerInstruction(new LdcInstruction(this.readMethod, constant));
         super.visitLdcInsn(constant);
     }
 
     @Override
     public void visitLineNumber(final int line, final Label start) {
-        this.lineNumber = line;
+        this.labelLineNumbers.put(getLabelMarker(start, false), line);
         super.visitLineNumber(line, start);
     }
 
     @Override
     public void visitLookupSwitchInsn(final Label dflt, final int[] keys, final Label[] handlerLabels) {
-        // TODO Auto-generated method stub
+        final IntegerMap<LabelMarker> handlers = new IntegerMap<LabelMarker>(handlerLabels.length*4/3+1);
+        assert keys.length == handlerLabels.length;
+        for (int i = 0; i < handlerLabels.length; ++i)
+            handlers.put(keys[i], getLabelMarker(handlerLabels[i], false));
+        registerInstruction(new LookupSwitchInstruction(this.readMethod, getLabelMarker(dflt, false), handlers));
         super.visitLookupSwitchInsn(dflt, keys, handlerLabels);
+    }
+
+    private LabelMarker getLabelMarker(final Label label, final boolean additionalLabel) {
+        LabelMarker lm = additionalLabel ? null : this.labels.get(label);
+        if (lm == null) {
+            final int seq = this.tracer.newIntegerTraceSequence();
+            lm = new LabelMarker(this.readMethod, seq, additionalLabel);
+            this.labels.put(label, lm);
+        }
+        return lm;
     }
 
     @Override
     public void visitMultiANewArrayInsn(final String desc, final int dims) {
-        // TODO Auto-generated method stub
+        registerInstruction(new MultiANewArrayInstruction(this.readMethod, desc, dims));
         super.visitMultiANewArrayInsn(desc, dims);
     }
 
     @Override
     public void visitTableSwitchInsn(final int min, final int max, final Label dflt, final Label[] handlerLabels) {
-        // TODO Auto-generated method stub
+        assert min + handlerLabels.length - 1 == max;
+        final LabelMarker[] handlers = new LabelMarker[handlerLabels.length];
+        for (int i = 0; i < handlerLabels.length; ++i)
+            handlers[i] = getLabelMarker(handlerLabels[i], false);
+        registerInstruction(new TableSwitchInstruction(this.readMethod, min, max, getLabelMarker(dflt, false), handlers));
         super.visitTableSwitchInsn(min, max, dflt, handlerLabels);
     }
 
@@ -330,13 +354,13 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
         super.visitLabel(label);
 
         // whenever a label is crossed, it stores the instruction index we come from
-        final int seq = this.tracer.newIntegerTraceSequence();
+        final LabelMarker lm = getLabelMarker(label, additionalLabel);
         final int labelNr = additionalLabel ? this.nextAdditionalLabelNr-- : this.nextLabelNr++;
-        final LabelMarker lm = new LabelMarker(this.readMethod, this.lineNumber, seq, additionalLabel, labelNr);
-        this.labels.put(label, lm);
+        assert lm.getLabelNr() == -1;
+        lm.setLabelNr(labelNr);
         //System.out.println("seq " + index + ": label " + label + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
         // at runtime: push last executed instruction index on stack, then the sequence index
-        pushIntOnStack(seq);
+        pushIntOnStack(lm.getTraceSeqIndex());
         super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceLastInstructionIndex",
                 "(I)V");
 
@@ -348,10 +372,14 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
         // and *after* that, we store our new instruction index on the stack (on runtime)
         registerInstruction(lm);
+
+        if (!additionalLabel)
+            this.lastVisitedLabel = lm;
     }
 
     private void registerInstruction(final AbstractInstruction instruction) {
         this.readMethod.addInstruction(instruction);
+        this.preceedingLabels .add(this.lastVisitedLabel);
         pushIntOnStack(instruction.getIndex());
         super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "passInstruction", "(I)V");
         ++MethodInstrumenter.instructions;

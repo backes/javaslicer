@@ -173,8 +173,7 @@ public class ThreadTraceResult {
         }
 
         private Instance getNextInstruction(final Instruction old) throws TracerException, EOFException {
-            final ReadMethod method = old.getMethod();
-            return getNextInstruction(method, old.getBackwardInstructionIndex(this));
+            return getNextInstruction(old.getMethod(), old.getBackwardInstructionIndex(this));
         }
 
         private Instance getNextInstruction(final ReadMethod oldMethod, final int nextIndex) throws TracerException, EOFException {

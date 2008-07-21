@@ -3,9 +3,35 @@ package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Queue;
+
+import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
 
 public class ReadMethod {
+
+    public static class MethodReadInformation {
+
+        private final ReadMethod method;
+        protected final IntegerMap<LabelMarker> labels = new IntegerMap<LabelMarker>();
+
+        public MethodReadInformation(final ReadMethod method) {
+            this.method = method;
+        }
+
+        public ReadMethod getMethod() {
+            return this.method;
+        }
+
+        public LabelMarker getLabel(final int labelNr) throws IOException {
+            final LabelMarker lm = this.labels.get(labelNr);
+            if (lm == null)
+                throw new IOException("corrupted data (illegal label)");
+            return lm;
+        }
+
+    }
 
     private final ArrayList<AbstractInstruction> instructions = new ArrayList<AbstractInstruction>();
     private final ReadClass readClass;
@@ -65,7 +91,11 @@ public class ReadMethod {
         out.writeInt(this.instructionNumberEnd);
         out.writeInt(this.instructions.size());
         for (final Instruction instr: this.instructions)
-            instr.writeOut(out);
+            if (instr instanceof LabelMarker)
+                instr.writeOut(out);
+        for (final Instruction instr: this.instructions)
+            if (!(instr instanceof LabelMarker))
+                instr.writeOut(out);
     }
 
     public static ReadMethod readFrom(final DataInput in, final ReadClass readClass) throws IOException {
@@ -77,8 +107,26 @@ public class ReadMethod {
         rm.setInstructionNumberEnd(instructionNumberEnd);
         int numInstr = in.readInt();
         rm.instructions.ensureCapacity(numInstr);
-        while (numInstr-- > 0)
-            rm.instructions.add(AbstractInstruction.readFrom(in, rm));
+        final Queue<LabelMarker> labels = new ArrayDeque<LabelMarker>();
+        final MethodReadInformation mri = new MethodReadInformation(rm);
+        AbstractInstruction instr = null;
+        while (numInstr-- > 0) {
+            instr = AbstractInstruction.readFrom(in, mri);
+            if (!(instr instanceof LabelMarker))
+                break;
+            final LabelMarker lm = (LabelMarker) instr;
+            labels.add(lm);
+            mri.labels.put(lm.getLabelNr(), lm);
+        }
+        while (instr != null || numInstr-- > 0) {
+            if (instr == null)
+                instr = AbstractInstruction.readFrom(in, mri);
+            while (!labels.isEmpty() && labels.peek().getIndex() < instr.getIndex())
+                rm.instructions.add(labels.poll());
+            rm.instructions.add(instr);
+            instr = null;
+        }
+        rm.instructions.addAll(labels);
         rm.instructions.trimToSize();
 
         return rm;
