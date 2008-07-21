@@ -3,6 +3,7 @@ package de.unisb.cs.st.javaslicer.tracer.instrumenter.trace;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -103,6 +104,15 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
                 lm.setLabelNr(labelNr);
             }
         }
+        // now set the line numbers of the instructions of this method
+        final Iterator<AbstractInstruction> instrIt = this.readMethod.getInstructions().iterator();
+        final Iterator<LabelMarker> preceedingLabel = this.preceedingLabels.iterator();
+        while (instrIt.hasNext() && preceedingLabel.hasNext()) {
+            final Integer lineNumber = this.labelLineNumbers.get(preceedingLabel.next());
+            assert lineNumber != null;
+            instrIt.next().setLineNumber(lineNumber.intValue());
+        }
+        assert !instrIt.hasNext() && !preceedingLabel.hasNext();
         this.readMethod.ready();
         this.readMethod.setInstructionNumberEnd(AbstractInstruction.getNextIndex());
     }
