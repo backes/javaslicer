@@ -441,7 +441,8 @@ public class Tracer implements ClassFileTransformer {
         return getInstance().getThreadTracer(Thread.currentThread());
     }
 
-    private ThreadTracer getThreadTracer(final Thread thread) {
+    // TODO non-blocking
+    private synchronized ThreadTracer getThreadTracer(final Thread thread) {
         final ThreadTracer tracer = this.threadTracers.get(thread);
         if (tracer != null)
             return tracer;
