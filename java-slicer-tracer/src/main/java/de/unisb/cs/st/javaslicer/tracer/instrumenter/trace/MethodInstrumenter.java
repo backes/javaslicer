@@ -4,6 +4,7 @@ import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodAdapter;
@@ -28,13 +29,14 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.SimpleInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.TableSwitchInstruction;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
+import de.unisb.cs.st.javaslicer.tracer.util.Pair;
 
 public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
     private final Tracer tracer;
     private final ReadMethod readMethod;
 
-    private final Map<LabelMarker, Integer> labelLineNumbers = new HashMap<LabelMarker, Integer>();
+    private final Map<Label, Integer> labelLineNumbers = new HashMap<Label, Integer>();
 
     private final Label startLabel = new Label();
     private final Label endLabel = new Label();
@@ -44,6 +46,10 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
     private int nextLabelNr = 0;
     private int nextAdditionalLabelNr = Integer.MAX_VALUE;
     private final Map<JumpInstruction, Label> jumpInstructions = new HashMap<JumpInstruction, Label>();
+    private final Map<LookupSwitchInstruction, Pair<Label, IntegerMap<Label>>> lookupSwitchInstructions
+        = new HashMap<LookupSwitchInstruction, Pair<Label,IntegerMap<Label>>>();
+    private final Map<TableSwitchInstruction, Pair<Label, Label[]>> tableSwitchInstructions
+        = new HashMap<TableSwitchInstruction, Pair<Label,Label[]>>();
 
     // statistics
     private static int labelsAdditional = 0;
@@ -103,18 +109,59 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
                 lm.setLabelNr(labelNr);
             }
         }
+
         // now set the line numbers of the instructions of this method
+        final Map<LabelMarker, Label> labelInvs = new HashMap<LabelMarker, Label>(this.labels.size()*4/3+1);
+        for (final Entry<Label, LabelMarker> e: this.labels.entrySet())
+            labelInvs.put(e.getValue(), e.getKey());
         final Iterator<AbstractInstruction> instrIt = this.readMethod.getInstructions().iterator();
         int line = -1;
         while (instrIt.hasNext()) {
             final AbstractInstruction instr = instrIt.next();
             if (instr instanceof LabelMarker) {
-                final Integer labelLine = this.labelLineNumbers.get(instr);
+                final Integer labelLine = this.labelLineNumbers.get(labelInvs.get(instr));
                 if (labelLine != null)
                     line = labelLine.intValue();
             }
             instr.setLineNumber(line);
         }
+
+        // and set label references
+        for (final Entry<JumpInstruction, Label> e: this.jumpInstructions.entrySet()) {
+            final LabelMarker lm = this.labels.get(e.getValue());
+            if (lm == null)
+                throw new RuntimeException("Unvisited Label in JumpInstruction");
+            e.getKey().setLabel(lm);
+        }
+        for (final Entry<LookupSwitchInstruction, Pair<Label, IntegerMap<Label>>> e: this.lookupSwitchInstructions.entrySet()) {
+            final LabelMarker defLab = this.labels.get(e.getValue().getFirst());
+            if (defLab == null)
+                throw new RuntimeException("Unvisited Label in LookupSwitchInstruction");
+            final IntegerMap<LabelMarker> handlers = new IntegerMap<LabelMarker>(e.getValue().getSecond().size()*4/3+1);
+            for (final Entry<Integer, Label> e2: e.getValue().getSecond().entrySet()) {
+                final LabelMarker handlerLabel = this.labels.get(e2.getValue());
+                if (handlerLabel == null)
+                    throw new RuntimeException("Unvisited Label in LookupSwitchInstruction");
+                handlers.put(e2.getKey(), handlerLabel);
+            }
+            e.getKey().setDefaultHandler(defLab);
+            e.getKey().setHandlers(handlers);
+        }
+        for (final Entry<TableSwitchInstruction, Pair<Label, Label[]>> e: this.tableSwitchInstructions.entrySet()) {
+            final LabelMarker defLab = this.labels.get(e.getValue().getFirst());
+            if (defLab == null)
+                throw new RuntimeException("Unvisited Label in LookupSwitchInstruction");
+            final Label[] oldHandlers = e.getValue().getSecond();
+            final LabelMarker[] handlers = new LabelMarker[oldHandlers.length];
+            for (int i = 0; i < oldHandlers.length; ++i) {
+                handlers[i] = this.labels.get(oldHandlers[i]);
+                if (handlers[i] == null)
+                    throw new RuntimeException("Unvisited Label in LookupSwitchInstruction");
+            }
+            e.getKey().setDefaultHandler(defLab);
+            e.getKey().setHandlers(handlers);
+        }
+
         this.readMethod.ready();
         this.readMethod.setInstructionNumberEnd(AbstractInstruction.getNextIndex());
     }
@@ -293,28 +340,20 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
     @Override
     public void visitLineNumber(final int line, final Label start) {
-        this.labelLineNumbers.put(getLabelMarker(start, false), line);
+        this.labelLineNumbers.put(start, line);
         super.visitLineNumber(line, start);
     }
 
     @Override
     public void visitLookupSwitchInsn(final Label dflt, final int[] keys, final Label[] handlerLabels) {
-        final IntegerMap<LabelMarker> handlers = new IntegerMap<LabelMarker>(handlerLabels.length*4/3+1);
+        final IntegerMap<Label> handlers = new IntegerMap<Label>(handlerLabels.length*4/3+1);
         assert keys.length == handlerLabels.length;
         for (int i = 0; i < handlerLabels.length; ++i)
-            handlers.put(keys[i], getLabelMarker(handlerLabels[i], false));
-        registerInstruction(new LookupSwitchInstruction(this.readMethod, getLabelMarker(dflt, false), handlers));
+            handlers.put(keys[i], handlerLabels[i]);
+        final LookupSwitchInstruction instr = new LookupSwitchInstruction(this.readMethod, null, null);
+        this.lookupSwitchInstructions.put(instr, new Pair<Label, IntegerMap<Label>>(dflt, handlers));
+        registerInstruction(instr);
         super.visitLookupSwitchInsn(dflt, keys, handlerLabels);
-    }
-
-    private LabelMarker getLabelMarker(final Label label, final boolean additionalLabel) {
-        LabelMarker lm = additionalLabel ? null : this.labels.get(label);
-        if (lm == null) {
-            final int seq = this.tracer.newIntegerTraceSequence();
-            lm = new LabelMarker(this.readMethod, seq, additionalLabel);
-            this.labels.put(label, lm);
-        }
-        return lm;
     }
 
     @Override
@@ -326,10 +365,9 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
     @Override
     public void visitTableSwitchInsn(final int min, final int max, final Label dflt, final Label[] handlerLabels) {
         assert min + handlerLabels.length - 1 == max;
-        final LabelMarker[] handlers = new LabelMarker[handlerLabels.length];
-        for (int i = 0; i < handlerLabels.length; ++i)
-            handlers[i] = getLabelMarker(handlerLabels[i], false);
-        registerInstruction(new TableSwitchInstruction(this.readMethod, min, max, getLabelMarker(dflt, false), handlers));
+        final TableSwitchInstruction instr = new TableSwitchInstruction(this.readMethod, min, max, null, null);
+        this.tableSwitchInstructions.put(instr, new Pair<Label, Label[]>(dflt, handlerLabels));
+        registerInstruction(instr);
         super.visitTableSwitchInsn(min, max, dflt, handlerLabels);
     }
 

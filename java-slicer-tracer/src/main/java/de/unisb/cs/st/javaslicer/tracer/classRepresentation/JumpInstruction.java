@@ -11,7 +11,7 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodRea
 
 public class JumpInstruction extends AbstractInstruction {
 
-    private final LabelMarker label;
+    private LabelMarker label;
 
     public JumpInstruction(final ReadMethod readMethod, final int opcode, final LabelMarker label) {
         super(readMethod, opcode);
@@ -20,6 +20,14 @@ public class JumpInstruction extends AbstractInstruction {
 
     private JumpInstruction(final ReadMethod readMethod, final int lineNumber, final int opcode, final LabelMarker label, final int index) {
         super(readMethod, opcode, lineNumber, index);
+        this.label = label;
+    }
+
+    public LabelMarker getLabel() {
+        return this.label;
+    }
+
+    public void setLabel(final LabelMarker label) {
         this.label = label;
     }
 

@@ -10,8 +10,8 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodRea
 
 public class TableSwitchInstruction extends AbstractInstruction {
 
-    private final LabelMarker defaultHandler;
-    private final LabelMarker[] handlers;
+    private LabelMarker defaultHandler;
+    private LabelMarker[] handlers;
     private final int min;
     private final int max;
 
@@ -29,6 +29,30 @@ public class TableSwitchInstruction extends AbstractInstruction {
         this.max = max;
         this.defaultHandler = defaultHandler;
         this.handlers = handlers;
+    }
+
+    public LabelMarker getDefaultHandler() {
+        return this.defaultHandler;
+    }
+
+    public void setDefaultHandler(final LabelMarker defaultHandler) {
+        this.defaultHandler = defaultHandler;
+    }
+
+    public LabelMarker[] getHandlers() {
+        return this.handlers;
+    }
+
+    public void setHandlers(final LabelMarker[] handlers) {
+        this.handlers = handlers;
+    }
+
+    public int getMin() {
+        return this.min;
+    }
+
+    public int getMax() {
+        return this.max;
     }
 
     @Override

@@ -16,8 +16,8 @@ import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
 
 public class LookupSwitchInstruction extends AbstractInstruction {
 
-    private final LabelMarker defaultHandler;
-    private final IntegerMap<LabelMarker> handlers;
+    private LabelMarker defaultHandler;
+    private IntegerMap<LabelMarker> handlers;
 
     public LookupSwitchInstruction(final ReadMethod readMethod, final LabelMarker defaultHandler, final IntegerMap<LabelMarker> handlers) {
         super(readMethod, Opcodes.LOOKUPSWITCH);
@@ -28,6 +28,22 @@ public class LookupSwitchInstruction extends AbstractInstruction {
     private LookupSwitchInstruction(final ReadMethod readMethod, final int lineNumber, final LabelMarker defaultHandler, final IntegerMap<LabelMarker> handlers, final int index) {
         super(readMethod, Opcodes.LOOKUPSWITCH, lineNumber, index);
         this.defaultHandler = defaultHandler;
+        this.handlers = handlers;
+    }
+
+    public LabelMarker getDefaultHandler() {
+        return this.defaultHandler;
+    }
+
+    public void setDefaultHandler(final LabelMarker defaultHandler) {
+        this.defaultHandler = defaultHandler;
+    }
+
+    public IntegerMap<LabelMarker> getHandlers() {
+        return this.handlers;
+    }
+
+    public void setHandlers(final IntegerMap<LabelMarker> handlers) {
         this.handlers = handlers;
     }
 
