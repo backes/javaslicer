@@ -1,10 +1,8 @@
 package de.unisb.cs.st.javaslicer.tracer.instrumenter.trace;
 
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 import org.objectweb.asm.Label;
@@ -36,9 +34,7 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
     private final Tracer tracer;
     private final ReadMethod readMethod;
 
-    private LabelMarker lastVisitedLabel = null;
     private final Map<LabelMarker, Integer> labelLineNumbers = new HashMap<LabelMarker, Integer>();
-    private final List<LabelMarker> preceedingLabels = new ArrayList<LabelMarker>();
 
     private final Label startLabel = new Label();
     private final Label endLabel = new Label();
@@ -47,6 +43,7 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
     private int nextLabelNr = 0;
     private int nextAdditionalLabelNr = Integer.MAX_VALUE;
+    private final Map<JumpInstruction, Label> jumpInstructions = new HashMap<JumpInstruction, Label>();
 
     // statistics
     private static int labelsAdditional = 0;
@@ -71,7 +68,9 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
     @Override
     public void visitJumpInsn(final int opcode, final Label label) {
-        registerInstruction(new JumpInstruction(this.readMethod, opcode, getLabelMarker(label, false)));
+        final JumpInstruction jumpInstr = new JumpInstruction(this.readMethod, opcode, null);
+        this.jumpInstructions .put(jumpInstr, label);
+        registerInstruction(jumpInstr);
         super.visitJumpInsn(opcode, label);
     }
 
@@ -106,13 +105,16 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
         }
         // now set the line numbers of the instructions of this method
         final Iterator<AbstractInstruction> instrIt = this.readMethod.getInstructions().iterator();
-        final Iterator<LabelMarker> preceedingLabel = this.preceedingLabels.iterator();
-        while (instrIt.hasNext() && preceedingLabel.hasNext()) {
-            final Integer lineNumber = this.labelLineNumbers.get(preceedingLabel.next());
-            assert lineNumber != null;
-            instrIt.next().setLineNumber(lineNumber.intValue());
+        int line = -1;
+        while (instrIt.hasNext()) {
+            final AbstractInstruction instr = instrIt.next();
+            if (instr instanceof LabelMarker) {
+                final Integer labelLine = this.labelLineNumbers.get(instr);
+                if (labelLine != null)
+                    line = labelLine.intValue();
+            }
+            instr.setLineNumber(line);
         }
-        assert !instrIt.hasNext() && !preceedingLabel.hasNext();
         this.readMethod.ready();
         this.readMethod.setInstructionNumberEnd(AbstractInstruction.getNextIndex());
     }
@@ -362,13 +364,11 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
     private void visitLabel(final Label label, final boolean additionalLabel) {
         super.visitLabel(label);
-
-        // whenever a label is crossed, it stores the instruction index we come from
-        final LabelMarker lm = getLabelMarker(label, additionalLabel);
+        final int seq = this.tracer.newIntegerTraceSequence();
         final int labelNr = additionalLabel ? this.nextAdditionalLabelNr-- : this.nextLabelNr++;
-        assert lm.getLabelNr() == -1;
-        lm.setLabelNr(labelNr);
-        //System.out.println("seq " + index + ": label " + label + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
+        final LabelMarker lm = new LabelMarker(this.readMethod, seq, additionalLabel, labelNr);
+        this.labels.put(label, lm);
+
         // at runtime: push last executed instruction index on stack, then the sequence index
         pushIntOnStack(lm.getTraceSeqIndex());
         super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "traceLastInstructionIndex",
@@ -382,14 +382,10 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
         // and *after* that, we store our new instruction index on the stack (on runtime)
         registerInstruction(lm);
-
-        if (!additionalLabel)
-            this.lastVisitedLabel = lm;
     }
 
     private void registerInstruction(final AbstractInstruction instruction) {
         this.readMethod.addInstruction(instruction);
-        this.preceedingLabels .add(this.lastVisitedLabel);
         pushIntOnStack(instruction.getIndex());
         super.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "passInstruction", "(I)V");
         ++MethodInstrumenter.instructions;

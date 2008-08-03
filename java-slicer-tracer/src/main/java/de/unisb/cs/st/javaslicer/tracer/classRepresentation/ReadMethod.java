@@ -117,6 +117,7 @@ public class ReadMethod {
             final LabelMarker lm = (LabelMarker) instr;
             labels.add(lm);
             mri.labels.put(lm.getLabelNr(), lm);
+            instr = null;
         }
         while (instr != null || numInstr-- > 0) {
             if (instr == null)

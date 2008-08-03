@@ -16,12 +16,12 @@ public class LabelMarker extends AbstractInstruction {
     private final boolean additionalLabel;
     private int labelNr;
 
-    public LabelMarker(final ReadMethod readMethod,
-            final int traceSeqIndex, final boolean additionalLabel) {
+    public LabelMarker(final ReadMethod readMethod, final int traceSeqIndex,
+            final boolean additionalLabel, final int labelNr) {
         super(readMethod, -1);
         this.traceSeqIndex = traceSeqIndex;
         this.additionalLabel = additionalLabel;
-        this.labelNr = -1;
+        this.labelNr = labelNr;
     }
 
     private LabelMarker(final ReadMethod readMethod, final int lineNumber,
