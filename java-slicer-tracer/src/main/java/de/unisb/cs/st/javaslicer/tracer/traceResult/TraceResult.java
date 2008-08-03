@@ -148,8 +148,17 @@ public class TraceResult {
                 + (it2.getNoInstructions() + it2.getNoAdditionalInstructions())
                 + " total instructions)");
 
-        System.out.println("Ready");
+        assert visitedAllInstructions(it): "Did not visit all instructions.";
 
+        System.out.println("Ready");
+    }
+
+    private static boolean visitedAllInstructions(final Iterator<Instance> it) {
+        if (it instanceof BackwardInstructionIterator) {
+            final BackwardInstructionIterator it2 = (BackwardInstructionIterator)it;
+            return it2.visitedAllInstructions();
+        }
+        return true;
     }
 
 }

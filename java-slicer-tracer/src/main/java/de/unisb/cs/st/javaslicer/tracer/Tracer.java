@@ -324,8 +324,8 @@ public class Tracer implements ClassFileTransformer {
                 checkClass(newClassfileBuffer, readClass.getClassName());
             }
 
-//          if (className.equals("java/lang/ClassLoader"))
-//          printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
+            if (className.equals("java/lang/ClassLoader"))
+                printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
             if (className.equals("de/unisb/cs/depend/ccs_sem/utils/WeakIdentityHashMap$1"))
                 printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
             if (className.equals("A"))

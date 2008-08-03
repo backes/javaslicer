@@ -23,30 +23,24 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
     public void visitCode() {
         super.visitCode();
 
-        //visitTryCatchBlock(this.l0, this.l1, this.l1, null);
-
-        visitLabel(this.l0);
-
         visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "pauseTracing", "()V");
 
+        //visitTryCatchBlock(this.l0, this.l1, this.l1, null);
+        visitLabel(this.l0);
     }
 
     @Override
     public void visitMaxs(final int maxStack, final int maxLocals) {
-        /*
-        final Label l2 = new Label();
-        visitJumpInsn(GOTO, l2);
         visitLabel(this.l1);
+        /*
         visitVarInsn(ASTORE, maxLocals);
 
         visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "unpauseTracing", "()V");
 
         visitVarInsn(ALOAD, maxLocals);
         visitInsn(ATHROW);
-        visitLabel(l2);
-        super.visitMaxs(maxStack, maxLocals+1);
         */
-        super.visitMaxs(maxStack, maxLocals);
+        super.visitMaxs(maxStack, maxLocals+1);
     }
 
     @Override

@@ -235,6 +235,13 @@ public class ThreadTraceResult {
             return this.additionalInstructionCount;
         }
 
+        public boolean visitedAllInstructions() {
+            for (final Long nextOccNr: this.instructionNextOccurenceNumber.values())
+                if (nextOccNr != 0)
+                    return false;
+            return true;
+        }
+
     }
 
 }
