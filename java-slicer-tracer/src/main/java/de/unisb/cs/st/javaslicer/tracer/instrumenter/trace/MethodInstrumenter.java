@@ -178,26 +178,30 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
         case GETFIELD:
             // top item on stack is the object reference: duplicate it
-            super.visitInsn(DUP);
-            objectTraceSeqIndex = this.tracer.newObjectTraceSequence();
-            ++MethodInstrumenter.getField;
-            //System.out.println("seq " + index + ": getField " + name + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
+            if (!name.startsWith("this$")) {
+                super.visitInsn(DUP);
+                objectTraceSeqIndex = this.tracer.newObjectTraceSequence();
+                ++MethodInstrumenter.getField;
+                //System.out.println("seq " + index + ": getField " + name + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
+            }
             break;
 
         case PUTFIELD:
             // the second item on the stack is the object reference
-            final int size = Type.getType(desc).getSize(); // either 1 or 2
-            if (size == 1) {
-                super.visitInsn(DUP2);
-                super.visitInsn(POP);
-            } else {
-                super.visitInsn(DUP2_X1);
-                super.visitInsn(POP2);
-                super.visitInsn(DUP_X2);
+            if (!name.startsWith("this$")) {
+                final int size = Type.getType(desc).getSize(); // either 1 or 2
+                if (size == 1) {
+                    super.visitInsn(DUP2);
+                    super.visitInsn(POP);
+                } else {
+                    super.visitInsn(DUP2_X1);
+                    super.visitInsn(POP2);
+                    super.visitInsn(DUP_X2);
+                }
+                objectTraceSeqIndex = this.tracer.newObjectTraceSequence();
+                ++MethodInstrumenter.putField;
+                //System.out.println("seq " + index + ": putField " + name + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             }
-            objectTraceSeqIndex = this.tracer.newObjectTraceSequence();
-            ++MethodInstrumenter.putField;
-            //System.out.println("seq " + index + ": putField " + name + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             break;
 
         default:
