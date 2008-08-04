@@ -119,7 +119,7 @@ public class TraceResult {
             if (threadToTrace == null) {
                 if (tracing == null)
                     tracing = t;
-            } else if (t.getThreadId() == threadToTrace)
+            } else if (t.getThreadId() == threadToTrace.longValue())
                 tracing = t;
             System.out.format("%15d: %s%n", t.getThreadId(), t.getThreadName());
         }

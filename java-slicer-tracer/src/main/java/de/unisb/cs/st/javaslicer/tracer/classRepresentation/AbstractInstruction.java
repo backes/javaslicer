@@ -30,7 +30,9 @@ public abstract class AbstractInstruction implements Instruction {
             MultiANewArrayInstruction.class,
             NewArrayInstruction.class,
             SimpleInstruction.class,
-            TableSwitchInstruction.class
+            TableSwitchInstruction.class,
+            TypeInstruction.class,
+            VarInstruction.class
         };
 
     private final int index;

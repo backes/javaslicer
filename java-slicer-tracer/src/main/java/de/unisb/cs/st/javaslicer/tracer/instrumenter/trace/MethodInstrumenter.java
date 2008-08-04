@@ -28,6 +28,8 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.NewArrayInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.SimpleInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.TableSwitchInstruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.TypeInstruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.VarInstruction;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
 import de.unisb.cs.st.javaslicer.tracer.util.Pair;
 
@@ -377,19 +379,19 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
     @Override
     public void visitTryCatchBlock(final Label start, final Label end, final Label handler, final String type) {
-        // TODO Auto-generated method stub
+        // we do not store information about try-catch blocks
         super.visitTryCatchBlock(start, end, handler, type);
     }
 
     @Override
     public void visitTypeInsn(final int opcode, final String type) {
-        // TODO Auto-generated method stub
+        registerInstruction(new TypeInstruction(this.readMethod, opcode, type));
         super.visitTypeInsn(opcode, type);
     }
 
     @Override
     public void visitVarInsn(final int opcode, final int var) {
-        // TODO Auto-generated method stub
+        registerInstruction(new VarInstruction(this.readMethod, opcode, var));
         super.visitVarInsn(opcode, var);
     }
 
