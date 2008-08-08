@@ -60,7 +60,7 @@ public class ThreadTracer {
     }
 
     public void traceInt(final int value, final int traceSequenceIndex) {
-        if (this.paused > 0)
+        if (this.paused > 0 || !this.tracer.tracingStarted || this.tracer.tracingReady)
             return;
         ++this.paused;
 
@@ -84,7 +84,7 @@ public class ThreadTracer {
     }
 
     public void traceObject(final Object obj, final int traceSequenceIndex) {
-        if (this.paused > 0)
+        if (this.paused > 0 || !this.tracer.tracingStarted || this.tracer.tracingReady)
             return;
         this.paused++;
 
@@ -112,7 +112,7 @@ public class ThreadTracer {
     }
 
     public void passInstruction(final int instructionIndex) {
-        if (this.paused > 0)
+        if (this.paused > 0 || !this.tracer.tracingStarted || this.tracer.tracingReady)
             return;
         ++this.paused;
         if (this.threadId == 1) {
@@ -151,8 +151,8 @@ public class ThreadTracer {
     }
 
     public void unpauseTracing() {
-        if (--this.paused  < 0)
-            throw new RuntimeException("unpaused more than paused");
+        --this.paused;
+        assert this.paused >= 0: "unpaused more than paused";
     }
 
 }

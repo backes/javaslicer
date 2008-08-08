@@ -35,13 +35,15 @@ public class ReadMethod {
 
     private final ArrayList<AbstractInstruction> instructions = new ArrayList<AbstractInstruction>();
     private final ReadClass readClass;
+    private final int access;
     private final String name;
     private final String desc;
     private final int instructionNumberStart;
     private int instructionNumberEnd;
 
-    public ReadMethod(final ReadClass readClass, final String name, final String desc, final int instructionNumberStart) {
+    public ReadMethod(final ReadClass readClass, final int access, final String name, final String desc, final int instructionNumberStart) {
         this.readClass = readClass;
+        this.access = access;
         this.name = name;
         this.desc = desc;
         this.instructionNumberStart = instructionNumberStart;
@@ -62,6 +64,10 @@ public class ReadMethod {
 
     public ReadClass getReadClass() {
         return this.readClass;
+    }
+
+    public int getAccess() {
+        return this.access;
     }
 
     public String getName() {
@@ -85,6 +91,7 @@ public class ReadMethod {
     }
 
     public void writeOut(final DataOutput out) throws IOException {
+        out.writeInt(this.access);
         out.writeUTF(this.name);
         out.writeUTF(this.desc);
         out.writeInt(this.instructionNumberStart);
@@ -99,11 +106,12 @@ public class ReadMethod {
     }
 
     public static ReadMethod readFrom(final DataInput in, final ReadClass readClass) throws IOException {
+        final int access = in.readInt();
         final String name = in.readUTF();
         final String desc = in.readUTF();
         final int instructionNumberStart = in.readInt();
         final int instructionNumberEnd = in.readInt();
-        final ReadMethod rm = new ReadMethod(readClass, name, desc, instructionNumberStart);
+        final ReadMethod rm = new ReadMethod(readClass, access, name, desc, instructionNumberStart);
         rm.setInstructionNumberEnd(instructionNumberEnd);
         int numInstr = in.readInt();
         rm.instructions.ensureCapacity(numInstr);

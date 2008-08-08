@@ -252,7 +252,7 @@ public class IntegerToIntegerMap implements Map<Integer, Integer>, Cloneable {
                 }
                 return old;
             }
-            final boolean switchToMap = key < 0 || this.size < this.switchToMapRatio * (key+1);
+            final boolean switchToMap = key < 0 || this.size < this.switchToMapRatio * Math.max(key, key+1);
             if (switchToMap) {
                 switchToMap();
                 // and continue with the map code below...

@@ -128,7 +128,7 @@ public class Tracer implements ClassFileTransformer {
     protected final List<TraceSequence.Type> traceSequenceTypes
         = new ArrayList<TraceSequence.Type>();
 
-    private volatile boolean tracingStarted = false;
+    public volatile boolean tracingStarted = false;
 
     public volatile boolean tracingReady = false;
 
@@ -256,7 +256,7 @@ public class Tracer implements ClassFileTransformer {
             return null;
 
         // disable tracing for the thread tracer of this thread
-        final ThreadTracer tt = getThreadTracer();
+        final ThreadTracer tt = getThreadTracer(Thread.currentThread());
         tt.pauseTracing();
 
         try {
@@ -354,7 +354,8 @@ public class Tracer implements ClassFileTransformer {
             try {
                 a.analyze(cn.name, method);
             } catch (final AnalyzerException e) {
-                System.err.println("Error in class " + classname + ":");
+                System.err.println("Error in method " + classname + "." + method.name
+                        + method.desc + ":");
                 e.printStackTrace(System.err);
                 printMethod(a, System.err, method);
                 return false;
@@ -430,19 +431,7 @@ public class Tracer implements ClassFileTransformer {
         return nextIndex;
     }
 
-    public static void traceInteger(final int value, final int traceSequenceIndex) {
-        final Tracer tracer = getInstance();
-        if (!tracer.tracingStarted || tracer.tracingReady)
-            return;
-        tracer.getThreadTracer(Thread.currentThread()).traceInt(value, traceSequenceIndex);
-    }
-
-    private static ThreadTracer getThreadTracer() {
-        return getInstance().getThreadTracer(Thread.currentThread());
-    }
-
-    // TODO non-blocking
-    private synchronized ThreadTracer getThreadTracer(final Thread thread) {
+    public synchronized ThreadTracer getThreadTracer(final Thread thread) {
         final ThreadTracer tracer = this.threadTracers.get(thread);
         if (tracer != null)
             return tracer;
@@ -451,41 +440,6 @@ public class Tracer implements ClassFileTransformer {
         this.threadTracers.put(thread, newTracer);
         this.allThreadTracers.add(newTracer);
         return newTracer;
-    }
-
-    public static void traceObject(final Object obj, final int traceSequenceIndex) {
-        final Tracer tracer = getInstance();
-        if (!tracer.tracingStarted || tracer.tracingReady)
-            return;
-        tracer.getThreadTracer(Thread.currentThread()).traceObject(obj, traceSequenceIndex);
-    }
-
-    public static void passInstruction(final int instructionIndex) {
-        final Tracer tracer = getInstance();
-        if (!tracer.tracingStarted || tracer.tracingReady)
-            return;
-        tracer.getThreadTracer(Thread.currentThread()).passInstruction(instructionIndex);
-    }
-
-    public static void traceLastInstructionIndex(final int traceSeqIndex) {
-        final Tracer tracer = getInstance();
-        if (!tracer.tracingStarted || tracer.tracingReady)
-            return;
-        tracer.getThreadTracer(Thread.currentThread()).traceLastInstructionIndex(traceSeqIndex);
-    }
-
-    public static void pauseTracing() {
-        final Tracer tracer = getInstance();
-        if (!tracer.tracingStarted || tracer.tracingReady)
-            return;
-        tracer.getThreadTracer(Thread.currentThread()).pauseTracing();
-    }
-
-    public static void unpauseTracing() {
-        final Tracer tracer = getInstance();
-        if (!tracer.tracingStarted || tracer.tracingReady)
-            return;
-        tracer.getThreadTracer(Thread.currentThread()).unpauseTracing();
     }
 
     public void finish() throws IOException {

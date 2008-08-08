@@ -4,10 +4,8 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodAdapter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
 
-import de.unisb.cs.st.javaslicer.tracer.Tracer;
-
+// TODO
 public class MethodInstrumenter extends MethodAdapter implements Opcodes {
 
     private final Label l0 = new Label();
@@ -23,7 +21,10 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
     public void visitCode() {
         super.visitCode();
 
-        visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "pauseTracing", "()V");
+        visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/Tracer", "getInstance", "()Lde/unisb/cs/st/javaslicer/tracer/Tracer;");
+        visitMethodInsn(INVOKESTATIC, "java/lang/Thread", "currentThread", "()Ljava/lang/Thread;");
+        visitMethodInsn(INVOKEVIRTUAL, "de/unisb/cs/st/javaslicer/tracer/Tracer", "getThreadTracer", "(Ljava/lang/Thread;)Lde/unisb/cs/st/javaslicer/tracer/ThreadTracer;");
+        visitMethodInsn(INVOKEVIRTUAL, "de/unisb/cs/st/javaslicer/tracer/ThreadTracer", "pauseTracing", "()V");
 
         //visitTryCatchBlock(this.l0, this.l1, this.l1, null);
         visitLabel(this.l0);
@@ -47,7 +48,10 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
     public void visitInsn(final int opcode) {
         switch (opcode) {
         case IRETURN: case LRETURN: case FRETURN: case DRETURN: case ARETURN: case RETURN:
-            visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "unpauseTracing", "()V");
+            visitMethodInsn(INVOKESTATIC, "de/unisb/cs/st/javaslicer/tracer/Tracer", "getInstance", "()Lde/unisb/cs/st/javaslicer/tracer/Tracer;");
+            visitMethodInsn(INVOKESTATIC, "java/lang/Thread", "currentThread", "()Ljava/lang/Thread;");
+            visitMethodInsn(INVOKEVIRTUAL, "de/unisb/cs/st/javaslicer/tracer/Tracer", "getThreadTracer", "(Ljava/lang/Thread;)Lde/unisb/cs/st/javaslicer/tracer/ThreadTracer;");
+            visitMethodInsn(INVOKEVIRTUAL, "de/unisb/cs/st/javaslicer/tracer/ThreadTracer", "unpauseTracing", "()V");
             break;
         }
         super.visitInsn(opcode);

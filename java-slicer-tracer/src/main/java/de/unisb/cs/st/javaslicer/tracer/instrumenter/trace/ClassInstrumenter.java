@@ -40,7 +40,7 @@ public class ClassInstrumenter extends ClassAdapter implements Opcodes {
 		if ((access & ACC_ABSTRACT) != 0 || (access & ACC_NATIVE) != 0)
 		    return mv;
 
-		final ReadMethod readMethod = new ReadMethod(this.readClass, name, desc, AbstractInstruction.getNextIndex());
+		final ReadMethod readMethod = new ReadMethod(this.readClass, access, name, desc, AbstractInstruction.getNextIndex());
 		this.readClass.addMethod(readMethod);
 
         final MethodInstrumenter myInstrumenter = new MethodInstrumenter(mv, this.tracer, readMethod);
