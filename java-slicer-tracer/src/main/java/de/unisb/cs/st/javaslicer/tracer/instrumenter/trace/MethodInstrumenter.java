@@ -107,7 +107,7 @@ public class MethodInstrumenter extends MethodAdapter implements Opcodes {
     public void visitJumpInsn(final int opcode, final Label label) {
         checkAddLabel();
         final JumpInstruction jumpInstr = new JumpInstruction(this.readMethod, opcode, null);
-        this.jumpInstructions .put(jumpInstr, label);
+        this.jumpInstructions.put(jumpInstr, label);
         registerInstruction(jumpInstr);
         super.visitJumpInsn(opcode, label);
     }
