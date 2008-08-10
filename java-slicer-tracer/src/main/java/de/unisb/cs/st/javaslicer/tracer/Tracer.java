@@ -33,8 +33,10 @@ import org.objectweb.asm.util.TraceMethodVisitor;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
-import de.unisb.cs.st.javaslicer.tracer.instrumenter.trace.ClassInstrumenter;
-import de.unisb.cs.st.javaslicer.tracer.instrumenter.trace.MethodInstrumenter;
+import de.unisb.cs.st.javaslicer.tracer.instrumenter.JSRInliner;
+import de.unisb.cs.st.javaslicer.tracer.instrumenter.PauseTracingInstrumenter;
+import de.unisb.cs.st.javaslicer.tracer.instrumenter.TracingClassInstrumenter;
+import de.unisb.cs.st.javaslicer.tracer.instrumenter.TracingMethodInstrumenter;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
@@ -102,9 +104,13 @@ public class Tracer implements ClassFileTransformer {
     // there are classes needed while retransforming.
     // these must be loaded a-priori, otherwise circular dependencies may occur
     private final String[] classesToPreload = {
-            Tracer.class.getName(),
-            "java.security.Policy",
-            "sun.security.provider.Sun"
+    };
+    private final String[] classesToPreloadIfChecking = {
+            //"java.security.Policy",
+            //"sun.security.provider.Sun",
+            //"sun.misc.Cleaner",
+    };
+    private final String[] classesToPreloadIfDebug = {
     };
 
 
@@ -137,6 +143,8 @@ public class Tracer implements ClassFileTransformer {
     private final DataOutputStream mainOutStream;
 
     private static final AtomicInteger errorCount = new AtomicInteger(0);
+
+    private static final boolean COMPUTE_FRAMES = false;
     private static String lastErrorString;
 
 
@@ -196,6 +204,28 @@ public class Tracer implements ClassFileTransformer {
             }
             additionalClassesToRetransform.add(class1);
         }
+        if (check) {
+            for (final String classname: this.classesToPreloadIfChecking) {
+                Class<?> class1;
+                try {
+                    class1 = ClassLoader.getSystemClassLoader().loadClass(classname);
+                } catch (final ClassNotFoundException e) {
+                    continue;
+                }
+                additionalClassesToRetransform.add(class1);
+            }
+        }
+        if (debug) {
+            for (final String classname: this.classesToPreloadIfDebug) {
+                Class<?> class1;
+                try {
+                    class1 = ClassLoader.getSystemClassLoader().loadClass(classname);
+                } catch (final ClassNotFoundException e) {
+                    continue;
+                }
+                additionalClassesToRetransform.add(class1);
+            }
+        }
 
         inst.addTransformer(this, true);
 
@@ -236,11 +266,11 @@ public class Tracer implements ClassFileTransformer {
 
             if (debug) {
                 // print statistics once now and once when all finished
-                MethodInstrumenter.printStats(System.out);
+                TracingMethodInstrumenter.printStats(System.out);
                 Runtime.getRuntime().addShutdownHook(new Thread() {
                     @Override
                     public void run() {
-                        MethodInstrumenter.printStats(System.out);
+                        TracingMethodInstrumenter.printStats(System.out);
                     }
                 });
             }
@@ -302,19 +332,24 @@ public class Tracer implements ClassFileTransformer {
             this.readClasses.add(readClass);
 
             final ClassReader reader = new ClassReader(classfileBuffer);
-            //final ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES) {
-            final ClassWriter writer = new FixedClassWriter(ClassWriter.COMPUTE_MAXS);
+
+            final ClassNode classNode = new ClassNode();
+            reader.accept(classNode, 0);
+
+            //final boolean computeFrames = COMPUTE_FRAMES || Arrays.asList(this.pauseTracingClasses).contains(Type.getObjectType(className).getClassName());
+            final boolean computeFrames = COMPUTE_FRAMES;
+
+            final ClassWriter writer = new FixedClassWriter(computeFrames ? ClassWriter.COMPUTE_FRAMES : ClassWriter.COMPUTE_MAXS);
 
             final ClassVisitor output = check ? new CheckClassAdapter(writer) : writer;
 
-            final ClassVisitor instrumenter;
             if (Arrays.asList(this.pauseTracingClasses).contains(Type.getObjectType(className).getClassName())) {
-                instrumenter = new de.unisb.cs.st.javaslicer.tracer.instrumenter.pausetracing.ClassInstrumenter(output, readClass.getClassName());
+                new PauseTracingInstrumenter(readClass).transform(classNode);
             } else {
-                instrumenter = new ClassInstrumenter(output, this, readClass);
+                new TracingClassInstrumenter(readClass, this).transform(classNode);
             }
 
-            reader.accept(instrumenter, 0);
+            classNode.accept(computeFrames ? new JSRInliner(output) : output);
 
             readClass.setInstructionNumberEnd(AbstractInstruction.getNextIndex());
 
@@ -346,11 +381,13 @@ public class Tracer implements ClassFileTransformer {
     private boolean checkClass(final byte[] newClassfileBuffer, final String classname) {
         final ClassNode cn = new ClassNode();
         final ClassReader cr = new ClassReader(newClassfileBuffer);
-        cr.accept(new CheckClassAdapter(cn), ClassReader.SKIP_DEBUG);
+        //cr.accept(new CheckClassAdapter(cn), ClassReader.SKIP_DEBUG);
+        cr.accept(new CheckClassAdapter(cn), 0);
 
         for (final Object methodObj : cn.methods) {
             final MethodNode method = (MethodNode) methodObj;
             final Analyzer a = new Analyzer(new BasicVerifier());
+            //final Analyzer a = new Analyzer(new SimpleVerifier());
             try {
                 a.analyze(cn.name, method);
             } catch (final AnalyzerException e) {
@@ -364,12 +401,12 @@ public class Tracer implements ClassFileTransformer {
         return true;
     }
 
-    private void printMethod(final Analyzer a, final PrintStream err, final MethodNode method) {
+    private void printMethod(final Analyzer a, final PrintStream out, final MethodNode method) {
         final Frame[] frames = a.getFrames();
 
         final TraceMethodVisitor mv = new TraceMethodVisitor();
 
-        err.println(method.name + method.desc);
+        out.println(method.name + method.desc);
         for (int j = 0; j < method.instructions.size(); ++j) {
             method.instructions.get(j).accept(mv);
 
@@ -389,16 +426,19 @@ public class Tracer implements ClassFileTransformer {
             while (s.length() < method.maxStack + method.maxLocals + 1) {
                 s.append(' ');
             }
-            err.print(Integer.toString(j + 100000).substring(1));
-            err.print(" " + s + " : " + mv.text.get(j));
+            out.print(Integer.toString(j + 100000).substring(1));
+            out.print(" " + s + " : " + mv.text.get(j));
         }
         for (int j = 0; j < method.tryCatchBlocks.size(); ++j) {
             ((TryCatchBlockNode) method.tryCatchBlocks.get(j)).accept(mv);
-            err.print(" " + mv.text.get(j));
+            out.print(" " + mv.text.get(j));
         }
-        err.println();
+        out.println(" MAXSTACK " + method.maxStack);
+        out.println(" MAXLOCALS " + method.maxLocals);
+        out.println();
     }
 
+    @SuppressWarnings("unused")
     private void printClass(final byte[] classfileBuffer, final String classname) {
         final TraceClassVisitor v = new TraceClassVisitor(new PrintWriter(System.out));
         new ClassReader(classfileBuffer).accept(v, ClassReader.SKIP_DEBUG);

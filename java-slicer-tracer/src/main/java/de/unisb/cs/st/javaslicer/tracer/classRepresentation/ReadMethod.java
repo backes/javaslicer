@@ -47,6 +47,8 @@ public class ReadMethod {
         this.name = name;
         this.desc = desc;
         this.instructionNumberStart = instructionNumberStart;
+        // default: no instructions
+        this.instructionNumberEnd = instructionNumberStart;
     }
 
     public int addInstruction(final AbstractInstruction instruction) {
