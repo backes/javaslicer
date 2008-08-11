@@ -21,76 +21,65 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 public class PauseTracingInstrumenter implements Opcodes {
 
     public PauseTracingInstrumenter(final ReadClass readClass) {
-        if (Tracer.debug)
+        if (Tracer.debug && readClass != null)
             System.out.println("instrumenting " + readClass.getClassName() + " (pause tracing)");
     }
 
-    @SuppressWarnings("unchecked")
     public void transform(final ClassNode classNode) {
-        final ListIterator<MethodNode> methodIt = classNode.methods.listIterator();
+        final ListIterator<?> methodIt = classNode.methods.listIterator();
         while (methodIt.hasNext()) {
-            final MethodNode method = methodIt.next();
-            if ((method.access & ACC_ABSTRACT) != 0 || (method.access & ACC_NATIVE) != 0)
-                continue;
-
-            final LabelNode l0 = new LabelNode();
-            final LabelNode l1 = new LabelNode();
-
-            final ListIterator<AbstractInsnNode> insnIt = method.instructions.iterator();
-
-            insnIt.add(new MethodInsnNode(INVOKESTATIC,
-                    Type.getInternalName(Tracer.class), "getInstance",
-                    "()L"+Type.getInternalName(Tracer.class)+";"));
-            insnIt.add(new MethodInsnNode(INVOKESTATIC,
-                    "java/lang/Thread", "currentThread", "()Ljava/lang/Thread;"));
-            insnIt.add(new MethodInsnNode(INVOKEVIRTUAL,
-                    Type.getInternalName(Tracer.class), "getThreadTracer",
-                    "(Ljava/lang/Thread;)L"+Type.getInternalName(ThreadTracer.class)+";"));
-            insnIt.add(new InsnNode(DUP));
-            insnIt.add(new VarInsnNode(ASTORE, method.maxLocals));
-            insnIt.add(new MethodInsnNode(INVOKEVIRTUAL,
-                    Type.getInternalName(ThreadTracer.class), "pauseTracing", "()V"));
-            insnIt.add(l0);
-
-            while (insnIt.hasNext()) {
-                final AbstractInsnNode insn = insnIt.next();
-                switch (insn.getOpcode()) {
-                case IRETURN: case LRETURN: case FRETURN: case DRETURN: case ARETURN: case RETURN:
-                    insnIt.previous();
-                    insnIt.add(new VarInsnNode(ALOAD, method.maxLocals));
-                    insnIt.add(new MethodInsnNode(INVOKEVIRTUAL,
-                            Type.getInternalName(ThreadTracer.class), "unpauseTracing", "()V"));
-                    insnIt.next();
-                    break;
-                default:
-                    break;
-                }
-            }
-
-            method.instructions.add(l1);
-
-            method.instructions.add(new VarInsnNode(ALOAD, method.maxLocals));
-            method.instructions.add(new MethodInsnNode(INVOKEVIRTUAL,
-                    Type.getInternalName(ThreadTracer.class), "unpauseTracing", "()V"));
-            method.instructions.add(new InsnNode(ATHROW));
-
-            method.tryCatchBlocks.add(new TryCatchBlockNode(l0, l1, l1, null));
+            final MethodNode method = (MethodNode) methodIt.next();
+            transformMethod(method);
         }
     }
 
-/*
-    @Override
-    public void visitMaxs(final int maxStack, final int maxLocals) {
-        visitLabel(this.l1);
-        /
-        visitVarInsn(ASTORE, maxLocals);
+    @SuppressWarnings("unchecked")
+    public void transformMethod(final MethodNode method) {
+        if ((method.access & ACC_ABSTRACT) != 0 || (method.access & ACC_NATIVE) != 0)
+            return;
 
-        visitMethodInsn(INVOKESTATIC, Type.getInternalName(Tracer.class), "unpauseTracing", "()V");
+        final LabelNode l0 = new LabelNode();
+        final LabelNode l1 = new LabelNode();
 
-        visitVarInsn(ALOAD, maxLocals);
-        visitInsn(ATHROW);
-        /
-        super.visitMaxs(maxStack, maxLocals+1);
+        final ListIterator<AbstractInsnNode> insnIt = method.instructions.iterator();
+
+        insnIt.add(new MethodInsnNode(INVOKESTATIC,
+                Type.getInternalName(Tracer.class), "getInstance",
+                "()L"+Type.getInternalName(Tracer.class)+";"));
+        insnIt.add(new MethodInsnNode(INVOKESTATIC,
+                "java/lang/Thread", "currentThread", "()Ljava/lang/Thread;"));
+        insnIt.add(new MethodInsnNode(INVOKEVIRTUAL,
+                Type.getInternalName(Tracer.class), "getThreadTracer",
+                "(Ljava/lang/Thread;)L"+Type.getInternalName(ThreadTracer.class)+";"));
+        insnIt.add(new InsnNode(DUP));
+        insnIt.add(new VarInsnNode(ASTORE, method.maxLocals));
+        insnIt.add(new MethodInsnNode(INVOKEVIRTUAL,
+                Type.getInternalName(ThreadTracer.class), "pauseTracing", "()V"));
+        insnIt.add(l0);
+
+        while (insnIt.hasNext()) {
+            final AbstractInsnNode insn = insnIt.next();
+            switch (insn.getOpcode()) {
+            case IRETURN: case LRETURN: case FRETURN: case DRETURN: case ARETURN: case RETURN:
+                insnIt.previous();
+                insnIt.add(new VarInsnNode(ALOAD, method.maxLocals));
+                insnIt.add(new MethodInsnNode(INVOKEVIRTUAL,
+                        Type.getInternalName(ThreadTracer.class), "unpauseTracing", "()V"));
+                insnIt.next();
+                break;
+            default:
+                break;
+            }
+        }
+
+        method.instructions.add(l1);
+
+        method.instructions.add(new VarInsnNode(ALOAD, method.maxLocals));
+        method.instructions.add(new MethodInsnNode(INVOKEVIRTUAL,
+                Type.getInternalName(ThreadTracer.class), "unpauseTracing", "()V"));
+        method.instructions.add(new InsnNode(ATHROW));
+
+        method.tryCatchBlocks.add(new TryCatchBlockNode(l0, l1, l1, null));
     }
-*/
+
 }

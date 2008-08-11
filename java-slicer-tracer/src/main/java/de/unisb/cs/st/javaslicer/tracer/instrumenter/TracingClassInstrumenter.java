@@ -35,10 +35,6 @@ public class TracingClassInstrumenter implements Opcodes {
                 method.name, method.desc, AbstractInstruction.getNextIndex());
         this.readClass.addMethod(readMethod);
 
-        // do not modify abstract or native methods
-        if ((method.access & ACC_ABSTRACT) != 0 || (method.access & ACC_NATIVE) != 0)
-            return;
-
         new TracingMethodInstrumenter(this.tracer, readMethod).transform(method);
     }
 

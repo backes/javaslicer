@@ -2,13 +2,19 @@ package de.unisb.cs.st.javaslicer.tracer.traceResult;
 
 import java.io.DataInput;
 import java.io.EOFException;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Map.Entry;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.LabelMarker;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance;
@@ -135,6 +141,16 @@ public class ThreadTraceResult {
         return instr;
     }
 
+    public long getTraceLength() {
+        long traceLength = 0;
+        for (final Entry<Integer, Long> e: this.instructionOccurences.entrySet()) {
+            final Instruction instr = findInstruction(e.getKey(), null, null);
+            if (instr != null && !(instr instanceof LabelMarker && ((LabelMarker)instr).isAdditionalLabel()))
+                traceLength += e.getValue();
+        }
+        return traceLength;
+    }
+
     public class BackwardInstructionIterator implements Iterator<Instance> {
 
         private Instance nextInstruction;
@@ -176,9 +192,21 @@ public class ThreadTraceResult {
             return getNextInstruction(old.getMethod(), old.getBackwardInstructionIndex(this));
         }
 
+        // TODO remove
+        private int i = 0;
         private Instance getNextInstruction(final ReadMethod oldMethod, final int nextIndex) throws TracerException, EOFException {
             int index = nextIndex;
             while (true) {
+                // TODO remove
+                this.i++;
+                try {
+                    final PrintWriter iterationDebugWriter = new PrintWriter(new FileOutputStream(new File("iteration_debug.log"), this.i > 1));
+                    iterationDebugWriter.println(index);
+                    iterationDebugWriter.close();
+                } catch (final FileNotFoundException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
                 final Instruction backwardInstruction = findInstruction(index,
                         oldMethod == null ? null : oldMethod.getReadClass(), oldMethod);
                 if (backwardInstruction == null)

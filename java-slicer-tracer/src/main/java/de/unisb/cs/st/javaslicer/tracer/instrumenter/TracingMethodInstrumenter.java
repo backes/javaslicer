@@ -156,6 +156,17 @@ public class TracingMethodInstrumenter implements Opcodes {
     }
 
     public void transform(final MethodNode method) {
+        // do not modify abstract or native methods
+        if ((method.access & ACC_ABSTRACT) != 0 || (method.access & ACC_NATIVE) != 0)
+            return;
+
+        // do not instrument <clinit> methods (break (linear) control flow)
+        // because these methods may call other methods, we have to pause tracing when they are entered
+        if ("<clinit>".equals(method.name)) {
+            new PauseTracingInstrumenter(null).transformMethod(method);
+            return;
+        }
+
         this.instructionIterator = new FixedInstructionIterator(method.instructions);
         // first, initialize the new local variable for the threadtracer
         this.instructionIterator.add(new MethodInsnNode(INVOKESTATIC, Type.getInternalName(Tracer.class),

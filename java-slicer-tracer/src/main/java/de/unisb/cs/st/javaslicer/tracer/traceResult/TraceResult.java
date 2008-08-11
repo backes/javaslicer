@@ -19,10 +19,12 @@ public class TraceResult {
 
         private final long threadId;
         private final String threadName;
+        private final Long traceLength;
 
-        public ThreadId(final long threadId, final String threadName) {
+        public ThreadId(final long threadId, final String threadName, final Long traceLength) {
             this.threadId = threadId;
             this.threadName = threadName;
+            this.traceLength = traceLength;
         }
 
         public long getThreadId() {
@@ -31,6 +33,15 @@ public class TraceResult {
 
         public String getThreadName() {
             return this.threadName;
+        }
+
+        public Long getTraceLength() {
+            return this.traceLength;
+        }
+
+        @Override
+        public String toString() {
+            return this.threadId + ": " + this.threadName + (this.traceLength != null ? " (length: " + this.traceLength + ")" : "");
         }
 
     }
@@ -72,10 +83,12 @@ public class TraceResult {
         return null;
     }
 
-    public List<ThreadId> getThreads() {
+    public List<ThreadId> getThreads(final boolean computeTraceLength) {
         final List<ThreadId> list = new ArrayList<ThreadId>(this.threadTraces.size());
-        for (final ThreadTraceResult t: this.threadTraces)
-            list.add(new ThreadId(t.getThreadId(), t.getThreadName()));
+        for (final ThreadTraceResult t: this.threadTraces) {
+            final long traceLength = t.getTraceLength();
+            list.add(new ThreadId(t.getThreadId(), t.getThreadName(), traceLength));
+        }
         return list;
     }
 
@@ -107,7 +120,7 @@ public class TraceResult {
             System.exit(-1);
         }
 
-        final List<ThreadId> threads = tr.getThreads();
+        final List<ThreadId> threads = tr.getThreads(true);
         if (threads.size() == 0) {
             System.err.println("The trace file contains no tracing information.");
             System.exit(-1);
@@ -121,12 +134,15 @@ public class TraceResult {
                     tracing = t;
             } else if (t.getThreadId() == threadToTrace.longValue())
                 tracing = t;
-            System.out.format("%15d: %s%n", t.getThreadId(), t.getThreadName());
+            System.out.format("%15d: %s (length: %d)%n", t.getThreadId(), t.getThreadName(), t.getTraceLength().longValue());
         }
         System.out.println();
 
         System.out.println(threadToTrace == null ? "Selecting first thread:" : "You selected:");
         System.out.format("%15d: %s%n", tracing.getThreadId(), tracing.getThreadName());
+
+        long nr = tracing.getTraceLength();
+        final String format = "%"+Long.toString(nr-1).length()+"d: %-100s -> %7d %s%n";
 
         System.out.println();
         System.out.println("The backward trace:");
@@ -135,7 +151,7 @@ public class TraceResult {
             final Instance inst = it.next();
             final ReadMethod method = inst.getMethod();
             final ReadClass class0 = method.getReadClass();
-            System.out.format("%-50s -> %12d %s%n", class0.getClassName()+"."
+            System.out.format(format, --nr, class0.getClassName()+"."
                     +method.getName()+":"+inst.getLineNumber(),
                     inst.getOccurenceNumber(), inst.toString());
         }

@@ -100,6 +100,7 @@ public class Tracer implements ClassFileTransformer {
 
     private final String[] pauseTracingClasses = new String[] {
             "java.lang.ClassLoader",
+            "sun.instrument.InstrumentationImpl"
     };
     // there are classes needed while retransforming.
     // these must be loaded a-priori, otherwise circular dependencies may occur
