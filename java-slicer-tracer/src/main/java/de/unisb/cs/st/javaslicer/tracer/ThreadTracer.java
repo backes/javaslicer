@@ -60,7 +60,7 @@ public class ThreadTracer {
     }
 
     public void traceInt(final int value, final int traceSequenceIndex) {
-        if (this.paused > 0 || !this.tracer.tracingStarted || this.tracer.tracingReady)
+        if (this.paused > 0)
             return;
         ++this.paused;
 
@@ -84,7 +84,7 @@ public class ThreadTracer {
     }
 
     public void traceObject(final Object obj, final int traceSequenceIndex) {
-        if (this.paused > 0 || !this.tracer.tracingStarted || this.tracer.tracingReady)
+        if (this.paused > 0)
             return;
         this.paused++;
 
@@ -112,15 +112,19 @@ public class ThreadTracer {
     }
 
     public void passInstruction(final int instructionIndex) {
-        if (this.paused > 0 || !this.tracer.tracingStarted || this.tracer.tracingReady)
+        if (this.paused > 0)
             return;
+        /*
         ++this.paused;
         if (this.threadId == 1) {
             debugFile.println(instructionIndex);
         }
+        */
         this.lastInstructionIndex = instructionIndex;
+        /*
         this.instructionOccurences.increment(instructionIndex);
         --this.paused;
+        */
     }
 
     public void finish() throws IOException {

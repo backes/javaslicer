@@ -6,10 +6,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.AbstractTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.LongTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter.MultiplexOutputStream;
 
-public class UncompressedLongTraceSequence extends LongTraceSequence {
+public class UncompressedLongTraceSequence extends AbstractTraceSequence implements LongTraceSequence {
 
     private boolean ready = false;
 
@@ -33,10 +34,8 @@ public class UncompressedLongTraceSequence extends LongTraceSequence {
         return out;
     }
 
-    @Override
     public void trace(final long value) throws IOException {
-        if (this.ready)
-            throw new RuntimeException("Trace cannot be extended any more");
+        assert !this.ready: "Trace cannot be extended any more";
 
         this.dataOut.writeLong(value);
     }

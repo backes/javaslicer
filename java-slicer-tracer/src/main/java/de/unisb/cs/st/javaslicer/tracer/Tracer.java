@@ -133,9 +133,7 @@ public class Tracer implements ClassFileTransformer {
     private final List<ReadClass> readClasses = new ArrayList<ReadClass>();
 
     protected final List<TraceSequence.Type> traceSequenceTypes
-        = new ArrayList<TraceSequence.Type>();
-
-    public volatile boolean tracingStarted = false;
+        = new SimpleArrayList<TraceSequence.Type>();
 
     public volatile boolean tracingReady = false;
 
@@ -275,8 +273,6 @@ public class Tracer implements ClassFileTransformer {
                     }
                 });
             }
-
-            this.tracingStarted = true;
         }
     }
 
@@ -479,7 +475,10 @@ public class Tracer implements ClassFileTransformer {
         final ThreadTracer newTracer = new ThreadTracer(thread,
                 Tracer.this.traceSequenceTypes, this);
         this.threadTracers.put(thread, newTracer);
-        this.allThreadTracers.add(newTracer);
+        if (this.tracingReady)
+            newTracer.pauseTracing();
+        else
+            this.allThreadTracers.add(newTracer);
         return newTracer;
     }
 
@@ -487,10 +486,12 @@ public class Tracer implements ClassFileTransformer {
         if (this.tracingReady)
             return;
         this.tracingReady = true;
+        final ThreadTracer[] tmp = this.allThreadTracers.toArray(new ThreadTracer[this.allThreadTracers.size()]);
+        for (final ThreadTracer t: tmp)
+            t.finish();
         this.mainOutStream.writeInt(this.readClasses.size());
         for (final ReadClass rc: this.readClasses)
             rc.writeOut(this.mainOutStream);
-        final ThreadTracer[] tmp = this.allThreadTracers.toArray(new ThreadTracer[this.allThreadTracers.size()]);
         this.mainOutStream.writeInt(tmp.length);
         for (final ThreadTracer t: tmp)
             t.writeOut(this.mainOutStream);
