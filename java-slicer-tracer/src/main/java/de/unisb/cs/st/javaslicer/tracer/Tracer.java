@@ -135,6 +135,7 @@ public class Tracer implements ClassFileTransformer {
     protected final List<TraceSequence.Type> traceSequenceTypes
         = new SimpleArrayList<TraceSequence.Type>();
 
+    public volatile boolean tracingStarted = false;
     public volatile boolean tracingReady = false;
 
     private final File filename;
@@ -273,6 +274,12 @@ public class Tracer implements ClassFileTransformer {
                     }
                 });
             }
+        }
+
+        synchronized (this) {
+            this.tracingStarted = true;
+            for (final ThreadTracer tt: this.allThreadTracers)
+                tt.unpauseTracing();
         }
     }
 
@@ -475,9 +482,9 @@ public class Tracer implements ClassFileTransformer {
         final ThreadTracer newTracer = new ThreadTracer(thread,
                 Tracer.this.traceSequenceTypes, this);
         this.threadTracers.put(thread, newTracer);
-        if (this.tracingReady)
+        if (!this.tracingStarted || this.tracingReady)
             newTracer.pauseTracing();
-        else
+        if (!this.tracingReady)
             this.allThreadTracers.add(newTracer);
         return newTracer;
     }
