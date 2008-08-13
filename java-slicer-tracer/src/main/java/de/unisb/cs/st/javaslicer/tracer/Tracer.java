@@ -11,8 +11,10 @@ import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.objectweb.asm.ClassReader;
@@ -116,6 +118,7 @@ public class Tracer implements ClassFileTransformer {
 
 
     public static final TraceSequenceFactory seqFactory = new UncompressedTraceSequenceFactory();
+    //public static final TraceSequenceFactory seqFactory = new GZipTraceSequenceFactory();
 
     // TODO get rid of this list - it leads to linear memory consumption w.r.t. the thread count
     private final List<ThreadTracer> allThreadTracers = new SimpleArrayList<ThreadTracer>();
@@ -141,6 +144,8 @@ public class Tracer implements ClassFileTransformer {
     private final File filename;
     private final MultiplexedFileWriter file;
     private final DataOutputStream mainOutStream;
+
+    private Set<String> notTransformedClasses;
 
     private static final AtomicInteger errorCount = new AtomicInteger(0);
 
@@ -229,9 +234,16 @@ public class Tracer implements ClassFileTransformer {
 
         inst.addTransformer(this, true);
 
+        this.notTransformedClasses = new HashSet<String>();
+        final Class<?>[] allLoadedClasses = inst.getAllLoadedClasses();
+        for (final Class<?> class1: allLoadedClasses)
+            this.notTransformedClasses.add(class1.getName());
+        for (final Class<?> class1: additionalClassesToRetransform)
+            this.notTransformedClasses.add(class1.getName());
+
         if (retransformClasses) {
             final ArrayList<Class<?>> classesToTransform = new ArrayList<Class<?>>();
-            for (final Class<?> class1 : inst.getAllLoadedClasses()) {
+            for (final Class<?> class1: allLoadedClasses) {
                 boolean modify = inst.isModifiableClass(class1) && !class1.isInterface();
                 modify &= !class1.getName().startsWith("de.unisb.cs.st.javaslicer.tracer");
                 if (modify)

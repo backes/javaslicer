@@ -159,4 +159,8 @@ public class ThreadTracer {
         assert this.paused >= 0: "unpaused more than paused";
     }
 
+    public boolean isPaused() {
+        return this.paused > 0;
+    }
+
 }

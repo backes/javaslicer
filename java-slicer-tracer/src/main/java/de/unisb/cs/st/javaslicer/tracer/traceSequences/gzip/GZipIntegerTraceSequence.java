@@ -16,7 +16,7 @@ public class GZipIntegerTraceSequence extends UncompressedIntegerTraceSequence {
 
     @Override
     protected OutputStream getOutputStream(final MultiplexOutputStream out) throws IOException {
-        return new GZIPOutputStream(out);
+        return new GZIPOutputStream(super.getOutputStream(out));
     }
 
     @Override

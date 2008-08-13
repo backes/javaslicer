@@ -8,6 +8,8 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.commons.collections.Factory;
+import org.apache.commons.collections.map.LazyMap;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -27,6 +29,7 @@ import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.MultiANewArrayInsnNode;
 import org.objectweb.asm.tree.TableSwitchInsnNode;
+import org.objectweb.asm.tree.TryCatchBlockNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
@@ -155,27 +158,41 @@ public class TracingMethodInstrumenter implements Opcodes {
         }
     }
 
+    @SuppressWarnings("unchecked")
     public void transform(final MethodNode method) {
-        // do not modify abstract or native methods
-        if ((method.access & ACC_ABSTRACT) != 0 || (method.access & ACC_NATIVE) != 0)
-            return;
-
-        // do not instrument <clinit> methods (break (linear) control flow)
-        // because these methods may call other methods, we have to pause tracing when they are entered
-        if ("<clinit>".equals(method.name)) {
-            new PauseTracingInstrumenter(null).transformMethod(method);
-            return;
-        }
-
         this.instructionIterator = new FixedInstructionIterator(method.instructions);
         // first, initialize the new local variable for the threadtracer
         this.instructionIterator.add(new MethodInsnNode(INVOKESTATIC, Type.getInternalName(Tracer.class),
                 "getInstance", "()L"+Type.getInternalName(Tracer.class)+";"));
         this.instructionIterator.add(new MethodInsnNode(INVOKESTATIC, "java/lang/Thread", "currentThread",
                 "()Ljava/lang/Thread;"));
-        this.instructionIterator.add(new MethodInsnNode(INVOKEVIRTUAL, Type.getInternalName(Tracer.class), "getThreadTracer",
-                "(Ljava/lang/Thread;)L"+Type.getInternalName(ThreadTracer.class)+";"));
+        this.instructionIterator.add(new MethodInsnNode(INVOKEVIRTUAL, Type.getInternalName(Tracer.class),
+                "getThreadTracer", "(Ljava/lang/Thread;)L"+Type.getInternalName(ThreadTracer.class)+";"));
+        this.instructionIterator.add(new InsnNode(DUP));
         this.instructionIterator.add(new VarInsnNode(ASTORE, this.tracerLocalVarIndex));
+
+        this.instructionIterator.add(new MethodInsnNode(INVOKEVIRTUAL, Type.getInternalName(ThreadTracer.class),
+                "isPaused", "()Z"));
+        final LabelNode noTracingLabel = new LabelNode();
+        this.instructionIterator.add(new JumpInsnNode(IFNE, noTracingLabel));
+        // create a copy of the (uninstrumented) instructions (later, while iterating through the instructions)
+        final InsnList oldInstructions = new InsnList();
+        final Map<LabelNode, LabelNode> labelCopies = LazyMap.decorate(
+                new HashMap<LabelNode, LabelNode>(), new Factory() {
+                    public Object create() {
+                        return new LabelNode();
+                    }
+                });
+        // copy the try-catch-blocks
+        for (final Object o: method.tryCatchBlocks.toArray()) {
+            final TryCatchBlockNode tcb = (TryCatchBlockNode) o;
+            final TryCatchBlockNode newTcb = new TryCatchBlockNode(
+                    labelCopies.get(tcb.start),
+                    labelCopies.get(tcb.end),
+                    labelCopies.get(tcb.handler),
+                    tcb.type);
+            method.tryCatchBlocks.add(newTcb);
+        }
 
         // increment number of local variables by one (for the threadtracer)
         ++method.maxLocals;
@@ -189,6 +206,7 @@ public class TracingMethodInstrumenter implements Opcodes {
         // then, visit the instructions that where in the method before
         while (this.instructionIterator.hasNext()) {
             final AbstractInsnNode insnNode = this.instructionIterator.next();
+            oldInstructions.add(insnNode.clone(labelCopies));
             switch (insnNode.getType()) {
             case AbstractInsnNode.INSN:
                 transformInsn((InsnNode)insnNode);
@@ -239,6 +257,10 @@ public class TracingMethodInstrumenter implements Opcodes {
                         + " (" + insnNode.getClass().getSimpleName()+")");
             }
         }
+
+        // now add the code that is executed if no tracing should be performed
+        method.instructions.add(noTracingLabel);
+        method.instructions.add(oldInstructions);
 
         ready();
     }

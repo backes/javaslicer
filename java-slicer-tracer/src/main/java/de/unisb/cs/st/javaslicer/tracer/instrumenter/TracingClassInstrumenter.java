@@ -35,6 +35,17 @@ public class TracingClassInstrumenter implements Opcodes {
                 method.name, method.desc, AbstractInstruction.getNextIndex());
         this.readClass.addMethod(readMethod);
 
+        // do not modify abstract or native methods
+        if ((method.access & ACC_ABSTRACT) != 0 || (method.access & ACC_NATIVE) != 0)
+            return;
+
+        // do not instrument <clinit> methods (break (linear) control flow)
+        // because these methods may call other methods, we have to pause tracing when they are entered
+        if ("<clinit>".equals(method.name)) {
+            new PauseTracingInstrumenter(null).transformMethod(method);
+            return;
+        }
+
         new TracingMethodInstrumenter(this.tracer, readMethod).transform(method);
     }
 
