@@ -20,10 +20,15 @@ public class MultiplexedFileWriter {
         private final byte[] currentBlock = new byte[MultiplexedFileWriter.this.blockSize];
         private volatile boolean streamClosed = false;
 
-        protected MultiplexOutputStream(final int id, final int beginningBlockAddr) {
+        protected MultiplexOutputStream(final int id, final int beginningBlockAddr) throws IOException {
             this.id = id;
             this.blockAddr[0] = beginningBlockAddr;
             this.full[0] = 8;
+            // initially write a 0 as file length
+            synchronized (MultiplexedFileWriter.this.file) {
+                MultiplexedFileWriter.this.file.seek(beginningBlockAddr*MultiplexedFileWriter.this.blockSize);
+                MultiplexedFileWriter.this.file.writeLong(0);
+            }
         }
 
         @Override
@@ -147,12 +152,14 @@ public class MultiplexedFileWriter {
             this.dataLength += this.full[this.depth];
             synchronized (MultiplexedFileWriter.this.file) {
                 // write back the current block
-                MultiplexedFileWriter.this.file.seek(this.blockAddr[this.depth]*MultiplexedFileWriter.this.blockSize);
-                MultiplexedFileWriter.this.file.write(this.currentBlock, 0, this.full[this.depth]);
+                if (this.dataLength != 0) {
+                    MultiplexedFileWriter.this.file.seek(this.blockAddr[this.depth]*MultiplexedFileWriter.this.blockSize);
+                    MultiplexedFileWriter.this.file.write(this.currentBlock, 0, this.full[this.depth]);
 
-                // write length information to the beginning of this stream (8 byte)
-                MultiplexedFileWriter.this.file.seek(this.blockAddr[0]*MultiplexedFileWriter.this.blockSize);
-                MultiplexedFileWriter.this.file.writeLong(this.dataLength);
+                    // write length information to the beginning of this stream (8 byte)
+                    MultiplexedFileWriter.this.file.seek(this.blockAddr[0]*MultiplexedFileWriter.this.blockSize);
+                    MultiplexedFileWriter.this.file.writeLong(this.dataLength);
+                }
             }
         }
 
@@ -177,10 +184,10 @@ public class MultiplexedFileWriter {
     private final Map<MultiplexOutputStream, MultiplexOutputStream> openStreams =
         new WeakIdentityHashMap<MultiplexOutputStream, MultiplexOutputStream>() {
             @Override
-            protected void removing(MultiplexOutputStream value) {
+            protected void removing(final MultiplexOutputStream value) {
                 try {
                     value.close();
-                } catch (IOException e) {
+                } catch (final IOException e) {
                     synchronized (MultiplexedFileWriter.this) {
                         MultiplexedFileWriter.this.exception = e;
                     }

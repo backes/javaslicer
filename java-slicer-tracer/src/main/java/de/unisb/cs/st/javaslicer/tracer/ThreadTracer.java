@@ -76,7 +76,7 @@ public class ThreadTracer {
             ((IntegerTraceSequence) seq).trace(value);
         } catch (final IOException e) {
             System.err.println("Error writing the trace: " + e.getMessage());
-            // and do _NOT_ set trace to true
+            // and do _NOT_ unpause
             return;
         }
 
@@ -100,7 +100,7 @@ public class ThreadTracer {
             ((ObjectTraceSequence) seq).trace(obj);
         } catch (final IOException e) {
             System.err.println("Error writing the trace: " + e.getMessage());
-            // and do _NOT_ set trace to true
+            // and do _NOT_ unpause
             return;
         }
 
