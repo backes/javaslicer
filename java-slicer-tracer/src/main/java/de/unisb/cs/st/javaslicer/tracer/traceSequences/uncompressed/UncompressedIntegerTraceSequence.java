@@ -1,27 +1,27 @@
 package de.unisb.cs.st.javaslicer.tracer.traceSequences.uncompressed;
 
 import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.AbstractTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.IntegerTraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter.MultiplexOutputStream;
 
 public class UncompressedIntegerTraceSequence extends AbstractTraceSequence implements IntegerTraceSequence {
 
     private boolean ready = false;
 
-    private final OptimizedDataOutputStream dataOut;
+    private final DataOutputStream dataOut;
 
     private final int streamIndex;
 
     public UncompressedIntegerTraceSequence(final int index, final Tracer tracer) throws IOException {
         super(index);
         final MultiplexOutputStream out = tracer.newOutputStream();
-        this.dataOut = new OptimizedDataOutputStream(getOutputStream(out));
+        this.dataOut = new DataOutputStream(getOutputStream(out));
         this.streamIndex = out.getId();
     }
 

@@ -15,11 +15,13 @@ public class ReadClass {
     private final int instructionNumberStart;
     private int instructionNumberEnd;
     private String source = null;
+    private final int access;
 
-    public ReadClass(final String internalClassName, final int instructionNumberStart) {
+    public ReadClass(final String internalClassName, final int instructionNumberStart, final int access) {
         this.internalClassName = internalClassName;
         this.className = Type.getObjectType(internalClassName).getClassName();
         this.instructionNumberStart = instructionNumberStart;
+        this.access = access;
     }
 
     public void addMethod(final ReadMethod method) {
@@ -28,6 +30,10 @@ public class ReadClass {
 
     public void ready() {
         this.methods.trimToSize();
+    }
+
+    public int getAccess() {
+        return this.access;
     }
 
     public String getClassName() {
@@ -63,6 +69,7 @@ public class ReadClass {
         out.writeUTF(this.className);
         out.writeInt(this.instructionNumberStart);
         out.writeInt(this.instructionNumberEnd);
+        out.writeInt(this.access);
         out.writeInt(this.methods.size());
         for (final ReadMethod rm: this.methods) {
             rm.writeOut(out);
@@ -75,13 +82,15 @@ public class ReadClass {
         final String className = in.readUTF();
         final int instructionNumberStart = in.readInt();
         final int instructionNumberEnd = in.readInt();
-        final ReadClass rc = new ReadClass(intName, instructionNumberStart);
+        final int access = in.readInt();
+        final ReadClass rc = new ReadClass(intName, instructionNumberStart, access);
         rc.setInstructionNumberEnd(instructionNumberEnd);
         assert rc.className != null && rc.className.equals(className);
         int numMethods = in.readInt();
         rc.methods.ensureCapacity(numMethods);
         while (numMethods-- > 0)
             rc.methods.add(ReadMethod.readFrom(in, rc));
+        rc.methods.trimToSize();
         final String source = in.readUTF();
         if (source.length() > 0)
             rc.setSource(source);

@@ -40,7 +40,7 @@ public class ConstantUncompressedLongTraceSequence extends ConstantLongTraceSequ
     public class BackwardIterator implements Iterator<Long> {
 
         private final MultiplexInputStream iStream;
-        private final DataInput dataIn;
+        private final DataInputStream dataIn;
         private long nextPos;
 
         public BackwardIterator() throws IOException {

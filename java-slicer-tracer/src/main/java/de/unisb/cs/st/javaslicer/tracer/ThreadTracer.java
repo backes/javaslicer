@@ -14,8 +14,6 @@ import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.Type;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
-import de.unisb.cs.st.javaslicer.tracer.util.IntegerToIntegerMap;
-import de.unisb.cs.st.javaslicer.tracer.util.IntegerToLongMap;
 
 public class ThreadTracer {
 
@@ -27,9 +25,6 @@ public class ThreadTracer {
     private int lastInstructionIndex = -1;
 
     private final IntegerMap<TraceSequence> sequences = new IntegerMap<TraceSequence>();
-    private final IntegerToLongMap instructionOccurences = new IntegerToLongMap(128,
-            IntegerToIntegerMap.DEFAULT_LOAD_FACTOR, IntegerToIntegerMap.DEFAULT_SWITCH_TO_MAP_RATIO,
-            IntegerToIntegerMap.DEFAULT_SWITCH_TO_LIST_RATIO, 0);
 
     private final Tracer tracer;
     private int paused = 0;
@@ -38,7 +33,7 @@ public class ThreadTracer {
     protected static PrintWriter debugFile;
     static {
         try {
-            debugFile = new PrintWriter(new BufferedWriter(new FileWriter(new File("debug.log")), 8192));
+            debugFile = new PrintWriter(new BufferedWriter(new FileWriter(new File("debug.log"))));
         } catch (final IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -114,21 +109,24 @@ public class ThreadTracer {
     public void passInstruction(final int instructionIndex) {
         if (this.paused > 0)
             return;
-        /*
-        ++this.paused;
-        if (this.threadId == 1) {
+
+        if (Tracer.debug && this.threadId == 1) {
+            ++this.paused;
             debugFile.println(instructionIndex);
+            --this.paused;
         }
-        */
+
         this.lastInstructionIndex = instructionIndex;
-        /*
-        this.instructionOccurences.increment(instructionIndex);
-        --this.paused;
-        */
     }
 
     public void finish() throws IOException {
         this.paused++;
+        // TODO remove concurrentmodificationexception on sequences
+        try {
+            Thread.sleep(10);
+        } catch (final InterruptedException e) {
+            e.printStackTrace();
+        }
         for (final TraceSequence seq: this.sequences.values())
             seq.finish();
     }
@@ -141,11 +139,6 @@ public class ThreadTracer {
         for (final Entry<Integer, TraceSequence> seq: this.sequences.entrySet()) {
             out.writeInt(seq.getKey());
             seq.getValue().writeOut(out);
-        }
-        out.writeInt(this.instructionOccurences.size());
-        for (final Entry<Integer, Long> seq: this.instructionOccurences.entrySet()) {
-            out.writeInt(seq.getKey());
-            out.writeLong(seq.getValue());
         }
         out.writeInt(this.lastInstructionIndex);
     }

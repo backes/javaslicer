@@ -1,5 +1,7 @@
 package de.unisb.cs.st.javaslicer.tracer.instrumenter;
 
+import java.util.ListIterator;
+
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
@@ -21,32 +23,30 @@ public class TracingClassInstrumenter implements Opcodes {
             System.out.println("instrumenting " + readClass.getClassName());
     }
 
+    @SuppressWarnings("unchecked")
     public void transform(final ClassNode classNode) {
         this.readClass.setSource(classNode.sourceFile);
-        for (final Object o: classNode.methods) {
-            final MethodNode method = (MethodNode) o;
-            transformMethod(classNode, method);
+        final ListIterator<MethodNode> methodIt = classNode.methods.listIterator();
+        while (methodIt.hasNext()) {
+            transformMethod(classNode, methodIt);
         }
         this.readClass.ready();
     }
 
-	private void transformMethod(final ClassNode classNode, final MethodNode method) {
+	private void transformMethod(final ClassNode classNode, final ListIterator<MethodNode> methodIt) {
+	    final MethodNode method = methodIt.next();
         final ReadMethod readMethod = new ReadMethod(this.readClass, method.access,
                 method.name, method.desc, AbstractInstruction.getNextIndex());
         this.readClass.addMethod(readMethod);
 
-        // do not modify abstract or native methods
-        if ((method.access & ACC_ABSTRACT) != 0 || (method.access & ACC_NATIVE) != 0)
-            return;
-
         // do not instrument <clinit> methods (break (linear) control flow)
         // because these methods may call other methods, we have to pause tracing when they are entered
         if ("<clinit>".equals(method.name)) {
-            new PauseTracingInstrumenter(null).transformMethod(method);
+            new PauseTracingInstrumenter(null, this.tracer).transformMethod(method, methodIt, this.readClass.getClassName());
             return;
         }
 
-        new TracingMethodInstrumenter(this.tracer, readMethod).transform(method);
+        new TracingMethodInstrumenter(this.tracer, readMethod, classNode).transform(method, methodIt);
     }
 
 }
