@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
+package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -6,9 +6,17 @@ import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
 
 
+/**
+ * Class representing a conditional or unconditional jump instructions (one of
+ * IFEQ, IFNE, IFLT, IFGE, IFGT, IFLE, IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPGE,
+ * IF_ICMPGT, IF_ICMPLE, IF_ACMPEQ, IF_ACMPNE, GOTO, JSR, IFNULL and IFNONNULL).
+ *
+ * @author Clemens Hammacher
+ */
 public class JumpInstruction extends AbstractInstruction {
 
     private LabelMarker label;

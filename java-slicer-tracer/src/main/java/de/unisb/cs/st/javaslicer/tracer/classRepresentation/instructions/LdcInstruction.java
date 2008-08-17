@@ -1,14 +1,19 @@
-package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
+package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
 
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
 
+/**
+ * Class representing an LDC instruction.
+ *
+ * @author Clemens Hammacher
+ */
 public class LdcInstruction extends AbstractInstruction {
 
     private final Object constant;
@@ -49,7 +54,7 @@ public class LdcInstruction extends AbstractInstruction {
             out.writeFloat((Float)this.constant);
         } else if (this.constant instanceof Type) {
             out.writeByte(5);
-            out.writeUTF(((Type)this.constant).getDescriptor());
+            out.writeUTF(((org.objectweb.asm.Type)this.constant).getDescriptor());
         }
     }
 
@@ -73,7 +78,7 @@ public class LdcInstruction extends AbstractInstruction {
             constant = Float.valueOf(in.readFloat());
             break;
         case 5:
-            constant = Type.getType(in.readUTF());
+            constant = org.objectweb.asm.Type.getType(in.readUTF());
             break;
         default:
             throw new IOException("corrupted data");

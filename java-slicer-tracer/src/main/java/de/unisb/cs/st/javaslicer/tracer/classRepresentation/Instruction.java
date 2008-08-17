@@ -7,7 +7,28 @@ import java.io.IOException;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
 
+/**
+ * Interface for all instructions that are stored in a {@link ReadMethod}.
+ *
+ * @author Clemens Hammacher
+ */
 public interface Instruction {
+
+    public enum Type {
+        FIELD,
+        IINC,
+        INT,
+        JUMP,
+        LABEL,
+        LDC,
+        LOOKUPSWITCH,
+        MULTIANEWARRAY,
+        METHOD,
+        SIMPLE,
+        TABLESWITCH,
+        TYPE,
+        VAR,
+    }
 
     int getIndex();
 

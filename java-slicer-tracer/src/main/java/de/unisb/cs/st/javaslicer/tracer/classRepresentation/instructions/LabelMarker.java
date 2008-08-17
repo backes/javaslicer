@@ -1,15 +1,21 @@
-package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
+package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.IOException;
 
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
 
 
+/**
+ * This is no read instruction, but a marker for jump targets.
+ *
+ * @author Clemens Hammacher
+ */
 public class LabelMarker extends AbstractInstruction {
 
     private final int traceSeqIndex;

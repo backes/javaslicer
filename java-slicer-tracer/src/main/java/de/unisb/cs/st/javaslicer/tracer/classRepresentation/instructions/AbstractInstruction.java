@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
+package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -7,10 +7,18 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.InstructionWrapper;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
 
+/**
+ * Abstract superclass that builds the basis for most Instruction implementing classes.
+ *
+ * @author Clemens Hammacher
+ */
 public abstract class AbstractInstruction implements Instruction {
 
     private static int nextIndex = 0;

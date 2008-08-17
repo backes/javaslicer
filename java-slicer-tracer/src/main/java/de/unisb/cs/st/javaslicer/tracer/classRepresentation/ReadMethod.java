@@ -5,8 +5,11 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Queue;
 
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.AbstractInstruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
 
 public class ReadMethod {
@@ -60,7 +63,7 @@ public class ReadMethod {
         this.instructions.trimToSize();
     }
 
-    public ArrayList<AbstractInstruction> getInstructions() {
+    public List<AbstractInstruction> getInstructions() {
         return this.instructions;
     }
 

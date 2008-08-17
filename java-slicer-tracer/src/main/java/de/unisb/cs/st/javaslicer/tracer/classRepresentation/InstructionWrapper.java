@@ -7,7 +7,13 @@ import java.io.IOException;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
 
-public class InstructionWrapper implements Instruction {
+/**
+ * An abstract class that wraps around another instruction and delegates all calles to this
+ * inner instruction.
+ *
+ * @author Clemens Hammacher
+ */
+public abstract class InstructionWrapper implements Instruction {
 
     private final Instruction wrappedInstruction;
 

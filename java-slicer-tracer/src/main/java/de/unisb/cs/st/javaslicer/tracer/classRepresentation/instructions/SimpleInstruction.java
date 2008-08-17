@@ -1,11 +1,36 @@
-package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
+package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
 import java.io.DataInput;
 
 import org.objectweb.asm.Opcodes;
 
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
 
+/**
+ * Class representing an instruction with no arguments.
+ *
+ * These are:
+ * <ul>
+ *  <li> the &quot;no operation&quot;: NOP</li>
+ *  <li> instructions that push a constant onto the stack:
+ *       ACONST_NULL, ICONST_M1, ICONST_0, ICONST_1, ICONST_2, ICONST_3, ICONST_4, ICONST_5,
+ *       LCONST_0, LCONST_1, FCONST_0, FCONST_1, FCONST_2, DCONST_0, DCONST_1</li>
+ *  <li> stack manipulating operations: POP, POP2, DUP, DUP_X1, DUP_X2, DUP2, DUP2_X1, DUP2_X2, SWAP</li>
+ *  <li> arithmetic operators:
+ *       IADD, LADD, FADD, DADD, ISUB, LSUB, FSUB, DSUB, IMUL, LMUL,
+ *       FMUL, DMUL, IDIV, LDIV, FDIV, DDIV, IREM, LREM, FREM, DREM,
+ *       INEG, LNEG, FNEG, DNEG, ISHL, LSHL, ISHR, LSHR, IUSHR, LUSHR,
+ *       IAND, LAND, IOR, LOR, IXOR, LXOR</li>
+ *  <li> type conversions:
+ *       I2L, I2F, I2D, L2I, L2F, L2D, F2I, F2L, F2D, D2I, D2L, D2F, I2B, I2C, I2S</li>
+ *  <li> comparisons: LCMP, FCMPL, FCMPG, DCMPL, DCMPG</li>
+ *  <li> control-flow statements: IRETURN, LRETURN, FRETURN, DRETURN, ARETURN, RETURN</li>
+ *  <li> and some special instructions: ARRAYLENGTH, ATHROW, MONITORENTER, MONITOREXIT</li>
+ * </ul>
+ *
+ * @author Clemens Hammacher
+ */
 public class SimpleInstruction extends AbstractInstruction {
 
     public SimpleInstruction(final ReadMethod readMethod, final int opcode) {

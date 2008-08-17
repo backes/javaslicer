@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
+package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -7,10 +7,16 @@ import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
 
+/**
+ * Class representing an array load or array store (*ALOAD / *ASTORE) instruction.
+ *
+ * @author Clemens Hammacher
+ */
 public class ArrayInstruction extends AbstractInstruction {
 
     // when tracing, these two fields are set

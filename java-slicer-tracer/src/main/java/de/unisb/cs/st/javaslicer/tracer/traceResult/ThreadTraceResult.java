@@ -9,13 +9,14 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 
-import de.unisb.cs.st.javaslicer.tracer.classRepresentation.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerToLongMap;
@@ -113,7 +114,7 @@ public class ThreadTraceResult {
             instrMethod = tryMethod;
 
         // now search for the instruction
-        final ArrayList<AbstractInstruction> instructions = instrMethod.getInstructions();
+        final List<AbstractInstruction> instructions = instrMethod.getInstructions();
 
         // we can just compute the offset of the instruction
         final int offset = instructionIndex - instrMethod.getInstructionNumberStart();

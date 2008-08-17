@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
+package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -6,8 +6,14 @@ import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
 
+/**
+ * Class representing a MULTIANEWARRAY instruction.
+ *
+ * @author Clemens Hammacher
+ */
 public class MultiANewArrayInstruction extends AbstractInstruction {
 
     private final String typeDesc;
