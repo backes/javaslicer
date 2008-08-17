@@ -1,7 +1,6 @@
 package de.unisb.cs.st.javaslicer.tracer.util;
 
 import java.io.DataInputStream;
-import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,51 +13,38 @@ public class MultiplexedFileReader {
         private final int id;
         private final int depth;
         private final long dataLength;
-        private final int[] blockAddr;
+        private final byte[][] dataBlocks;
         private final int[] pos;
         private int remainingInCurrentBlock;
-        private final byte[] currentBlock = new byte[MultiplexedFileReader.this.blockSize];
 
-        protected MultiplexInputStream(final int id, final int beginningBlockAddr) throws IOException {
+        protected MultiplexInputStream(final int id, final int beginningBlockAddr, final long length) throws IOException {
             this.id = id;
-
-            // read the length and the depth
-            synchronized (MultiplexedFileReader.this.file) {
-                MultiplexedFileReader.this.file.seek(beginningBlockAddr*MultiplexedFileReader.this.blockSize);
-                this.dataLength = MultiplexedFileReader.this.file.readLong();
-                // compute the depth needed to store the data
-                this.depth = compDepth(this.dataLength);
-            }
+            this.dataLength = length;
+            this.depth = compDepth(this.dataLength);
 
             this.pos = new int[this.depth+1];
-            this.blockAddr = new int[this.depth+1];
+            this.dataBlocks = new byte[this.depth+1][MultiplexedFileReader.this.blockSize];
             this.remainingInCurrentBlock = (int) Math.min(this.dataLength, MultiplexedFileReader.this.blockSize);
-            this.blockAddr[0] = beginningBlockAddr;
-            this.pos[0] = 8;
 
-            // initialize blockAddr and currentBlock
+            readBlock(beginningBlockAddr, this.dataBlocks[0]);
             for (int i = 1; i <= this.depth; ++i) {
-                this.pos[i] = 0;
-                synchronized (MultiplexedFileReader.this.file) {
-                    MultiplexedFileReader.this.file.seek(this.blockAddr[i-1]*MultiplexedFileReader.this.blockSize+(i==1?8:0));
-                    this.blockAddr[i] = MultiplexedFileReader.this.file.readInt();
-                }
+                readBlock(readInt(this.dataBlocks[i-1], 0), this.dataBlocks[i]);
             }
-            synchronized (MultiplexedFileReader.this.file) {
-                MultiplexedFileReader.this.file.seek(this.blockAddr[this.depth]*MultiplexedFileReader.this.blockSize);
-                final int read = this.remainingInCurrentBlock+(this.depth==0?8:0);
-                if (MultiplexedFileReader.this.file.read(this.currentBlock, 0, read) < read) {
-                    throw new EOFException();
-                }
-            }
+        }
+
+        private int readInt(final byte[] buf, final int offset) {
+            return ((buf[offset] & 0xff) << 24)
+                | ((buf[offset+1] & 0xff) << 16)
+                | ((buf[offset+2] & 0xff) << 8)
+                | (buf[offset+3] & 0xff);
         }
 
         private int compDepth(final long len) {
             int d = 0;
-            long max = MultiplexedFileReader.this.blockSize-8;
+            long max = MultiplexedFileReader.this.blockSize;
             while (max < len) {
                 d++;
-                max *= 1024/4;
+                max *= MultiplexedFileReader.this.blockSize/4;
             }
             return d;
         }
@@ -66,51 +52,50 @@ public class MultiplexedFileReader {
         public void seek(final long toPos) throws IOException {
             if (toPos < 0 || toPos > this.dataLength)
                 throw new IOException("pos must be in the range 0 .. dataLength");
-            long rem = toPos;
-            final int[] newPos = new int[this.depth+1];
-            for (int d = this.depth; d >= 0; --d) {
-                newPos[d] = (int) (rem % MultiplexedFileReader.this.blockSize);
-                rem = rem / MultiplexedFileReader.this.blockSize * 4;
-            }
-            newPos[0] += 8;
-            if (rem != 0)
-                throw new IOException("internal error");
-
             if (toPos == this.dataLength) {
+                final int[] newPos = getBlocksPos(toPos, true);
+                for (int i = 0; i <= this.depth; ++i)
+                    this.pos[i] = newPos[i];
                 this.remainingInCurrentBlock = 0;
-                // move the pos pointer(s) after the end of the last block instead in front of the new one
-                if (this.pos[this.depth] == 0) {
-                    for (int i = this.depth; i >= 0; ++i) {
-                        if (this.pos[i] == 0)
-                            this.pos[i] = MultiplexedFileReader.this.blockSize;
-                        else {
-                            this.pos[i] -= 4;
-                            break;
-                        }
-                    }
-                }
             } else {
-                // read the block addresses
+                final int[] newPos = getBlocksPos(toPos, false);
+                // read the data blocks
                 for (int i = 0; i < this.depth; ++i) {
                     if (newPos[i] != this.pos[i]) {
+                        readBlock(readInt(this.dataBlocks[i], newPos[i]), this.dataBlocks[i+1]);
                         this.pos[i] = newPos[i];
-                        synchronized (MultiplexedFileReader.this.file) {
-                            MultiplexedFileReader.this.file.seek(this.blockAddr[i] * MultiplexedFileReader.this.blockSize + this.pos[i]);
-                            this.blockAddr[i+1] = MultiplexedFileReader.this.file.readInt();
-                        }
                     }
                 }
                 this.pos[this.depth] = newPos[this.depth];
 
-                this.remainingInCurrentBlock = MultiplexedFileReader.this.blockSize - this.pos[this.depth];
-                if (this.dataLength - toPos < this.remainingInCurrentBlock)
-                    this.remainingInCurrentBlock = (int) (this.dataLength - toPos);
-                // read the current block (remaining part)
-                synchronized (MultiplexedFileReader.this.file) {
-                    MultiplexedFileReader.this.file.seek(this.blockAddr[this.depth] * MultiplexedFileReader.this.blockSize + this.pos[this.depth]);
-                    MultiplexedFileReader.this.file.read(this.currentBlock, this.pos[this.depth], this.remainingInCurrentBlock);
-                }
+                this.remainingInCurrentBlock = (int) Math.min(
+                    MultiplexedFileReader.this.blockSize - this.pos[this.depth],
+                    this.dataLength - toPos);
             }
+        }
+
+        /**
+         *
+         * @param position
+         * @param moveAfter if true, then the positions will point after the given position
+         *                  (as if you would have done several read()s to get there), otherwise
+         *                  they point in front of that position, i.e. you can directly read from
+         *                  there without moveToNextBlock()
+         * @return
+         * @throws IOException
+         */
+        private int[] getBlocksPos(final long position, final boolean moveAfter) throws IOException {
+            long remaining = position;
+            final int[] newPos = new int[this.depth+1];
+            for (int d = this.depth; d >= 0; --d) {
+                newPos[d] = moveAfter
+                    ? (int) ((remaining-1) % MultiplexedFileReader.this.blockSize) + 1
+                    : (int) (remaining % MultiplexedFileReader.this.blockSize);
+                remaining = remaining / MultiplexedFileReader.this.blockSize * 4;
+            }
+            if (remaining != 0)
+                throw new IOException("internal error");
+            return newPos;
         }
 
         @Override
@@ -121,7 +106,7 @@ public class MultiplexedFileReader {
                     return -1;
             }
             --this.remainingInCurrentBlock;
-            return this.currentBlock[this.pos[this.depth]++] & 0xff;
+            return this.dataBlocks[this.depth][this.pos[this.depth]++] & 0xff;
         }
 
         @Override
@@ -142,18 +127,18 @@ public class MultiplexedFileReader {
             int ptr = off;
             final int end = off + len;
             while (true) {
-                int read = end - ptr;
-                if (this.remainingInCurrentBlock < read)
-                    read = this.remainingInCurrentBlock;
-                System.arraycopy(this.currentBlock, this.pos[this.depth], b, ptr, read);
+                final int read = Math.min(end - ptr, this.remainingInCurrentBlock);
+                System.arraycopy(this.dataBlocks[this.depth], this.pos[this.depth], b, ptr, read);
                 ptr += read;
                 this.remainingInCurrentBlock -= read;
-                this.pos[this.depth] += read;
-                if (ptr >= end)
+                if (ptr < end) {
+                    moveToNextBlock();
+                    if (this.remainingInCurrentBlock == 0)
+                        return ptr-off;
+                } else {
+                    this.pos[this.depth] += read;
                     break;
-                moveToNextBlock();
-                if (this.remainingInCurrentBlock == 0)
-                    return ptr-off;
+                }
             }
             return len;
         }
@@ -163,42 +148,26 @@ public class MultiplexedFileReader {
             final long remaining = this.dataLength - read;
             if (remaining <= 0)
                 return;
+            this.remainingInCurrentBlock = (int) Math.min(remaining, MultiplexedFileReader.this.blockSize);
 
-            int moved = this.depth-1;
-            while (moved >= 0) {
-                this.pos[moved + 1] = 0;
-                if (this.pos[moved] < MultiplexedFileReader.this.blockSize - 4) {
-                    this.pos[moved] += 4;
-                    break;
-                }
-                moved--;
-            }
-            if (moved < 0)
-                throw new IOException("corrupted data");
+            readNext(this.depth);
+            assert this.pos[this.depth] < MultiplexedFileReader.this.blockSize;
+        }
 
-            // read the block addresses
-            for (int d = moved+1; d <= this.depth; ++d) {
-                synchronized (MultiplexedFileReader.this.file) {
-                    MultiplexedFileReader.this.file.seek(this.blockAddr[d-1]*MultiplexedFileReader.this.blockSize + this.pos[d-1]);
-                    this.blockAddr[d] = MultiplexedFileReader.this.file.readInt();
-                }
+        private void readNext(final int level) throws IOException {
+            assert level > 0;
+            if (this.pos[level-1] + 4 == MultiplexedFileReader.this.blockSize) {
+                readNext(level-1);
+                assert this.pos[level-1] < MultiplexedFileReader.this.blockSize;
+            } else {
+                this.pos[level-1] += 4;
             }
-
-            // read the current block
-            this.remainingInCurrentBlock = MultiplexedFileReader.this.blockSize;
-            if (remaining < MultiplexedFileReader.this.blockSize)
-                this.remainingInCurrentBlock = (int) remaining;
-            synchronized (MultiplexedFileReader.this.file) {
-                MultiplexedFileReader.this.file.seek(this.blockAddr[this.depth]*MultiplexedFileReader.this.blockSize);
-                if (MultiplexedFileReader.this.file.read(this.currentBlock, 0, this.remainingInCurrentBlock) < this.remainingInCurrentBlock)
-                    throw new IOException("corrupted data");
-            }
-            this.pos[this.depth] = 0;
-            return;
+            readBlock(readInt(this.dataBlocks[level-1], this.pos[level-1]), this.dataBlocks[level]);
+            this.pos[level] = 0;
         }
 
         public long pos() {
-            long read = this.pos[0]-8;
+            long read = this.pos[0];
             for (int i = 1; i <= this.depth; ++i)
                 read = MultiplexedFileReader.this.blockSize/4*read + this.pos[i];
             return read;
@@ -219,35 +188,52 @@ public class MultiplexedFileReader {
 
     }
 
-    protected final int blockSize; // MUST be divideable by 4
+    private static final long POS_INT_MASK = 0xffffffffL;
+
+    protected final int blockSize; // MUST be divisible by 4
 
     protected final RandomAccessFile file;
 
     private final int[] streamBeginningBlocks;
+    private final long[] streamLengths;
 
     public MultiplexedFileReader(final RandomAccessFile file) throws IOException {
         this.file = file;
 
-        // blockSize is always on offsets 8-11 on the file (after the header of the def stream)
-        if (file.length() < 12)
-            throw new IOException("corrupted data");
-        file.seek(8);
-        // TODO fix
-        //this.blockSize = file.readInt();
-        this.blockSize = 1024;
+        file.seek(0);
+
+        if (file.length() < MultiplexedFileWriter.headerSize || file.readInt() != MultiplexedFileWriter.MAGIC_HEADER)
+            throw new IOException("File contains no MultiplexedFile");
+        this.blockSize = file.readInt();
+        if ((this.blockSize & 0x3) != 0)
+            throw new IOException("blocksize must be divisible by 4");
+
+        final int streamDefsStartingBlock = file.readInt();
+        final long streamDefsLength = file.readLong();
 
         // read the stream defs
-        final MultiplexInputStream streamDefStream = new MultiplexInputStream(-1, 0);
+        final MultiplexInputStream streamDefStream = new MultiplexInputStream(-1, streamDefsStartingBlock, streamDefsLength);
         final DataInputStream str = new DataInputStream(streamDefStream);
-        final int numInts = (int) (streamDefStream.getDataLength()/4);
-        if (numInts < 1)
+        int numInts = (int) (streamDefStream.getDataLength()/16);
+        if (numInts < 1 || (long)numInts*16 != streamDefStream.getDataLength())
             throw new IOException("corrupted data");
-        this.streamBeginningBlocks = new int[numInts-1];
-        if (str.readInt() != this.blockSize)
-            throw new IOException("corrupted data");
-        for (int i = 0; i < this.streamBeginningBlocks.length; ++i)
-            this.streamBeginningBlocks[i] = str.readInt();
+        this.streamBeginningBlocks = new int[numInts];
+        this.streamLengths = new long[numInts];
+        while (numInts-- > 0) {
+            final int id = str.readInt();
+            final int start = str.readInt();
+            final long length = str.readLong();
+            if (this.streamBeginningBlocks[id] != 0 || this.streamLengths[id] != 0)
+                throw new IOException("corrupted data");
+            this.streamBeginningBlocks[id] = start;
+            this.streamLengths[id] = length;
+        }
         str.close();
+    }
+
+    public synchronized void readBlock(final int blockAddr, final byte[] buf) throws IOException {
+        this.file.seek(MultiplexedFileWriter.headerSize+(blockAddr&POS_INT_MASK)*this.blockSize);
+        this.file.readFully(buf, 0, this.blockSize);
     }
 
     public MultiplexedFileReader(final File filename) throws IOException {
@@ -261,7 +247,7 @@ public class MultiplexedFileReader {
     public MultiplexInputStream getInputStream(final int index) throws IOException {
         if (index < 0 || index >= this.streamBeginningBlocks.length)
             throw new IndexOutOfBoundsException("stream " + index + " does not exist");
-        return new MultiplexInputStream(index, this.streamBeginningBlocks[index]);
+        return new MultiplexInputStream(index, this.streamBeginningBlocks[index], this.streamLengths[index]);
     }
 
     public void close() throws IOException {

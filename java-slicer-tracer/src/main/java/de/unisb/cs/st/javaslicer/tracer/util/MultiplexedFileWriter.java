@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class MultiplexedFileWriter {
 
@@ -14,21 +13,15 @@ public class MultiplexedFileWriter {
 
         private final int id;
         private int depth = 0;
-        private long dataLength = -8; // is increased to at least 0 on close
-        protected int[] blockAddr = new int[MultiplexedFileWriter.this.maxDepth];
-        private final int[] full = new int[MultiplexedFileWriter.this.maxDepth];
-        private final byte[] currentBlock = new byte[MultiplexedFileWriter.this.blockSize];
+        protected long dataLength = 0;
+        protected int startBlockAddr = 0; // is set on close()
+        private final byte[][] dataBlocks = new byte[MultiplexedFileWriter.this.maxDepth+1][];
+        private final int[] full = new int[MultiplexedFileWriter.this.maxDepth+1];
         private volatile boolean streamClosed = false;
 
-        protected MultiplexOutputStream(final int id, final int beginningBlockAddr) throws IOException {
+        protected MultiplexOutputStream(final int id) {
             this.id = id;
-            this.blockAddr[0] = beginningBlockAddr;
-            this.full[0] = 8;
-            // initially write a 0 as file length
-            synchronized (MultiplexedFileWriter.this.file) {
-                MultiplexedFileWriter.this.file.seek(beginningBlockAddr*MultiplexedFileWriter.this.blockSize);
-                MultiplexedFileWriter.this.file.writeLong(0);
-            }
+            this.dataBlocks[0] = new byte[MultiplexedFileWriter.this.blockSize];
         }
 
         @Override
@@ -39,7 +32,7 @@ public class MultiplexedFileWriter {
                 // current block is full...
                 moveToNextBlock();
             }
-            this.currentBlock[this.full[this.depth]++] = (byte) b;
+            this.dataBlocks[this.depth][this.full[this.depth]++] = (byte) b;
         }
 
         @Override
@@ -60,10 +53,9 @@ public class MultiplexedFileWriter {
             int pos = off;
             final int end = off + len;
             while (true) {
-                int write = end - pos;
-                if (MultiplexedFileWriter.this.blockSize-this.full[this.depth] < write)
-                    write = MultiplexedFileWriter.this.blockSize-this.full[this.depth];
-                System.arraycopy(b, pos, this.currentBlock, this.full[this.depth], write);
+                final int write = Math.min(end - pos,
+                    MultiplexedFileWriter.this.blockSize-this.full[this.depth]);
+                System.arraycopy(b, pos, this.dataBlocks[this.depth], this.full[this.depth], write);
                 pos += write;
                 if (pos < end) {
                     moveToNextBlock();
@@ -77,66 +69,49 @@ public class MultiplexedFileWriter {
         private void moveToNextBlock() throws IOException {
             this.dataLength += MultiplexedFileWriter.this.blockSize;
 
-            // first, write back the current block
-            synchronized (MultiplexedFileWriter.this.file) {
-                MultiplexedFileWriter.this.file.seek(this.blockAddr[this.depth]*MultiplexedFileWriter.this.blockSize);
-                MultiplexedFileWriter.this.file.write(this.currentBlock);
+            if (!writeBack(this.depth)) {
+                // could not write back directly, so we have to increase the depth
+                increaseDepth();
+                if (!writeBack(this.depth))
+                    throw new RuntimeException("Increase of tree depth did not work as expected");
             }
+        }
 
-            // search for a free table entry (up the tree)
-            int insert = this.depth-1;
-            while (insert >= 0) {
-                this.full[insert+1] = 0;
-                if (this.full[insert] < MultiplexedFileWriter.this.blockSize) {
-                    break;
-                }
-                --insert;
-            }
+        private void increaseDepth() throws IOException {
+            if (this.depth == MultiplexedFileWriter.this.maxDepth)
+                throw new IOException("Maximum stream length reached");
+            // the depth of all entries except the first one is increased
+            for (int i = this.depth; i >= 0; --i)
+                this.dataBlocks[i+1] = this.dataBlocks[i];
+            this.dataBlocks[0] = new byte[MultiplexedFileWriter.this.blockSize];
+            System.arraycopy(this.full, 0, this.full, 1, this.depth+1);
+            this.full[0] = 0;
+            this.depth++;
+        }
 
-            if (insert < 0) {
-                // hmm, no table entry free. we have to increase the depth
-                if (this.depth + 1 == MultiplexedFileWriter.this.maxDepth)
-                    throw new IOException("Maximum stream length reached");
-                this.depth++;
-                // the depth of all entries except the first increased
-                System.arraycopy(this.full, 1, this.full, 2, MultiplexedFileWriter.this.maxDepth-2);
-                System.arraycopy(this.blockAddr, 1, this.blockAddr, 2, MultiplexedFileWriter.this.maxDepth-2);
-                // we need a new block to insert between the 0th and the 1st (now 2nd) depth
-                final int freeBlockNr = nextFreeBlockNr();
-                this.blockAddr[1] = freeBlockNr;
+        private boolean writeBack(final int level) throws IOException {
+            // we cannot write back level 0 (have to increase depth)
+            if (level == 0)
+                return false;
 
-                synchronized (MultiplexedFileWriter.this.file) {
-                    // read beginning block data (beginning at offset 8)
-                    MultiplexedFileWriter.this.file.seek(this.blockAddr[0]*MultiplexedFileWriter.this.blockSize+8);
-                    MultiplexedFileWriter.this.file.read(this.currentBlock, 0, MultiplexedFileWriter.this.blockSize-8);
-                    // copy data from beginning block to new block
-                    MultiplexedFileWriter.this.file.seek(freeBlockNr*MultiplexedFileWriter.this.blockSize);
-                    MultiplexedFileWriter.this.file.write(this.currentBlock, 0, MultiplexedFileWriter.this.blockSize-8);
-                    // then write the new block addr to the beginning block
-                    MultiplexedFileWriter.this.file.seek(this.blockAddr[0]*MultiplexedFileWriter.this.blockSize+8);
-                    MultiplexedFileWriter.this.file.writeInt(freeBlockNr);
-                }
-                // set the full values correctly
-                this.full[0] = 12;
-                this.full[1] = MultiplexedFileWriter.this.blockSize-8;
-                if (this.depth == 1)
-                    this.dataLength -= MultiplexedFileWriter.this.blockSize-8; // would otherwise be counted twice
-                // and insert the new block in the 1st depth
-                insert = 1;
-            }
+            // if the next lower level is full too, we first have to write back this level
+            if (this.full[level-1] == MultiplexedFileWriter.this.blockSize && !writeBack(level-1))
+                return false;
 
-            // fill up the tree again
-            for (int down = insert; down < this.depth; ++down) {
-                // we need another free block on this depth
-                final int nextFreeBlockNr = nextFreeBlockNr();
-                synchronized (MultiplexedFileWriter.this.file) {
-                    MultiplexedFileWriter.this.file.seek(this.blockAddr[down]*MultiplexedFileWriter.this.blockSize+this.full[down]);
-                    MultiplexedFileWriter.this.file.writeInt(nextFreeBlockNr);
-                }
-                this.full[down] += 4;
-                this.blockAddr[down+1] = nextFreeBlockNr;
-            }
-            return;
+            // now write back the data block
+            final int newDataBlockNr = writeBlock(this.dataBlocks[level]);
+
+            writeInt(this.dataBlocks[level-1], this.full[level-1], newDataBlockNr);
+            this.full[level-1] += 4;
+            this.full[level] = 0;
+            return true;
+        }
+
+        private void writeInt(final byte[] buf, final int pos, final int value) {
+            buf[pos] = (byte) (value >>> 24);
+            buf[pos+1] = (byte) (value >>> 16);
+            buf[pos+2] = (byte) (value >>> 8);
+            buf[pos+3] = (byte) value;
         }
 
         public int getId() {
@@ -144,21 +119,38 @@ public class MultiplexedFileWriter {
         }
 
         @Override
-        public void close() throws IOException {
+        public synchronized void close() throws IOException {
             if (this.streamClosed)
                 return;
             this.streamClosed = true;
 
             this.dataLength += this.full[this.depth];
-            synchronized (MultiplexedFileWriter.this.file) {
-                // write back the current block
-                if (this.dataLength != 0) {
-                    MultiplexedFileWriter.this.file.seek(this.blockAddr[this.depth]*MultiplexedFileWriter.this.blockSize);
-                    MultiplexedFileWriter.this.file.write(this.currentBlock, 0, this.full[this.depth]);
 
-                    // write length information to the beginning of this stream (8 byte)
-                    MultiplexedFileWriter.this.file.seek(this.blockAddr[0]*MultiplexedFileWriter.this.blockSize);
-                    MultiplexedFileWriter.this.file.writeLong(this.dataLength);
+            // write out procedure:
+            // 1) if depth is > 0 and level 0 is full, increase the depth
+            // 2) write back all levels that are full, except the deepest one, starting from 1 (upwards)
+            // 3) write back all levels (downwards), starting with the deepest level, ending on 1
+            // 4) write back level 0 (manually) and store block nr in startBlockAddr
+
+            if (this.depth > 0 && this.full[0] == MultiplexedFileWriter.this.blockSize)
+                increaseDepth();
+
+            for (int i = 1; i < this.depth; ++i)
+                if (this.full[i] == MultiplexedFileWriter.this.blockSize)
+                    if (!writeBack(i))
+                        throw new RuntimeException("writeBack in close() should always succeed");
+            for (int i = this.depth; i > 0; --i)
+                if (!writeBack(i))
+                    throw new RuntimeException("writeBack in close() should always succeed");
+
+            this.startBlockAddr = writeBlock(this.dataBlocks[0]);
+
+            // after all this work, store the information about this stream to the streamDefs stream
+            if (this != MultiplexedFileWriter.this.streamDefs) {
+                synchronized (MultiplexedFileWriter.this) {
+                    MultiplexedFileWriter.this.streamDefsDataOut.writeInt(this.id);
+                    MultiplexedFileWriter.this.streamDefsDataOut.writeInt(this.startBlockAddr);
+                    MultiplexedFileWriter.this.streamDefsDataOut.writeLong(this.dataLength);
                 }
             }
         }
@@ -169,10 +161,14 @@ public class MultiplexedFileWriter {
 
     private static final int DEFAULT_MAX_DEPTH = 5;
 
+    // this is just some random integer
+    public static final int MAGIC_HEADER = 0xB7A332B2;
+
+    protected static final int headerSize = 20; // bytes
+
     protected final RandomAccessFile file;
 
-    // 0 is reserved to the stream definition block
-    private final AtomicInteger nextBlockAddr = new AtomicInteger(1);
+    private int nextBlockAddr = 0;
 
     private int nextStreamNr = 0;
 
@@ -180,7 +176,7 @@ public class MultiplexedFileWriter {
     // operation on this file.
     protected IOException exception = null;
 
-    // holds stream beginning (block) addresses
+    // holds all open streams. they still have to be written out on close()
     private final Map<MultiplexOutputStream, MultiplexOutputStream> openStreams =
         new WeakIdentityHashMap<MultiplexOutputStream, MultiplexOutputStream>() {
             @Override
@@ -197,7 +193,8 @@ public class MultiplexedFileWriter {
 
     private boolean closed = false;
 
-    private final DataOutputStream streamDefs;
+    protected final MultiplexOutputStream streamDefs;
+    protected final DataOutputStream streamDefsDataOut;
 
     protected final int blockSize;
     protected final int maxDepth;
@@ -205,9 +202,9 @@ public class MultiplexedFileWriter {
     /**
      * Constructs a new multiplexed file writer with all options available.
      *
-     * Each stream will have a limit of <code>(blockSize-8)*(blockSize/4)^(maxDepth-1)</code> bytes.
+     * Each stream will have a limit of <code>blockSize*((blockSize/4)^maxDepth)</code> bytes.
      *
-     * The whole file can have at most 2^31*blockSize bytes.
+     * The whole file can have at most 2^32*blockSize bytes.
      *
      * @param file the file to write the multiplexed streams to
      * @param blockSize the block size of the file (each stream will allocate
@@ -220,19 +217,28 @@ public class MultiplexedFileWriter {
             throw new NullPointerException();
         if ((blockSize & 0x3) != 0)
             throw new IllegalArgumentException("blockSize must be dividable by 4");
-        if (blockSize < 12)
-            throw new IllegalArgumentException("blockSize must be >= 12");
-        if (maxDepth < 1)
-            throw new IllegalArgumentException("maxDepth must be > 0");
+        if (blockSize <= 0)
+            throw new IllegalArgumentException("blockSize must be > 0");
+        if (maxDepth < 0)
+            throw new IllegalArgumentException("maxDepth must be >= 0");
 
-        // first, set the file size to 0
-        file.setLength(0);
+        // first, reset the file
+        file.seek(0);
+        file.setLength(headerSize);
+        // this replaces no seek, but writes 0 to the magic header
+        for (int i = 0; i < headerSize; ++i)
+            file.writeByte(0);
 
         this.file = file;
         this.blockSize = blockSize;
         this.maxDepth = maxDepth;
-        this.streamDefs = new DataOutputStream(new MultiplexOutputStream(-1, 0));
-        this.streamDefs.writeInt(blockSize);
+        this.streamDefs = new MultiplexOutputStream(-1);
+        this.streamDefsDataOut = new DataOutputStream(this.streamDefs);
+    }
+
+    public synchronized int writeBlock(final byte[] data) throws IOException {
+        this.file.write(data, 0, this.blockSize);
+        return this.nextBlockAddr++;
     }
 
     public MultiplexedFileWriter(final RandomAccessFile file) throws IOException {
@@ -243,26 +249,16 @@ public class MultiplexedFileWriter {
         this(new RandomAccessFile(filename, "rw"));
     }
 
-    protected int nextFreeBlockNr() throws IOException {
-        final int blockNr = this.nextBlockAddr.getAndIncrement();
-        if (blockNr < 0)
-            throw new IOException("Maximum total file size reached");
-        return blockNr;
-    }
-
-    public synchronized MultiplexOutputStream newOutputStream() throws IOException {
-        checkException();
+    public synchronized MultiplexOutputStream newOutputStream() {
         if (this.closed)
             throw new IllegalStateException(getClass().getSimpleName() + " closed");
         final int streamNr = this.nextStreamNr++;
-        final int beginningBlockAddr = this.nextBlockAddr.getAndIncrement();
-        final MultiplexOutputStream newStream = new MultiplexOutputStream(streamNr, beginningBlockAddr);
+        final MultiplexOutputStream newStream = new MultiplexOutputStream(streamNr);
         this.openStreams.put(newStream, newStream);
-        this.streamDefs.writeInt(beginningBlockAddr);
         return newStream;
     }
 
-    public void close() throws IOException {
+    public synchronized void close() throws IOException {
         checkException();
         if (this.closed)
             return;
@@ -274,10 +270,12 @@ public class MultiplexedFileWriter {
 
         this.streamDefs.close();
 
-        // if necessary, truncate the file
-        final int fileLength = this.nextBlockAddr.get()*this.blockSize;
-        if (this.file.length() > fileLength)
-            this.file.setLength(fileLength);
+        // write some meta information to the file
+        this.file.seek(0);
+        this.file.writeInt(MAGIC_HEADER);
+        this.file.writeInt(this.blockSize);
+        this.file.writeInt(this.streamDefs.startBlockAddr);
+        this.file.writeLong(this.streamDefs.dataLength);
 
         this.file.close();
         checkException();
