@@ -202,9 +202,10 @@ public class MultiplexedFileWriter {
     /**
      * Constructs a new multiplexed file writer with all options available.
      *
-     * Each stream will have a limit of <code>blockSize*((blockSize/4)^maxDepth)</code> bytes.
+     * Each stream will have a limit of <code>blockSize*((blockSize/4)^maxDepth)</code>
+     * (1 PB (1024 TB) for blockSize 1024 and maxDepth 5) bytes.
      *
-     * The whole file can have at most 2^32*blockSize bytes.
+     * The whole file can have at most 2^32*blockSize (4 TB for blockSize 1024) bytes.
      *
      * @param file the file to write the multiplexed streams to
      * @param blockSize the block size of the file (each stream will allocate
@@ -236,17 +237,25 @@ public class MultiplexedFileWriter {
         this.streamDefsDataOut = new DataOutputStream(this.streamDefs);
     }
 
-    public synchronized int writeBlock(final byte[] data) throws IOException {
-        this.file.write(data, 0, this.blockSize);
-        return this.nextBlockAddr++;
-    }
-
+    /**
+     * @see #MultiplexedFileWriter(RandomAccessFile, int, int)
+     */
     public MultiplexedFileWriter(final RandomAccessFile file) throws IOException {
         this(file, DEFAULT_BLOCK_SIZE, DEFAULT_MAX_DEPTH);
     }
 
+    /**
+     * @see #MultiplexedFileWriter(RandomAccessFile, int, int)
+     */
     public MultiplexedFileWriter(final File filename) throws IOException {
         this(new RandomAccessFile(filename, "rw"));
+    }
+
+    /**
+     * @see #MultiplexedFileWriter(RandomAccessFile, int, int)
+     */
+    public MultiplexedFileWriter(final File filename, final int blockSize, final int maxDepth) throws IOException {
+        this(new RandomAccessFile(filename, "rw"), blockSize, maxDepth);
     }
 
     public synchronized MultiplexOutputStream newOutputStream() {
@@ -256,6 +265,11 @@ public class MultiplexedFileWriter {
         final MultiplexOutputStream newStream = new MultiplexOutputStream(streamNr);
         this.openStreams.put(newStream, newStream);
         return newStream;
+    }
+
+    public synchronized int writeBlock(final byte[] data) throws IOException {
+        this.file.write(data, 0, this.blockSize);
+        return this.nextBlockAddr++;
     }
 
     public synchronized void close() throws IOException {

@@ -155,7 +155,7 @@ public class Tracer implements ClassFileTransformer {
 
     private Tracer(final File filename) throws IOException {
         this.filename = filename;
-        this.file = new MultiplexedFileWriter(filename);
+        this.file = new MultiplexedFileWriter(filename, 512, 5);
         final MultiplexOutputStream stream = this.file.newOutputStream();
         if (stream.getId() != 0)
             throw new AssertionError("MultiplexedFileWriter does not initially return stream id 0");
@@ -528,7 +528,7 @@ public class Tracer implements ClassFileTransformer {
         return TraceResult.readFrom(this.filename);
     }
 
-    public MultiplexOutputStream newOutputStream() throws IOException {
+    public MultiplexOutputStream newOutputStream() {
         return this.file.newOutputStream();
     }
 

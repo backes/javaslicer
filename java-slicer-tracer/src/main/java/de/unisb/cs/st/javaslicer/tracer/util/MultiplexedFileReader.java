@@ -81,7 +81,7 @@ public class MultiplexedFileReader {
          *                  (as if you would have done several read()s to get there), otherwise
          *                  they point in front of that position, i.e. you can directly read from
          *                  there without moveToNextBlock()
-         * @return
+         * @return an array describing the position in the blocks at each level
          * @throws IOException
          */
         private int[] getBlocksPos(final long position, final boolean moveAfter) throws IOException {
@@ -214,12 +214,12 @@ public class MultiplexedFileReader {
         // read the stream defs
         final MultiplexInputStream streamDefStream = new MultiplexInputStream(-1, streamDefsStartingBlock, streamDefsLength);
         final DataInputStream str = new DataInputStream(streamDefStream);
-        int numInts = (int) (streamDefStream.getDataLength()/16);
-        if (numInts < 1 || (long)numInts*16 != streamDefStream.getDataLength())
+        int numStreams = (int) (streamDefStream.getDataLength()/16);
+        if (numStreams < 1 || (long)numStreams*16 != streamDefStream.getDataLength())
             throw new IOException("corrupted data");
-        this.streamBeginningBlocks = new int[numInts];
-        this.streamLengths = new long[numInts];
-        while (numInts-- > 0) {
+        this.streamBeginningBlocks = new int[numStreams];
+        this.streamLengths = new long[numStreams];
+        while (numStreams-- > 0) {
             final int id = str.readInt();
             final int start = str.readInt();
             final long length = str.readLong();
@@ -252,6 +252,10 @@ public class MultiplexedFileReader {
 
     public void close() throws IOException {
         this.file.close();
+    }
+
+    public int getBlockSize() {
+        return this.blockSize;
     }
 
 }
