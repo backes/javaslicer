@@ -135,7 +135,9 @@ public class ThreadTraceResult {
 
         private int instructionCount = 0;
         private int additionalInstructionCount = 0;
+        private PrintWriter debugFileWriter;
 
+        @SuppressWarnings("synthetic-access")
         public BackwardInstructionIterator() throws TracerException {
             this.integerSequenceBackwardIterators = new IntegerMap<Iterator<Integer>>();
             this.longSequenceBackwardIterators = new IntegerMap<Iterator<Long>>();
@@ -145,10 +147,20 @@ public class ThreadTraceResult {
             } catch (final EOFException e) {
                 this.nextInstruction = null;
             }
+            if (ThreadTraceResult.this.traceResult.debug) {
+                try {
+                    this.debugFileWriter = new PrintWriter(new FileOutputStream(new File("iteration_debug.log")));
+                } catch (final FileNotFoundException e) {
+                    e.printStackTrace();
+                }
+            }
         }
 
         public boolean hasNext() {
-            return this.nextInstruction != null;
+            final boolean hasNext = this.nextInstruction != null;
+            if (!hasNext && this.debugFileWriter != null)
+                this.debugFileWriter.close();
+            return hasNext;
         }
 
         public Instance next() throws TracerException {
@@ -167,20 +179,11 @@ public class ThreadTraceResult {
             return getNextInstruction(old.getMethod(), old.getBackwardInstructionIndex(this));
         }
 
-        // TODO remove
-        private int i = 0;
         private Instance getNextInstruction(final ReadMethod oldMethod, final int nextIndex) throws TracerException, EOFException {
             int index = nextIndex;
             while (true) {
-                // TODO remove
-                this.i++;
-                try {
-                    final PrintWriter iterationDebugWriter = new PrintWriter(new FileOutputStream(new File("iteration_debug.log"), this.i > 1));
-                    iterationDebugWriter.println(index);
-                    iterationDebugWriter.close();
-                } catch (final FileNotFoundException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+                if (this.debugFileWriter != null) {
+                    this.debugFileWriter.println(index);
                 }
                 final Instruction backwardInstruction = findInstruction(index,
                         oldMethod == null ? null : oldMethod.getReadClass(), oldMethod);

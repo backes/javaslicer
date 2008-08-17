@@ -42,6 +42,7 @@ public class TraceResult {
 
     private final List<ReadClass> readClasses;
     private final List<ThreadTraceResult> threadTraces;
+    public boolean debug = false;
 
     public TraceResult(final List<ReadClass> readClasses, final List<ThreadTraceResult> threadTraces) {
         this.readClasses = readClasses;
