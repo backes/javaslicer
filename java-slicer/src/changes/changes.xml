@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<document>
+    <properties>
+        <title>Release History</title>
+        <author email="jdoe@st.cs.uni-sb.de">John Doe</author>
+    </properties>
+
+    <body>
+        <!-- Valied values for type: add, fix, remove, update -->
+
+        <release version="0.1" date="2008-02-28">
+            <action dev="jdoe" type="add">
+                Initial release.
+            </action>
+        </release>
+
+    </body>
+</document>
