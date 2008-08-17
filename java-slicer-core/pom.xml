@@ -10,27 +10,9 @@
 	</parent>
 
 	<modelVersion>4.0.0</modelVersion>
-	<artifactId>java-slicer-tracer</artifactId>
-	<name>Java-Slicer Tracing Component</name>
-	<description>Generated a trace of a program run.</description>
+	<artifactId>java-slicer-core</artifactId>
+	<name>Java-Slicer Core</name>
+	<description>Computes trace on java bytecode level base on a trace.</description>
 	<packaging>jar</packaging>
 
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-jar-plugin</artifactId>
-				<version>2.1</version>
-				<configuration>
-					<archive>
-						<manifestEntries>
-							<Premain-Class>de.unisb.cs.st.javaslicer.tracer.TracerAgent</Premain-Class>
-							<Can-Retransform-Classes>true</Can-Retransform-Classes>
-							<Boot-Class-Path>./${project.build.finalName}.jar</Boot-Class-Path>
-						</manifestEntries>
-					</archive>
-				</configuration>
-			</plugin>
-		</plugins>
-	</build>
 </project>
