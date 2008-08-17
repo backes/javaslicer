@@ -14,5 +14,12 @@
 	<name>Java-Slicer Core</name>
 	<description>Computes trace on java bytecode level base on a trace.</description>
 	<packaging>jar</packaging>
+	
+	<dependencies>
+		<dependency>
+			<groupId>de.unisb.cs.st</groupId>
+			<artifactId>java-slicer-tracer</artifactId>
+		</dependency>
+	</dependencies>
 
 </project>
