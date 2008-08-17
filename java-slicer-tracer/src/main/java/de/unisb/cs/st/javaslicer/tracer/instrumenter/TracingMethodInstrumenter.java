@@ -719,21 +719,14 @@ public class TracingMethodInstrumenter implements Opcodes {
         ++TracingMethodInstrumenter.statsInstructions;
     }
 
-    // TODO remove
     private void registerInstruction(final AbstractInstruction instruction) {
-        registerInstruction(instruction, false);
-    }
-
-    private void registerInstruction(final AbstractInstruction instruction, final boolean isSafeInstruction) {
         this.readMethod.addInstruction(instruction);
-        if (Tracer.debug || !isSafeInstruction) {
-            this.instructionIterator.previous();
-            this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
-            this.instructionIterator.add(getIntConstInsn(instruction.getIndex()));
-            this.instructionIterator.add(new MethodInsnNode(INVOKEVIRTUAL,
-                    Type.getInternalName(ThreadTracer.class), "passInstruction", "(I)V"));
-            this.instructionIterator.next();
-        }
+        this.instructionIterator.previous();
+        this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
+        this.instructionIterator.add(getIntConstInsn(instruction.getIndex()));
+        this.instructionIterator.add(new MethodInsnNode(INVOKEVIRTUAL,
+                Type.getInternalName(ThreadTracer.class), "passInstruction", "(I)V"));
+        this.instructionIterator.next();
         ++TracingMethodInstrumenter.statsInstructions;
     }
 
