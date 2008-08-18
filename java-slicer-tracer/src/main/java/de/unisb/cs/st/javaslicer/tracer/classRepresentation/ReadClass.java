@@ -36,7 +36,7 @@ public class ReadClass {
         return this.access;
     }
 
-    public String getClassName() {
+    public String getName() {
         return this.className;
     }
 

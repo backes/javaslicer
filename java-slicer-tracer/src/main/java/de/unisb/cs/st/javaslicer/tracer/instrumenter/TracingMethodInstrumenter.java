@@ -296,7 +296,7 @@ public class TracingMethodInstrumenter implements Opcodes {
 
         // finally: create a copy of the method that gets the ThreadTracer as argument
         // this is only necessary for private methods or "<init>"
-        if (this.tracer.wasRedefined(this.readMethod.getReadClass().getClassName()) &&
+        if (this.tracer.wasRedefined(this.readMethod.getReadClass().getName()) &&
                 (method.access & ACC_PRIVATE) != 0) {
             final Type[] oldMethodArguments = Type.getArgumentTypes(method.desc);
             final Type[] newMethodArguments = Arrays.copyOf(oldMethodArguments, oldMethodArguments.length+1);

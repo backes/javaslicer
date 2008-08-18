@@ -20,7 +20,7 @@ public class TracingClassInstrumenter implements Opcodes {
 	    this.tracer = tracer;
 	    this.readClass = readClass;
         if (Tracer.debug)
-            System.out.println("instrumenting " + readClass.getClassName());
+            System.out.println("instrumenting " + readClass.getName());
     }
 
     @SuppressWarnings("unchecked")
@@ -42,7 +42,7 @@ public class TracingClassInstrumenter implements Opcodes {
         // do not instrument <clinit> methods (break (linear) control flow)
         // because these methods may call other methods, we have to pause tracing when they are entered
         if ("<clinit>".equals(method.name)) {
-            new PauseTracingInstrumenter(null, this.tracer).transformMethod(method, methodIt, this.readClass.getClassName());
+            new PauseTracingInstrumenter(null, this.tracer).transformMethod(method, methodIt, this.readClass.getName());
             return;
         }
 

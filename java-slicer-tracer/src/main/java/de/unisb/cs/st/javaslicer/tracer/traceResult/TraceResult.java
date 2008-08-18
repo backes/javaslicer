@@ -145,7 +145,7 @@ public class TraceResult {
             final Instance inst = it.next();
             final ReadMethod method = inst.getMethod();
             final ReadClass class0 = method.getReadClass();
-            System.out.format(format, nr++, class0.getClassName()+"."
+            System.out.format(format, nr++, class0.getName()+"."
                     +method.getName()+":"+inst.getLineNumber(),
                     inst.getOccurenceNumber(), inst.toString());
         }

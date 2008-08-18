@@ -374,7 +374,7 @@ public class Tracer implements ClassFileTransformer {
             final byte[] newClassfileBuffer = writer.toByteArray();
 
             if (check) {
-                checkClass(newClassfileBuffer, readClass.getClassName());
+                checkClass(newClassfileBuffer, readClass.getName());
             }
 
             //printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());

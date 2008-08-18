@@ -29,21 +29,21 @@ public class ThreadTracer {
     private final Tracer tracer;
     private int paused = 0;
 
-    // TODO remove
     protected static PrintWriter debugFile;
     static {
-        try {
-            debugFile = new PrintWriter(new BufferedWriter(new FileWriter(new File("debug.log"))));
-        } catch (final IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            @Override
-            public void run() {
-                debugFile.close();
+        if (Tracer.debug) {
+            try {
+                debugFile = new PrintWriter(new BufferedWriter(new FileWriter(new File("debug.log"))));
+                Runtime.getRuntime().addShutdownHook(new Thread() {
+                    @Override
+                    public void run() {
+                        debugFile.close();
+                    }
+                });
+            } catch (final IOException e) {
+                e.printStackTrace();
             }
-        });
+        }
     }
 
     public ThreadTracer(final Thread thread,
@@ -70,9 +70,9 @@ public class ThreadTracer {
 
             ((IntegerTraceSequence) seq).trace(value);
         } catch (final IOException e) {
+            Tracer.error(e);
             System.err.println("Error writing the trace: " + e.getMessage());
-            // and do _NOT_ unpause
-            return;
+            System.exit(-1);
         }
 
         --this.paused;
@@ -94,9 +94,9 @@ public class ThreadTracer {
 
             ((ObjectTraceSequence) seq).trace(obj);
         } catch (final IOException e) {
+            Tracer.error(e);
             System.err.println("Error writing the trace: " + e.getMessage());
-            // and do _NOT_ unpause
-            return;
+            System.exit(-1);
         }
 
         --this.paused;
