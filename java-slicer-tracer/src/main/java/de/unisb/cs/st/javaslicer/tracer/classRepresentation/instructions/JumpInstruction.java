@@ -40,6 +40,11 @@ public class JumpInstruction extends AbstractInstruction {
     }
 
     @Override
+    public Type getType() {
+        return Type.JUMP;
+    }
+
+    @Override
     public void writeOut(final DataOutput out) throws IOException {
         super.writeOut(out);
         out.writeInt(this.label.getLabelNr());

@@ -9,6 +9,12 @@ import org.objectweb.asm.Opcodes;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
 
+/**
+ * Class representing an instruction that just pushes an integer onto the stack (
+ * except ICONST_*, so just BIPUSH and SIPUSH).
+ *
+ * @author Clemens Hammacher
+ */
 public class IntPush extends AbstractInstruction {
 
     private final int operand;
@@ -27,6 +33,11 @@ public class IntPush extends AbstractInstruction {
 
     public int getOperand() {
         return this.operand;
+    }
+
+    @Override
+    public Type getType() {
+        return Type.INT;
     }
 
     @Override

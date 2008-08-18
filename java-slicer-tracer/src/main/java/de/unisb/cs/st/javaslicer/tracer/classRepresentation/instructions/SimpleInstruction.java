@@ -47,6 +47,11 @@ public class SimpleInstruction extends AbstractInstruction {
     }
 
     @Override
+    public Type getType() {
+        return Type.SIMPLE;
+    }
+
+    @Override
     public String toString() {
         switch (getOpcode()) {
         // the not interesting ones:

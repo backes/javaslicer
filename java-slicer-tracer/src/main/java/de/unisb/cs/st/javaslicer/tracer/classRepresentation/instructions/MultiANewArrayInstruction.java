@@ -32,6 +32,11 @@ public class MultiANewArrayInstruction extends AbstractInstruction {
     }
 
     @Override
+    public Type getType() {
+        return Type.MULTIANEWARRAY;
+    }
+
+    @Override
     public void writeOut(final DataOutput out) throws IOException {
         super.writeOut(out);
         out.writeUTF(this.typeDesc);

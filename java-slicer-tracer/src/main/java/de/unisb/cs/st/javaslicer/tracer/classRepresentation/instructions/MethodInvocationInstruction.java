@@ -50,6 +50,11 @@ public class MethodInvocationInstruction extends AbstractInstruction {
     }
 
     @Override
+    public Type getType() {
+        return Type.METHODINVOCATION;
+    }
+
+    @Override
     public void writeOut(final DataOutput out) throws IOException {
         super.writeOut(out);
         out.writeUTF(this.internalClassName);

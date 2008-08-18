@@ -142,6 +142,28 @@ public abstract class AbstractInstruction implements Instruction {
         return new AbstractInstance(this, backwardInstructionIterator.getNextInstructionOccurenceNumber(this.index));
     }
 
+    public Instruction getPrevious() {
+        assert getIndex() >= getMethod().getInstructionNumberStart()
+            && getIndex() <= getMethod().getInstructionNumberEnd();
+        if (getIndex() == getMethod().getInstructionNumberStart())
+            return null;
+        final Instruction previous = getMethod().getInstructions().get(
+                getIndex()-1-getMethod().getInstructionNumberStart());
+        assert previous.getIndex() == getIndex()-1;
+        return previous;
+    }
+
+    public Instruction getNext() {
+        assert getIndex() >= getMethod().getInstructionNumberStart()
+            && getIndex() <= getMethod().getInstructionNumberEnd();
+        if (getIndex() + 1 == getMethod().getInstructionNumberEnd())
+            return null;
+        final Instruction next = getMethod().getInstructions().get(
+                getIndex()+1-getMethod().getInstructionNumberStart());
+        assert next.getIndex() == getIndex()+1;
+        return next;
+    }
+
     public static class AbstractInstance extends InstructionWrapper
             implements Instance {
 

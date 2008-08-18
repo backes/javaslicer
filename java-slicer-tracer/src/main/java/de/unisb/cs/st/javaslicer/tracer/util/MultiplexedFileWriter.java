@@ -268,6 +268,8 @@ public class MultiplexedFileWriter {
     }
 
     public synchronized int writeBlock(final byte[] data) throws IOException {
+        if (this.nextBlockAddr == 0 && this.file.length() > headerSize)
+            throw new IOException("Maximum file size reached");
         this.file.write(data, 0, this.blockSize);
         return this.nextBlockAddr++;
     }

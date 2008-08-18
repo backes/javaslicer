@@ -52,6 +52,11 @@ public class LabelMarker extends AbstractInstruction {
     }
 
     @Override
+    public Type getType() {
+        return Type.LABEL;
+    }
+
+    @Override
     public int getBackwardInstructionIndex(final BackwardInstructionIterator backwardInstructionIterator) {
         return backwardInstructionIterator.getNextInteger(this.traceSeqIndex);
     }

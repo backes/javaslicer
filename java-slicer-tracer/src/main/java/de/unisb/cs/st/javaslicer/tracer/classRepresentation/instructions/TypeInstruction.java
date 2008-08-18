@@ -16,34 +16,39 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodRea
  */
 public class TypeInstruction extends AbstractInstruction {
 
-    private final String type;
+    private final String typeDesc;
 
-    public TypeInstruction(final ReadMethod readMethod, final int opcode, final String type) {
+    public TypeInstruction(final ReadMethod readMethod, final int opcode, final String typeDesc) {
         super(readMethod, opcode);
         assert opcode == Opcodes.NEW
             || opcode == Opcodes.ANEWARRAY
             || opcode == Opcodes.CHECKCAST
             || opcode == Opcodes.INSTANCEOF;
-        this.type = type;
+        this.typeDesc = typeDesc;
     }
 
-    private TypeInstruction(final ReadMethod readMethod, final int lineNumber, final int opcode, final String type, final int index) {
+    private TypeInstruction(final ReadMethod readMethod, final int lineNumber, final int opcode, final String typeDesc, final int index) {
         super(readMethod, opcode, lineNumber, index);
         assert opcode == Opcodes.NEW
             || opcode == Opcodes.ANEWARRAY
             || opcode == Opcodes.CHECKCAST
             || opcode == Opcodes.INSTANCEOF;
-        this.type = type;
+        this.typeDesc = typeDesc;
     }
 
-    public String getType() {
-        return this.type;
+    public String getTypeDesc() {
+        return this.typeDesc;
+    }
+
+    @Override
+    public Type getType() {
+        return Type.TYPE;
     }
 
     @Override
     public void writeOut(final DataOutput out) throws IOException {
         super.writeOut(out);
-        out.writeUTF(this.type);
+        out.writeUTF(this.typeDesc);
     }
 
     public static TypeInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
@@ -70,7 +75,7 @@ public class TypeInstruction extends AbstractInstruction {
         default:
             instruction = "-ERROR-";
         }
-        return new StringBuilder(instruction.length() + this.type.length() + 1).append(instruction).append(' ').append(this.type).toString();
+        return new StringBuilder(instruction.length() + this.typeDesc.length() + 1).append(instruction).append(' ').append(this.typeDesc).toString();
     }
 
 }

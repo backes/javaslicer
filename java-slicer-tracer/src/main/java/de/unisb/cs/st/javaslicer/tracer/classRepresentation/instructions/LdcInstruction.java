@@ -35,6 +35,11 @@ public class LdcInstruction extends AbstractInstruction {
     }
 
     @Override
+    public Type getType() {
+        return Type.LDC;
+    }
+
+    @Override
     public void writeOut(final DataOutput out) throws IOException {
         super.writeOut(out);
         if (this.constant instanceof Integer) {

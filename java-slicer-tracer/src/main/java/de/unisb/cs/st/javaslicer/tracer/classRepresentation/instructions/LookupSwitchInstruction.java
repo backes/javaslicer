@@ -54,6 +54,11 @@ public class LookupSwitchInstruction extends AbstractInstruction {
     }
 
     @Override
+    public Type getType() {
+        return Type.LOOKUPSWITCH;
+    }
+
+    @Override
     public void writeOut(final DataOutput out) throws IOException {
         super.writeOut(out);
         out.writeInt(this.defaultHandler.getLabelNr());

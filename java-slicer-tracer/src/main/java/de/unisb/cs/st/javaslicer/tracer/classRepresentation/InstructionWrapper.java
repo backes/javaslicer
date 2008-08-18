@@ -47,6 +47,18 @@ public abstract class InstructionWrapper implements Instruction {
         return this.wrappedInstruction.getOpcode();
     }
 
+    public Type getType() {
+        return this.wrappedInstruction.getType();
+    }
+
+    public Instruction getNext() {
+        return this.wrappedInstruction.getNext();
+    }
+
+    public Instruction getPrevious() {
+        return this.wrappedInstruction.getPrevious();
+    }
+
     public void writeOut(final DataOutput out) throws IOException {
         this.wrappedInstruction.writeOut(out);
     }

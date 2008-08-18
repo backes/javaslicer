@@ -45,6 +45,11 @@ public class ArrayInstruction extends AbstractInstruction {
     }
 
     @Override
+    public Type getType() {
+        return Type.ARRAY;
+    }
+
+    @Override
     public void writeOut(final DataOutput out) throws IOException {
         super.writeOut(out);
         out.writeInt(this.arrayTraceSeqIndex);
