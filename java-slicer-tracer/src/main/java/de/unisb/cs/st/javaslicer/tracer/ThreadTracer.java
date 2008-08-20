@@ -121,12 +121,29 @@ public class ThreadTracer {
 
     public void finish() throws IOException {
         this.paused++;
-        // TODO remove concurrentmodificationexception on sequences
-        try {
-            Thread.sleep(10);
-        } catch (final InterruptedException e) {
-            e.printStackTrace();
+        // wait while our "using thread" still executes a trace* Method
+        boolean wait = true;
+        while (wait) {
+            wait = false;
+            Thread[] allThreads = new Thread[Thread.activeCount()*2];
+            while (Thread.enumerate(allThreads) == allThreads.length)
+                allThreads = new Thread[allThreads.length*2];
+            // search the thread with the correct threadId
+            for (final Thread t: allThreads) {
+                if (t != null && t.getId() == this.threadId) {
+                    final StackTraceElement[] stacktrace = t.getStackTrace();
+                    for (final StackTraceElement elem: stacktrace) {
+                        if (getClass().getName().equals(elem.getClassName())
+                                && elem.getMethodName().startsWith("trace")) {
+                            wait = true;
+                            Thread.yield();
+                            continue;
+                        }
+                    }
+                }
+            }
         }
+
         for (final TraceSequence seq: this.sequences.values())
             seq.finish();
     }

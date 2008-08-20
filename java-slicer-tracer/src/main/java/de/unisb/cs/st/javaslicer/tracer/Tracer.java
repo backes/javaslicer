@@ -11,7 +11,9 @@ import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,9 +45,11 @@ import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.uncompressed.UncompressedTraceSequenceFactory;
+import de.unisb.cs.st.javaslicer.tracer.util.ConcurrentReferenceHashMap;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter;
 import de.unisb.cs.st.javaslicer.tracer.util.SimpleArrayList;
-import de.unisb.cs.st.javaslicer.tracer.util.WeakThreadMap;
+import de.unisb.cs.st.javaslicer.tracer.util.ConcurrentReferenceHashMap.Option;
+import de.unisb.cs.st.javaslicer.tracer.util.ConcurrentReferenceHashMap.ReferenceType;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter.MultiplexOutputStream;
 
 public class Tracer implements ClassFileTransformer {
@@ -120,20 +124,12 @@ public class Tracer implements ClassFileTransformer {
     public static final TraceSequenceFactory seqFactory = new UncompressedTraceSequenceFactory();
     //public static final TraceSequenceFactory seqFactory = new GZipTraceSequenceFactory();
 
-    // TODO get rid of this list - it leads to linear memory consumption w.r.t. the thread count
-    private final List<ThreadTracer> allThreadTracers = new SimpleArrayList<ThreadTracer>();
-    private final Map<Thread, ThreadTracer> threadTracers = new WeakThreadMap<ThreadTracer>() {
-            @Override
-            protected void removing(final ThreadTracer value) {
-                try {
-                    value.finish();
-                } catch (final IOException e) {
-                    error(e);
-                }
-            }
-        };
+    private final Map<Thread, ThreadTracer> threadTracers;
 
-    private final List<ReadClass> readClasses = new ArrayList<ReadClass>();
+    // an (untraced) list that holds ThreadTracers that can be finished. They are added to this
+    // list first, because if they would be finished immediately, it would leed to an recursive
+    // loop...
+    protected SimpleArrayList<ThreadTracer> readyThreadTracers = new SimpleArrayList<ThreadTracer>();
 
     protected final List<TraceSequence.Type> traceSequenceTypes
         = new SimpleArrayList<TraceSequence.Type>();
@@ -143,7 +139,8 @@ public class Tracer implements ClassFileTransformer {
 
     private final File filename;
     private final MultiplexedFileWriter file;
-    private final DataOutputStream mainOutStream;
+    private final DataOutputStream readClassesOutputStream;
+    private final DataOutputStream threadTracersOutputStream;
 
     private Set<String> notRedefinedClasses;
 
@@ -156,10 +153,28 @@ public class Tracer implements ClassFileTransformer {
     private Tracer(final File filename) throws IOException {
         this.filename = filename;
         this.file = new MultiplexedFileWriter(filename, 512, 5);
-        final MultiplexOutputStream stream = this.file.newOutputStream();
-        if (stream.getId() != 0)
+        final MultiplexOutputStream readClassesMultiplexedStream = this.file.newOutputStream();
+        if (readClassesMultiplexedStream.getId() != 0)
             throw new AssertionError("MultiplexedFileWriter does not initially return stream id 0");
-        this.mainOutStream = new DataOutputStream(stream);
+        this.readClassesOutputStream = new DataOutputStream(readClassesMultiplexedStream);
+        final MultiplexOutputStream threadTracersMultiplexedStream = this.file.newOutputStream();
+        if (threadTracersMultiplexedStream.getId() != 1)
+            throw new AssertionError("MultiplexedFileWriter does not monotonously increase stream ids");
+        this.threadTracersOutputStream = new DataOutputStream(threadTracersMultiplexedStream);
+        final ConcurrentReferenceHashMap<Thread, ThreadTracer> threadTracersMap =
+            new ConcurrentReferenceHashMap<Thread, ThreadTracer>(
+                    16, .75f, 16, ReferenceType.WEAK, ReferenceType.STRONG,
+                    EnumSet.of(Option.IDENTITY_COMPARISONS));
+        threadTracersMap.addRemoveStaleListener(new ConcurrentReferenceHashMap.RemoveStaleListener<ThreadTracer>() {
+            public void removed(final ThreadTracer removedValue) {
+                if (removedValue != null) {
+                    synchronized (Tracer.this.readyThreadTracers) {
+                        Tracer.this.readyThreadTracers.add(removedValue);
+                    }
+                }
+            }
+        });
+        this.threadTracers = threadTracersMap;
     }
 
     public static void error(final Exception e) {
@@ -290,9 +305,9 @@ public class Tracer implements ClassFileTransformer {
             }
         }
 
-        synchronized (this) {
+        synchronized (this.threadTracers) {
             this.tracingStarted = true;
-            for (final ThreadTracer tt: this.allThreadTracers)
+            for (final ThreadTracer tt: this.threadTracers.values())
                 tt.unpauseTracing();
         }
     }
@@ -304,7 +319,7 @@ public class Tracer implements ClassFileTransformer {
             return null;
 
         // disable tracing for the thread tracer of this thread
-        final ThreadTracer tt = getThreadTracer(Thread.currentThread());
+        final ThreadTracer tt = getThreadTracer();
         tt.pauseTracing();
 
         try {
@@ -352,7 +367,6 @@ public class Tracer implements ClassFileTransformer {
 
             // register that class for later reconstruction of the trace
             final ReadClass readClass = new ReadClass(className, AbstractInstruction.getNextIndex(), classNode.access);
-            this.readClasses.add(readClass);
 
             //final boolean computeFrames = COMPUTE_FRAMES || Arrays.asList(this.pauseTracingClasses).contains(Type.getObjectType(className).getClassName());
             final boolean computeFrames = COMPUTE_FRAMES;
@@ -376,6 +390,9 @@ public class Tracer implements ClassFileTransformer {
             if (check) {
                 checkClass(newClassfileBuffer, readClass.getName());
             }
+
+            // now we can write the class out
+            readClass.writeOut(this.readClassesOutputStream);
 
             //printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
             /*
@@ -492,34 +509,68 @@ public class Tracer implements ClassFileTransformer {
         return nextIndex;
     }
 
-    public synchronized ThreadTracer getThreadTracer(final Thread thread) {
-        final ThreadTracer tracer = this.threadTracers.get(thread);
+    public ThreadTracer getThreadTracer() {
+        final Thread currentThread = Thread.currentThread();
+        ThreadTracer tracer = this.threadTracers.get(currentThread);
         if (tracer != null)
             return tracer;
-        final ThreadTracer newTracer = new ThreadTracer(thread,
-                Tracer.this.traceSequenceTypes, this);
-        this.threadTracers.put(thread, newTracer);
-        if (!this.tracingStarted || this.tracingReady)
+        synchronized (this.threadTracers) {
+            // check if it's present now...
+            tracer = this.threadTracers.get(currentThread);
+            if (tracer != null)
+                return tracer;
+            // if not, create a new ThreadTracer
+            final ThreadTracer newTracer = new ThreadTracer(currentThread,
+                    this.traceSequenceTypes, this);
+            // we have to pause it, because put uses classes in the java api
             newTracer.pauseTracing();
-        if (!this.tracingReady)
-            this.allThreadTracers.add(newTracer);
-        return newTracer;
+            try {
+                final ThreadTracer oldTracer = this.threadTracers.put(currentThread, newTracer);
+                if (this.readyThreadTracers.size() > 0) {
+                    synchronized (this.readyThreadTracers) {
+                        for (final ThreadTracer t: this.readyThreadTracers) {
+                            try {
+                                t.writeOut(this.threadTracersOutputStream);
+                            } catch (final IOException e) {
+                                error(e);
+                            }
+                        }
+                        this.readyThreadTracers.clear();
+                    }
+                    System.out.println("threadTracers.size(): " + this.threadTracers.size()
+                            + "; threads: " + Thread.activeCount());
+                }
+
+                assert oldTracer == null;
+                if (!this.tracingStarted || this.tracingReady)
+                    newTracer.pauseTracing();
+                return newTracer;
+            } finally {
+                newTracer.unpauseTracing();
+            }
+        }
     }
 
     public void finish() throws IOException {
         if (this.tracingReady)
             return;
-        this.tracingReady = true;
-        final ThreadTracer[] tmp = this.allThreadTracers.toArray(new ThreadTracer[this.allThreadTracers.size()]);
-        for (final ThreadTracer t: tmp)
-            t.finish();
-        this.mainOutStream.writeInt(this.readClasses.size());
-        for (final ReadClass rc: this.readClasses)
-            rc.writeOut(this.mainOutStream);
-        this.mainOutStream.writeInt(tmp.length);
-        for (final ThreadTracer t: tmp)
-            t.writeOut(this.mainOutStream);
-        this.mainOutStream.close();
+        synchronized (this.threadTracers) {
+            this.tracingReady = true;
+            synchronized (this.readyThreadTracers) {
+                for (final ThreadTracer t: this.readyThreadTracers)
+                    t.writeOut(this.threadTracersOutputStream);
+                this.readyThreadTracers.clear();
+            }
+            final Iterator<ThreadTracer> it = this.threadTracers.values().iterator();
+            while (it.hasNext()) {
+                final ThreadTracer t = it.next();
+                it.remove();
+                t.writeOut(this.threadTracersOutputStream);
+            }
+        }
+        assert this.readyThreadTracers.size() == 0;
+        this.threadTracersOutputStream.close();
+        this.readClassesOutputStream.close();
         this.file.close();
     }
 

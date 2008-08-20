@@ -71,11 +71,9 @@ public class PauseTracingInstrumenter implements Opcodes {
         insnIt.add(new MethodInsnNode(INVOKESTATIC,
                 Type.getInternalName(Tracer.class), "getInstance",
                 "()L"+Type.getInternalName(Tracer.class)+";"));
-        insnIt.add(new MethodInsnNode(INVOKESTATIC,
-                "java/lang/Thread", "currentThread", "()Ljava/lang/Thread;"));
         insnIt.add(new MethodInsnNode(INVOKEVIRTUAL,
                 Type.getInternalName(Tracer.class), "getThreadTracer",
-                "(Ljava/lang/Thread;)L"+Type.getInternalName(ThreadTracer.class)+";"));
+                "()L"+Type.getInternalName(ThreadTracer.class)+";"));
         insnIt.add(new InsnNode(DUP));
         insnIt.add(new VarInsnNode(ASTORE, tracerLocalVarIndex));
         insnIt.add(new MethodInsnNode(INVOKEVIRTUAL,

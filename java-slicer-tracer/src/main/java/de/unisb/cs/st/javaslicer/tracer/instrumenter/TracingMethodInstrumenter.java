@@ -173,10 +173,8 @@ public class TracingMethodInstrumenter implements Opcodes {
         // in the old method, initialize the new local variable for the threadtracer
         this.instructionIterator.add(new MethodInsnNode(INVOKESTATIC, Type.getInternalName(Tracer.class),
                 "getInstance", "()L"+Type.getInternalName(Tracer.class)+";"));
-        this.instructionIterator.add(new MethodInsnNode(INVOKESTATIC, "java/lang/Thread", "currentThread",
-                "()Ljava/lang/Thread;"));
         this.instructionIterator.add(new MethodInsnNode(INVOKEVIRTUAL, Type.getInternalName(Tracer.class),
-                "getThreadTracer", "(Ljava/lang/Thread;)L"+Type.getInternalName(ThreadTracer.class)+";"));
+                "getThreadTracer", "()L"+Type.getInternalName(ThreadTracer.class)+";"));
         this.instructionIterator.add(new InsnNode(DUP));
         this.instructionIterator.add(new VarInsnNode(ASTORE, this.tracerLocalVarIndex));
 
@@ -337,10 +335,10 @@ public class TracingMethodInstrumenter implements Opcodes {
                         tcb.type));
             }
 
-            // skip the first 7 instructions, replace them with these:
+            // skip the first 6 instructions, replace them with these:
             newMethod.instructions.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
             newMethod.instructions.add(new JumpInsnNode(IFNULL, newMethodLabels.get(noTracingLabel)));
-            final Iterator<AbstractInsnNode> oldInsnIt = method.instructions.iterator(7);
+            final Iterator<AbstractInsnNode> oldInsnIt = method.instructions.iterator(6);
             // and add all the other instructions
             while (oldInsnIt.hasNext()) {
                 final AbstractInsnNode insn = oldInsnIt.next();

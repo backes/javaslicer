@@ -15,8 +15,8 @@ public class MultiplexedFileWriter {
         private int depth = 0;
         protected long dataLength = 0;
         protected int startBlockAddr = 0; // is set on close()
-        private final byte[][] dataBlocks = new byte[MultiplexedFileWriter.this.maxDepth+1][];
-        private final int[] full = new int[MultiplexedFileWriter.this.maxDepth+1];
+        private byte[][] dataBlocks = new byte[MultiplexedFileWriter.this.maxDepth+1][];
+        private int[] full = new int[MultiplexedFileWriter.this.maxDepth+1];
         private volatile boolean streamClosed = false;
 
         protected MultiplexOutputStream(final int id) {
@@ -144,6 +144,10 @@ public class MultiplexedFileWriter {
                     throw new RuntimeException("writeBack in close() should always succeed");
 
             this.startBlockAddr = writeBlock(this.dataBlocks[0]);
+
+            // now we can release most buffers
+            this.dataBlocks = null;
+            this.full = null;
 
             // after all this work, store the information about this stream to the streamDefs stream
             if (this != MultiplexedFileWriter.this.streamDefs) {
