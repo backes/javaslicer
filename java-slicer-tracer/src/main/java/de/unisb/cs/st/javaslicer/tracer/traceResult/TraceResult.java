@@ -4,6 +4,7 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -15,7 +16,7 @@ import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;
 
 public class TraceResult {
 
-    public static class ThreadId {
+    public static class ThreadId implements Comparable<ThreadId> {
 
         private final long threadId;
         private final String threadName;
@@ -38,6 +39,17 @@ public class TraceResult {
             return this.threadId + ": " + this.threadName;
         }
 
+        @Override
+        public int compareTo(final ThreadId other) {
+            if (this.threadId == other.threadId) {
+                final int nameCmp = this.threadName.compareTo(other.threadName);
+                if (nameCmp == 0 && this != other)
+                    return System.identityHashCode(this) - System.identityHashCode(other);
+                return nameCmp;
+            }
+            return Long.signum(this.threadId - other.threadId);
+        }
+
     }
 
     private final List<ReadClass> readClasses;
@@ -51,22 +63,20 @@ public class TraceResult {
 
     public static TraceResult readFrom(final File filename) throws IOException {
         final MultiplexedFileReader file = new MultiplexedFileReader(filename);
-        if (file.getNoStreams() < 1)
+        if (file.getNoStreams() < 2)
             throw new IOException("corrupted data");
-        final DataInputStream mainInStream = new DataInputStream(file.getInputStream(0));
-        int numClasses = mainInStream.readInt();
-        final List<ReadClass> readClasses = new ArrayList<ReadClass>(numClasses);
-        while (numClasses-- > 0)
-            readClasses.add(ReadClass.readFrom(mainInStream));
+        final DataInputStream readClassesInputStream = new DataInputStream(file.getInputStream(0));
+        final ArrayList<ReadClass> readClasses = new ArrayList<ReadClass>();
+        while (readClassesInputStream.available() > 0)
+            readClasses.add(ReadClass.readFrom(readClassesInputStream));
+        readClasses.trimToSize();
 
-        int numThreadTracers = mainInStream.readInt();
-        final List<ThreadTraceResult> threadTraces = new ArrayList<ThreadTraceResult>(numThreadTracers);
+        final DataInputStream threadTracersInputStream = new DataInputStream(file.getInputStream(1));
+        final ArrayList<ThreadTraceResult> threadTraces = new ArrayList<ThreadTraceResult>();
         final TraceResult traceResult = new TraceResult(readClasses, threadTraces);
-        while (numThreadTracers-- > 0)
-            threadTraces.add(ThreadTraceResult.readFrom(mainInStream, traceResult, file));
-
-        if (mainInStream.read() != -1)
-            throw new IOException("Corrupt data");
+        while (threadTracersInputStream.available() > 0)
+            threadTraces.add(ThreadTraceResult.readFrom(threadTracersInputStream, traceResult, file));
+        threadTraces.trimToSize();
 
         return traceResult;
     }
@@ -78,12 +88,20 @@ public class TraceResult {
         return null;
     }
 
+    /**
+     * Returns a sorted, not modifiable List of all threads that are represented
+     * by traces in this TraceResult.
+     *
+     * @return the sorted list of {@link ThreadId}s.
+     */
     public List<ThreadId> getThreads() {
-        final List<ThreadId> list = new ArrayList<ThreadId>(this.threadTraces.size());
-        for (final ThreadTraceResult t: this.threadTraces) {
-            list.add(new ThreadId(t.getThreadId(), t.getThreadName()));
+        final ThreadId[] list = new ThreadId[this.threadTraces.size()];
+        for (int i = 0; i < this.threadTraces.size(); ++i) {
+            final ThreadTraceResult tt = this.threadTraces.get(i);
+            list[i] = new ThreadId(tt.getThreadId(), tt.getThreadName());
         }
-        return list;
+        Arrays.sort(list);
+        return Arrays.asList(list);
     }
 
     public List<ReadClass> getReadClasses() {
@@ -124,15 +142,22 @@ public class TraceResult {
         ThreadId tracing = null;
         for (final ThreadId t: threads) {
             if (threadToTrace == null) {
-                if (tracing == null)
+                if ("main".equals(t.getThreadName()) && (tracing == null || t.getThreadId() < tracing.getThreadId()))
                     tracing = t;
-            } else if (t.getThreadId() == threadToTrace.longValue())
+            } else if (t.getThreadId() == threadToTrace.longValue()) {
                 tracing = t;
+            }
             System.out.format("%15d: %s%n", t.getThreadId(), t.getThreadName());
         }
         System.out.println();
 
-        System.out.println(threadToTrace == null ? "Selecting first thread:" : "You selected:");
+        if (tracing == null) {
+            System.out.println(threadToTrace == null ? "Couldn't find a main thread."
+                    : "The thread you selected was not found.");
+            System.exit(-1);
+        }
+
+        System.out.println(threadToTrace == null ? "Selected:" : "You selected:");
         System.out.format("%15d: %s%n", tracing.getThreadId(), tracing.getThreadName());
 
         final String format = "%8d: %-100s -> %7d %s%n";

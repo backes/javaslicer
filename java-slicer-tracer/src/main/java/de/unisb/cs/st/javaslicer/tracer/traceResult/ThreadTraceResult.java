@@ -143,17 +143,17 @@ public class ThreadTraceResult {
             this.integerSequenceBackwardIterators = new IntegerMap<Iterator<Integer>>();
             this.longSequenceBackwardIterators = new IntegerMap<Iterator<Long>>();
             this.instructionNextOccurenceNumber = new IntegerToLongMap();
-            try {
-                this.nextInstruction = getNextInstruction(null, ThreadTraceResult.this.lastInstructionIndex);
-            } catch (final EOFException e) {
-                this.nextInstruction = null;
-            }
             if (ThreadTraceResult.this.traceResult.debug) {
                 try {
                     this.debugFileWriter = new PrintWriter(new FileOutputStream(new File("iteration_debug.log")));
                 } catch (final FileNotFoundException e) {
                     e.printStackTrace();
                 }
+            }
+            try {
+                this.nextInstruction = getNextInstruction(null, ThreadTraceResult.this.lastInstructionIndex);
+            } catch (final EOFException e) {
+                this.nextInstruction = null;
             }
         }
 

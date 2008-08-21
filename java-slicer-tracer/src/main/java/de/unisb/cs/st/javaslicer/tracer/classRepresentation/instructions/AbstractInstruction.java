@@ -122,7 +122,7 @@ public abstract class AbstractInstruction implements Instruction {
             final Object o = readFromMethod.invoke(null, in, methodInfo, opcode, index, lineNumber);
             if (o instanceof AbstractInstruction)
                 return (AbstractInstruction)o;
-            throw new RuntimeException("readFrom does not return Instruction");
+            throw new RuntimeException("readFrom does not return AbstractInstruction");
         } catch (final SecurityException e) {
             throw new RuntimeException(e);
         } catch (final NoSuchMethodException e) {
@@ -132,6 +132,8 @@ public abstract class AbstractInstruction implements Instruction {
         } catch (final IllegalAccessException e) {
             throw new RuntimeException(e);
         } catch (final InvocationTargetException e) {
+            if (e.getCause() instanceof IOException)
+                throw (IOException)e.getCause();
             throw new RuntimeException(e);
         }
 

@@ -1,6 +1,5 @@
 package de.unisb.cs.st.javaslicer.tracer.util;
 
-import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -144,7 +143,7 @@ public class MultiplexedFileReader {
         }
 
         private void moveToNextBlock() throws IOException {
-            final long read = pos();
+            final long read = getPosition();
             final long remaining = this.dataLength - read;
             if (remaining <= 0)
                 return;
@@ -166,11 +165,16 @@ public class MultiplexedFileReader {
             this.pos[level] = 0;
         }
 
-        public long pos() {
+        public long getPosition() {
             long read = this.pos[0];
             for (int i = 1; i <= this.depth; ++i)
                 read = MultiplexedFileReader.this.blockSize/4*read + this.pos[i];
             return read;
+        }
+
+        @Override
+        public int available() throws IOException {
+            return (int) Math.min(Integer.MAX_VALUE, this.dataLength - getPosition());
         }
 
         public int getId() {
@@ -213,7 +217,7 @@ public class MultiplexedFileReader {
 
         // read the stream defs
         final MultiplexInputStream streamDefStream = new MultiplexInputStream(-1, streamDefsStartingBlock, streamDefsLength);
-        final DataInputStream str = new DataInputStream(streamDefStream);
+        final MyDataInputStream str = new MyDataInputStream(streamDefStream);
         int numStreams = (int) (streamDefStream.getDataLength()/16);
         if (numStreams < 1 || (long)numStreams*16 != streamDefStream.getDataLength())
             throw new IOException("corrupted data");

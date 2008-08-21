@@ -1,176 +1,23 @@
 package de.unisb.cs.st.javaslicer.tracer;
 
-import java.io.BufferedWriter;
-import java.io.DataOutput;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.List;
-import java.util.Map.Entry;
 
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.IntegerTraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectTraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.Type;
-import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
+public interface ThreadTracer {
 
-public class ThreadTracer {
+    void traceInt(final int value, final int traceSequenceIndex);
 
-    private final long threadId;
-    private final String threadName;
-    private final List<Type> threadSequenceTypes;
+    void traceObject(final Object obj, final int traceSequenceIndex);
 
-    // this is the variable modified during runtime of the instrumented program
-    private int lastInstructionIndex = -1;
+    void traceLastInstructionIndex(final int traceSequenceIndex);
 
-    private final IntegerMap<TraceSequence> sequences = new IntegerMap<TraceSequence>();
+    void passInstruction(final int instructionIndex);
 
-    private final Tracer tracer;
-    private int paused = 0;
+    void finish() throws IOException;
 
-    protected static PrintWriter debugFile;
-    static {
-        if (Tracer.debug) {
-            try {
-                debugFile = new PrintWriter(new BufferedWriter(new FileWriter(new File("debug.log"))));
-                Runtime.getRuntime().addShutdownHook(new Thread() {
-                    @Override
-                    public void run() {
-                        debugFile.close();
-                    }
-                });
-            } catch (final IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
+    void pauseTracing();
 
-    public ThreadTracer(final Thread thread,
-            final List<Type> threadSequenceTypes, final Tracer tracer) {
-        this.threadId = thread.getId();
-        this.threadName = thread.getName();
-        this.threadSequenceTypes = threadSequenceTypes;
-        this.tracer = tracer;
-    }
+    void unpauseTracing();
 
-    public void traceInt(final int value, final int traceSequenceIndex) {
-        if (this.paused > 0)
-            return;
-        ++this.paused;
-
-        TraceSequence seq = this.sequences.get(traceSequenceIndex);
-        try {
-            if (seq == null) {
-                seq = Tracer.seqFactory.createTraceSequence(traceSequenceIndex,
-                        this.threadSequenceTypes.get(traceSequenceIndex), this.tracer);
-                this.sequences.put(traceSequenceIndex, seq);
-            }
-            assert seq instanceof IntegerTraceSequence;
-
-            ((IntegerTraceSequence) seq).trace(value);
-        } catch (final IOException e) {
-            Tracer.error(e);
-            System.err.println("Error writing the trace: " + e.getMessage());
-            System.exit(-1);
-        }
-
-        --this.paused;
-    }
-
-    public void traceObject(final Object obj, final int traceSequenceIndex) {
-        if (this.paused > 0)
-            return;
-        this.paused++;
-
-        TraceSequence seq = this.sequences.get(traceSequenceIndex);
-        try {
-            if (seq == null) {
-                seq = Tracer.seqFactory.createTraceSequence(traceSequenceIndex,
-                        this.threadSequenceTypes.get(traceSequenceIndex), this.tracer);
-                this.sequences.put(traceSequenceIndex, seq);
-            }
-            assert seq instanceof ObjectTraceSequence;
-
-            ((ObjectTraceSequence) seq).trace(obj);
-        } catch (final IOException e) {
-            Tracer.error(e);
-            System.err.println("Error writing the trace: " + e.getMessage());
-            System.exit(-1);
-        }
-
-        --this.paused;
-    }
-
-    public void traceLastInstructionIndex(final int traceSequenceIndex) {
-        traceInt(this.lastInstructionIndex, traceSequenceIndex);
-    }
-
-    public void passInstruction(final int instructionIndex) {
-        if (this.paused > 0)
-            return;
-
-        if (Tracer.debug && this.threadId == 1) {
-            ++this.paused;
-            debugFile.println(instructionIndex);
-            --this.paused;
-        }
-
-        this.lastInstructionIndex = instructionIndex;
-    }
-
-    public void finish() throws IOException {
-        this.paused++;
-        // wait while our "using thread" still executes a trace* Method
-        boolean wait = true;
-        while (wait) {
-            wait = false;
-            Thread[] allThreads = new Thread[Thread.activeCount()*2];
-            while (Thread.enumerate(allThreads) == allThreads.length)
-                allThreads = new Thread[allThreads.length*2];
-            // search the thread with the correct threadId
-            for (final Thread t: allThreads) {
-                if (t != null && t.getId() == this.threadId) {
-                    final StackTraceElement[] stacktrace = t.getStackTrace();
-                    for (final StackTraceElement elem: stacktrace) {
-                        if (getClass().getName().equals(elem.getClassName())
-                                && elem.getMethodName().startsWith("trace")) {
-                            wait = true;
-                            Thread.yield();
-                            continue;
-                        }
-                    }
-                }
-            }
-        }
-
-        for (final TraceSequence seq: this.sequences.values())
-            seq.finish();
-    }
-
-    public void writeOut(final DataOutput out) throws IOException {
-        finish();
-        out.writeLong(this.threadId);
-        out.writeUTF(this.threadName);
-        out.writeInt(this.sequences.size());
-        for (final Entry<Integer, TraceSequence> seq: this.sequences.entrySet()) {
-            out.writeInt(seq.getKey());
-            seq.getValue().writeOut(out);
-        }
-        out.writeInt(this.lastInstructionIndex);
-    }
-
-    public void pauseTracing() {
-        ++this.paused;
-    }
-
-    public void unpauseTracing() {
-        --this.paused;
-        assert this.paused >= 0: "unpaused more than paused";
-    }
-
-    public boolean isPaused() {
-        return this.paused > 0;
-    }
+    boolean isPaused();
 
 }

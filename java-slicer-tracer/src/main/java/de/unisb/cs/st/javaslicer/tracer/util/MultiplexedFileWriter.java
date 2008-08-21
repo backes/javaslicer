@@ -1,11 +1,15 @@
 package de.unisb.cs.st.javaslicer.tracer.util;
 
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
+import java.util.EnumSet;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import de.unisb.cs.st.javaslicer.tracer.util.ConcurrentReferenceHashMap.Option;
+import de.unisb.cs.st.javaslicer.tracer.util.ConcurrentReferenceHashMap.ReferenceType;
 
 public class MultiplexedFileWriter {
 
@@ -22,6 +26,16 @@ public class MultiplexedFileWriter {
         protected MultiplexOutputStream(final int id) {
             this.id = id;
             this.dataBlocks[0] = new byte[MultiplexedFileWriter.this.blockSize];
+        }
+
+        @Override
+        protected void finalize() throws Throwable {
+            try {
+                close();
+            } catch (final IOException e) {
+                MultiplexedFileWriter.this.exception = e;
+            }
+            super.finalize();
         }
 
         @Override
@@ -174,31 +188,22 @@ public class MultiplexedFileWriter {
 
     private int nextBlockAddr = 0;
 
-    private int nextStreamNr = 0;
+    private final AtomicInteger nextStreamNr = new AtomicInteger(0);
 
     // may be set when an error occurs asynchronously. is thrown on the next
     // operation on this file.
     protected IOException exception = null;
 
     // holds all open streams. they still have to be written out on close()
-    private final Map<MultiplexOutputStream, MultiplexOutputStream> openStreams =
-        new WeakIdentityHashMap<MultiplexOutputStream, MultiplexOutputStream>() {
-            @Override
-            protected void removing(final MultiplexOutputStream value) {
-                try {
-                    value.close();
-                } catch (final IOException e) {
-                    synchronized (MultiplexedFileWriter.this) {
-                        MultiplexedFileWriter.this.exception = e;
-                    }
-                }
-            }
-        };
+    public final Map<MultiplexOutputStream, Object> openStreams =
+        new ConcurrentReferenceHashMap<MultiplexOutputStream, Object>(
+            65535, .75f, 16, ReferenceType.WEAK, ReferenceType.STRONG,
+            EnumSet.of(Option.IDENTITY_COMPARISONS));
 
     private boolean closed = false;
 
     protected final MultiplexOutputStream streamDefs;
-    protected final DataOutputStream streamDefsDataOut;
+    protected final MyDataOutputStream streamDefsDataOut;
 
     protected final int blockSize;
     protected final int maxDepth;
@@ -238,7 +243,7 @@ public class MultiplexedFileWriter {
         this.blockSize = blockSize;
         this.maxDepth = maxDepth;
         this.streamDefs = new MultiplexOutputStream(-1);
-        this.streamDefsDataOut = new DataOutputStream(this.streamDefs);
+        this.streamDefsDataOut = new MyDataOutputStream(this.streamDefs);
     }
 
     /**
@@ -262,18 +267,18 @@ public class MultiplexedFileWriter {
         this(new RandomAccessFile(filename, "rw"), blockSize, maxDepth);
     }
 
-    public synchronized MultiplexOutputStream newOutputStream() {
+    public MultiplexOutputStream newOutputStream() {
         if (this.closed)
             throw new IllegalStateException(getClass().getSimpleName() + " closed");
-        final int streamNr = this.nextStreamNr++;
+        final int streamNr = this.nextStreamNr.getAndIncrement();
         final MultiplexOutputStream newStream = new MultiplexOutputStream(streamNr);
-        this.openStreams.put(newStream, newStream);
+        this.openStreams.put(newStream, this);
         return newStream;
     }
 
-    public synchronized int writeBlock(final byte[] data) throws IOException {
+    protected synchronized int writeBlock(final byte[] data) throws IOException {
         if (this.nextBlockAddr == 0 && this.file.length() > headerSize)
-            throw new IOException("Maximum file size reached");
+            throw new IOException("Maximum file size reached (length: " + this.file.length() + " bytes)");
         this.file.write(data, 0, this.blockSize);
         return this.nextBlockAddr++;
     }

@@ -404,7 +404,7 @@ public class WeakIdentityHashMap<K, V> implements Map<K, V> {
         /**
          * Creates new entry.
          */
-        Entry(final K key, final int hash, final V value, final Entry<K, V> next, final ReferenceQueue<K> queue) {
+        public Entry(final K key, final int hash, final V value, final Entry<K, V> next, final ReferenceQueue<K> queue) {
             super(key, queue);
             this.hash = hash;
             this.value = value;

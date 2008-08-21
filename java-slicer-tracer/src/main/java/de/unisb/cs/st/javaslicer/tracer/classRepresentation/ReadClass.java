@@ -66,7 +66,6 @@ public class ReadClass {
 
     public void writeOut(final DataOutput out) throws IOException {
         out.writeUTF(this.internalClassName);
-        out.writeUTF(this.className);
         out.writeInt(this.instructionNumberStart);
         out.writeInt(this.instructionNumberEnd);
         out.writeInt(this.access);
@@ -79,13 +78,11 @@ public class ReadClass {
 
     public static ReadClass readFrom(final DataInput in) throws IOException {
         final String intName = in.readUTF();
-        final String className = in.readUTF();
         final int instructionNumberStart = in.readInt();
         final int instructionNumberEnd = in.readInt();
         final int access = in.readInt();
         final ReadClass rc = new ReadClass(intName, instructionNumberStart, access);
         rc.setInstructionNumberEnd(instructionNumberEnd);
-        assert rc.className != null && rc.className.equals(className);
         int numMethods = in.readInt();
         rc.methods.ensureCapacity(numMethods);
         while (numMethods-- > 0)

@@ -20,13 +20,13 @@ public class LdcInstruction extends AbstractInstruction {
 
     public LdcInstruction(final ReadMethod readMethod, final Object constant) {
         super(readMethod, Opcodes.LDC);
-        assert constant instanceof Number || constant instanceof String || constant instanceof Type;
+        assert constant instanceof Number || constant instanceof String || constant instanceof org.objectweb.asm.Type;
         this.constant = constant;
     }
 
     private LdcInstruction(final ReadMethod readMethod, final int lineNumber, final Object constant, final int index) {
         super(readMethod, Opcodes.LDC, lineNumber, index);
-        assert constant instanceof Number || constant instanceof String || constant instanceof Type;
+        assert constant instanceof Number || constant instanceof String || constant instanceof org.objectweb.asm.Type;
         this.constant = constant;
     }
 
@@ -57,9 +57,11 @@ public class LdcInstruction extends AbstractInstruction {
         } else if (this.constant instanceof Float) {
             out.writeByte(4);
             out.writeFloat((Float)this.constant);
-        } else if (this.constant instanceof Type) {
+        } else if (this.constant instanceof org.objectweb.asm.Type) {
             out.writeByte(5);
             out.writeUTF(((org.objectweb.asm.Type)this.constant).getDescriptor());
+        } else {
+            throw new RuntimeException("Unknown LDC constant type: " + this.constant.getClass().getName());
         }
     }
 

@@ -76,7 +76,7 @@ public class PauseTracingInstrumenter implements Opcodes {
                 "()L"+Type.getInternalName(ThreadTracer.class)+";"));
         insnIt.add(new InsnNode(DUP));
         insnIt.add(new VarInsnNode(ASTORE, tracerLocalVarIndex));
-        insnIt.add(new MethodInsnNode(INVOKEVIRTUAL,
+        insnIt.add(new MethodInsnNode(INVOKEINTERFACE,
                 Type.getInternalName(ThreadTracer.class), "pauseTracing", "()V"));
         insnIt.add(l0);
 
@@ -88,7 +88,7 @@ public class PauseTracingInstrumenter implements Opcodes {
                 case IRETURN: case LRETURN: case FRETURN: case DRETURN: case ARETURN: case RETURN:
                     insnIt.previous();
                     insnIt.add(new VarInsnNode(ALOAD, tracerLocalVarIndex));
-                    insnIt.add(new MethodInsnNode(INVOKEVIRTUAL,
+                    insnIt.add(new MethodInsnNode(INVOKEINTERFACE,
                             Type.getInternalName(ThreadTracer.class), "unpauseTracing", "()V"));
                     insnIt.next();
                 }
@@ -109,7 +109,7 @@ public class PauseTracingInstrumenter implements Opcodes {
         method.instructions.add(l1);
 
         method.instructions.add(new VarInsnNode(ALOAD, tracerLocalVarIndex));
-        method.instructions.add(new MethodInsnNode(INVOKEVIRTUAL,
+        method.instructions.add(new MethodInsnNode(INVOKEINTERFACE,
                 Type.getInternalName(ThreadTracer.class), "unpauseTracing", "()V"));
         method.instructions.add(new InsnNode(ATHROW));
 

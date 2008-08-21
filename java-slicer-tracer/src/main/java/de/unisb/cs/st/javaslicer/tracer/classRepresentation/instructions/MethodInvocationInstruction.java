@@ -58,14 +58,14 @@ public class MethodInvocationInstruction extends AbstractInstruction {
     public void writeOut(final DataOutput out) throws IOException {
         super.writeOut(out);
         out.writeUTF(this.internalClassName);
-        out.writeUTF(this.methodDesc);
         out.writeUTF(this.methodName);
+        out.writeUTF(this.methodDesc);
     }
 
     public static MethodInvocationInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
         final String internalClassName = in.readUTF();
-        final String methodDesc = in.readUTF();
         final String methodName = in.readUTF();
+        final String methodDesc = in.readUTF();
         return new MethodInvocationInstruction(methodInfo.getMethod(), lineNumber, opcode, internalClassName, methodName, methodDesc, index);
     }
 
