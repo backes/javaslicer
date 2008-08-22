@@ -22,11 +22,9 @@ public class ThreadInstrumenter implements Opcodes {
             System.out.println("instrumenting " + readClass.getName() + " (extend exit method)");
     }
 
-    @SuppressWarnings("unchecked")
     public void transform(final ClassNode classNode) {
-        final ListIterator<MethodNode> methodIt = classNode.methods.listIterator();
-        while (methodIt.hasNext()) {
-            final MethodNode method = methodIt.next();
+        for (final Object methodObj: classNode.methods) {
+            final MethodNode method = (MethodNode) methodObj;
             if ("exit".equals(method.name) && "()V".equals(method.desc) &&
                     (method.access & (ACC_NATIVE | ACC_ABSTRACT | ACC_STATIC)) == 0) {
                 transformExitMethod(method);

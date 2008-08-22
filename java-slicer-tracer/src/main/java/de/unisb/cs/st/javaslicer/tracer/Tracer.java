@@ -37,12 +37,14 @@ import org.objectweb.asm.util.TraceMethodVisitor;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
+import de.unisb.cs.st.javaslicer.tracer.instrumenter.IdentifiableInstrumenter;
 import de.unisb.cs.st.javaslicer.tracer.instrumenter.JSRInliner;
 import de.unisb.cs.st.javaslicer.tracer.instrumenter.PauseTracingInstrumenter;
 import de.unisb.cs.st.javaslicer.tracer.instrumenter.ThreadInstrumenter;
 import de.unisb.cs.st.javaslicer.tracer.instrumenter.TracingClassInstrumenter;
 import de.unisb.cs.st.javaslicer.tracer.instrumenter.TracingMethodInstrumenter;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectIdentifier;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.uncompressed.UncompressedTraceSequenceFactory;
@@ -252,6 +254,9 @@ public class Tracer implements ClassFileTransformer {
             }
         }
 
+        // call a method in ObjectIdentifier to ensure that the class is initialized
+        ObjectIdentifier.instance.getObjectId(this);
+
         this.notRedefinedClasses = new HashSet<String>();
         for (final Class<?> class1: additionalClassesToRetransform)
             this.notRedefinedClasses.add(class1.getName());
@@ -261,7 +266,7 @@ public class Tracer implements ClassFileTransformer {
         inst.addTransformer(this, true);
 
         if (retransformClasses) {
-            final ArrayList<Class<?>> classesToTransform = new ArrayList<Class<?>>();
+            final ArrayList<Class<?>> classesToRetransform = new ArrayList<Class<?>>();
             for (final Class<?> class1: inst.getAllLoadedClasses()) {
                 final boolean isModifiable = inst.isModifiableClass(class1);
                 if (debug && !isModifiable && !class1.isPrimitive() && !class1.isArray())
@@ -269,31 +274,26 @@ public class Tracer implements ClassFileTransformer {
                 boolean modify = isModifiable && !class1.isInterface();
                 modify &= !class1.getName().startsWith("de.unisb.cs.st.javaslicer.tracer");
                 if (modify)
-                    classesToTransform.add(class1);
+                    classesToRetransform.add(class1);
             }
             for (final Class<?> class1: additionalClassesToRetransform) {
-                if (!classesToTransform.contains(class1)) {
-                    classesToTransform.add(class1);
+                if (!classesToRetransform.contains(class1)) {
+                    classesToRetransform.add(class1);
                 }
             }
 
             if (debug) {
-                System.out.println("classes to transform:");
-                System.out.println("############################################");
-                System.out.println("############################################");
-                System.out.println("############################################");
-                for (final Class<?> c1 : classesToTransform) {
+                System.out.println("classes to retransform (" + classesToRetransform.size() + "):");
+                for (final Class<?> c1 : classesToRetransform) {
                     System.out.println(c1);
                 }
-                System.out.println("############################################");
-                System.out.println("############################################");
                 System.out.println("############################################");
             }
 
             try {
-                inst.retransformClasses(classesToTransform.toArray(new Class<?>[classesToTransform.size()]));
+                inst.retransformClasses(classesToRetransform.toArray(new Class<?>[classesToRetransform.size()]));
                 if (debug)
-                    System.out.println("Instrumentation ready");
+                    System.out.println("Initial instrumentation ready");
             } catch (final UnmodifiableClassException e) {
                 throw new TracerException(e);
             }
@@ -328,7 +328,8 @@ public class Tracer implements ClassFileTransformer {
         tt.pauseTracing();
 
         try {
-            if (Type.getObjectType(className).getClassName().startsWith(Tracer.class.getPackage().getName()))
+            final String javaClassName = Type.getObjectType(className).getClassName();
+            if (javaClassName.startsWith(Tracer.class.getPackage().getName()))
                 return null;
 
             //////////////////////////////////////////////////////////////////
@@ -340,29 +341,33 @@ public class Tracer implements ClassFileTransformer {
                 return null;
             */
 
-            if (Type.getObjectType(className).getClassName().equals("java.lang.System"))
+            if (javaClassName.equals("java.lang.System"))
                 return null;
-            if (Type.getObjectType(className).getClassName().equals("java.lang.VerifyError"))
+            if (javaClassName.equals("java.lang.VerifyError")
+                    || javaClassName.equals("java.lang.ClassCircularityError")
+                    || javaClassName.equals("java.lang.LinkageError")
+                    || javaClassName.equals("java.lang.Error")
+                    || javaClassName.equals("java.lang.Throwable"))
                 return null;
 
-            if (Type.getObjectType(className).getClassName().startsWith("java.util.Collections"))
+            if (javaClassName.startsWith("java.util.Collections"))
                 return null;
 
-            if (Type.getObjectType(className).getClassName().startsWith("java.lang.Thread")
-                    && !"java.lang.Thread".equals(Type.getObjectType(className).getClassName()))
+            if (javaClassName.startsWith("java.lang.Thread")
+                    && !"java.lang.Thread".equals(javaClassName))
                 return null;
             // because of Thread.getName()
-            if (Type.getObjectType(className).getClassName().equals("java.lang.String"))
+            if (javaClassName.equals("java.lang.String"))
                 return null;
-            if (Type.getObjectType(className).getClassName().equals("java.util.Arrays"))
+            if (javaClassName.equals("java.util.Arrays"))
                 return null;
-            if (Type.getObjectType(className).getClassName().equals("java.lang.Math"))
+            if (javaClassName.equals("java.lang.Math"))
                 return null;
 
             // Object
-            if (Type.getObjectType(className).getClassName().equals("java.lang.Object"))
+            if (javaClassName.equals("java.lang.Object"))
                 return null;
-            if (Type.getObjectType(className).getClassName().startsWith("java.lang.ref."))
+            if (javaClassName.startsWith("java.lang.ref."))
                 return null;
 
             final ClassReader reader = new ClassReader(classfileBuffer);
@@ -382,11 +387,13 @@ public class Tracer implements ClassFileTransformer {
 
             if ("java/lang/Thread".equals(className)) {
                 new ThreadInstrumenter(readClass, this).transform(classNode);
-            } else if (Arrays.asList(this.pauseTracingClasses).contains(Type.getObjectType(className).getClassName())) {
+            } else if (Arrays.asList(this.pauseTracingClasses).contains(javaClassName)) {
                 new PauseTracingInstrumenter(readClass, this).transform(classNode);
             } else {
                 new TracingClassInstrumenter(readClass, this).transform(classNode);
             }
+
+            new IdentifiableInstrumenter(readClass, this).transform(classNode);
 
             classNode.accept(computeFrames ? new JSRInliner(output) : output);
 
@@ -406,6 +413,8 @@ public class Tracer implements ClassFileTransformer {
             if (className.equals("java/lang/ClassLoader"))
                 printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
             if (className.equals("java/util/zip/ZipFile"))
+                printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
+            if (className.endsWith("line/Main"))
                 printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
             */
 
@@ -526,7 +535,6 @@ public class Tracer implements ClassFileTransformer {
             tracer = this.threadTracers.get(currentThread);
             if (tracer != null)
                 return tracer;
-            // if not, create a new ThreadTracer
             final ThreadTracer newTracer = this.tracingReady ? NullThreadTracer.instance
                     : new TracingThreadTracer(currentThread,
                             this.traceSequenceTypes, this);
@@ -619,6 +627,16 @@ public class Tracer implements ClassFileTransformer {
         }
     }
 
+    /**
+     * Checks whether the class given by the fully qualified java class name has been
+     * redefined by the instrumenter or not.
+     * The classes that couldn't get redefined are those already loaded by the vm when
+     * the agent's premain method was executed.
+     *
+     * @param className the fully qualified classname to check
+     * @return true if the class was redefined, false if not
+     */
+    // hmm, redefined is the wrong word here...
     public boolean wasRedefined(final String className) {
         return !this.notRedefinedClasses.contains(className);
     }
