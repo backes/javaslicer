@@ -1,7 +1,9 @@
 package de.unisb.cs.st.javaslicer.tracer.traceSequences;
 
 import java.util.EnumSet;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import de.unisb.cs.st.javaslicer.tracer.util.ConcurrentReferenceHashMap;
 
@@ -13,7 +15,9 @@ public class ObjectIdentifier {
         new ConcurrentReferenceHashMap<Object, Long>(65536, 0.75f, 16, ConcurrentReferenceHashMap.ReferenceType.WEAK,
                 ConcurrentReferenceHashMap.ReferenceType.STRONG, EnumSet.of(ConcurrentReferenceHashMap.Option.IDENTITY_COMPARISONS));
 
-    private long nextId = 1;
+    private final ConcurrentLinkedQueue<Long> freeIds = new ConcurrentLinkedQueue<Long>();
+
+    private final AtomicLong nextId = new AtomicLong(1);
 
     private ObjectIdentifier() {
         // private constructor ==> singleton
@@ -21,22 +25,22 @@ public class ObjectIdentifier {
 
     public long getObjectId(final Object obj) {
         final Long id = this.objectMap.get(obj);
-        return id == null ? getIdUnderLock(obj) : id;
+        return id == null ? getNewId(obj) : id;
     }
 
-    // TODO try non-blocking synchronization
-    private synchronized long getIdUnderLock(final Object obj) {
-        // re-try to get id from map
-        final Long id = this.objectMap.get(obj);
-        if (id != null)
-            return id;
+    private long getNewId(final Object obj) {
+        Long newId = this.freeIds.poll();
+        if (newId == null) {
+            newId = this.nextId.getAndIncrement();
+            if (newId.longValue() == 0)
+                throw new RuntimeException("long overflow in object ids");
+        }
+        final Long oldId = this.objectMap.putIfAbsent(obj, newId);
+        if (oldId == null)
+            return newId;
 
-        final long l = this.nextId++;
-        if (l == 0)
-            throw new RuntimeException("long overflow in object ids");
-        if (this.objectMap.put(obj, l) != null)
-            throw new AssertionError("illegal non-synchronized map modification");
-        return l;
+        this.freeIds.add(newId);
+        return oldId;
     }
 
 }
