@@ -140,22 +140,28 @@ public class MultiplexedFileWriter {
 
             this.dataLength += this.full[this.depth];
 
-            // write out procedure:
-            // 1) if depth is > 0 and level 0 is full, increase the depth
-            // 2) write back all levels that are full, except the deepest one, starting from 1 (upwards)
-            // 3) write back all levels (downwards), starting with the deepest level, ending on 1
-            // 4) write back level 0 (manually) and store block nr in startBlockAddr
+            if (this.depth > 0) {
+                if (this.full[0] == MultiplexedFileWriter.this.blockSize)
+                    increaseDepth();
 
-            if (this.depth > 0 && this.full[0] == MultiplexedFileWriter.this.blockSize)
-                increaseDepth();
+                outer:
+                while (true) {
+                    for (int i = 1; i < this.depth; ++i) {
+                        if (this.full[i] == MultiplexedFileWriter.this.blockSize) {
+                            if (!writeBack(i))
+                                throw new RuntimeException("writeBack in close() should always succeed");
+                            if (this.full[0] == MultiplexedFileWriter.this.blockSize)
+                                increaseDepth();
+                            continue outer;
+                        }
+                    }
+                    break;
+                }
 
-            for (int i = 1; i < this.depth; ++i)
-                if (this.full[i] == MultiplexedFileWriter.this.blockSize)
+                for (int i = this.depth; i > 0; --i)
                     if (!writeBack(i))
                         throw new RuntimeException("writeBack in close() should always succeed");
-            for (int i = this.depth; i > 0; --i)
-                if (!writeBack(i))
-                    throw new RuntimeException("writeBack in close() should always succeed");
+            }
 
             this.startBlockAddr = writeBlock(this.dataBlocks[0]);
 
