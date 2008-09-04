@@ -277,7 +277,12 @@ public class Tracer implements ClassFileTransformer {
                     classesToRetransform.add(class1);
             }
             for (final Class<?> class1: additionalClassesToRetransform) {
-                if (!classesToRetransform.contains(class1)) {
+                final boolean isModifiable = inst.isModifiableClass(class1);
+                if (debug && !isModifiable && !class1.isPrimitive() && !class1.isArray())
+                    System.out.println("not modifiable: " + class1);
+                boolean modify = isModifiable && !class1.isInterface();
+                modify &= !class1.getName().startsWith("de.unisb.cs.st.javaslicer.tracer");
+                if (modify && !classesToRetransform.contains(class1)) {
                     classesToRetransform.add(class1);
                 }
             }

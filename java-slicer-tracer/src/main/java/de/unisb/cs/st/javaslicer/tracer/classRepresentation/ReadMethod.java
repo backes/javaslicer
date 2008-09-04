@@ -43,6 +43,8 @@ public class ReadMethod {
     private final String desc;
     private final int instructionNumberStart;
     private int instructionNumberEnd;
+    private LabelMarker methodEntryLabel;
+    private LabelMarker methodLeaveLabel;
 
     public ReadMethod(final ReadClass readClass, final int access, final String name, final String desc, final int instructionNumberStart) {
         this.readClass = readClass;
@@ -95,6 +97,22 @@ public class ReadMethod {
         this.instructionNumberEnd = instructionNumberEnd;
     }
 
+    public LabelMarker getMethodEntryLabel() {
+        return this.methodEntryLabel;
+    }
+
+    public void setMethodEntryLabel(final LabelMarker methodEntryLabel) {
+        this.methodEntryLabel = methodEntryLabel;
+    }
+
+    public LabelMarker getMethodLeaveLabel() {
+        return this.methodLeaveLabel;
+    }
+
+    public void setMethodLeaveLabel(final LabelMarker methodLeaveLabel) {
+        this.methodLeaveLabel = methodLeaveLabel;
+    }
+
     public void writeOut(final DataOutput out) throws IOException {
         out.writeInt(this.access);
         out.writeUTF(this.name);
@@ -108,6 +126,13 @@ public class ReadMethod {
         for (final Instruction instr: this.instructions)
             if (!(instr instanceof LabelMarker))
                 instr.writeOut(out);
+        if (this.methodEntryLabel != null && this.methodLeaveLabel != null) {
+            out.writeBoolean(true);
+            this.methodEntryLabel.writeOut(out);
+            this.methodLeaveLabel.writeOut(out);
+        } else {
+            out.writeBoolean(false);
+        }
     }
 
     public static ReadMethod readFrom(final DataInput in, final ReadClass readClass) throws IOException {
@@ -142,6 +167,22 @@ public class ReadMethod {
         }
         rm.instructions.addAll(labels);
         rm.instructions.trimToSize();
+
+        final boolean hasEntryAndLeaveLabels = in.readBoolean();
+
+        if (hasEntryAndLeaveLabels) {
+            final AbstractInstruction methodEntryLabel = AbstractInstruction.readFrom(in, mri);
+            if (methodEntryLabel instanceof LabelMarker)
+                rm.setMethodEntryLabel((LabelMarker) methodEntryLabel);
+            else
+                throw new IOException("corrupted data");
+
+            final AbstractInstruction methodLeaveLabel = AbstractInstruction.readFrom(in, mri);
+            if (methodLeaveLabel instanceof LabelMarker)
+                rm.setMethodLeaveLabel((LabelMarker) methodLeaveLabel);
+            else
+                throw new IOException("corrupted data");
+        }
 
         return rm;
     }

@@ -3,10 +3,12 @@ package de.unisb.cs.st.javaslicer.tracer.instrumenter;
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.Map.Entry;
 
 import org.apache.commons.collections.Factory;
@@ -69,6 +71,12 @@ public class TracingMethodInstrumenter implements Opcodes {
         public FixedInstructionIterator(final InsnList insnList) {
             this.insnList = insnList;
             this.iterator = insnList.iterator();
+        }
+
+        @SuppressWarnings("unchecked")
+        public FixedInstructionIterator(final InsnList insnList, final int index) {
+            this.insnList = insnList;
+            this.iterator = insnList.iterator(index);
         }
 
         @SuppressWarnings("unchecked")
@@ -140,12 +148,14 @@ public class TracingMethodInstrumenter implements Opcodes {
     private static int statsMethods = 0;
     private static int statsInstructions = 0;
     private static int statsLabelsStd = 0;
+    private static int statsLabelsJumpTargets = 0;
     private static int statsLabelsAdditional = 0;
     private static int statsArrayStore = 0;
     private static int statsArrayLoad = 0;
     private static int statsGetField = 0;
     private static int statsPutField = 0;
     private ListIterator<AbstractInsnNode> instructionIterator;
+    private Set<LabelNode> jumpTargetLabels;
 
     public TracingMethodInstrumenter(final Tracer tracer, final ReadMethod readMethod, final ClassNode classNode) {
         this.tracer = tracer;
@@ -168,6 +178,9 @@ public class TracingMethodInstrumenter implements Opcodes {
         // do not modify abstract or native methods
         if ((method.access & ACC_ABSTRACT) != 0 || (method.access & ACC_NATIVE) != 0)
             return;
+
+        // check out what labels are jump targets (only these have to be traced)
+        this.jumpTargetLabels = getJumpTargetLabels(method);
 
         this.instructionIterator = new FixedInstructionIterator(method.instructions);
         // in the old method, initialize the new local variable for the threadtracer
@@ -212,26 +225,16 @@ public class TracingMethodInstrumenter implements Opcodes {
                 ++localVar.index;
         }
 
-        // each method must start with a label:
-        AbstractInsnNode next = null;
-        if (this.instructionIterator.hasNext()) {
-            next = this.instructionIterator.next();
-            this.instructionIterator.previous();
-        }
-        boolean startLabelThere = false;
-        while (next != null) {
-            if (next instanceof LabelNode) {
-                startLabelThere = true;
-                break;
-            }
-            if (next instanceof FrameNode || next instanceof LineNumberNode)
-                next = next.getNext();
-            else
-                break;
-        }
-        if (!startLabelThere)
-            traceLabel(null);
+        // each method must start with a (dedicated) label:
+        assert this.readMethod.getInstructions().isEmpty();
+        traceLabel(null);
+        assert this.readMethod.getInstructions().size() == 1
+            && this.readMethod.getInstructions().get(0) instanceof LabelMarker;
+        this.readMethod.setMethodEntryLabel((LabelMarker) this.readMethod.getInstructions().get(0));
 
+        // needed later:
+        final LabelNode l0 = new LabelNode();
+        this.instructionIterator.add(l0);
 
         // then, visit the instructions that where in the method before
         while (this.instructionIterator.hasNext()) {
@@ -288,6 +291,20 @@ public class TracingMethodInstrumenter implements Opcodes {
             oldInstructions.add(insnNode.clone(labelCopies));
         }
 
+        final LabelNode l1 = new LabelNode();
+        this.instructionIterator.add(l1);
+        this.instructionIterator.add(new LineNumberNode(-1, l1));
+        final int newPos = this.readMethod.getInstructions().size();
+        traceLabel(null);
+        assert this.readMethod.getInstructions().size() == newPos+1;
+        final AbstractInstruction methodLeaveLabel = this.readMethod.getInstructions().get(newPos);
+        assert methodLeaveLabel instanceof LabelMarker;
+        this.readMethod.setMethodLeaveLabel((LabelMarker) methodLeaveLabel);
+        this.instructionIterator.add(new InsnNode(ATHROW));
+
+        // add a try catch block around the method so that we can trace when this method is left
+        method.tryCatchBlocks.add(new TryCatchBlockNode(l0 , l1 , l1, null));
+
         // now add the code that is executed if no tracing should be performed
         method.instructions.add(noTracingLabel);
         method.instructions.add(new InsnNode(ACONST_NULL));
@@ -323,7 +340,6 @@ public class TracingMethodInstrumenter implements Opcodes {
             }
 
 
-            // increment number of local variables by one (for the threadtracer)
             newMethod.maxLocals = method.maxLocals;
             newMethod.maxStack = method.maxStack;
 
@@ -349,6 +365,34 @@ public class TracingMethodInstrumenter implements Opcodes {
         }
 
         ready();
+    }
+
+    private Set<LabelNode> getJumpTargetLabels(final MethodNode method) {
+        final Set<LabelNode> jumpTargets = new HashSet<LabelNode>();
+        final Iterator<?> insnIt = method.instructions.iterator();
+        while (insnIt.hasNext()) {
+            final AbstractInsnNode insn = (AbstractInsnNode) insnIt.next();
+            switch (insn.getType()) {
+            case AbstractInsnNode.JUMP_INSN:
+                jumpTargets.add(((JumpInsnNode)insn).label);
+                break;
+            case AbstractInsnNode.LOOKUPSWITCH_INSN:
+                jumpTargets.add(((LookupSwitchInsnNode)insn).dflt);
+                for (final Object o: ((LookupSwitchInsnNode)insn).labels)
+                    jumpTargets.add((LabelNode)o);
+                break;
+            case AbstractInsnNode.TABLESWITCH_INSN:
+                jumpTargets.add(((TableSwitchInsnNode)insn).dflt);
+                for (final Object o: ((TableSwitchInsnNode)insn).labels)
+                    jumpTargets.add((LabelNode)o);
+                break;
+            }
+        }
+
+        for (final Object o: method.tryCatchBlocks)
+            jumpTargets.add(((TryCatchBlockNode) o).handler);
+
+        return jumpTargets;
     }
 
     private void transformJumpInsn(final JumpInsnNode insn) {
@@ -689,34 +733,38 @@ public class TracingMethodInstrumenter implements Opcodes {
     }
 
     private void traceLabel(final LabelNode label) {
-        final int seq = this.tracer.newIntegerTraceSequence();
-        final boolean isAdditionalLabel = label == null;
-        final int labelNr = isAdditionalLabel ? this.nextAdditionalLabelNr-- : this.nextLabelNr++;
-        final LabelMarker lm = new LabelMarker(this.readMethod, seq, isAdditionalLabel, labelNr);
-        if (!isAdditionalLabel)
-            this.labels.put(label, lm);
+        if (label == null || this.jumpTargetLabels.contains(label)) {
+            final int seq = this.tracer.newIntegerTraceSequence();
+            final boolean isAdditionalLabel = label == null;
+            final int labelNr = isAdditionalLabel ? this.nextAdditionalLabelNr-- : this.nextLabelNr++;
+            final LabelMarker lm = new LabelMarker(this.readMethod, seq, isAdditionalLabel, labelNr);
+            if (!isAdditionalLabel)
+                this.labels.put(label, lm);
 
-        // at runtime: push sequence index on the stack and call method to trace last executed instruction
-        this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
-        this.instructionIterator.add(getIntConstInsn(lm.getTraceSeqIndex()));
-        this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
-                Type.getInternalName(ThreadTracer.class), "traceLastInstructionIndex", "(I)V"));
-
-        // stats
-        if (isAdditionalLabel)
-            TracingMethodInstrumenter.statsLabelsAdditional++;
-        else
-            TracingMethodInstrumenter.statsLabelsStd++;
-
-        // do not use registerInstruction, because the code has to be inserted *after* the label
-        this.readMethod.addInstruction(lm);
-        if (Tracer.debug) {
+            // at runtime: push sequence index on the stack and call method to trace last executed instruction
             this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
-            this.instructionIterator.add(getIntConstInsn(lm.getIndex()));
+            this.instructionIterator.add(getIntConstInsn(lm.getTraceSeqIndex()));
             this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
-                    Type.getInternalName(ThreadTracer.class), "passInstruction", "(I)V"));
+                    Type.getInternalName(ThreadTracer.class), "traceLastInstructionIndex", "(I)V"));
+
+            // stats
+            if (isAdditionalLabel)
+                TracingMethodInstrumenter.statsLabelsAdditional++;
+            else
+                TracingMethodInstrumenter.statsLabelsJumpTargets++;
+
+            // do not use registerInstruction, because the code has to be inserted *after* the label
+            this.readMethod.addInstruction(lm);
+            if (Tracer.debug) {
+                this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
+                this.instructionIterator.add(getIntConstInsn(lm.getIndex()));
+                this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
+                        Type.getInternalName(ThreadTracer.class), "passInstruction", "(I)V"));
+            }
+            ++TracingMethodInstrumenter.statsInstructions;
+        } else {
+            TracingMethodInstrumenter.statsLabelsStd++;
         }
-        ++TracingMethodInstrumenter.statsInstructions;
     }
 
     private void registerInstruction(final AbstractInstruction instruction) {
@@ -764,7 +812,8 @@ public class TracingMethodInstrumenter implements Opcodes {
         out.format(format, "classes", statsClasses);
         out.format(format, "methods", statsMethods);
         out.format(format, "instructions", statsInstructions);
-        out.format(format, "labels", statsLabelsStd);
+        out.format(format, "labels (no jump target)", statsLabelsStd);
+        out.format(format, "labels (jump target)", statsLabelsJumpTargets);
         out.format(format, "labels (additional)", statsLabelsAdditional);
         out.format(format, "array store", statsArrayStore);
         out.format(format, "array load", statsArrayLoad);
