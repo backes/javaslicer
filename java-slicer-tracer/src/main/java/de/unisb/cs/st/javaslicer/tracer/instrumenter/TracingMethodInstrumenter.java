@@ -293,7 +293,6 @@ public class TracingMethodInstrumenter implements Opcodes {
 
         final LabelNode l1 = new LabelNode();
         this.instructionIterator.add(l1);
-        this.instructionIterator.add(new LineNumberNode(-1, l1));
         final int newPos = this.readMethod.getInstructions().size();
         traceLabel(null);
         assert this.readMethod.getInstructions().size() == newPos+1;
@@ -420,7 +419,7 @@ public class TracingMethodInstrumenter implements Opcodes {
         // if the next instruction is no label, we have to add one after the instruction
         AbstractInsnNode next = insn.getNext();
         while (next != null) {
-            if (next instanceof LabelNode)
+            if (next instanceof LabelNode && this.jumpTargetLabels.contains(next))
                 return;
             if (next instanceof FrameNode || next instanceof LineNumberNode)
                 next = next.getNext();
@@ -807,7 +806,7 @@ public class TracingMethodInstrumenter implements Opcodes {
     public static void printStats(final PrintStream out) {
         out.println();
         out.println("----------------------------------------------------");
-        final String format = "%-20s%10d%n";
+        final String format = "%-23s%10d%n";
         out.println("Instrumentation statistics:");
         out.format(format, "classes", statsClasses);
         out.format(format, "methods", statsMethods);

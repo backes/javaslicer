@@ -2,7 +2,6 @@ package de.unisb.cs.st.javaslicer.tracer.instrumenter;
 
 import java.util.ListIterator;
 
-import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
@@ -15,20 +14,19 @@ import org.objectweb.asm.tree.VarInsnNode;
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 
-public class ThreadInstrumenter implements Opcodes {
+public class ThreadInstrumenter extends TracingClassInstrumenter {
 
     public ThreadInstrumenter(final ReadClass readClass, final Tracer tracer) {
+        super(readClass, tracer, false);
         if (Tracer.debug && readClass != null)
-            System.out.println("instrumenting " + readClass.getName() + " (extend exit method)");
+            System.out.println("instrumenting " + readClass.getName() + " (special)");
     }
 
-    public void transform(final ClassNode classNode) {
-        for (final Object methodObj: classNode.methods) {
-            final MethodNode method = (MethodNode) methodObj;
-            if ("exit".equals(method.name) && "()V".equals(method.desc) &&
-                    (method.access & (ACC_NATIVE | ACC_ABSTRACT | ACC_STATIC)) == 0) {
-                transformExitMethod(method);
-            }
+    @Override
+    protected void transformMethod(final ClassNode classNode, final MethodNode method, final ListIterator<MethodNode> methodIt) {
+        if ("exit".equals(method.name) && "()V".equals(method.desc) &&
+                (method.access & (ACC_NATIVE | ACC_ABSTRACT | ACC_STATIC)) == 0) {
+            transformExitMethod(method);
         }
     }
 

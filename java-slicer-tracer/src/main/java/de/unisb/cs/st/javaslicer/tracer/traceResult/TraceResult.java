@@ -39,7 +39,6 @@ public class TraceResult {
             return this.threadId + ": " + this.threadName;
         }
 
-        @Override
         public int compareTo(final ThreadId other) {
             if (this.threadId == other.threadId) {
                 final int nameCmp = this.threadName.compareTo(other.threadName);
@@ -54,7 +53,7 @@ public class TraceResult {
 
     private final List<ReadClass> readClasses;
     private final List<ThreadTraceResult> threadTraces;
-    public boolean debug = false;
+    public boolean debug = true; // TODO false;
 
     public TraceResult(final List<ReadClass> readClasses, final List<ThreadTraceResult> threadTraces) {
         this.readClasses = readClasses;

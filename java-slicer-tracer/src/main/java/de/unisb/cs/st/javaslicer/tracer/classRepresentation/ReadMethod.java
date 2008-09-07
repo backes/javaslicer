@@ -127,9 +127,9 @@ public class ReadMethod {
             if (!(instr instanceof LabelMarker))
                 instr.writeOut(out);
         if (this.methodEntryLabel != null && this.methodLeaveLabel != null) {
+            assert this.methodEntryLabel == this.instructions.get(0);
+            assert this.methodLeaveLabel == this.instructions.get(this.instructions.size()-1);
             out.writeBoolean(true);
-            this.methodEntryLabel.writeOut(out);
-            this.methodLeaveLabel.writeOut(out);
         } else {
             out.writeBoolean(false);
         }
@@ -171,13 +171,13 @@ public class ReadMethod {
         final boolean hasEntryAndLeaveLabels = in.readBoolean();
 
         if (hasEntryAndLeaveLabels) {
-            final AbstractInstruction methodEntryLabel = AbstractInstruction.readFrom(in, mri);
+            final AbstractInstruction methodEntryLabel = rm.instructions.get(0);
             if (methodEntryLabel instanceof LabelMarker)
                 rm.setMethodEntryLabel((LabelMarker) methodEntryLabel);
             else
                 throw new IOException("corrupted data");
 
-            final AbstractInstruction methodLeaveLabel = AbstractInstruction.readFrom(in, mri);
+            final AbstractInstruction methodLeaveLabel = rm.instructions.get(rm.instructions.size()-1);
             if (methodLeaveLabel instanceof LabelMarker)
                 rm.setMethodLeaveLabel((LabelMarker) methodLeaveLabel);
             else

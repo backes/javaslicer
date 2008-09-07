@@ -289,27 +289,30 @@ public class MultiplexedFileWriter {
         return this.nextBlockAddr++;
     }
 
-    public synchronized void close() throws IOException {
+    private final Object closingLock = new Object();
+    public void close() throws IOException {
         checkException();
-        if (this.closed)
-            return;
-        this.closed = true;
+        synchronized (this.closingLock) {
+            if (this.closed)
+                return;
+            this.closed = true;
 
-        for (final MultiplexOutputStream str: this.openStreams.keySet())
-            str.close();
-        this.openStreams.clear();
+            for (final MultiplexOutputStream str: this.openStreams.keySet())
+                str.close();
+            this.openStreams.clear();
 
-        this.streamDefs.close();
+            this.streamDefs.close();
 
-        // write some meta information to the file
-        this.file.seek(0);
-        this.file.writeInt(MAGIC_HEADER);
-        this.file.writeInt(this.blockSize);
-        this.file.writeInt(this.streamDefs.startBlockAddr);
-        this.file.writeLong(this.streamDefs.dataLength);
+            // write some meta information to the file
+            this.file.seek(0);
+            this.file.writeInt(MAGIC_HEADER);
+            this.file.writeInt(this.blockSize);
+            this.file.writeInt(this.streamDefs.startBlockAddr);
+            this.file.writeLong(this.streamDefs.dataLength);
 
-        this.file.close();
-        checkException();
+            this.file.close();
+            checkException();
+        }
     }
 
     private synchronized void checkException() throws IOException {

@@ -151,6 +151,9 @@ public class Tracer implements ClassFileTransformer {
             32, .75f, 16, ReferenceType.WEAK, ReferenceType.STRONG,
             EnumSet.of(Option.IDENTITY_COMPARISONS));
 
+    // the thread that just creates a threadTracer (needed to avoid stack overflowes)
+    private Thread threadTracerBeingCreated = null;
+
     private static final AtomicInteger errorCount = new AtomicInteger(0);
 
     private static final boolean COMPUTE_FRAMES = false;
@@ -306,7 +309,7 @@ public class Tracer implements ClassFileTransformer {
             if (debug) {
                 // print statistics once now and once when all finished
                 TracingMethodInstrumenter.printStats(System.out);
-                Runtime.getRuntime().addShutdownHook(new Thread() {
+                Runtime.getRuntime().addShutdownHook(new Thread("final stats printer") {
                     @Override
                     public void run() {
                         TracingMethodInstrumenter.printStats(System.out);
@@ -334,6 +337,7 @@ public class Tracer implements ClassFileTransformer {
 
         try {
             final String javaClassName = Type.getObjectType(className).getClassName();
+
             if (javaClassName.startsWith(Tracer.class.getPackage().getName()))
                 return null;
 
@@ -390,12 +394,14 @@ public class Tracer implements ClassFileTransformer {
 
             final ClassVisitor output = check ? new CheckClassAdapter(writer) : writer;
 
-            if ("java/lang/Thread".equals(className)) {
-                new ThreadInstrumenter(readClass, this).transform(classNode);
-            } else if (Arrays.asList(this.pauseTracingClasses).contains(javaClassName)) {
+            if (Arrays.asList(this.pauseTracingClasses).contains(javaClassName)
+                    || className.startsWith("java/security/")) {
                 new PauseTracingInstrumenter(readClass, this).transform(classNode);
             } else {
-                new TracingClassInstrumenter(readClass, this).transform(classNode);
+                if ("java/lang/Thread".equals(className))
+                    new ThreadInstrumenter(readClass, this).transform(classNode);
+                else
+                    new TracingClassInstrumenter(readClass, this).transform(classNode);
             }
 
             new IdentifiableInstrumenter(readClass, this).transform(classNode);
@@ -540,6 +546,10 @@ public class Tracer implements ClassFileTransformer {
             tracer = this.threadTracers.get(currentThread);
             if (tracer != null)
                 return tracer;
+            if (this.threadTracerBeingCreated == currentThread)
+                return NullThreadTracer.instance;
+            assert this.threadTracerBeingCreated == null;
+            this.threadTracerBeingCreated = currentThread;
             final ThreadTracer newTracer = this.tracingReady ? NullThreadTracer.instance
                     : new TracingThreadTracer(currentThread,
                             this.traceSequenceTypes, this);
@@ -556,11 +566,12 @@ public class Tracer implements ClassFileTransformer {
                 }
 
                 assert oldTracer == null;
-                if (!this.tracingStarted || this.tracingReady)
-                    newTracer.pauseTracing();
                 return newTracer;
             } finally {
-                newTracer.unpauseTracing();
+                if (this.tracingStarted)
+                    newTracer.unpauseTracing();
+                assert this.threadTracerBeingCreated == currentThread;
+                this.threadTracerBeingCreated = null;
             }
         }
     }
@@ -593,19 +604,18 @@ public class Tracer implements ClassFileTransformer {
             return;
         synchronized (this.threadTracers) {
             this.tracingReady = true;
-            synchronized (this.readyThreadTracers) {
-                for (final TracingThreadTracer t: this.readyThreadTracers)
-                    writeOutIfNecessary(t);
-                this.readyThreadTracers.clear();
-            }
             for (final Entry<Thread, ThreadTracer> e: this.threadTracers.entrySet()) {
                 final ThreadTracer t = e.getValue();
                 e.setValue(NullThreadTracer.instance);
                 if (t instanceof TracingThreadTracer)
                     writeOutIfNecessary((TracingThreadTracer) t);
             }
+            synchronized (this.readyThreadTracers) {
+                for (final TracingThreadTracer t: this.readyThreadTracers)
+                    writeOutIfNecessary(t);
+                this.readyThreadTracers.clear();
+            }
         }
-        assert this.readyThreadTracers.size() == 0;
         this.threadTracersOutputStream.close();
         this.readClassesOutputStream.close();
         this.file.close();

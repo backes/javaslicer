@@ -16,7 +16,7 @@
 	<filelist dir="${M2_REPO}" id="libraries">
 		<file name="log4j/log4j/1.2.14/log4j-1.2.14.jar" />
 		<file name="junit/junit/4.4/junit-4.4.jar" />
-		<file name="commons-collections/commons-collections/3.2/commons-collections-3.2.jar" />
+		<file name="commons-collections/commons-collections/3.2.1/commons-collections-3.2.1.jar" />
 		<file name="asm/asm-all/3.1/asm-all-3.1.jar" />
 		<file name="commons-io/commons-io/1.4/commons-io-1.4.jar" />
 		<file name="commons-lang/commons-lang/2.4/commons-lang-2.4.jar" />
@@ -33,6 +33,7 @@
 	</target>
 
 	<target name="init">
+		<echo>M2_REPO: ${M2_REPO}</echo>
 		<mkdir dir="${build}" />
 	</target>
 
@@ -46,7 +47,7 @@
 			<fileset dir="${build}" />
 			<!--zipfileset src="${M2_REPO}/log4j/log4j/1.2.14/log4j-1.2.14.jar" /-->
 			<!--zipfileset src="${M2_REPO}/junit/junit/4.4/junit-4.4.jar" /-->
-			<zipfileset src="${M2_REPO}/commons-collections/commons-collections/3.2/commons-collections-3.2.jar" />
+			<zipfileset src="${M2_REPO}/commons-collections/commons-collections/3.2.1/commons-collections-3.2.1.jar" />
 			<zipfileset src="${M2_REPO}/asm/asm-all/3.1/asm-all-3.1.jar" />
 			<!--zipfileset src="${M2_REPO}/commons-io/commons-io/1.4/commons-io-1.4.jar" /-->
 			<!--zipfileset src="${M2_REPO}/commons-lang/commons-lang/2.4/commons-lang-2.4.jar" /-->

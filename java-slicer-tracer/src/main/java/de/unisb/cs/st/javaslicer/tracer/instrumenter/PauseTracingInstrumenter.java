@@ -155,9 +155,9 @@ public class PauseTracingInstrumenter implements Opcodes {
                         tcb.type));
             }
 
-            // skip the first 5 instructions, replace them with this:
+            // skip the first 4 instructions, replace them with this:
             newMethod.instructions.add(new VarInsnNode(ALOAD, tracerLocalVarIndex));
-            final Iterator<AbstractInsnNode> oldInsnIt = method.instructions.iterator(5);
+            final Iterator<AbstractInsnNode> oldInsnIt = method.instructions.iterator(4);
             // and add all the other instructions
             while (oldInsnIt.hasNext()) {
                 final AbstractInsnNode insn = oldInsnIt.next();

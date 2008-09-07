@@ -34,7 +34,7 @@ public class TracingThreadTracer implements ThreadTracer {
         if (Tracer.debug) {
             try {
                 debugFile = new PrintWriter(new BufferedWriter(new FileWriter(new File("debug.log"))));
-                Runtime.getRuntime().addShutdownHook(new Thread() {
+                Runtime.getRuntime().addShutdownHook(new Thread("debug file closer") {
                     @Override
                     public void run() {
                         debugFile.close();
@@ -122,22 +122,23 @@ public class TracingThreadTracer implements ThreadTracer {
     public void finish() throws IOException {
         pauseTracing();
         // wait while our "using thread" still executes a trace* Method
-        boolean wait = true;
-        while (wait) {
-            wait = false;
-            Thread[] allThreads = new Thread[Thread.activeCount()*2];
-            while (Thread.enumerate(allThreads) >= allThreads.length)
-                allThreads = new Thread[allThreads.length*2];
-            // search the thread with the correct threadId
-            for (final Thread t: allThreads) {
-                if (t != null && t.getId() == this.threadId) {
+        Thread[] allThreads = new Thread[Thread.activeCount()*2];
+        while (Thread.enumerate(allThreads) >= allThreads.length)
+            allThreads = new Thread[allThreads.length*2];
+        // search the thread with the correct threadId
+        for (final Thread t: allThreads) {
+            if (t != null && t.getId() == this.threadId) {
+                boolean wait = true;
+                while (wait) {
+                    Thread.yield();
+                    wait = false;
                     final StackTraceElement[] stacktrace = t.getStackTrace();
                     for (final StackTraceElement elem: stacktrace) {
                         if (getClass().getName().equals(elem.getClassName())
                                 && elem.getMethodName().startsWith("trace")) {
                             wait = true;
                             Thread.yield();
-                            continue;
+                            break;
                         }
                     }
                 }
