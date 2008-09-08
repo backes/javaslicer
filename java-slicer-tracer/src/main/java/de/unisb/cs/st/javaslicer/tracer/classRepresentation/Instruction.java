@@ -31,9 +31,11 @@ public interface Instruction {
 
     public interface Instance extends Instruction {
 
+        Instruction getInstruction();
+
         long getOccurenceNumber();
 
-        Instruction getInstruction();
+        int getStackDepth();
 
     }
 

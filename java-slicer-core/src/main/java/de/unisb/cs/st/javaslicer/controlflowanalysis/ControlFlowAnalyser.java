@@ -32,7 +32,7 @@ public class ControlFlowAnalyser {
      * @param method
      * @return a map that contains for every instruction all instructions that are dependent on this one
      */
-    public Map<Instruction, Set<Instruction>> getInvertedControlDependencies(final ReadMethod method) {
+    public Map<Instruction, Set<Instruction>> getControlDependencies(final ReadMethod method) {
         final Map<Instruction, Set<Instruction>> invControlDeps = new HashMap<Instruction, Set<Instruction>>();
         final Set<Instruction> emptyInsnSet = Collections.emptySet();
         for (final Instruction insn: method.getInstructions()) {

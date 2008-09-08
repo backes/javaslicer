@@ -66,8 +66,8 @@ public class FieldInstruction extends AbstractInstruction {
     public Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException, EOFException {
         final long objectId = this.objectTraceSeqIndex == -1 ? -1 :
             backwardInstructionIterator.getNextLong(this.objectTraceSeqIndex);
-        return new Instance(this, objectId,
-                backwardInstructionIterator.getNextInstructionOccurenceNumber(getIndex()));
+        return new Instance(this, backwardInstructionIterator.getNextInstructionOccurenceNumber(getIndex()),
+                backwardInstructionIterator.getStackDepth(), objectId);
     }
 
     @Override
@@ -121,8 +121,8 @@ public class FieldInstruction extends AbstractInstruction {
 
         private final long objectId;
 
-        public Instance(final FieldInstruction fieldInstr, final long objectId, final long occurenceNumber) {
-            super(fieldInstr, occurenceNumber);
+        public Instance(final FieldInstruction fieldInstr, final long occurenceNumber, final int stackDepth, final long objectId) {
+            super(fieldInstr, occurenceNumber, stackDepth);
             this.objectId = objectId;
         }
 

@@ -141,7 +141,7 @@ public abstract class AbstractInstruction implements Instruction {
 
     // must be overridden by classes with dynamic parameters (e.g. array load/store)
     public Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException, EOFException {
-        return new AbstractInstance(this, backwardInstructionIterator.getNextInstructionOccurenceNumber(this.index));
+        return new AbstractInstance(this, backwardInstructionIterator.getNextInstructionOccurenceNumber(this.index), backwardInstructionIterator.getStackDepth());
     }
 
     public Instruction getPrevious() {
@@ -170,10 +170,12 @@ public abstract class AbstractInstruction implements Instruction {
             implements Instance {
 
         private final long occurenceNumber;
+        private final int stackDepth;
 
-        public AbstractInstance(final AbstractInstruction instr, final long occurenceNumber) {
+        public AbstractInstance(final AbstractInstruction instr, final long occurenceNumber, final int stackDepth) {
             super(instr);
             this.occurenceNumber = occurenceNumber;
+            this.stackDepth = stackDepth;
         }
 
         public long getOccurenceNumber() {
@@ -183,6 +185,11 @@ public abstract class AbstractInstruction implements Instruction {
         @Override
         public Instruction getInstruction() {
             return this.wrappedInstruction;
+        }
+
+        @Override
+        public int getStackDepth() {
+            return this.stackDepth;
         }
 
     }

@@ -12,10 +12,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import org.objectweb.asm.Opcodes;
+
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Type;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
@@ -134,6 +137,8 @@ public class ThreadTraceResult {
         private final IntegerMap<Iterator<Long>> longSequenceBackwardIterators;
         private final IntegerToLongMap instructionNextOccurenceNumber;
 
+        private int stackDepth = 0;
+
         private int instructionCount = 0;
         private int additionalInstructionCount = 0;
         private PrintWriter debugFileWriter;
@@ -190,7 +195,20 @@ public class ThreadTraceResult {
                         oldMethod == null ? null : oldMethod.getReadClass(), oldMethod);
                 if (backwardInstruction == null)
                     return null;
+                if (backwardInstruction == backwardInstruction.getMethod().getMethodEntryLabel()) {
+                    --this.stackDepth;
+                    assert this.stackDepth >= 0 : "enter method occured more often than leave method";
+                } else if (backwardInstruction == backwardInstruction.getMethod().getMethodLeaveLabel()) {
+                    ++this.stackDepth;
+                } else if (backwardInstruction.getType() == Type.SIMPLE) {
+                    switch (backwardInstruction.getOpcode()) {
+                    case Opcodes.IRETURN: case Opcodes.LRETURN: case Opcodes.FRETURN:
+                    case Opcodes.DRETURN: case Opcodes.ARETURN: case Opcodes.RETURN:
+                        ++this.stackDepth;
+                    }
+                }
                 final Instance instance = backwardInstruction.getNextInstance(this);
+
                 if (instance == null) {
                     ++this.additionalInstructionCount;
                 } else {
@@ -238,6 +256,10 @@ public class ThreadTraceResult {
 
         public int getNoAdditionalInstructions() {
             return this.additionalInstructionCount;
+        }
+
+        public int getStackDepth() {
+            return this.stackDepth;
         }
 
     }

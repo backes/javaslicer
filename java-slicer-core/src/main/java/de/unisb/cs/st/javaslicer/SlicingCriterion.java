@@ -1,5 +1,13 @@
 package de.unisb.cs.st.javaslicer;
 
-public class SlicingCriterion {
+import java.util.Collection;
+
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance;
+
+public interface SlicingCriterion {
+
+    boolean matches(Instance instructionInstance);
+
+    Collection<Variable> getInterestingVariables();
 
 }

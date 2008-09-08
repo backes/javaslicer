@@ -39,9 +39,10 @@ public class ArrayInstruction extends AbstractInstruction {
 
     @Override
     public Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException, EOFException {
-        final long objectId = backwardInstructionIterator.getNextLong(this.arrayTraceSeqIndex);
+        final long arrayId = backwardInstructionIterator.getNextLong(this.arrayTraceSeqIndex);
         final int index = backwardInstructionIterator.getNextInteger(this.indexTraceSeqIndex);
-        return new Instance(this, objectId, index, backwardInstructionIterator.getNextInstructionOccurenceNumber(getIndex()));
+        return new Instance(this, backwardInstructionIterator.getNextInstructionOccurenceNumber(getIndex()),
+                backwardInstructionIterator.getStackDepth(), arrayId, index);
     }
 
     @Override
@@ -111,8 +112,9 @@ public class ArrayInstruction extends AbstractInstruction {
         private final long arrayId;
         private final int arrayIndex;
 
-        public Instance(final ArrayInstruction arrayInstr, final long arrayId, final int arrayIndex, final long occurenceNumber) {
-            super(arrayInstr, occurenceNumber);
+        public Instance(final ArrayInstruction arrayInstr, final long occurenceNumber, final int stackDepth,
+                final long arrayId, final int arrayIndex) {
+            super(arrayInstr, occurenceNumber, stackDepth);
             this.arrayId = arrayId;
             this.arrayIndex = arrayIndex;
         }
