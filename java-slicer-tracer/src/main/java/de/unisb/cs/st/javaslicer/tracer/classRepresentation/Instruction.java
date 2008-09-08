@@ -33,6 +33,8 @@ public interface Instruction {
 
         long getOccurenceNumber();
 
+        Instruction getInstruction();
+
     }
 
     /**

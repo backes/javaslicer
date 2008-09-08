@@ -180,6 +180,11 @@ public abstract class AbstractInstruction implements Instruction {
             return this.occurenceNumber;
         }
 
+        @Override
+        public Instruction getInstruction() {
+            return this.wrappedInstruction;
+        }
+
     }
 
 }

@@ -15,7 +15,7 @@ import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardIn
  */
 public abstract class InstructionWrapper implements Instruction {
 
-    private final Instruction wrappedInstruction;
+    protected final Instruction wrappedInstruction;
 
     public InstructionWrapper(final Instruction wrappedInstruction) {
         if (wrappedInstruction == null)
