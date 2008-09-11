@@ -21,13 +21,12 @@ public class TracingThreadTracer implements ThreadTracer {
     private final String threadName;
     private final List<Type> threadSequenceTypes;
 
-    // this is the variable modified during runtime of the instrumented program
-    private int lastInstructionIndex = -1;
+    private volatile int lastInstructionIndex = -1;
 
     private final IntegerMap<TraceSequence> sequences = new IntegerMap<TraceSequence>();
 
     private final Tracer tracer;
-    private int paused = 0;
+    private volatile int paused = 0;
 
     protected static PrintWriter debugFile;
     static {
@@ -54,10 +53,11 @@ public class TracingThreadTracer implements ThreadTracer {
         this.tracer = tracer;
     }
 
-    public void traceInt(final int value, final int traceSequenceIndex) {
+    public synchronized void traceInt(final int value, final int traceSequenceIndex) {
         if (this.paused > 0)
             return;
-        ++this.paused;
+
+        pauseTracing();
 
         TraceSequence seq = this.sequences.get(traceSequenceIndex);
         try {
@@ -75,13 +75,14 @@ public class TracingThreadTracer implements ThreadTracer {
             System.exit(-1);
         }
 
-        --this.paused;
+        unpauseTracing();
     }
 
-    public void traceObject(final Object obj, final int traceSequenceIndex) {
+    public synchronized void traceObject(final Object obj, final int traceSequenceIndex) {
         if (this.paused > 0)
             return;
-        ++this.paused;
+
+        pauseTracing();
 
         TraceSequence seq = this.sequences.get(traceSequenceIndex);
         try {
@@ -99,7 +100,7 @@ public class TracingThreadTracer implements ThreadTracer {
             System.exit(-1);
         }
 
-        --this.paused;
+        unpauseTracing();
     }
 
     public void traceLastInstructionIndex(final int traceSequenceIndex) {
@@ -111,39 +112,16 @@ public class TracingThreadTracer implements ThreadTracer {
             return;
 
         if (Tracer.debug && this.threadId == 1) {
-            ++this.paused;
+            pauseTracing();
             debugFile.println(instructionIndex);
-            --this.paused;
+            unpauseTracing();
         }
 
         this.lastInstructionIndex = instructionIndex;
     }
 
-    public void finish() throws IOException {
+    public synchronized void finish() throws IOException {
         pauseTracing();
-        // wait while our "using thread" still executes a trace* Method
-        Thread[] allThreads = new Thread[Thread.activeCount()*2];
-        while (Thread.enumerate(allThreads) >= allThreads.length)
-            allThreads = new Thread[allThreads.length*2];
-        // search the thread with the correct threadId
-        for (final Thread t: allThreads) {
-            if (t != null && t.getId() == this.threadId) {
-                boolean wait = true;
-                while (wait) {
-                    Thread.yield();
-                    wait = false;
-                    final StackTraceElement[] stacktrace = t.getStackTrace();
-                    for (final StackTraceElement elem: stacktrace) {
-                        if (getClass().getName().equals(elem.getClassName())
-                                && elem.getMethodName().startsWith("trace")) {
-                            wait = true;
-                            Thread.yield();
-                            break;
-                        }
-                    }
-                }
-            }
-        }
 
         for (final TraceSequence seq: this.sequences.values())
             seq.finish();
@@ -161,11 +139,11 @@ public class TracingThreadTracer implements ThreadTracer {
         out.writeInt(this.lastInstructionIndex);
     }
 
-    public void pauseTracing() {
+    public synchronized void pauseTracing() {
         ++this.paused;
     }
 
-    public void unpauseTracing() {
+    public synchronized void unpauseTracing() {
         --this.paused;
         assert this.paused >= 0: "unpaused more than paused";
     }

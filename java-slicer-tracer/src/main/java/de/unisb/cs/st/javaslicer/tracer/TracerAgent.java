@@ -13,6 +13,7 @@ public class TracerAgent {
         private final Tracer tracer;
 
         public WriteTracefileThread(final Tracer tracer) {
+            super("tracing finisher");
             this.tracer = tracer;
         }
 

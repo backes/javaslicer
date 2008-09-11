@@ -398,6 +398,10 @@ public class TracingMethodInstrumenter implements Opcodes {
         final JumpInstruction jumpInstr = new JumpInstruction(this.readMethod, insn.getOpcode(), null);
         this.jumpInstructions.put(jumpInstr, insn.label);
         registerInstruction(jumpInstr);
+        if (insn.getOpcode() == JSR) {
+            // JSR is like a method call, so we have to add a label after this instruction
+            addLabelIfNecessary(insn);
+        }
     }
 
     private void transformMethodInsn(final MethodInsnNode insn) {
@@ -417,6 +421,10 @@ public class TracingMethodInstrumenter implements Opcodes {
         }
 
         // if the next instruction is no label, we have to add one after the instruction
+        addLabelIfNecessary(insn);
+    }
+
+    private void addLabelIfNecessary(final AbstractInsnNode insn) {
         AbstractInsnNode next = insn.getNext();
         while (next != null) {
             if (next instanceof LabelNode && this.jumpTargetLabels.contains(next))

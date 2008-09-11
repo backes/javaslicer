@@ -11,6 +11,7 @@ import java.util.List;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;
 
@@ -159,32 +160,37 @@ public class TraceResult {
         System.out.println(threadToTrace == null ? "Selected:" : "You selected:");
         System.out.format("%15d: %s%n", tracing.getThreadId(), tracing.getThreadName());
 
-        System.out.println();
-        System.out.println("The backward trace:");
-        final Iterator<Instance> it = tr.getBackwardIterator(tracing.getThreadId());
-        long nr = 0;
-        final String format = "%8d: %-100s -> %3d %7d %s%n";
-        System.out.format("%8s  %-100s    %3s %7s %s%n",
-                "Nr", "Location", "Dep", "OccNr", "Instruction");
-        while (it.hasNext()) {
-            final Instance inst = it.next();
-            final ReadMethod method = inst.getMethod();
-            final ReadClass class0 = method.getReadClass();
-            System.out.format(format, nr++, class0.getName()+"."
-                    +method.getName()+":"+inst.getLineNumber(),
-                    inst.getStackDepth(),
-                    inst.getOccurenceNumber(), inst.toString());
+        try {
+            System.out.println();
+            System.out.println("The backward trace:");
+            final Iterator<Instance> it = tr.getBackwardIterator(tracing.getThreadId());
+            long nr = 0;
+            final String format = "%8d: %-100s -> %3d %7d %s%n";
+            System.out.format("%8s  %-100s    %3s %7s %s%n",
+                    "Nr", "Location", "Dep", "OccNr", "Instruction");
+            while (it.hasNext()) {
+                final Instance inst = it.next();
+                final ReadMethod method = inst.getMethod();
+                final ReadClass class0 = method.getReadClass();
+                System.out.format(format, nr++, class0.getName()+"."
+                        +method.getName()+":"+inst.getLineNumber(),
+                        inst.getStackDepth(),
+                        inst.getOccurenceNumber(), inst.toString());
+            }
+
+            final BackwardInstructionIterator it2 = (BackwardInstructionIterator) it;
+
+            System.out.println();
+            System.out.println("No instructions: " + it2.getNoInstructions()
+                    + " (+ " + it2.getNoAdditionalInstructions() + " additional = "
+                    + (it2.getNoInstructions() + it2.getNoAdditionalInstructions())
+                    + " total instructions)");
+
+            System.out.println("Ready");
+        } catch (final TracerException e) {
+            System.err.println("Error while tracing: " + e.getMessage());
+            System.exit(-1);
         }
-
-        final BackwardInstructionIterator it2 = (BackwardInstructionIterator) it;
-
-        System.out.println();
-        System.out.println("No instructions: " + it2.getNoInstructions()
-                + " (+ " + it2.getNoAdditionalInstructions() + " additional = "
-                + (it2.getNoInstructions() + it2.getNoAdditionalInstructions())
-                + " total instructions)");
-
-        System.out.println("Ready");
     }
 
 }
