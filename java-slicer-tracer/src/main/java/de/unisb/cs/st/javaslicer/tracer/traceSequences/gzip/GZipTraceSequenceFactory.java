@@ -10,14 +10,15 @@ import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.Type;
 
 public class GZipTraceSequenceFactory implements TraceSequenceFactory {
 
-    public TraceSequence createTraceSequence(final int traceSequenceIndex, final Type type, final Tracer tracer) throws IOException {
+    @Override
+    public TraceSequence createTraceSequence(final Type type, final Tracer tracer) throws IOException {
         switch (type) {
         case INTEGER:
-            return new GZipIntegerTraceSequence(traceSequenceIndex, tracer);
+            return new GZipIntegerTraceSequence(tracer);
         case LONG:
-            return new GZipLongTraceSequence(traceSequenceIndex, tracer);
+            return new GZipLongTraceSequence(tracer);
         case OBJECT:
-            return new ObjectTraceSequence(new GZipLongTraceSequence(traceSequenceIndex, tracer));
+            return new ObjectTraceSequence(new GZipLongTraceSequence(tracer));
         default:
             assert false;
             return null;

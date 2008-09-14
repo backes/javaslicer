@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer.tracer.traceSequences.uncompressed;
+package de.unisb.cs.st.javaslicer.tracer.traceSequences.switching;
 
 import java.io.IOException;
 
@@ -8,17 +8,17 @@ import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.Type;
 
-public class UncompressedTraceSequenceFactory implements TraceSequenceFactory {
+public class SwitchingTraceSequenceFactory implements TraceSequenceFactory {
 
     @Override
     public TraceSequence createTraceSequence(final Type type, final Tracer tracer) throws IOException {
         switch (type) {
         case INTEGER:
-            return new UncompressedIntegerTraceSequence(tracer);
+            return new SwitchingIntegerTraceSequence(tracer);
         case LONG:
-            return new UncompressedLongTraceSequence(tracer);
+            return new SwitchingLongTraceSequence(tracer);
         case OBJECT:
-            return new ObjectTraceSequence(new UncompressedLongTraceSequence(tracer));
+            return new ObjectTraceSequence(new SwitchingLongTraceSequence(tracer));
         default:
             assert false;
             return null;

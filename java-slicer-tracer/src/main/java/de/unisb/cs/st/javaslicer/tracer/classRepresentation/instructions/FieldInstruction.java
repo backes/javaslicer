@@ -26,9 +26,10 @@ public class FieldInstruction extends AbstractInstruction {
     private final int objectTraceSeqIndex;
 
     public FieldInstruction(final ReadMethod readMethod, final int opcode,
-            final String ownerInternalClassName, final String fieldName,
-            final String fieldDesc, final int objectTraceSeqIndex) {
-        super(readMethod, opcode);
+            final int lineNumber, final String ownerInternalClassName,
+            final String fieldName, final String fieldDesc,
+            final int objectTraceSeqIndex) {
+        super(readMethod, opcode, lineNumber);
         this.ownerInternalClassName = ownerInternalClassName;
         this.fieldName = fieldName;
         this.fieldDesc = fieldDesc;

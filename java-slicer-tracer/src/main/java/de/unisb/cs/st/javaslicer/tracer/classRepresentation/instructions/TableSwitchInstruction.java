@@ -21,15 +21,17 @@ public class TableSwitchInstruction extends AbstractInstruction {
     private final int min;
     private final int max;
 
-    public TableSwitchInstruction(final ReadMethod readMethod, final int min, final int max, final LabelMarker defaultHandler, final LabelMarker[] handlers) {
-        super(readMethod, Opcodes.TABLESWITCH);
+    public TableSwitchInstruction(final ReadMethod readMethod, final int lineNumber, final int min,
+            final int max, final LabelMarker defaultHandler, final LabelMarker[] handlers) {
+        super(readMethod, Opcodes.TABLESWITCH, lineNumber);
         this.min = min;
         this.max = max;
         this.defaultHandler = defaultHandler;
         this.handlers = handlers;
     }
 
-    private TableSwitchInstruction(final ReadMethod readMethod, final int min, final int max, final int lineNumber, final LabelMarker defaultHandler, final LabelMarker[] handlers, final int index) {
+    private TableSwitchInstruction(final ReadMethod readMethod, final int min, final int max,
+            final int lineNumber, final LabelMarker defaultHandler, final LabelMarker[] handlers, final int index) {
         super(readMethod, Opcodes.TABLESWITCH, lineNumber, index);
         this.min = min;
         this.max = max;

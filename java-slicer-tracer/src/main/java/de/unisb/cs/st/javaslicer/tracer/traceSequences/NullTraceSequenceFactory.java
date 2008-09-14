@@ -4,15 +4,13 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.IntegerTraceSequence;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.LongTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.Type;
 
 public class NullTraceSequenceFactory implements TraceSequenceFactory {
 
-    public class NullTraceSequence extends AbstractTraceSequence implements IntegerTraceSequence, LongTraceSequence {
-
-        public NullTraceSequence(final int index) {
-            super(index);
-        }
+    public class NullTraceSequence implements IntegerTraceSequence, LongTraceSequence {
 
         public void finish() throws IOException {
             // null
@@ -32,8 +30,8 @@ public class NullTraceSequenceFactory implements TraceSequenceFactory {
 
     }
 
-    public TraceSequence createTraceSequence(final int index, final Type type, final Tracer tracer) throws IOException {
-        return type == Type.OBJECT ? new ObjectTraceSequence(new NullTraceSequence(index)) : new NullTraceSequence(index);
+    public TraceSequence createTraceSequence(final Type type, final Tracer tracer) throws IOException {
+        return type == Type.OBJECT ? new ObjectTraceSequence(new NullTraceSequence()) : new NullTraceSequence();
     }
 
 }

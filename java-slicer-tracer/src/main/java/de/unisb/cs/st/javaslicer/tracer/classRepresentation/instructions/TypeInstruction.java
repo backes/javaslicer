@@ -18,8 +18,8 @@ public class TypeInstruction extends AbstractInstruction {
 
     private final String typeDesc;
 
-    public TypeInstruction(final ReadMethod readMethod, final int opcode, final String typeDesc) {
-        super(readMethod, opcode);
+    public TypeInstruction(final ReadMethod readMethod, final int opcode, final int lineNumber, final String typeDesc) {
+        super(readMethod, opcode, lineNumber);
         assert opcode == Opcodes.NEW
             || opcode == Opcodes.ANEWARRAY
             || opcode == Opcodes.CHECKCAST

@@ -57,6 +57,14 @@ import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter.MultiplexOutp
 
 public class Tracer implements ClassFileTransformer {
 
+    /**
+     * The asm {@link ClassWriter} has an "error" (maybe feature) in the
+     * method {@link #getCommonSuperClass(String, String)}, because it
+     * only uses the classloader of the current class, not the system
+     * class loader.
+     *
+     * @author Clemens Hammacher
+     */
     private static final class FixedClassWriter extends ClassWriter {
         protected FixedClassWriter(final int flags) {
             super(flags);
@@ -114,6 +122,8 @@ public class Tracer implements ClassFileTransformer {
     // there are classes needed while retransforming.
     // these must be loaded a-priori, otherwise circular dependencies may occur
     private final String[] classesToPreload = {
+            "java.io.IOException",
+            "java.io.EOFException"
     };
     private final String[] classesToPreloadIfChecking = {
             //"java.security.Policy",
@@ -125,7 +135,6 @@ public class Tracer implements ClassFileTransformer {
 
 
     public static final TraceSequenceFactory seqFactory = new UncompressedTraceSequenceFactory();
-    //public static final TraceSequenceFactory seqFactory = new GZipTraceSequenceFactory();
 
     private final Map<Thread, ThreadTracer> threadTracers;
 
@@ -163,6 +172,7 @@ public class Tracer implements ClassFileTransformer {
     private Tracer(final File filename) throws IOException {
         this.filename = filename;
         this.file = new MultiplexedFileWriter(filename, 512, 5);
+        this.file.setReuseStreamIds(true);
         final MultiplexOutputStream readClassesMultiplexedStream = this.file.newOutputStream();
         if (readClassesMultiplexedStream.getId() != 0)
             throw new AssertionError("MultiplexedFileWriter does not initially return stream id 0");
@@ -577,17 +587,22 @@ public class Tracer implements ClassFileTransformer {
     }
 
     public void threadExists() {
-        final Thread exitingThread = Thread.currentThread();
-        final ThreadTracer threadTracer = this.threadTracers.put(exitingThread, NullThreadTracer.instance);
-        if (threadTracer instanceof TracingThreadTracer) {
-            final TracingThreadTracer ttt = (TracingThreadTracer) threadTracer;
-            assert ttt.getThreadId() == exitingThread.getId();
-            writeOutIfNecessary(ttt);
+        try {
+            final Thread exitingThread = Thread.currentThread();
+            final ThreadTracer threadTracer = this.threadTracers.get(exitingThread);
+            if (threadTracer instanceof TracingThreadTracer) {
+                final TracingThreadTracer ttt = (TracingThreadTracer) threadTracer;
+                assert ttt.getThreadId() == exitingThread.getId();
+                writeOutIfNecessary(ttt);
+            }
+            this.threadTracers.put(exitingThread, NullThreadTracer.instance);
+        } catch (final Throwable t) {
+            t.printStackTrace();
         }
     }
 
     private void writeOutIfNecessary(final TracingThreadTracer threadTracer) {
-        synchronized (this.threadTracers) {
+        synchronized (this.writtenThreadTracers) {
             final Boolean written = this.writtenThreadTracers.put(threadTracer, Boolean.TRUE);
             if (written == null || written.booleanValue() == false) {
                 try {
@@ -602,19 +617,17 @@ public class Tracer implements ClassFileTransformer {
     public void finish() throws IOException {
         if (this.tracingReady)
             return;
-        synchronized (this.threadTracers) {
-            this.tracingReady = true;
-            for (final Entry<Thread, ThreadTracer> e: this.threadTracers.entrySet()) {
-                final ThreadTracer t = e.getValue();
-                e.setValue(NullThreadTracer.instance);
-                if (t instanceof TracingThreadTracer)
-                    writeOutIfNecessary((TracingThreadTracer) t);
-            }
-            synchronized (this.readyThreadTracers) {
-                for (final TracingThreadTracer t: this.readyThreadTracers)
-                    writeOutIfNecessary(t);
-                this.readyThreadTracers.clear();
-            }
+        this.tracingReady = true;
+        for (final Entry<Thread, ThreadTracer> e: this.threadTracers.entrySet()) {
+            final ThreadTracer t = e.getValue();
+            e.setValue(NullThreadTracer.instance);
+            if (t instanceof TracingThreadTracer)
+                writeOutIfNecessary((TracingThreadTracer) t);
+        }
+        synchronized (this.readyThreadTracers) {
+            for (final TracingThreadTracer t: this.readyThreadTracers)
+                writeOutIfNecessary(t);
+            this.readyThreadTracers.clear();
         }
         this.threadTracersOutputStream.close();
         this.readClassesOutputStream.close();

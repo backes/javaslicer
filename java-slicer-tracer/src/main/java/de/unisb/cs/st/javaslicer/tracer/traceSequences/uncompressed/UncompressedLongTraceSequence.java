@@ -5,12 +5,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.AbstractTraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.LongTraceSequence;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.LongTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.util.MyDataOutputStream;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter.MultiplexOutputStream;
 
-public class UncompressedLongTraceSequence extends AbstractTraceSequence implements LongTraceSequence {
+public class UncompressedLongTraceSequence implements LongTraceSequence {
 
     private boolean ready = false;
 
@@ -18,8 +17,7 @@ public class UncompressedLongTraceSequence extends AbstractTraceSequence impleme
 
     private final int streamIndex;
 
-    public UncompressedLongTraceSequence(final int index, final Tracer tracer) throws IOException {
-        super(index);
+    public UncompressedLongTraceSequence(final Tracer tracer) throws IOException {
         final MultiplexOutputStream out = tracer.newOutputStream();
         this.dataOut = new MyDataOutputStream(getOutputStream(out));
         this.streamIndex = out.getId();
@@ -43,8 +41,7 @@ public class UncompressedLongTraceSequence extends AbstractTraceSequence impleme
     public void writeOut(final DataOutput out) throws IOException {
         finish();
 
-        out.writeByte(getFormat());
-        out.writeByte(TYPE_LONG);
+        out.writeByte(getFormat() | TYPE_LONG);
         out.writeInt(this.streamIndex);
     }
 

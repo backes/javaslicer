@@ -33,8 +33,8 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodRea
  */
 public class SimpleInstruction extends AbstractInstruction {
 
-    public SimpleInstruction(final ReadMethod readMethod, final int opcode) {
-        super(readMethod, opcode);
+    public SimpleInstruction(final ReadMethod readMethod, final int opcode, final int lineNumber) {
+        super(readMethod, opcode, lineNumber);
     }
 
     private SimpleInstruction(final ReadMethod readMethod, final int lineNumber, final int opcode, final int index) {

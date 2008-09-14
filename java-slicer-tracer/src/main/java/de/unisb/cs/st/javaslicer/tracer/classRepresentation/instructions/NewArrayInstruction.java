@@ -18,8 +18,8 @@ public class NewArrayInstruction extends AbstractInstruction {
 
     private final int arrayElemType;
 
-    public NewArrayInstruction(final ReadMethod readMethod, final int arrayElemType) {
-        super(readMethod, Opcodes.NEWARRAY);
+    public NewArrayInstruction(final ReadMethod readMethod, final int lineNumber, final int arrayElemType) {
+        super(readMethod, Opcodes.NEWARRAY, lineNumber);
         assert arrayElemType == Opcodes.T_BOOLEAN
             || arrayElemType == Opcodes.T_CHAR
             || arrayElemType == Opcodes.T_FLOAT

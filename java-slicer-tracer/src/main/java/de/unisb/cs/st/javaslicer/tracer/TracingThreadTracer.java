@@ -9,9 +9,9 @@ import java.io.PrintWriter;
 import java.util.List;
 import java.util.Map.Entry;
 
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.IntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.IntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.Type;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
 
@@ -62,7 +62,7 @@ public class TracingThreadTracer implements ThreadTracer {
         TraceSequence seq = this.sequences.get(traceSequenceIndex);
         try {
             if (seq == null) {
-                seq = Tracer.seqFactory.createTraceSequence(traceSequenceIndex,
+                seq = Tracer.seqFactory.createTraceSequence(
                         this.threadSequenceTypes.get(traceSequenceIndex), this.tracer);
                 this.sequences.put(traceSequenceIndex, seq);
             }
@@ -87,7 +87,7 @@ public class TracingThreadTracer implements ThreadTracer {
         TraceSequence seq = this.sequences.get(traceSequenceIndex);
         try {
             if (seq == null) {
-                seq = Tracer.seqFactory.createTraceSequence(traceSequenceIndex,
+                seq = Tracer.seqFactory.createTraceSequence(
                         this.threadSequenceTypes.get(traceSequenceIndex), this.tracer);
                 this.sequences.put(traceSequenceIndex, seq);
             }

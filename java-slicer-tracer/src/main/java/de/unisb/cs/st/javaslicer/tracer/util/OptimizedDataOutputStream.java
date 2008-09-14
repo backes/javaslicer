@@ -15,13 +15,34 @@ public class OptimizedDataOutputStream extends FilterOutputStream {
     protected static final byte MAGIC_7BYTES = (byte) 0x7d; //  125
     protected static final byte MAGIC_8BYTES = (byte) 0x84; // -124
 
+    private int lastInt = 0;
+    private long lastLong = 0;
+    private boolean diff = false;
+
     public OptimizedDataOutputStream(final OutputStream out) {
+        this(out, false);
+    }
+
+    public OptimizedDataOutputStream(final OutputStream out, final boolean diff) {
         super(out);
+        this.diff = diff;
+    }
+
+    public OptimizedDataOutputStream(final OutputStream out, final int lastIntValue, final long lastLongValue) {
+        this(out, true);
+        this.lastInt = lastIntValue;
+        this.lastLong = lastLongValue;
     }
 
     public void writeInt(final int value) throws IOException {
-        final byte b0 = (byte)value;
-        if (b0 == value) {
+        int write;
+        if (this.diff) {
+            write = value - this.lastInt;
+            this.lastInt = value;
+        } else
+            write = value;
+        final byte b0 = (byte)write;
+        if (b0 == write) {
             switch (b0) {
             case MAGIC_1BYTE:
             case MAGIC_2BYTES:
@@ -33,9 +54,9 @@ public class OptimizedDataOutputStream extends FilterOutputStream {
                 return;
             }
         }
-        final byte b3 = (byte)(value >>> 24);
-        final byte b2 = (byte)(value >>> 16);
-        final byte b1 = (byte)(value >>> 8);
+        final byte b3 = (byte)(write >>> 24);
+        final byte b2 = (byte)(write >>> 16);
+        final byte b1 = (byte)(write >>> 8);
         if (b3 != 0) {
             this.out.write(MAGIC_4BYTES);
             this.out.write(b3);
@@ -58,8 +79,14 @@ public class OptimizedDataOutputStream extends FilterOutputStream {
     }
 
     public void writeLong(final long value) throws IOException {
-        final byte b0 = (byte)value;
-        if (b0 == value) {
+        long write;
+        if (this.diff) {
+            write = value - this.lastLong;
+            this.lastLong = value;
+        } else
+            write = value;
+        final byte b0 = (byte)write;
+        if (b0 == write) {
             switch (b0) {
             case MAGIC_1BYTE:
             case MAGIC_2BYTES:
@@ -75,13 +102,13 @@ public class OptimizedDataOutputStream extends FilterOutputStream {
                 return;
             }
         }
-        final byte b7 = (byte)(value >>> 56);
-        final byte b6 = (byte)(value >>> 48);
-        final byte b5 = (byte)(value >>> 40);
-        final byte b4 = (byte)(value >>> 32);
-        final byte b3 = (byte)(value >>> 24);
-        final byte b2 = (byte)(value >>> 16);
-        final byte b1 = (byte)(value >>> 8);
+        final byte b7 = (byte)(write >>> 56);
+        final byte b6 = (byte)(write >>> 48);
+        final byte b5 = (byte)(write >>> 40);
+        final byte b4 = (byte)(write >>> 32);
+        final byte b3 = (byte)(write >>> 24);
+        final byte b2 = (byte)(write >>> 16);
+        final byte b1 = (byte)(write >>> 8);
         if (b7 != 0) {
             this.out.write(MAGIC_8BYTES);
             this.out.write(b7);
@@ -135,6 +162,14 @@ public class OptimizedDataOutputStream extends FilterOutputStream {
             this.out.write(MAGIC_1BYTE);
             this.out.write(b0);
         }
+    }
+
+    public int getLastIntValue() {
+        return this.lastInt;
+    }
+
+    public long getLastLongValue() {
+        return this.lastLong;
     }
 
 }

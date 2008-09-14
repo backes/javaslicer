@@ -23,8 +23,9 @@ public class LabelMarker extends AbstractInstruction {
     private int labelNr;
 
     public LabelMarker(final ReadMethod readMethod, final int traceSeqIndex,
+            final int lineNumber,
             final boolean additionalLabel, final int labelNr) {
-        super(readMethod, -1);
+        super(readMethod, -1, lineNumber);
         this.traceSeqIndex = traceSeqIndex;
         this.additionalLabel = additionalLabel;
         this.labelNr = labelNr;

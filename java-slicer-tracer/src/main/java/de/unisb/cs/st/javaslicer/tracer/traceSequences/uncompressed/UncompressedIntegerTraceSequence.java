@@ -5,12 +5,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.AbstractTraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.IntegerTraceSequence;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.IntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.util.MyDataOutputStream;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter.MultiplexOutputStream;
 
-public class UncompressedIntegerTraceSequence extends AbstractTraceSequence implements IntegerTraceSequence {
+public class UncompressedIntegerTraceSequence implements IntegerTraceSequence {
 
     private boolean ready = false;
 
@@ -18,8 +17,7 @@ public class UncompressedIntegerTraceSequence extends AbstractTraceSequence impl
 
     private final int streamIndex;
 
-    public UncompressedIntegerTraceSequence(final int index, final Tracer tracer) throws IOException {
-        super(index);
+    public UncompressedIntegerTraceSequence(final Tracer tracer) throws IOException {
         final MultiplexOutputStream out = tracer.newOutputStream();
         this.dataOut = new MyDataOutputStream(getOutputStream(out));
         this.streamIndex = out.getId();
@@ -43,8 +41,7 @@ public class UncompressedIntegerTraceSequence extends AbstractTraceSequence impl
     public void writeOut(final DataOutput out) throws IOException {
         finish();
 
-        out.writeByte(getFormat());
-        out.writeByte(TYPE_INTEGER);
+        out.writeByte(getFormat() | TYPE_INTEGER);
         out.writeInt(this.streamIndex);
     }
 

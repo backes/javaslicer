@@ -18,8 +18,8 @@ public class IIncInstruction extends AbstractInstruction {
 
     private final int localVarIndex;
 
-    public IIncInstruction(final ReadMethod readMethod, final int localVarIndex) {
-        super(readMethod, Opcodes.IINC);
+    public IIncInstruction(final ReadMethod readMethod, final int localVarIndex, final int lineNumber) {
+        super(readMethod, Opcodes.IINC, lineNumber);
         this.localVarIndex = localVarIndex;
     }
 

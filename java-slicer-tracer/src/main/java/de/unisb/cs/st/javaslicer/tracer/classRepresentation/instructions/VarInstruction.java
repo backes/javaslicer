@@ -18,8 +18,8 @@ public class VarInstruction extends AbstractInstruction {
 
     private final int localVarIndex;
 
-    public VarInstruction(final ReadMethod readMethod, final int opcode, final int localVarIndex) {
-        super(readMethod, opcode);
+    public VarInstruction(final ReadMethod readMethod, final int opcode, final int lineNumber, final int localVarIndex) {
+        super(readMethod, opcode, lineNumber);
         assert opcode == Opcodes.ILOAD
             || opcode == Opcodes.LLOAD
             || opcode == Opcodes.FLOAD

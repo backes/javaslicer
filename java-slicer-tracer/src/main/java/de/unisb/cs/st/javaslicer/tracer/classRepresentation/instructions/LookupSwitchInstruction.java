@@ -25,13 +25,15 @@ public class LookupSwitchInstruction extends AbstractInstruction {
     private LabelMarker defaultHandler;
     private IntegerMap<LabelMarker> handlers;
 
-    public LookupSwitchInstruction(final ReadMethod readMethod, final LabelMarker defaultHandler, final IntegerMap<LabelMarker> handlers) {
-        super(readMethod, Opcodes.LOOKUPSWITCH);
+    public LookupSwitchInstruction(final ReadMethod readMethod, final int lineNumber,
+            final LabelMarker defaultHandler, final IntegerMap<LabelMarker> handlers) {
+        super(readMethod, Opcodes.LOOKUPSWITCH, lineNumber);
         this.defaultHandler = defaultHandler;
         this.handlers = handlers;
     }
 
-    private LookupSwitchInstruction(final ReadMethod readMethod, final int lineNumber, final LabelMarker defaultHandler, final IntegerMap<LabelMarker> handlers, final int index) {
+    private LookupSwitchInstruction(final ReadMethod readMethod, final int lineNumber,
+            final LabelMarker defaultHandler, final IntegerMap<LabelMarker> handlers, final int index) {
         super(readMethod, Opcodes.LOOKUPSWITCH, lineNumber, index);
         this.defaultHandler = defaultHandler;
         this.handlers = handlers;

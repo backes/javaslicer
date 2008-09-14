@@ -21,12 +21,14 @@ public class JumpInstruction extends AbstractInstruction {
 
     private LabelMarker label;
 
-    public JumpInstruction(final ReadMethod readMethod, final int opcode, final LabelMarker label) {
-        super(readMethod, opcode);
+    public JumpInstruction(final ReadMethod readMethod, final int opcode, final int lineNumber,
+            final LabelMarker label) {
+        super(readMethod, opcode, lineNumber);
         this.label = label;
     }
 
-    private JumpInstruction(final ReadMethod readMethod, final int lineNumber, final int opcode, final LabelMarker label, final int index) {
+    private JumpInstruction(final ReadMethod readMethod, final int lineNumber,
+            final int opcode, final LabelMarker label, final int index) {
         super(readMethod, opcode, lineNumber, index);
         this.label = label;
     }

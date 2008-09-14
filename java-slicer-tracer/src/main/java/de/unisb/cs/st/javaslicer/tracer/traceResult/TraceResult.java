@@ -14,6 +14,7 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;
+import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader.MultiplexInputStream;
 
 public class TraceResult {
 
@@ -63,15 +64,21 @@ public class TraceResult {
 
     public static TraceResult readFrom(final File filename) throws IOException {
         final MultiplexedFileReader file = new MultiplexedFileReader(filename);
-        if (file.getNoStreams() < 2)
+        if (file.getStreamIds().size() < 2)
             throw new IOException("corrupted data");
-        final DataInputStream readClassesInputStream = new DataInputStream(file.getInputStream(0));
+        final MultiplexInputStream readClassesStream = file.getInputStream(0);
+        if (readClassesStream == null)
+            throw new IOException("corrupted data");
+        final DataInputStream readClassesInputStream = new DataInputStream(readClassesStream);
         final ArrayList<ReadClass> readClasses = new ArrayList<ReadClass>();
         while (readClassesInputStream.available() > 0)
             readClasses.add(ReadClass.readFrom(readClassesInputStream));
         readClasses.trimToSize();
 
-        final DataInputStream threadTracersInputStream = new DataInputStream(file.getInputStream(1));
+        final MultiplexInputStream threadTracersStream = file.getInputStream(1);
+        if (threadTracersStream == null)
+            throw new IOException("corrupted data");
+        final DataInputStream threadTracersInputStream = new DataInputStream(threadTracersStream);
         final ArrayList<ThreadTraceResult> threadTraces = new ArrayList<ThreadTraceResult>();
         final TraceResult traceResult = new TraceResult(readClasses, threadTraces);
         while (threadTracersInputStream.available() > 0)

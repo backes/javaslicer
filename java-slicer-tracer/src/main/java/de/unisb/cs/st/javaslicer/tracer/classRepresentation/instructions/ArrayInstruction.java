@@ -24,8 +24,9 @@ public class ArrayInstruction extends AbstractInstruction {
     private final int indexTraceSeqIndex;
 
     public ArrayInstruction(final ReadMethod readMethod, final int opcode,
+            final int lineNumber,
             final int arrayTraceSeqIndex, final int indexTraceSeqIndex) {
-        super(readMethod, opcode);
+        super(readMethod, opcode, lineNumber);
         this.arrayTraceSeqIndex = arrayTraceSeqIndex;
         this.indexTraceSeqIndex = indexTraceSeqIndex;
     }

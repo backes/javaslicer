@@ -22,8 +22,9 @@ public class MethodInvocationInstruction extends AbstractInstruction {
     private final String methodDesc;
 
     public MethodInvocationInstruction(final ReadMethod readMethod, final int opcode,
-            final String internalClassName, final String methodName, final String methodDesc) {
-        super(readMethod, opcode);
+            final int lineNumber, final String internalClassName, final String methodName,
+            final String methodDesc) {
+        super(readMethod, opcode, lineNumber);
         this.internalClassName = internalClassName;
         this.methodName = methodName;
         this.methodDesc = methodDesc;

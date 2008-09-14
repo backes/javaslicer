@@ -10,8 +10,8 @@ import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter.MultiplexOutp
 
 public class GZipLongTraceSequence extends UncompressedLongTraceSequence {
 
-    public GZipLongTraceSequence(final int index, final Tracer tracer) throws IOException {
-        super(index, tracer);
+    public GZipLongTraceSequence(final Tracer tracer) throws IOException {
+        super(tracer);
     }
 
     @Override

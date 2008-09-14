@@ -18,8 +18,8 @@ public class LdcInstruction extends AbstractInstruction {
 
     private final Object constant;
 
-    public LdcInstruction(final ReadMethod readMethod, final Object constant) {
-        super(readMethod, Opcodes.LDC);
+    public LdcInstruction(final ReadMethod readMethod, final int lineNumber, final Object constant) {
+        super(readMethod, Opcodes.LDC, lineNumber);
         assert constant instanceof Number || constant instanceof String || constant instanceof org.objectweb.asm.Type;
         this.constant = constant;
     }

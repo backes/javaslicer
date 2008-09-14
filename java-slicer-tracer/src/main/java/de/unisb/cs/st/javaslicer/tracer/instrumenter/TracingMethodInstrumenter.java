@@ -129,8 +129,6 @@ public class TracingMethodInstrumenter implements Opcodes {
 
     private final int tracerLocalVarIndex;
 
-    private final Map<LabelNode, Integer> labelLineNumbers = new HashMap<LabelNode, Integer>();
-
     private final Map<LabelNode, LabelMarker> labels =
         new HashMap<LabelNode, LabelMarker>();
 
@@ -156,6 +154,9 @@ public class TracingMethodInstrumenter implements Opcodes {
     private static int statsPutField = 0;
     private ListIterator<AbstractInsnNode> instructionIterator;
     private Set<LabelNode> jumpTargetLabels;
+    private Map<LabelNode, Integer> labelLineNumbers;
+    private int currentLine = -1;
+    private int firstLine = -1;
 
     public TracingMethodInstrumenter(final Tracer tracer, final ReadMethod readMethod, final ClassNode classNode) {
         this.tracer = tracer;
@@ -180,7 +181,7 @@ public class TracingMethodInstrumenter implements Opcodes {
             return;
 
         // check out what labels are jump targets (only these have to be traced)
-        this.jumpTargetLabels = getJumpTargetLabels(method);
+        analyze(method);
 
         this.instructionIterator = new FixedInstructionIterator(method.instructions);
         // in the old method, initialize the new local variable for the threadtracer
@@ -306,6 +307,8 @@ public class TracingMethodInstrumenter implements Opcodes {
 
         // now add the code that is executed if no tracing should be performed
         method.instructions.add(noTracingLabel);
+        if (this.firstLine != -1)
+            method.instructions.add(new LineNumberNode(this.firstLine, noTracingLabel));
         method.instructions.add(new InsnNode(ACONST_NULL));
         method.instructions.add(new VarInsnNode(ASTORE, this.tracerLocalVarIndex));
         method.instructions.add(oldInstructions);
@@ -366,36 +369,41 @@ public class TracingMethodInstrumenter implements Opcodes {
         ready();
     }
 
-    private Set<LabelNode> getJumpTargetLabels(final MethodNode method) {
-        final Set<LabelNode> jumpTargets = new HashSet<LabelNode>();
+    private void analyze(final MethodNode method) {
+        this.jumpTargetLabels = new HashSet<LabelNode>();
+        this.labelLineNumbers = new HashMap<LabelNode, Integer>();
         final Iterator<?> insnIt = method.instructions.iterator();
         while (insnIt.hasNext()) {
             final AbstractInsnNode insn = (AbstractInsnNode) insnIt.next();
             switch (insn.getType()) {
             case AbstractInsnNode.JUMP_INSN:
-                jumpTargets.add(((JumpInsnNode)insn).label);
+                this.jumpTargetLabels.add(((JumpInsnNode)insn).label);
                 break;
             case AbstractInsnNode.LOOKUPSWITCH_INSN:
-                jumpTargets.add(((LookupSwitchInsnNode)insn).dflt);
+                this.jumpTargetLabels.add(((LookupSwitchInsnNode)insn).dflt);
                 for (final Object o: ((LookupSwitchInsnNode)insn).labels)
-                    jumpTargets.add((LabelNode)o);
+                    this.jumpTargetLabels.add((LabelNode)o);
                 break;
             case AbstractInsnNode.TABLESWITCH_INSN:
-                jumpTargets.add(((TableSwitchInsnNode)insn).dflt);
+                this.jumpTargetLabels.add(((TableSwitchInsnNode)insn).dflt);
                 for (final Object o: ((TableSwitchInsnNode)insn).labels)
-                    jumpTargets.add((LabelNode)o);
+                    this.jumpTargetLabels.add((LabelNode)o);
+                break;
+            case AbstractInsnNode.LINE:
+                final LineNumberNode lnn = (LineNumberNode)insn;
+                if (this.labelLineNumbers.isEmpty())
+                    this.firstLine = lnn.line;
+                this.labelLineNumbers.put(lnn.start, lnn.line);
                 break;
             }
         }
 
         for (final Object o: method.tryCatchBlocks)
-            jumpTargets.add(((TryCatchBlockNode) o).handler);
-
-        return jumpTargets;
+            this.jumpTargetLabels.add(((TryCatchBlockNode) o).handler);
     }
 
     private void transformJumpInsn(final JumpInsnNode insn) {
-        final JumpInstruction jumpInstr = new JumpInstruction(this.readMethod, insn.getOpcode(), null);
+        final JumpInstruction jumpInstr = new JumpInstruction(this.readMethod, insn.getOpcode(), this.currentLine, null);
         this.jumpInstructions.put(jumpInstr, insn.label);
         registerInstruction(jumpInstr);
         if (insn.getOpcode() == JSR) {
@@ -405,7 +413,7 @@ public class TracingMethodInstrumenter implements Opcodes {
     }
 
     private void transformMethodInsn(final MethodInsnNode insn) {
-        registerInstruction(new MethodInvocationInstruction(this.readMethod, insn.getOpcode(), insn.owner, insn.name, insn.desc));
+        registerInstruction(new MethodInvocationInstruction(this.readMethod, insn.getOpcode(), this.currentLine, insn.owner, insn.name, insn.desc));
 
         if (this.tracer.wasRedefined(Type.getObjectType(insn.owner).getClassName())
                 && (insn.owner.equals(this.classNode.name)
@@ -457,23 +465,7 @@ public class TracingMethodInstrumenter implements Opcodes {
             }
         }
 
-        // now set the line numbers of the instructions of this method
-        final Map<LabelMarker, LabelNode> labelInvs = new HashMap<LabelMarker, LabelNode>(this.labels.size()*4/3+1);
-        for (final Entry<LabelNode, LabelMarker> e: this.labels.entrySet())
-            labelInvs.put(e.getValue(), e.getKey());
-        final Iterator<AbstractInstruction> instrIt = this.readMethod.getInstructions().iterator();
-        int line = -1;
-        while (instrIt.hasNext()) {
-            final AbstractInstruction instr = instrIt.next();
-            if (instr instanceof LabelMarker) {
-                final Integer labelLine = this.labelLineNumbers.get(labelInvs.get(instr));
-                if (labelLine != null)
-                    line = labelLine.intValue();
-            }
-            instr.setLineNumber(line);
-        }
-
-        // and set label references
+        // now set label references
         for (final Entry<JumpInstruction, LabelNode> e: this.jumpInstructions.entrySet()) {
             final LabelMarker lm = this.labels.get(e.getValue());
             if (lm == null)
@@ -571,12 +563,12 @@ public class TracingMethodInstrumenter implements Opcodes {
             this.instructionIterator.next();
         }
 
-        registerInstruction(new FieldInstruction(this.readMethod, insn.getOpcode(), insn.owner,
-                insn.name, insn.desc, objectTraceSeqIndex));
+        registerInstruction(new FieldInstruction(this.readMethod, insn.getOpcode(), this.currentLine,
+                insn.owner, insn.name, insn.desc, objectTraceSeqIndex));
     }
 
     private void transformIincInsn(final IincInsnNode insn) {
-        registerInstruction(new IIncInstruction(this.readMethod, insn.var));
+        registerInstruction(new IIncInstruction(this.readMethod, insn.var, this.currentLine));
         if (insn.var >= this.tracerLocalVarIndex)
             ++insn.var;
     }
@@ -679,28 +671,29 @@ public class TracingMethodInstrumenter implements Opcodes {
             // and move to the position where it was before entering this method
             this.instructionIterator.next();
 
-            registerInstruction(new ArrayInstruction(this.readMethod, insn.getOpcode(), arrayTraceSeqIndex, indexTraceSeqIndex));
+            registerInstruction(new ArrayInstruction(this.readMethod, insn.getOpcode(), this.currentLine,
+                    arrayTraceSeqIndex, indexTraceSeqIndex));
         } else {
             assert indexTraceSeqIndex == -1;
-            registerInstruction(new SimpleInstruction(this.readMethod, insn.getOpcode()));
+            registerInstruction(new SimpleInstruction(this.readMethod, insn.getOpcode(), this.currentLine));
         }
     }
 
     private void transformIntInsn(final IntInsnNode insn) {
         if (insn.getOpcode() == NEWARRAY) {
-            registerInstruction(new NewArrayInstruction(this.readMethod, insn.operand));
+            registerInstruction(new NewArrayInstruction(this.readMethod, this.currentLine, insn.operand));
         } else {
             assert insn.getOpcode() == BIPUSH || insn.getOpcode() == SIPUSH;
-            registerInstruction(new IntPush(this.readMethod, insn.getOpcode(), insn.operand));
+            registerInstruction(new IntPush(this.readMethod, insn.getOpcode(), insn.operand, this.currentLine));
         }
     }
 
     private void transformLdcInsn(final LdcInsnNode insn) {
-        registerInstruction(new LdcInstruction(this.readMethod, insn.cst));
+        registerInstruction(new LdcInstruction(this.readMethod, this.currentLine, insn.cst));
     }
 
     private void transformLineNumber(final LineNumberNode lineNumber) {
-        this.labelLineNumbers.put(lineNumber.start, lineNumber.line);
+        //this.labelLineNumbers.put(lineNumber.start, lineNumber.line);
     }
 
     private void transformLookupSwitchInsn(final LookupSwitchInsnNode insn) {
@@ -708,34 +701,38 @@ public class TracingMethodInstrumenter implements Opcodes {
         assert insn.keys.size() == insn.labels.size();
         for (int i = 0; i < insn.keys.size(); ++i)
             handlers.put((Integer)insn.keys.get(i), (LabelNode)insn.labels.get(i));
-        final LookupSwitchInstruction instr = new LookupSwitchInstruction(this.readMethod, null, null);
+        final LookupSwitchInstruction instr = new LookupSwitchInstruction(this.readMethod, this.currentLine, null, null);
         this.lookupSwitchInstructions.put(instr, new Pair<LabelNode, IntegerMap<LabelNode>>(insn.dflt, handlers));
         registerInstruction(instr);
     }
 
     private void transformMultiANewArrayInsn(final MultiANewArrayInsnNode insn) {
-        registerInstruction(new MultiANewArrayInstruction(this.readMethod, insn.desc, insn.dims));
+        registerInstruction(new MultiANewArrayInstruction(this.readMethod, this.currentLine, insn.desc, insn.dims));
     }
 
     @SuppressWarnings("unchecked")
     private void transformTableSwitchInsn(final TableSwitchInsnNode insn) {
         assert insn.min + insn.labels.size() - 1 == insn.max;
-        final TableSwitchInstruction instr = new TableSwitchInstruction(this.readMethod, insn.min, insn.max, null, null);
+        final TableSwitchInstruction instr = new TableSwitchInstruction(this.readMethod, this.currentLine,
+                insn.min, insn.max, null, null);
         this.tableSwitchInstructions.put(instr, new Pair<LabelNode, List<LabelNode>>(insn.dflt, insn.labels));
         registerInstruction(instr);
     }
 
     private void transformTypeInsn(final TypeInsnNode insn) {
-        registerInstruction(new TypeInstruction(this.readMethod, insn.getOpcode(), insn.desc));
+        registerInstruction(new TypeInstruction(this.readMethod, insn.getOpcode(), this.currentLine, insn.desc));
     }
 
     private void transformVarInsn(final VarInsnNode insn) {
-        registerInstruction(new VarInstruction(this.readMethod, insn.getOpcode(), insn.var));
+        registerInstruction(new VarInstruction(this.readMethod, insn.getOpcode(), this.currentLine, insn.var));
         if (insn.var >= this.tracerLocalVarIndex)
             ++insn.var;
     }
 
     private void transformLabel(final LabelNode label) {
+        final Integer line = this.labelLineNumbers.get(label);
+        if (line != null)
+            this.currentLine = line;
         traceLabel(label);
     }
 
@@ -744,7 +741,7 @@ public class TracingMethodInstrumenter implements Opcodes {
             final int seq = this.tracer.newIntegerTraceSequence();
             final boolean isAdditionalLabel = label == null;
             final int labelNr = isAdditionalLabel ? this.nextAdditionalLabelNr-- : this.nextLabelNr++;
-            final LabelMarker lm = new LabelMarker(this.readMethod, seq, isAdditionalLabel, labelNr);
+            final LabelMarker lm = new LabelMarker(this.readMethod, seq, this.currentLine, isAdditionalLabel, labelNr);
             if (!isAdditionalLabel)
                 this.labels.put(label, lm);
 

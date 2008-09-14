@@ -19,8 +19,8 @@ public class MultiANewArrayInstruction extends AbstractInstruction {
     private final String typeDesc;
     private final int dims;
 
-    public MultiANewArrayInstruction(final ReadMethod readMethod, final String desc, final int dims) {
-        super(readMethod, Opcodes.MULTIANEWARRAY);
+    public MultiANewArrayInstruction(final ReadMethod readMethod, final int lineNumber, final String desc, final int dims) {
+        super(readMethod, Opcodes.MULTIANEWARRAY, lineNumber);
         this.typeDesc = desc;
         this.dims = dims;
     }

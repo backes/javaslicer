@@ -19,8 +19,8 @@ public class IntPush extends AbstractInstruction {
 
     private final int operand;
 
-    public IntPush(final ReadMethod readMethod, final int opcode, final int operand) {
-        super(readMethod, opcode);
+    public IntPush(final ReadMethod readMethod, final int opcode, final int operand, final int lineNumber) {
+        super(readMethod, opcode, lineNumber);
         assert opcode == Opcodes.BIPUSH || opcode == Opcodes.SIPUSH;
         this.operand = operand;
     }

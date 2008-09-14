@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer.tracer.traceResult;
+package de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences;
 
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -32,7 +32,7 @@ public class ConstantUncompressedIntegerTraceSequence extends ConstantIntegerTra
     public static ConstantUncompressedIntegerTraceSequence readFrom(final DataInput in, final MultiplexedFileReader file)
             throws IOException {
         final int streamIndex = in.readInt();
-        if (streamIndex < 0 || streamIndex >= file.getNoStreams())
+        if (!file.getStreamIds().contains(streamIndex))
             throw new IOException("corrupted data");
         return new ConstantUncompressedIntegerTraceSequence(file, streamIndex);
     }

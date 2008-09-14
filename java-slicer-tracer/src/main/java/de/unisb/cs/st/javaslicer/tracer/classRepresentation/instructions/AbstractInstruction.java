@@ -46,10 +46,10 @@ public abstract class AbstractInstruction implements Instruction {
     private final int index;
     protected final ReadMethod method;
     private final int opcode;
-    private int lineNumber;
+    private final int lineNumber;
 
-    public AbstractInstruction(final ReadMethod readMethod, final int opcode) {
-        this(readMethod, opcode, -1, nextIndex++);
+    public AbstractInstruction(final ReadMethod readMethod, final int opcode, final int lineNumber) {
+        this(readMethod, opcode, lineNumber, nextIndex++);
         if (nextIndex < 0)
             throw new RuntimeException("Integer overflow in instruction index");
     }
@@ -75,10 +75,6 @@ public abstract class AbstractInstruction implements Instruction {
 
     public int getLineNumber() {
         return this.lineNumber;
-    }
-
-    public void setLineNumber(final int lineNumber) {
-        this.lineNumber = lineNumber;
     }
 
     public static int getNextIndex() {
