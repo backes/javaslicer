@@ -121,6 +121,11 @@
                 <artifactId>java-slicer-tracer</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>de.unisb.cs.st</groupId>
+                <artifactId>java-slicer-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
