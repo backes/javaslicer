@@ -55,7 +55,7 @@ public class MultiplexedFileReader {
             int d = 0;
             long max = MultiplexedFileReader.this.blockSize;
             while (max < len) {
-                d++;
+                ++d;
                 max *= MultiplexedFileReader.this.blockSize/4;
             }
             return d;
