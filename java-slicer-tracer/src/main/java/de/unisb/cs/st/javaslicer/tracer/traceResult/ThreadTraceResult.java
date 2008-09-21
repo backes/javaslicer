@@ -154,6 +154,12 @@ public class ThreadTraceResult {
             if (ThreadTraceResult.this.traceResult.debug) {
                 try {
                     this.debugFileWriter = new PrintWriter(new FileOutputStream(new File("iteration_debug.log")));
+                    Runtime.getRuntime().addShutdownHook(new Thread() {
+                        @Override
+                        public void run() {
+                            BackwardInstructionIterator.this.debugFileWriter.close();
+                        }
+                    });
                 } catch (final FileNotFoundException e) {
                     e.printStackTrace();
                 }

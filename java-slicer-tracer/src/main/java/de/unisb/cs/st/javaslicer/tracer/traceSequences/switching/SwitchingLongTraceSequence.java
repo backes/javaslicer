@@ -6,6 +6,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.zip.GZIPOutputStream;
 
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
@@ -18,7 +20,74 @@ import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter.MultiplexOutp
 
 public class SwitchingLongTraceSequence implements LongTraceSequence {
 
-    public class MyByteArrayInputStream extends InputStream {
+    private static class BackwardLongStreamReader implements Iterator<Long> {
+
+        private long offset;
+        private final long[] buf;
+        private int bufPos;
+        private final Reader mplexReader;
+        private final MyDataInputStream dataIn;
+
+        public BackwardLongStreamReader(final MultiplexOutputStream mplexOut, final int bufSize) throws IOException {
+            final long numLongs = mplexOut.length()/8;
+            long startLong = (numLongs - 1) / bufSize * bufSize;
+            this.offset = startLong * 8;
+            this.mplexReader = mplexOut.getReader(this.offset);
+            this.dataIn = new MyDataInputStream(this.mplexReader);
+            this.buf = new long[bufSize];
+            this.bufPos = (int) (numLongs - startLong - 1);
+            for (int i = 0; startLong < numLongs; ++startLong) {
+                this.buf[i++] = this.dataIn.readLong();
+            }
+        }
+
+        @Override
+        public boolean hasNext() {
+            try {
+                if (this.bufPos >= 0)
+                    return true;
+                if (this.offset == 0)
+                    return false;
+                this.offset -= this.buf.length*8;
+                this.mplexReader.seek(this.offset);
+                for (int i = 0; i < this.buf.length; ++i) {
+                    this.buf[i] = this.dataIn.readLong();
+                }
+                this.bufPos = this.buf.length - 1;
+                return true;
+            } catch (final IOException e) {
+                close();
+                return false;
+            }
+        }
+
+        @Override
+        public Long next() {
+            if (!hasNext())
+                throw new NoSuchElementException();
+            return this.buf[this.bufPos--];
+        }
+
+        // to avoid boxing
+        public long nextLong() {
+            if (!hasNext())
+                throw new NoSuchElementException();
+            return this.buf[this.bufPos--];
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
+
+        public void close() {
+            this.bufPos = -1;
+            this.offset = 0;
+            this.mplexReader.close();
+        }
+    }
+
+    public static class MyByteArrayInputStream extends InputStream {
 
         private final byte[] buf;
         private int nextPos;
@@ -98,7 +167,7 @@ public class SwitchingLongTraceSequence implements LongTraceSequence {
         final MultiplexOutputStream oldMplexOut = this.mplexOut;
         this.mplexOut = this.tracer.newOutputStream();
 
-        // now we have to inverse the integer stream
+        // now we have to inverse the long stream
         assert this.baOutputStream != null || oldMplexOut != null;
         if (this.baOutputStream != null) {
             this.gzipped = false;
@@ -112,39 +181,31 @@ public class SwitchingLongTraceSequence implements LongTraceSequence {
                 nextPos -= 8;
             }
             this.baOutputStream = null;
+            optOut.close();
         } else {
             ByteArrayOutputStream invStreamFirstPart = null;
             OptimizedDataOutputStream optOut = null;
-            long nextPos = oldMplexOut.length() - 8;
-            final Reader mplexReader = oldMplexOut.getReader(Math.max(0, nextPos));
-            final MyDataInputStream dataIn = new MyDataInputStream(mplexReader);
-            if (this.mplexOut.length() < 8*SWITCH_TO_GZIP_WHEN_GREATER) {
+            final BackwardLongStreamReader backwardReader = new BackwardLongStreamReader(oldMplexOut, oldMplexOut.getBlockSize()/8);
+            if (oldMplexOut.length() <= 8*SWITCH_TO_GZIP_WHEN_GREATER) {
                 invStreamFirstPart = new ByteArrayOutputStream();
                 optOut = new OptimizedDataOutputStream(invStreamFirstPart, true);
-                while (nextPos >= 0 && invStreamFirstPart.size() <= SWITCH_TO_GZIP_WHEN_GREATER) {
-                    mplexReader.seek(nextPos);
-                    optOut.writeLong(dataIn.readLong());
-                    nextPos -= 8;
-                }
+                while (backwardReader.hasNext())
+                    optOut.writeLong(backwardReader.nextLong());
             }
-            if (nextPos < 0 && invStreamFirstPart != null && invStreamFirstPart.size() <= SWITCH_TO_GZIP_WHEN_GREATER) {
+            if (!backwardReader.hasNext() && invStreamFirstPart != null && invStreamFirstPart.size() <= SWITCH_TO_GZIP_WHEN_GREATER) {
                 this.gzipped = false;
                 invStreamFirstPart.writeTo(this.mplexOut);
-                optOut.close();
             } else {
                 this.gzipped = true;
-                final OutputStream gzipOut = new BufferedOutputStream(new GZIPOutputStream(this.mplexOut), 8192);
+                final OutputStream gzipOut = new BufferedOutputStream(new GZIPOutputStream(this.mplexOut, 512), 512);
                 if (invStreamFirstPart != null)
                     invStreamFirstPart.writeTo(gzipOut);
                 optOut = new OptimizedDataOutputStream(gzipOut, 0, optOut == null ? 0l : optOut.getLastLongValue());
-                while (nextPos >= 0) {
-                    mplexReader.seek(nextPos);
-                    optOut.writeLong(dataIn.readLong());
-                    nextPos -= 8;
-                }
+                while (backwardReader.hasNext())
+                    optOut.writeLong(backwardReader.nextLong());
                 optOut.close();
             }
-            mplexReader.close();
+            backwardReader.close();
             oldMplexOut.remove();
         }
     }

@@ -468,6 +468,10 @@ public class MultiplexedFileWriter {
             this.innerOut.write(b);
         }
 
+        public int getBlockSize() {
+            return MultiplexedFileWriter.this.blockSize;
+        }
+
     }
 
     private static final int DEFAULT_BLOCK_SIZE = 1024; // MUST be divideable by 4
