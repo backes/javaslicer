@@ -84,6 +84,7 @@ public class MultiplexedFileReader {
                     MultiplexedFileReader.this.blockSize - this.pos[this.depth],
                     this.dataLength - toPos);
             }
+
         }
 
         /**
@@ -203,6 +204,14 @@ public class MultiplexedFileReader {
             // nothing to do
         }
 
+        public boolean isEOF() throws IOException {
+            if (this.remainingInCurrentBlock == 0) {
+                moveToNextBlock();
+                if (this.remainingInCurrentBlock == 0)
+                    return true;
+            }
+            return false;
+        }
     }
 
     private static final long POS_INT_MASK = 0xffffffffL;
@@ -238,7 +247,7 @@ public class MultiplexedFileReader {
             final int id = str.readInt();
             final int start = str.readInt();
             final long length = str.readLong();
-            if (this.streamDefs.put(id, new StreamDef(start, length)) != null)
+            if (length < 0 || this.streamDefs.put(id, new StreamDef(start, length)) != null)
                 throw new IOException("corrupted data");
         }
         str.close();

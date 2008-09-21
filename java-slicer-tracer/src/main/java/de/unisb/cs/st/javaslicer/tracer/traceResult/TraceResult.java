@@ -1,12 +1,16 @@
 package de.unisb.cs.st.javaslicer.tracer.traceResult;
 
+import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.PushbackInputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.zip.GZIPInputStream;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
@@ -69,46 +73,78 @@ public class TraceResult {
         final MultiplexInputStream readClassesStream = file.getInputStream(0);
         if (readClassesStream == null)
             throw new IOException("corrupted data");
-        final DataInputStream readClassesInputStream = new DataInputStream(readClassesStream);
+        PushbackInputStream pushBackInput =
+            new PushbackInputStream(new BufferedInputStream(
+                    new GZIPInputStream(readClassesStream, 512), 512), 1);
+        final DataInputStream readClassesInputStream = new DataInputStream(
+                pushBackInput);
         final ArrayList<ReadClass> readClasses = new ArrayList<ReadClass>();
-        while (readClassesInputStream.available() > 0)
+        int testRead;
+        while ((testRead = pushBackInput.read()) != -1) {
+            pushBackInput.unread(testRead);
             readClasses.add(ReadClass.readFrom(readClassesInputStream));
+        }
         readClasses.trimToSize();
 
         final MultiplexInputStream threadTracersStream = file.getInputStream(1);
         if (threadTracersStream == null)
             throw new IOException("corrupted data");
-        final DataInputStream threadTracersInputStream = new DataInputStream(threadTracersStream);
+        pushBackInput = new PushbackInputStream(new BufferedInputStream(
+                new GZIPInputStream(threadTracersStream, 512), 512), 1);
+        final DataInputStream threadTracersInputStream = new DataInputStream(
+                pushBackInput);
         final ArrayList<ThreadTraceResult> threadTraces = new ArrayList<ThreadTraceResult>();
         final TraceResult traceResult = new TraceResult(readClasses, threadTraces);
-        while (threadTracersInputStream.available() > 0)
+        while ((testRead = pushBackInput.read()) != -1) {
+            pushBackInput.unread(testRead);
             threadTraces.add(ThreadTraceResult.readFrom(threadTracersInputStream, traceResult, file));
+        }
         threadTraces.trimToSize();
+        Collections.sort(threadTraces, new Comparator<ThreadTraceResult>() {
+            @Override
+            public int compare(final ThreadTraceResult o1, final ThreadTraceResult o2) {
+                return o1.getThreadId() < o2.getThreadId() ? -1 : o1.getThreadId() > o2.getThreadId() ? 1 : 0;
+            }
+        });
 
         return traceResult;
     }
 
     public Iterator<Instance> getBackwardIterator(final long threadId) {
-        for (final ThreadTraceResult res: this.threadTraces)
-            if (res.getThreadId() == threadId)
-                return res.getBackwardIterator();
+        final ThreadTraceResult res = findThreadTraceResult(threadId);
+        return res == null ? null : res.getBackwardIterator();
+    }
+
+    private ThreadTraceResult findThreadTraceResult(final long threadId) {
+        // binary search
+        int left = 0;
+        int right = this.threadTraces.size();
+        int mid;
+
+        while ((mid = (left + right) / 2) != left) {
+            final ThreadTraceResult midVal = this.threadTraces.get(mid);
+            if (midVal.getThreadId() < threadId)
+                left = mid;
+            else if (midVal.getThreadId() > threadId)
+                right = mid;
+            else
+                return midVal;
+        }
+        // not found:
         return null;
     }
 
     /**
-     * Returns a sorted, not modifiable List of all threads that are represented
+     * Returns a sorted List of all threads that are represented
      * by traces in this TraceResult.
      *
      * @return the sorted list of {@link ThreadId}s.
      */
     public List<ThreadId> getThreads() {
-        final ThreadId[] list = new ThreadId[this.threadTraces.size()];
-        for (int i = 0; i < this.threadTraces.size(); ++i) {
-            final ThreadTraceResult tt = this.threadTraces.get(i);
-            list[i] = new ThreadId(tt.getThreadId(), tt.getThreadName());
-        }
-        Arrays.sort(list);
-        return Arrays.asList(list);
+        final List<ThreadId> list = new ArrayList<ThreadId>(this.threadTraces.size());
+        for (final ThreadTraceResult tt: this.threadTraces)
+            list.add(new ThreadId(tt.getThreadId(), tt.getThreadName()));
+        return list;
     }
 
     public List<ReadClass> getReadClasses() {

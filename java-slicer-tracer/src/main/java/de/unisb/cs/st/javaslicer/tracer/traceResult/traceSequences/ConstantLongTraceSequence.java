@@ -18,6 +18,8 @@ public abstract class ConstantLongTraceSequence extends ConstantTraceSequence {
             // return ConstantGZipLongTraceSequence.readFrom(in, file);
         } else if ((format & TraceSequence.FORMAT_UNCOMPRESSED) != 0) {
             return ConstantUncompressedLongTraceSequence.readFrom(in, file);
+        } else if ((format & TraceSequence.FORMAT_SWITCHING) != 0) {
+            return ConstantSwitchingLongTraceSequence.readFrom(in, file);
         } else {
             throw new IOException("corrupted data (unknown format: " + format + ")");
         }

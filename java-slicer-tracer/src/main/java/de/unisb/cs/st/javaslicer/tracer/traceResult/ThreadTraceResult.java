@@ -21,6 +21,9 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Type;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
+import de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences.ConstantIntegerTraceSequence;
+import de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences.ConstantLongTraceSequence;
+import de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences.ConstantTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerToLongMap;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;

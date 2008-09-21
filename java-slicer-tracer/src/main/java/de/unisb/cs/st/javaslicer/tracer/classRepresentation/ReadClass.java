@@ -78,6 +78,8 @@ public class ReadClass {
 
     public static ReadClass readFrom(final DataInput in) throws IOException {
         final String intName = in.readUTF();
+        if (intName.isEmpty())
+            throw new IOException("corrupted data");
         final int instructionNumberStart = in.readInt();
         final int instructionNumberEnd = in.readInt();
         final int access = in.readInt();

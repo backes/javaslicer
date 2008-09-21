@@ -18,6 +18,8 @@ public abstract class ConstantIntegerTraceSequence extends ConstantTraceSequence
             //return ConstantGZipIntegerTraceSequence.readFrom(in, file);
         } else if ((format & TraceSequence.FORMAT_UNCOMPRESSED) != 0) {
             return ConstantUncompressedIntegerTraceSequence.readFrom(in, file);
+        } else if ((format & TraceSequence.FORMAT_SWITCHING) != 0) {
+            return ConstantSwitchingIntegerTraceSequence.readFrom(in, file);
         } else {
             throw new IOException("corrupted data (unknown format: " + format + ")");
         }

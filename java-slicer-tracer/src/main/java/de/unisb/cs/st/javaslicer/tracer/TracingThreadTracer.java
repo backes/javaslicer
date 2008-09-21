@@ -75,6 +75,7 @@ public class TracingThreadTracer implements ThreadTracer {
             System.exit(-1);
         }
 
+        // only unpause if there was no error until here
         unpauseTracing();
     }
 
@@ -100,6 +101,7 @@ public class TracingThreadTracer implements ThreadTracer {
             System.exit(-1);
         }
 
+        // only unpause if there was no error until here
         unpauseTracing();
     }
 
