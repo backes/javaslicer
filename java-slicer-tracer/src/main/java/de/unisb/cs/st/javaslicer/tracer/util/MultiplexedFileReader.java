@@ -131,27 +131,19 @@ public class MultiplexedFileReader {
             if (len == 0)
                 return 0;
 
-            if (this.remainingInCurrentBlock == 0) {
-                moveToNextBlock();
-                if (this.remainingInCurrentBlock == 0)
-                    return -1;
-            }
-
             int ptr = off;
             final int end = off + len;
-            while (true) {
+            while (ptr < end) {
+                if (this.remainingInCurrentBlock == 0) {
+                    moveToNextBlock();
+                    if (this.remainingInCurrentBlock == 0)
+                        return ptr == off ? -1 : ptr-off;
+                }
                 final int read = Math.min(end - ptr, this.remainingInCurrentBlock);
                 System.arraycopy(this.dataBlocks[this.depth], this.pos[this.depth], b, ptr, read);
                 ptr += read;
                 this.remainingInCurrentBlock -= read;
-                if (ptr < end) {
-                    moveToNextBlock();
-                    if (this.remainingInCurrentBlock == 0)
-                        return ptr-off;
-                } else {
-                    this.pos[this.depth] += read;
-                    break;
-                }
+                this.pos[this.depth] += read;
             }
             return len;
         }
