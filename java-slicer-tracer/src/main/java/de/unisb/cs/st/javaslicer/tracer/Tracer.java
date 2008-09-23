@@ -12,6 +12,7 @@ import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -51,7 +52,7 @@ import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectIdentifier;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.uncompressed.UncompressedTraceSequenceFactory;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.switching.SwitchingTraceSequenceFactory;
 import de.unisb.cs.st.javaslicer.tracer.util.ConcurrentReferenceHashMap;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter;
 import de.unisb.cs.st.javaslicer.tracer.util.SimpleArrayList;
@@ -138,7 +139,7 @@ public class Tracer implements ClassFileTransformer {
     };
 
 
-    public static final TraceSequenceFactory seqFactory = new UncompressedTraceSequenceFactory();
+    public static final TraceSequenceFactory seqFactory = new SwitchingTraceSequenceFactory();
 
     private final Map<Thread, ThreadTracer> threadTracers;
 
@@ -148,7 +149,7 @@ public class Tracer implements ClassFileTransformer {
     protected SimpleArrayList<TracingThreadTracer> readyThreadTracers = new SimpleArrayList<TracingThreadTracer>();
 
     protected final List<TraceSequence.Type> traceSequenceTypes
-        = new SimpleArrayList<TraceSequence.Type>();
+        = Collections.synchronizedList(new SimpleArrayList<TraceSequence.Type>());
 
     public volatile boolean tracingStarted = false;
     public volatile boolean tracingReady = false;

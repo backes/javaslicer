@@ -25,7 +25,7 @@ import de.unisb.cs.st.javaslicer.tracer.ThreadTracer;
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 
-// TODO
+// TODO doc
 public class PauseTracingInstrumenter implements Opcodes {
 
     private final Tracer tracer;

@@ -5,12 +5,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileChannel.MapMode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.LinkedList;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import de.unisb.cs.st.javaslicer.tracer.util.ConcurrentReferenceHashMap.Option;
@@ -485,11 +491,13 @@ public class MultiplexedFileWriter {
 
     private static final long POS_INT_MASK = 0xffffffffL;
 
-    protected final RandomAccessFile file;
+    protected final FileChannel fileChannel;
 
     private final AtomicInteger nextBlockAddr = new AtomicInteger(0);
 
     private final AtomicInteger nextStreamNr = new AtomicInteger(0);
+
+    private final AtomicBoolean firstWrite = new AtomicBoolean(true);
 
     // may be set when an error occurs asynchronously. is thrown on the next
     // operation on this file.
@@ -519,14 +527,14 @@ public class MultiplexedFileWriter {
      *
      * The whole file can have at most 2^32*blockSize (4 TB for blockSize 1024) bytes.
      *
-     * @param file the file to write the multiplexed streams to
+     * @param fileChannel the channel to write the multiplexed streams to
      * @param blockSize the block size of the file (each stream will allocate
      *                  at least <code>blockSize</code> bytes)
      * @param maxDepth the maximum depth of the internal tree to the data blocks
      * @throws IOException
      */
-    public MultiplexedFileWriter(final RandomAccessFile file, final int blockSize, final int maxDepth) throws IOException {
-        if (file == null)
+    public MultiplexedFileWriter(final FileChannel fileChannel, final int blockSize, final int maxDepth) throws IOException {
+        if (fileChannel == null)
             throw new NullPointerException();
         if ((blockSize & 0x3) != 0)
             throw new IllegalArgumentException("blockSize must be dividable by 4");
@@ -535,14 +543,13 @@ public class MultiplexedFileWriter {
         if (maxDepth < 0)
             throw new IllegalArgumentException("maxDepth must be >= 0");
 
-        // first, reset the file
-        file.seek(0);
-        file.setLength(headerSize);
+        // first, reset the file channel
+        fileChannel.position(0);
+        fileChannel.truncate(headerSize);
         // this replaces no seek, but writes 0 to the magic header
-        for (int i = 0; i < headerSize; ++i)
-            file.writeByte(0);
+        fileChannel.write(ByteBuffer.allocate(headerSize), 0);
 
-        this.file = file;
+        this.fileChannel = fileChannel;
         this.blockSize = blockSize;
         this.maxDepth = maxDepth;
         final ConcurrentReferenceHashMap<MultiplexOutputStream, InnerOutputStream> openStreamsTmp = new ConcurrentReferenceHashMap<MultiplexOutputStream, InnerOutputStream>(
@@ -568,22 +575,22 @@ public class MultiplexedFileWriter {
     /**
      * @see #MultiplexedFileWriter(RandomAccessFile, int, int)
      */
-    public MultiplexedFileWriter(final RandomAccessFile file) throws IOException {
-        this(file, DEFAULT_BLOCK_SIZE, DEFAULT_MAX_DEPTH);
+    public MultiplexedFileWriter(final FileChannel fileChannel) throws IOException {
+        this(fileChannel, DEFAULT_BLOCK_SIZE, DEFAULT_MAX_DEPTH);
     }
 
     /**
      * @see #MultiplexedFileWriter(RandomAccessFile, int, int)
      */
     public MultiplexedFileWriter(final File filename) throws IOException {
-        this(new RandomAccessFile(filename, "rw"));
+        this(new RandomAccessFile(filename, "rw").getChannel());
     }
 
     /**
      * @see #MultiplexedFileWriter(RandomAccessFile, int, int)
      */
     public MultiplexedFileWriter(final File filename, final int blockSize, final int maxDepth) throws IOException {
-        this(new RandomAccessFile(filename, "rw"), blockSize, maxDepth);
+        this(new RandomAccessFile(filename, "rw").getChannel(), blockSize, maxDepth);
     }
 
     public MultiplexOutputStream newOutputStream() {
@@ -603,25 +610,90 @@ public class MultiplexedFileWriter {
             newBlockAddr = freeBlock;
         } else {
             newBlockAddr = this.nextBlockAddr.getAndIncrement();
-            if (newBlockAddr == 0 && this.file.length() > headerSize)
-                throw new IOException("Maximum file size reached (length: " + this.file.length() + " bytes)");
+            if (newBlockAddr == 0 && !this.firstWrite.compareAndSet(true, false))
+                throw new IOException("Maximum file size reached (length: " +
+                        ((1l<<32)*this.blockSize+headerSize) + " bytes)");
         }
         writeBlock(newBlockAddr, data);
         return newBlockAddr;
     }
 
 //    private final IntegerMap<Boolean> written = new IntegerMap<Boolean>();
-    protected synchronized void writeBlock(final int blockAddr, final byte[] data) throws IOException {
+    protected void writeBlock(final int blockAddr, final byte[] data) throws IOException {
 //        if (this.written.get(blockAddr) != null)
 //            throw new RuntimeException("same block written twice");
 //        this.written.put(blockAddr, Boolean.TRUE);
-        this.file.seek(headerSize + (blockAddr&POS_INT_MASK)*this.blockSize);
-        this.file.write(data, 0, this.blockSize);
+        final long pos = headerSize + (blockAddr&POS_INT_MASK)*this.blockSize;
+        final int startMappingNr = (int) (pos >>> 31);
+        final int posInMapping = ((int)pos) & ~(1<<31);
+        final int remainingInMapping = 1<<31 - posInMapping;
+        if (remainingInMapping < this.blockSize) {
+            final ByteBuffer mapping1 = getThreadMapping(startMappingNr, posInMapping+this.blockSize);
+            mapping1.position(posInMapping);
+            mapping1.put(data, 0, remainingInMapping);
+            final ByteBuffer mapping2 = getThreadMapping(startMappingNr+1, posInMapping+this.blockSize);
+            mapping2.position(0);
+            mapping2.put(data, remainingInMapping, this.blockSize - remainingInMapping);
+        } else {
+            final ByteBuffer mapping = getThreadMapping(startMappingNr, posInMapping+this.blockSize);
+            mapping.position(posInMapping);
+            mapping.put(data, 0, this.blockSize);
+        }
     }
 
-    public synchronized void readBlock(final int blockAddr, final byte[] buf) throws IOException {
-        this.file.seek(headerSize + (blockAddr&POS_INT_MASK)*this.blockSize);
-        this.file.readFully(buf, 0, this.blockSize);
+    protected void readBlock(final int blockAddr, final byte[] buf) throws IOException {
+        final long pos = headerSize + (blockAddr&POS_INT_MASK)*this.blockSize;
+        final int mappingNr = (int) (pos >>> 31);
+        final int posInMapping = ((int)pos) & ~(1<<31);
+        final ByteBuffer mapping = getThreadMapping(mappingNr, posInMapping+this.blockSize);
+        mapping.position(posInMapping);
+        mapping.get(buf);
+    }
+
+    private final ConcurrentMap<Thread, ByteBuffer[]> threadsMappings =
+        new ConcurrentReferenceHashMap<Thread, ByteBuffer[]>(
+                16, .75f, 16, ReferenceType.WEAK, ReferenceType.STRONG,
+                EnumSet.of(Option.IDENTITY_COMPARISONS));
+    private final Object mappingLock = new Object();
+    private MappedByteBuffer[] globalMappings = new MappedByteBuffer[1];
+
+    private ByteBuffer getThreadMapping(final int mappingNr, final int neededMappingSize) throws IOException {
+        assert mappingNr >= 0 && neededMappingSize >= 0;
+        final Thread thisThread = Thread.currentThread();
+        ByteBuffer[] myMappings = this.threadsMappings.get(thisThread);
+        if (myMappings == null || myMappings.length <= mappingNr || myMappings[mappingNr].capacity() < neededMappingSize) {
+            synchronized (this.mappingLock) {
+                if (this.globalMappings.length <= mappingNr)
+                    this.globalMappings = Arrays.copyOf(this.globalMappings, this.globalMappings.length*2);
+
+                if (this.globalMappings[mappingNr] == null) {
+                    final long mappingSize = Math.max(neededMappingSize*2,
+                        mappingNr == 0 ? 256*1024*1024
+                        : mappingNr == 1 ? 1 << 30
+                        : 1 << 31);
+                    this.globalMappings[mappingNr] = this.fileChannel.map(MapMode.READ_WRITE, (long)mappingNr << 31, mappingSize);
+                } else if (this.globalMappings[mappingNr].capacity() < neededMappingSize) {
+                    final long mappingSize = Math.min(1l<<31, Math.max((long)neededMappingSize*2, (long)this.globalMappings[mappingNr].capacity()*2));
+                    this.globalMappings[mappingNr] = this.fileChannel.map(MapMode.READ_WRITE, (long)mappingNr << 31, mappingSize);
+                }
+
+                if (myMappings == null) {
+                    final MappedByteBuffer[] newMappings = new MappedByteBuffer[this.globalMappings.length];
+                    myMappings = this.threadsMappings.putIfAbsent(thisThread, newMappings);
+                    if (myMappings == null)
+                        myMappings = newMappings;
+                } else if (myMappings.length <= mappingNr) {
+                    myMappings = Arrays.copyOf(myMappings, this.globalMappings.length);
+                    this.threadsMappings.put(thisThread, myMappings);
+                }
+
+                if (myMappings[mappingNr] == null || myMappings[mappingNr].capacity() < neededMappingSize)
+                    myMappings[mappingNr] = this.globalMappings[mappingNr].slice();
+
+            }
+        }
+
+        return myMappings[mappingNr];
     }
 
     private final Object closingLock = new Object();
@@ -683,16 +755,40 @@ public class MultiplexedFileWriter {
             }
 
             // write some meta information to the file
-            this.file.seek(0);
-            this.file.writeInt(MAGIC_HEADER);
-            this.file.writeInt(this.blockSize);
-            this.file.writeInt(streamDefsStartBlock);
-            this.file.writeLong(this.streamDefs.innerOut.dataLength);
+            final ByteBuffer header = ByteBuffer.allocate(headerSize);
+            header.putInt(MAGIC_HEADER);
+            header.putInt(this.blockSize);
+            header.putInt(streamDefsStartBlock);
+            header.putLong(this.streamDefs.innerOut.dataLength);
+            header.position(0);
+            this.fileChannel.write(header, 0);
+
+            // erase references to mapped file regions
+            synchronized (this.mappingLock) {
+                this.globalMappings = null;
+            }
+            this.threadsMappings.clear();
 
             // and (possibly) truncate the file
-            this.file.setLength(headerSize+(long)newBlockCount*this.blockSize);
+            // WARNING: this is a really bad hack!
+            // there is a severe bug in jdk that files whose content is still mapped
+            // cannot be truncated, but there is no way to unmap file content.
+            // so we have to rely on the garbage collector to remove the mappings...
+            LinkedList<byte[]> memoryConsumingList = new LinkedList<byte[]>();
+            while (true) {
+                try {
+                    System.gc();
+                    this.fileChannel.truncate(headerSize+(long)newBlockCount*this.blockSize);
+                    // if there was no exception, then break this loop
+                    break;
+                } catch (final IOException e) {
+                    // consume some more memory to motivate the garbage collector to clear the mappings
+                    memoryConsumingList.add(new byte[1024*1024]); // consumes 1 MB
+                }
+            }
+            memoryConsumingList = null;
 
-            this.file.close();
+            this.fileChannel.close();
             checkException();
         }
     }
