@@ -4,7 +4,6 @@ import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -12,6 +11,7 @@ import java.util.zip.GZIPOutputStream;
 
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.IntegerTraceSequence;
+import de.unisb.cs.st.javaslicer.tracer.util.MyByteArrayInputStream;
 import de.unisb.cs.st.javaslicer.tracer.util.MyDataInputStream;
 import de.unisb.cs.st.javaslicer.tracer.util.MyDataOutputStream;
 import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
@@ -87,33 +87,6 @@ public class SwitchingIntegerTraceSequence implements IntegerTraceSequence {
         }
     }
 
-    public static class MyByteArrayInputStream extends InputStream {
-
-        private final byte[] buf;
-        private int nextPos;
-        private final int count;
-
-        public MyByteArrayInputStream(final byte[] buf) {
-            this.buf = buf;
-            this.nextPos = 0;
-            this.count = buf.length;
-        }
-
-        @Override
-        public int read() throws IOException {
-            if (this.nextPos >= this.count)
-                return -1;
-            return this.buf[this.nextPos++] & 0xff;
-        }
-
-        public void seek(final int pos) {
-            if (pos < 0)
-                throw new IllegalArgumentException("position for seek must be >= 0");
-            this.nextPos = pos;
-        }
-
-    }
-
     private final static int SWITCH_TO_GZIP_WHEN_GREATER = 512;
 
     private static final int CACHE_IF_LEQ = 507; // must be <= SWITCH_TO_GZIP_WHEN_GREATER
@@ -185,6 +158,7 @@ public class SwitchingIntegerTraceSequence implements IntegerTraceSequence {
         } else {
             ByteArrayOutputStream invStreamFirstPart = null;
             OptimizedDataOutputStream optOut = null;
+            // TODO try to optimize block size
             final BackwardIntegerStreamReader backwardReader = new BackwardIntegerStreamReader(oldMplexOut, oldMplexOut.getBlockSize() / 4);
             if (oldMplexOut.length() <= 4*SWITCH_TO_GZIP_WHEN_GREATER) {
                 invStreamFirstPart = new ByteArrayOutputStream();
