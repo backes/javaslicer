@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.IntBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
@@ -101,10 +102,10 @@ public class MultiplexedFileWriter {
                         if (!writeBack(this.depth))
                             throw new RuntimeException("Increase of tree depth did not work as expected");
                     }
-                    final Set<Reader> readers = this.readers.get();
-                    if (readers != null) {
-                        synchronized (readers) {
-                            for (final Reader reader: readers)
+                    final Set<Reader> readers0 = this.readers.get();
+                    if (readers0 != null) {
+                        synchronized (readers0) {
+                            for (final Reader reader: readers0)
                                 reader.seek(reader.getPosition());
                         }
                     }
@@ -151,73 +152,75 @@ public class MultiplexedFileWriter {
             }
 
             @Override
-            public synchronized void close() throws IOException {
-                if (this.dataBlock == null)
-                    return;
+            public void close() throws IOException {
+                synchronized (MultiplexOutputStream.this) {
+                    if (this.dataBlock == null)
+                        return;
 
-                final Set<Reader> readers0 = this.readers.get();
-                if (readers0 != null) {
-                    synchronized (readers0) {
-                        for (final Reader reader: readers0)
-                            reader.close();
+                    final Set<Reader> readers0 = this.readers.get();
+                    if (readers0 != null) {
+                        synchronized (readers0) {
+                            for (final Reader reader: readers0)
+                                reader.close();
+                        }
                     }
-                }
 
-                this.dataLength += this.full[this.depth];
+                    this.dataLength += this.full[this.depth];
 
-                if (this.dataBlock.length < MultiplexedFileWriter.this.blockSize) {
-                    final byte[] newDataBlock = new byte[MultiplexedFileWriter.this.blockSize];
-                    System.arraycopy(this.dataBlock, 0, newDataBlock, 0, this.full[this.depth]);
-                    this.dataBlock = newDataBlock;
-                } else {
-                    Arrays.fill(this.dataBlock, this.full[this.depth], MultiplexedFileWriter.this.blockSize, (byte)0);
-                }
-                if (this.depth == 0) {
-                    this.startBlockAddr = getNewBlockAddress();
-                    writeBlock(this.startBlockAddr, this.dataBlock);
-                } else {
-                    if (this.full[0] == MultiplexedFileWriter.this.blockSize/4)
-                        increaseDepth();
+                    if (this.dataBlock.length < MultiplexedFileWriter.this.blockSize) {
+                        final byte[] newDataBlock = new byte[MultiplexedFileWriter.this.blockSize];
+                        System.arraycopy(this.dataBlock, 0, newDataBlock, 0, this.full[this.depth]);
+                        this.dataBlock = newDataBlock;
+                    } else {
+                        Arrays.fill(this.dataBlock, this.full[this.depth], MultiplexedFileWriter.this.blockSize, (byte)0);
+                    }
+                    if (this.depth == 0) {
+                        this.startBlockAddr = getNewBlockAddress();
+                        writeBlock(this.startBlockAddr, this.dataBlock);
+                    } else {
+                        if (this.full[0] == MultiplexedFileWriter.this.blockSize/4)
+                            increaseDepth();
 
-                    outer:
-                        while (true) {
-                            for (int i = 1; i < this.depth; ++i) {
-                                if (this.full[i] == MultiplexedFileWriter.this.blockSize/4) {
-                                    if (!writeBack(i))
-                                        throw new RuntimeException("writeBack in close() should always succeed");
-                                    if (this.full[0] == MultiplexedFileWriter.this.blockSize/4)
-                                        increaseDepth();
-                                    continue outer;
+                        outer:
+                            while (true) {
+                                for (int i = 1; i < this.depth; ++i) {
+                                    if (this.full[i] == MultiplexedFileWriter.this.blockSize/4) {
+                                        if (!writeBack(i))
+                                            throw new RuntimeException("writeBack in close() should always succeed");
+                                        if (this.full[0] == MultiplexedFileWriter.this.blockSize/4)
+                                            increaseDepth();
+                                        continue outer;
+                                    }
                                 }
+                                break;
                             }
-                            break;
+
+                        if (!writeBack(this.depth))
+                            throw new RuntimeException("writeBack in close() should always succeed");
+                        for (int i = this.depth-1; i > 0; --i) {
+                            // zero out the remaining part of the block
+                            Arrays.fill(this.pointerBlocks[i], this.full[i], MultiplexedFileWriter.this.blockSize/4, 0);
+                            if (!writeBack(i))
+                                throw new RuntimeException("writeBack in close() should always succeed");
                         }
 
-                    if (!writeBack(this.depth))
-                        throw new RuntimeException("writeBack in close() should always succeed");
-                    for (int i = this.depth-1; i > 0; --i) {
-                        // zero out the remaining part of the block
-                        Arrays.fill(this.pointerBlocks[i], this.full[i], MultiplexedFileWriter.this.blockSize/4, 0);
-                        if (!writeBack(i))
-                            throw new RuntimeException("writeBack in close() should always succeed");
+                        this.startBlockAddr = getNewBlockAddress();
+                        writeBlock(this.startBlockAddr, this.pointerBlocks[0]);
                     }
 
-                    this.startBlockAddr = getNewBlockAddress();
-                    writeBlock(this.startBlockAddr, this.pointerBlocks[0]);
-                }
+                    // now we can release most buffers
+                    this.pointerBlocks = null;
+                    this.dataBlock = null;
+                    this.full = null;
+                    this.readers.set(null);
 
-                // now we can release most buffers
-                this.pointerBlocks = null;
-                this.dataBlock = null;
-                this.full = null;
-                this.readers.set(null);
-
-                // after all this work, store the information about this stream to the streamDefs stream
-                if (this != MultiplexedFileWriter.this.streamDefs.innerOut) {
-                    synchronized (MultiplexedFileWriter.this.streamDefsDataOut) {
-                        MultiplexedFileWriter.this.streamDefsDataOut.writeInt(this.id);
-                        MultiplexedFileWriter.this.streamDefsDataOut.writeInt(this.startBlockAddr);
-                        MultiplexedFileWriter.this.streamDefsDataOut.writeLong(this.dataLength);
+                    // after all this work, store the information about this stream to the streamDefs stream
+                    if (this != MultiplexedFileWriter.this.streamDefs.innerOut) {
+                        synchronized (MultiplexedFileWriter.this.streamDefsDataOut) {
+                            MultiplexedFileWriter.this.streamDefsDataOut.writeInt(this.id);
+                            MultiplexedFileWriter.this.streamDefsDataOut.writeInt(this.startBlockAddr);
+                            MultiplexedFileWriter.this.streamDefsDataOut.writeLong(this.dataLength);
+                        }
                     }
                 }
             }
@@ -261,13 +264,12 @@ public class MultiplexedFileWriter {
                 }
 
                 if (this.depth > 0) {
-                    int noBlocks = (int)divUp(length(), MultiplexedFileWriter.this.blockSize);
+                    int noBlocks = (int)divUp(length(), MultiplexedFileWriter.this.blockSize)-1;
                     int tmp = noBlocks; // no data blocks
                     while (tmp > 1) {
-                        tmp = divUp(tmp, MultiplexedFileWriter.this.blockSize/4);
+                        tmp = divUp(tmp, MultiplexedFileWriter.this.blockSize/4) - 1;
                         noBlocks += tmp;
                     }
-                    noBlocks -= this.depth + 1;
 
                     releaseBlocks:
                         while (true) {
@@ -346,7 +348,6 @@ public class MultiplexedFileWriter {
                         boolean reRead = reInitialize;
                         boolean atEnd = true;
                         for (int i = 0; i < depth; ++i) {
-                            reRead = reRead || this.pos[i] != newPos[i];
                             if (reRead) {
                                 if (atEnd) {
                                     this.readPointerBlocks[i] = MultiplexOutputStream.this.innerOut.pointerBlocks[i];
@@ -356,6 +357,7 @@ public class MultiplexedFileWriter {
                                     readBlock(blockAddr, this.readPointerBlocks[i]);
                                 }
                             }
+                            reRead = reRead || this.pos[i] != newPos[i];
                             atEnd = atEnd && newPos[i] == MultiplexOutputStream.this.innerOut.full[i];
                         }
                         if (reRead) {
@@ -389,7 +391,7 @@ public class MultiplexedFileWriter {
                         newPos[d] = (int) (remaining % (MultiplexedFileWriter.this.blockSize/4));
                         remaining = remaining / (MultiplexedFileWriter.this.blockSize/4);
                     }
-                    assert remaining <= MultiplexedFileWriter.this.blockSize;
+                    assert remaining <= MultiplexedFileWriter.this.blockSize/4;
                     newPos[0] = (int) remaining;
                     for (int d = 0; d < MultiplexOutputStream.this.innerOut.depth && newPos[d] > MultiplexOutputStream.this.innerOut.full[d]; ++d) {
                         assert newPos[d] == MultiplexOutputStream.this.innerOut.full[d]+1 && newPos[d+1] == 0;
@@ -530,26 +532,29 @@ public class MultiplexedFileWriter {
 
     }
 
-    private static final int DEFAULT_BLOCK_SIZE = 1024; // MUST be divisible by 4
+    public static final int DEFAULT_BLOCK_SIZE = 1024; // MUST be divisible by 4
 
     // this is just some random integer
     public static final int MAGIC_HEADER = 0xB7A332B2;
 
-    protected static final int headerSize = 20; // bytes
+    private static final int headerSize = 21; // bytes
 
     private static final long POS_INT_MASK = 0xffffffffL;
 
-    // TODO try nativeOrder() (performance?)
-    private static final ByteOrder byteOrder = ByteOrder.LITTLE_ENDIAN;
+    private final ByteOrder byteOrder;
 
     // each mapped slice has 1<<28 = 256M Bytes
-    private static final int MAPPING_SLICE_SIZE_BITS = 28;
+    protected static final int MAPPING_SLICE_SIZE_BITS = 28;
 
     public static final boolean is64bitVM =
-        "64".equals(System.getProperty("sun.arch.data.model"))
+           "64".equals(System.getProperty("sun.arch.data.model"))
         || System.getProperty("os.arch", "").contains("64");
 
+    private final RandomAccessFile file;
     protected final FileChannel fileChannel;
+    private int fileLengthBlocks;
+
+    private final boolean useMemoryMapping;
 
     private final AtomicInteger nextBlockAddr = new AtomicInteger(0);
 
@@ -581,31 +586,41 @@ public class MultiplexedFileWriter {
      *
      * The whole file can have at most 2^32*blockSize (4 TB for blockSize 1024) bytes.
      *
-     * @param fileChannel the channel to write the multiplexed streams to
+     * @param filename the name of the file to write the multiplexed streams to
      * @param blockSize the block size of the file (each stream will allocate
      *                  at least <code>blockSize</code> bytes).
      *                  must be divisible by 4, and 1<<31 must be divisible by the
      *                  blockSize.
+     * @param useMemoryMapping whether or not to use memory mapping (java.nio package)
+     * @param byteOrder the byte order to use to write out block addresses (only used internally)
+     *
      * @throws IOException
      */
-    public MultiplexedFileWriter(final FileChannel fileChannel, final int blockSize) throws IOException {
-        if (fileChannel == null)
+    public MultiplexedFileWriter(final File filename, final int blockSize,
+            final boolean useMemoryMapping, final ByteOrder byteOrder) throws IOException {
+        if (filename == null)
             throw new NullPointerException();
         if ((blockSize & 0x3) != 0)
             throw new IllegalArgumentException("blockSize must be dividable by 4");
         if (blockSize <= 0)
             throw new IllegalArgumentException("blockSize must be > 0");
-        if ((1<<MAPPING_SLICE_SIZE_BITS)%blockSize != 0)
+        if ((1 << MAPPING_SLICE_SIZE_BITS) % blockSize != 0)
             throw new IllegalArgumentException("1<<"+MAPPING_SLICE_SIZE_BITS+" must be divisible by the blockSize");
 
-        // first, reset the file channel
-        fileChannel.position(0);
-        fileChannel.truncate(headerSize);
-        // this replaces no seek, but writes 0 to the magic header
-        fileChannel.write(ByteBuffer.allocate(headerSize), 0);
-
-        this.fileChannel = fileChannel;
+        this.useMemoryMapping = useMemoryMapping;
+        this.byteOrder = byteOrder;
         this.blockSize = blockSize;
+
+        this.file = new RandomAccessFile(filename, "rw");
+        this.file.seek(0);
+        this.fileChannel = this.file.getChannel();
+        // first, reset the file channel
+        this.fileChannel.position(0);
+        this.fileLengthBlocks = useMemoryMapping ? 0 : Math.max(1000, 10*1024*1024/blockSize);
+        this.file.setLength(headerSize+(long)this.fileLengthBlocks*this.blockSize);
+        // zero out the magic header
+        this.fileChannel.write(ByteBuffer.allocate(headerSize), 0);
+
         final ConcurrentReferenceHashMap<MultiplexOutputStream, InnerOutputStream> openStreamsTmp = new ConcurrentReferenceHashMap<MultiplexOutputStream, InnerOutputStream>(
             65535, .75f, 16, ReferenceType.WEAK, ReferenceType.STRONG,
             EnumSet.of(Option.IDENTITY_COMPARISONS));
@@ -627,24 +642,30 @@ public class MultiplexedFileWriter {
     }
 
     /**
-     * @see #MultiplexedFileWriter(FileChannel, int)
+     * Uses
+     * <ul>
+     *  <li>memory mapped files when running inside a 64-bit VM</li>
+     *  <li>the native byte order of the system the VM is running on</li>
+     * </ul>
+     *
+     * @see #MultiplexedFileWriter(File, int, boolean, ByteOrder)
      */
-    public MultiplexedFileWriter(final FileChannel fileChannel) throws IOException {
-        this(fileChannel, DEFAULT_BLOCK_SIZE);
+    public MultiplexedFileWriter(final File file, final int blockSize) throws IOException {
+        this(file, blockSize, is64bitVM, ByteOrder.nativeOrder());
     }
 
     /**
-     * @see #MultiplexedFileWriter(FileChannel, int)
+     * Uses
+     * <ul>
+     *  <li>the default block size ({@link #DEFAULT_BLOCK_SIZE})</li>
+     *  <li>memory mapped files when running inside a 64-bit VM</li>
+     *  <li>the native byte order of the system the VM is running on</li>
+     * </ul>
+     *
+     * @see #MultiplexedFileWriter(File, int, boolean, ByteOrder)
      */
     public MultiplexedFileWriter(final File filename) throws IOException {
         this(filename, DEFAULT_BLOCK_SIZE);
-    }
-
-    /**
-     * @see #MultiplexedFileWriter(FileChannel, int)
-     */
-    public MultiplexedFileWriter(final File filename, final int blockSize) throws IOException {
-        this(new RandomAccessFile(filename, "rw").getChannel(), blockSize);
     }
 
     public MultiplexOutputStream newOutputStream() {
@@ -671,61 +692,78 @@ public class MultiplexedFileWriter {
 
     protected void writeBlock(final int blockAddr, final byte[] data) throws IOException {
         assert data.length == this.blockSize;
-        final long pos = (blockAddr&POS_INT_MASK)*this.blockSize;
-        final int startMappingNr = (int) (pos >>> MAPPING_SLICE_SIZE_BITS);
-        final int posInMapping = ((int)pos) & ((1<<MAPPING_SLICE_SIZE_BITS)-1);
-        final ByteBuffer mapping = getMapping(startMappingNr);
-        final ByteBuffer duplicate = mapping.slice();
-        duplicate.position(posInMapping);
-        duplicate.put(data, 0, this.blockSize);
+        if (this.useMemoryMapping) {
+            final ByteBuffer duplicate = getRawBlockMapping(blockAddr);
+            duplicate.put(data, 0, this.blockSize);
+        } else {
+            ensureFileLength(blockAddr);
+            final ByteBuffer buf = ByteBuffer.wrap(data, 0, this.blockSize);
+            while (buf.hasRemaining()) {
+                this.fileChannel.write(buf,
+                        headerSize + ((blockAddr&POS_INT_MASK)*this.blockSize) + buf.position());
+            }
+        }
     }
 
     protected void writeBlock(final int blockAddr, final int[] data) throws IOException {
         assert data.length == this.blockSize/4;
-        final long pos = (blockAddr&POS_INT_MASK)*this.blockSize;
-        final int startMappingNr = (int) (pos >>> MAPPING_SLICE_SIZE_BITS);
-        final int posInMapping = ((int)pos) & ((1<<MAPPING_SLICE_SIZE_BITS)-1);
-        final ByteBuffer mapping = getMapping(startMappingNr);
-        final ByteBuffer duplicate = mapping.slice().order(byteOrder);
-        duplicate.position(posInMapping);
-        duplicate.asIntBuffer().put(data, 0, this.blockSize/4);
+        if (this.useMemoryMapping) {
+            final ByteBuffer duplicate = getRawBlockMapping(blockAddr).order(this.byteOrder);
+            duplicate.asIntBuffer().put(data, 0, this.blockSize/4);
+        } else {
+            ensureFileLength(blockAddr);
+            final ByteBuffer buf = ByteBuffer.allocate(this.blockSize);
+            buf.order(this.byteOrder).asIntBuffer().put(data, 0, this.blockSize/4);
+            while (buf.hasRemaining()) {
+                this.fileChannel.write(buf,
+                        headerSize + ((blockAddr&POS_INT_MASK)*this.blockSize) + buf.position());
+            }
+        }
     }
 
     protected void readBlock(final int blockAddr, final byte[] buf) throws IOException {
         assert buf.length == this.blockSize;
-        final long pos = (blockAddr&POS_INT_MASK)*this.blockSize;
-        final int mappingNr = (int) (pos >>> MAPPING_SLICE_SIZE_BITS);
-        final int posInMapping = ((int)pos) & ((1<<MAPPING_SLICE_SIZE_BITS)-1);
-        final ByteBuffer mapping = getMapping(mappingNr);
-        final ByteBuffer duplicate = mapping.slice();
-        duplicate.position(posInMapping);
-        duplicate.get(buf, 0, this.blockSize);
+        if (this.useMemoryMapping) {
+            final ByteBuffer mapping = getRawBlockMapping(blockAddr);
+            mapping.get(buf, 0, this.blockSize);
+        } else {
+            final ByteBuffer bbuf = ByteBuffer.wrap(buf, 0, this.blockSize);
+            while (bbuf.hasRemaining()) {
+                this.fileChannel.read(bbuf,
+                        headerSize + ((blockAddr&POS_INT_MASK)*this.blockSize) + bbuf.position());
+            }
+        }
     }
 
     protected void readBlock(final int blockAddr, final int[] buf) throws IOException {
         assert buf.length == this.blockSize/4;
-        final long pos = (blockAddr&POS_INT_MASK)*this.blockSize;
-        final int mappingNr = (int) (pos >>> MAPPING_SLICE_SIZE_BITS);
-        final int posInMapping = ((int)pos) & ((1<<MAPPING_SLICE_SIZE_BITS)-1);
-        final ByteBuffer mapping = getMapping(mappingNr);
-        final ByteBuffer duplicate = mapping.slice().order(byteOrder);
-        duplicate.position(posInMapping);
-        duplicate.asIntBuffer().get(buf, 0, this.blockSize/4);
+        if (this.useMemoryMapping) {
+            final ByteBuffer mapping = getRawBlockMapping(blockAddr);
+            mapping.order(this.byteOrder).asIntBuffer().get(buf, 0, this.blockSize/4);
+        } else {
+            final ByteBuffer bbuf = ByteBuffer.allocate(this.blockSize);
+            final IntBuffer intBuf = bbuf.order(this.byteOrder).asIntBuffer();
+            while (bbuf.hasRemaining()) {
+                this.fileChannel.read(bbuf,
+                        headerSize + ((blockAddr&POS_INT_MASK)*this.blockSize) + bbuf.position());
+            }
+            intBuf.get(buf, 0, this.blockSize/4);
+        }
     }
 
-    private ByteBuffer getBlockMapping(final int blockAddr) throws IOException {
-        final long pos = (blockAddr&POS_INT_MASK)*this.blockSize;
-        final int mappingNr = (int) (pos >>> MAPPING_SLICE_SIZE_BITS);
-        final int posInMapping = ((int)pos) & ((1<<MAPPING_SLICE_SIZE_BITS)-1);
-        final ByteBuffer mapping = getMapping(mappingNr);
-        final ByteBuffer duplicate = mapping.slice().order(byteOrder);
-        duplicate.position(posInMapping).limit(posInMapping+this.blockSize);
+    private ByteBuffer getRawBlockMapping(final int blockAddr) throws IOException {
+        final long position = (blockAddr&POS_INT_MASK)*this.blockSize;
+        final int mappingNr = (int) (position >>> MAPPING_SLICE_SIZE_BITS);
+        final int posInMapping = ((int)position) & ((1<<MAPPING_SLICE_SIZE_BITS)-1);
+        final ByteBuffer mapping = getMappedSlice(mappingNr);
+        final ByteBuffer duplicate = mapping.slice();
+        duplicate.position(posInMapping);
         return duplicate;
     }
 
     private final Object fileMappingsLock = new Object();
     private MappedByteBuffer[] fileMappings = new MappedByteBuffer[1];
-    private ByteBuffer getMapping(final int mappingNr) throws IOException {
+    private ByteBuffer getMappedSlice(final int mappingNr) throws IOException {
         assert mappingNr >= 0;
         if (this.fileMappings.length <= mappingNr || this.fileMappings[mappingNr] == null) {
             synchronized (this.fileMappingsLock) {
@@ -735,14 +773,30 @@ public class MultiplexedFileWriter {
                     this.fileMappings = newMappings;
                 }
                 if (this.fileMappings[mappingNr] == null) {
-                    this.fileMappings[mappingNr] = this.fileChannel.map(
-                            MapMode.READ_WRITE, headerSize+((long)mappingNr << MAPPING_SLICE_SIZE_BITS),
-                            1 << MAPPING_SLICE_SIZE_BITS);
+                    try {
+                        this.fileMappings[mappingNr] = this.fileChannel.map(
+                                MapMode.READ_WRITE, headerSize+((long)mappingNr << MAPPING_SLICE_SIZE_BITS),
+                                1 << MAPPING_SLICE_SIZE_BITS);
+                    } catch (final IOException e) {
+                        throw new IOException("Error mapping additional " + (1<<(MAPPING_SLICE_SIZE_BITS-20))
+                                + " MB of the trace file: " + e.getMessage(), e.getCause());
+                    }
                 }
             }
         }
 
         return this.fileMappings[mappingNr];
+    }
+
+    private void ensureFileLength(final int blockAddr) throws IOException {
+        if ((blockAddr & POS_INT_MASK) >= (this.fileLengthBlocks & POS_INT_MASK)) {
+            synchronized (this.fileChannel) {
+                if ((blockAddr & POS_INT_MASK) >= (this.fileLengthBlocks & POS_INT_MASK)) {
+                    this.fileLengthBlocks = (int) Math.min(Integer.MAX_VALUE, Math.max((long)this.fileLengthBlocks*5/4, (long)this.fileLengthBlocks+10*1024*1024/this.blockSize));
+                    this.file.setLength(headerSize+(long)this.fileLengthBlocks*this.blockSize);
+                }
+            }
+        }
     }
 
     private final Object closingLock = new Object();
@@ -812,10 +866,10 @@ public class MultiplexedFileWriter {
             }
 
             // write some meta information to the file
-            // TODO write byte order to the header
             final ByteBuffer header = ByteBuffer.allocate(headerSize);
             header.putInt(MAGIC_HEADER);
             header.putInt(this.blockSize);
+            header.put(this.byteOrder == ByteOrder.BIG_ENDIAN ? (byte)0 : (byte)1);
             header.putInt(streamDefsStartBlock);
             header.putLong(this.streamDefs.innerOut.dataLength);
             header.position(0);
@@ -866,6 +920,7 @@ public class MultiplexedFileWriter {
             memoryConsumingList = null;
 
             this.fileChannel.close();
+            this.file.close();
             checkException();
         }
     }
@@ -950,21 +1005,23 @@ public class MultiplexedFileWriter {
     }
 
     private void transferBlock(final int oldAddr, final int newAddr) throws IOException {
-        // TODO try direct transfer:
-        /*
-        final long oldPos = headerSize + (oldAddr&POS_INT_MASK)*this.blockSize;
-        long newPos = headerSize + (newAddr&POS_INT_MASK)*this.blockSize;
-        int count = this.blockSize;
-        this.fileChannel.position(oldPos);
-        while (count > 0) {
-            final int newTransfered = (int) this.fileChannel.transferTo(newPos, count, this.fileChannel);
-            count -= newTransfered;
-            newPos += newTransfered;
+        assert oldAddr < this.nextBlockAddr.get() && newAddr < this.nextBlockAddr.get();
+        if (this.useMemoryMapping) {
+            final ByteBuffer oldMapping = getRawBlockMapping(oldAddr);
+            oldMapping.limit(oldMapping.position() + this.blockSize);
+            final ByteBuffer newMapping = getRawBlockMapping(newAddr);
+            newMapping.put(oldMapping);
+        } else {
+            long oldPos = headerSize + (oldAddr&POS_INT_MASK)*this.blockSize;
+            final long newPos = headerSize + (newAddr&POS_INT_MASK)*this.blockSize;
+            int count = this.blockSize;
+            this.fileChannel.position(newPos);
+            while (count > 0) {
+                final int newTransfered = (int) this.fileChannel.transferTo(oldPos, count, this.fileChannel);
+                count -= newTransfered;
+                oldPos += newTransfered;
+            }
         }
-        */
-        final ByteBuffer oldMapping = getBlockMapping(oldAddr);
-        final ByteBuffer newMapping = getBlockMapping(newAddr);
-        newMapping.put(oldMapping);
     }
 
     private synchronized void checkException() throws IOException {
@@ -991,38 +1048,10 @@ public class MultiplexedFileWriter {
         return oldVal;
     }
 
-    public void writeInt(final byte[] buf, final int pos, final int value) {
-        if (byteOrder == ByteOrder.BIG_ENDIAN) {
-            buf[pos] = (byte) (value >>> 24);
-            buf[pos+1] = (byte) (value >>> 16);
-            buf[pos+2] = (byte) (value >>> 8);
-            buf[pos+3] = (byte) value;
-        } else {
-            buf[pos] = (byte) value;
-            buf[pos+1] = (byte) (value >>> 8);
-            buf[pos+2] = (byte) (value >>> 16);
-            buf[pos+3] = (byte) (value >>> 24);
-        }
-    }
-
-    public int readInt(final byte[] buf, final int offset) {
-        if (byteOrder == ByteOrder.BIG_ENDIAN) {
-            return ((buf[offset] & 0xff) << 24)
-                | ((buf[offset+1] & 0xff) << 16)
-                | ((buf[offset+2] & 0xff) << 8)
-                | (buf[offset+3] & 0xff);
-        } else {
-            return (buf[offset] & 0xff)
-                | ((buf[offset+1] & 0xff) << 8)
-                | ((buf[offset+2] & 0xff) << 16)
-                | ((buf[offset+3] & 0xff) << 24);
-        }
-    }
-
-    public static long divUp(final long a, final int b) {
+    protected static long divUp(final long a, final int b) {
         return (a+b-1)/b;
     }
-    public static int divUp(final int a, final int b) {
+    protected static int divUp(final int a, final int b) {
         return (a+b-1)/b;
     }
 

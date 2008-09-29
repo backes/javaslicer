@@ -71,7 +71,7 @@ public class TracingThreadTracer implements ThreadTracer {
             ((IntegerTraceSequence) seq).trace(value);
         } catch (final IOException e) {
             Tracer.error(e);
-            System.err.println("Error writing the trace: " + e.getMessage());
+            System.err.println("Error writing the trace: " + e);
             System.exit(-1);
         }
 
@@ -97,7 +97,7 @@ public class TracingThreadTracer implements ThreadTracer {
             ((ObjectTraceSequence) seq).trace(obj);
         } catch (final IOException e) {
             Tracer.error(e);
-            System.err.println("Error writing the trace: " + e.getMessage());
+            System.err.println("Error writing the trace: " + e);
             System.exit(-1);
         }
 

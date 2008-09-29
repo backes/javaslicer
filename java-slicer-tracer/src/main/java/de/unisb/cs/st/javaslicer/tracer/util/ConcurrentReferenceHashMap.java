@@ -1189,13 +1189,15 @@ public class ConcurrentReferenceHashMap<K, V> extends AbstractMap<K, V>
         final Segment<K, V>[] segments1 = this.segments;
         final int[] mc = new int[segments1.length];
 
+        // unused, just for doing volatile-reads
+        int tmp = 0;
+
         // Try a few times without locking
         for (int k = 0; k < RETRIES_BEFORE_LOCK; ++k) {
             int mcsum = 0;
             for (int i = 0; i < segments1.length; ++i) {
                 // volatile-read
-                @SuppressWarnings("unused")
-                final int c = segments1[i].count;
+                tmp += segments1[i].count;
                 mcsum += mc[i] = segments1[i].modCount;
                 if (segments1[i].containsValue(value))
                     return true;
@@ -1203,9 +1205,8 @@ public class ConcurrentReferenceHashMap<K, V> extends AbstractMap<K, V>
             boolean cleanSweep = true;
             if (mcsum != 0) {
                 for (int i = 0; i < segments1.length; ++i) {
-                    @SuppressWarnings("unused")
                     // volatile-read
-                    final int c = segments1[i].count;
+                    tmp += segments1[i].count;
                     if (mc[i] != segments1[i].modCount) {
                         cleanSweep = false;
                         break;
@@ -1615,9 +1616,7 @@ public class ConcurrentReferenceHashMap<K, V> extends AbstractMap<K, V>
         public boolean equals(final Object o) {
             if (!(o instanceof Map.Entry))
                 return false;
-            @SuppressWarnings("unchecked")
-            final
-            Map.Entry e = (Map.Entry) o;
+            final Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
             return eq(this.key, e.getKey()) && eq(this.value, e.getValue());
         }
 

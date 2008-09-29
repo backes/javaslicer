@@ -212,6 +212,7 @@ public class Tracer implements ClassFileTransformer {
             final PrintWriter ps = new PrintWriter(sw);
             e.printStackTrace(ps);
             lastErrorString = sw.toString();
+            System.out.println(sw.toString());
         } else
             lastErrorString = e.toString();
         errorCount.getAndIncrement();
