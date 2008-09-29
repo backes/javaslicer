@@ -589,29 +589,29 @@ public class Tracer implements ClassFileTransformer {
             newTracer = this.tracingReady ? NullThreadTracer.instance
                     : new TracingThreadTracer(currentThread,
                             this.traceSequenceTypes, this);
+            try {
+                // we have to pause it, because put uses classes in the java api
+                newTracer.pauseTracing();
+                final ThreadTracer oldTracer = this.threadTracers.put(currentThread, newTracer);
+                assert oldTracer == null;
+            } finally {
+                assert this.threadTracerBeingCreated == currentThread;
+                this.threadTracerBeingCreated = null;
+                // recheck tracingReady!
+                if (this.tracingStarted && !this.tracingReady)
+                    newTracer.unpauseTracing();
+            }
         }
-        try {
-            // we have to pause it, because put uses classes in the java api
-            newTracer.pauseTracing();
-            final ThreadTracer oldTracer = this.threadTracers.put(currentThread, newTracer);
-            assert oldTracer == null;
-            List<TracingThreadTracer> toWriteOut = null;
-            synchronized (this.readyThreadTracers) {
-                if (this.readyThreadTracers.size() > 0) {
-                    toWriteOut = new ArrayList<TracingThreadTracer>();
-                    toWriteOut.addAll(this.readyThreadTracers);
-                    this.readyThreadTracers.clear();
+        synchronized (this.readyThreadTracers) {
+            if (this.readyThreadTracers.size() > 0) {
+                newTracer.pauseTracing();
+                try {
+                    for (final TracingThreadTracer t: this.readyThreadTracers)
+                        writeOutIfNecessary(t);
+                } finally {
+                    newTracer.unpauseTracing();
                 }
             }
-            if (toWriteOut != null)
-                for (final TracingThreadTracer t: toWriteOut)
-                    writeOutIfNecessary(t);
-        } finally {
-            assert this.threadTracerBeingCreated == currentThread;
-            this.threadTracerBeingCreated = null;
-            // recheck tracingReady!
-            if (this.tracingStarted && !this.tracingReady)
-                newTracer.unpauseTracing();
         }
         return newTracer;
     }
