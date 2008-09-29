@@ -111,6 +111,7 @@
     </organization>
 
     <modules>
+        <module>java-slicer-core</module>
         <module>java-slicer-tracer</module>
     </modules>
 
@@ -239,6 +240,9 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-site-plugin</artifactId>
                     <version>2.0-beta-5</version>
+                    <configuration>
+                        <outputEncoding>UTF-8</outputEncoding>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
