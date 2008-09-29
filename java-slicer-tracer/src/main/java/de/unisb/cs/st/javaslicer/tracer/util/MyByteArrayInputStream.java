@@ -1,6 +1,3 @@
-/**
- *
- */
 package de.unisb.cs.st.javaslicer.tracer.util;
 
 import java.io.IOException;
