@@ -354,6 +354,7 @@ public class Tracer implements ClassFileTransformer {
     }
 
     private final Object transformationLock = new Object();
+
     public byte[] transform(final ClassLoader loader, final String className,
             final Class<?> classBeingRedefined, final ProtectionDomain protectionDomain, final byte[] classfileBuffer) {
 
