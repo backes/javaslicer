@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer.tracer.util.sequitur;
+package de.unisb.cs.st.javaslicer.tracer.util.sequitur.input;
 
 
 public class Terminal<T> extends Symbol<T> {
@@ -15,7 +15,7 @@ public class Terminal<T> extends Symbol<T> {
         if (this.next.getClass() != this.getClass())
             return false;
 
-        final Terminal<T> otherT = (Terminal<T>) this.next;
+        final Terminal<?> otherT = (Terminal<?>) this.next;
         if (this.value == null ? otherT.value == null : this.value.equals(otherT.value)) {
             this.count += otherT.count;
             otherT.remove();

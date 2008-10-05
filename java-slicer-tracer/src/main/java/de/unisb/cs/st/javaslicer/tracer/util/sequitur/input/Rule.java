@@ -1,9 +1,10 @@
-package de.unisb.cs.st.javaslicer.tracer.util.sequitur;
+package de.unisb.cs.st.javaslicer.tracer.util.sequitur.input;
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
@@ -94,7 +95,8 @@ public class Rule<T> {
         return this.useCount;
     }
 
-    public void writeOut(final ObjectOutputStream objOut, final Grammar<T> grammar) {
+    public void writeOut(final ObjectOutputStream objOut, final Grammar<T> grammar,
+            final LinkedList<Rule<T>> ruleQueue) {
         // TODO Auto-generated method stub
 
     }

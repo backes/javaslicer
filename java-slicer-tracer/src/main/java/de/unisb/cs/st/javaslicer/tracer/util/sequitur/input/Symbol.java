@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer.tracer.util.sequitur;
+package de.unisb.cs.st.javaslicer.tracer.util.sequitur.input;
 
 public abstract class Symbol<T> implements Cloneable {
 

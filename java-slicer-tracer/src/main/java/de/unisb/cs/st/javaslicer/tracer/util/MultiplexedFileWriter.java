@@ -1069,13 +1069,13 @@ public class MultiplexedFileWriter {
                                 pos[du] = 0;
                             }
                             break;
-                        } else {
-                            if (d == 0)
-                                throw new RuntimeException("should not get here");
-                            if (changed[d]) {
-                                writeBlock(pointerBlocks[d-1][pos[d-1]], pointerBlocks[d]);
-                                changed[d] = false;
-                            }
+                        }
+
+                        if (d == 0)
+                            throw new RuntimeException("should not get here");
+                        if (changed[d]) {
+                            writeBlock(pointerBlocks[d-1][pos[d-1]], pointerBlocks[d]);
+                            changed[d] = false;
                         }
                     }
                 }

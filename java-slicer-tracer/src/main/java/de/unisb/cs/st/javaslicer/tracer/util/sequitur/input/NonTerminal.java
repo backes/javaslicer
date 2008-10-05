@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer.tracer.util.sequitur;
+package de.unisb.cs.st.javaslicer.tracer.util.sequitur.input;
 
 public class NonTerminal<T> extends Symbol<T> {
 
@@ -49,7 +49,7 @@ public class NonTerminal<T> extends Symbol<T> {
         if (this.next.getClass() != this.getClass())
             return false;
 
-        final NonTerminal<T> otherNonT = (NonTerminal<T>) this.next;
+        final NonTerminal<?> otherNonT = (NonTerminal<?>) this.next;
         if (otherNonT.rule.equals(this.rule)) {
             this.count += otherNonT.count;
             otherNonT.remove();
@@ -59,6 +59,7 @@ public class NonTerminal<T> extends Symbol<T> {
         return false;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     protected NonTerminal<T> clone() {
         final NonTerminal<T> clone = (NonTerminal<T>) super.clone();

@@ -28,6 +28,7 @@ public class UncompressedLongTraceSequence implements LongTraceSequence {
      *
      * @throws IOException if an I/O error occures
      */
+    @SuppressWarnings("unused")
     protected OutputStream getOutputStream(final MultiplexOutputStream out) throws IOException {
         return out;
     }

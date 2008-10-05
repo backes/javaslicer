@@ -1,22 +1,21 @@
-package de.unisb.cs.st.javaslicer.tracer.util.sequitur;
+package de.unisb.cs.st.javaslicer.tracer.util.sequitur.input;
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedList;
 import java.util.Map;
-
-import de.unisb.cs.st.javaslicer.tracer.util.sequitur.Rule.Dummy;
+import java.util.TreeMap;
+import java.util.Map.Entry;
 
 public class Grammar<T> {
 
     private final Map<Symbol<T>, Symbol<T>> digrams = new HashMap<Symbol<T>, Symbol<T>>();
 
     // in writeOut, this map is filled
-    private final Map<Rule<T>, Long> ruleNumbers = new IdentityHashMap<Rule<T>, Long>();
+    private Map<Rule<T>, Long> ruleNumbers = new IdentityHashMap<Rule<T>, Long>();
     private long nextRuleNumber = 0;
 
     /**
@@ -64,43 +63,28 @@ public class Grammar<T> {
         }
     }
 
-    public void writeOut(final ObjectOutputStream objOut) {
-        final LinkedList<Rule<T>> ruleQueue = new LinkedList<Rule<T>>();
-        // first, fill in already written rules
-        if (this.ruleNumbers.size() >= Integer.MAX_VALUE) {
-            // TODO problem: IdentityHashMap can take only 1<<29 elements!
-            final Rule<?>[][] ruleArrs = new Rule<?>[1][1<<30];
-            /*
-            Arrays.sort(ruleArr, new Comparator<Rule<?>>() {
-                @SuppressWarnings("unchecked")
-                @Override
-                public int compare(final Rule<?> r1, final Rule<?> r2) {
-                    return Long.signum(getRuleNr((Rule<T>) r1) - getRuleNr((Rule<T>) r2));
-                }
-            });
-            for (final Rule r: ruleArr)
-                ruleQueue.add(r);
-            */
-        } else if (this.ruleNumbers.size() > 0) {
-            final Rule<?>[] ruleArr = this.ruleNumbers.keySet().toArray(new Rule<?>[this.ruleNumbers.size()]);
-            Arrays.sort(ruleArr, new Comparator<Rule<?>>() {
-                @SuppressWarnings("unchecked")
-                @Override
-                public int compare(final Rule<?> r1, final Rule<?> r2) {
-                    return Long.signum(getRuleNr((Rule<T>) r1) - getRuleNr((Rule<T>) r2));
-                }
-            });
-            for (final Rule r: ruleArr)
-                ruleQueue.add(r);
-        }
-        // TODO Auto-generated method stub
-
+    protected long getRuleNr(final Rule<T> rule) {
+        return getRuleNr(rule, null);
     }
 
-    protected long getRuleNr(final Rule<T> rule) {
+    protected long getRuleNr(final Rule<T> rule, final LinkedList<Rule<?>> queue) {
         Long nr = this.ruleNumbers.get(rule);
-        if (nr == null)
-            this.ruleNumbers.put(rule, nr = this.nextRuleNumber++);
+        if (nr == null) {
+            if (queue != null)
+                queue.add(rule);
+            nr = this.nextRuleNumber++;
+            // this rule must not be removed!!
+            rule.incUseCount();
+            try {
+                this.ruleNumbers.put(rule, nr);
+            } catch (final IllegalStateException e) {
+                if (this.ruleNumbers.getClass().equals(TreeMap.class))
+                    throw e;
+                // capacity exceeded: switch to treemap
+                this.ruleNumbers = new TreeMap<Rule<T>, Long>(this.ruleNumbers);
+                this.ruleNumbers.put(rule, nr);
+            }
+        }
         return nr;
     }
 
@@ -108,4 +92,23 @@ public class Grammar<T> {
         // TODO Auto-generated method stub
         return null;
     }
+
+    @SuppressWarnings("unchecked")
+    private Rule<T>[][][] newRuleArray(final int dim1, final int dim2, final int dim3) {
+        return (Rule<T>[][][]) (
+                dim2 == -1 ? new Rule<?>[dim1][][]
+              : dim3 == -1 ? new Rule<?>[dim1][dim2][]
+              : new Rule<?>[dim1][dim2][dim3]);
+    }
+    @SuppressWarnings("unchecked")
+    private Rule<T>[][] newRuleArray(final int dim1, final int dim2) {
+        return (Rule<T>[][]) (
+                dim2 == -1 ? new Rule<?>[dim1][]
+              : new Rule<?>[dim1][dim2]);
+    }
+    @SuppressWarnings("unchecked")
+    private Rule<T>[] newRuleArray(final int dim1) {
+        return (Rule<T>[]) new Rule<?>[dim1];
+    }
+
 }
