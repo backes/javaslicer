@@ -1,7 +1,6 @@
 package de.unisb.cs.st.javaslicer.tracer.util.sequitur.output;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -41,7 +40,7 @@ public class Rule<T> {
         }
 
         @Override
-        public boolean meltDigram() {
+        public boolean meltDigram(final Grammar<T> grammar) {
             return false;
         }
 
@@ -104,7 +103,6 @@ public class Rule<T> {
     }
 
     public int getUseCount() {
-        assert this.useCount >= 0;
         return this.useCount;
     }
 
@@ -123,12 +121,13 @@ public class Rule<T> {
         Symbol<T> next = this.dummy.next;
         for (written = 0; written < 3 && next != this.dummy; ++written, next = next.next)
             header |= (next.getHeader() << (4 - 2 * written));
-        assert written >= 2 && written <= 3;
+        assert (written >= 2 && written <= 3) || (written >= 0 && this.useCount == -1);
         if (next == this.dummy && !ruleQueue.isEmpty()) {
             header |= written == 2 ? (2 << 6) : (3 << 6);
             objOut.write(header);
         } else {
-            header |= ruleQueue.isEmpty() ? 0 : (1 << 6);
+            if (!ruleQueue.isEmpty())
+                header |= 1 << 6;
             objOut.write(header);
 
             DataOutput.writeLong(objOut, length());
@@ -141,7 +140,7 @@ public class Rule<T> {
                     pos = 3;
                     b = 0;
                 }
-                b |= next.getHeader() << pos;
+                b |= next.getHeader() << (2*pos);
             }
             if (pos != 4)
                 objOut.write(b);
@@ -191,12 +190,6 @@ public class Rule<T> {
                         ruleQueue.add(newR);
                 }
         }
-    }
-
-    public static <T> Rule<T> readFrom(final ObjectInputStream objIn, final Grammar<T> grammar,
-            final Class<? extends T> checkInstance) {
-        // TODO
-        return null;
     }
 
 }

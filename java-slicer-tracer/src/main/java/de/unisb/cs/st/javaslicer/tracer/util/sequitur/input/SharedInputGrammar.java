@@ -1,6 +1,6 @@
 package de.unisb.cs.st.javaslicer.tracer.util.sequitur.input;
 
-import java.io.ObjectOutputStream;
+import java.io.ObjectInputStream;
 
 public class SharedInputGrammar<T> {
 
@@ -16,8 +16,14 @@ public class SharedInputGrammar<T> {
         this.grammar = grammar;
     }
 
-    public void writeOut(final ObjectOutputStream objOut) {
-        this.grammar.writeOut(objOut);
+    public static SharedInputGrammar<Object> readFrom(final ObjectInputStream objIn) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    public static <T> SharedInputGrammar<T> readFrom(final ObjectInputStream objIn, final Class<? extends T> checkInstance) {
+        // TODO
+        return null;
     }
 
 }

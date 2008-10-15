@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.LinkedList;
 
+import de.unisb.cs.st.javaslicer.tracer.util.sequitur.output.Rule.Dummy;
+
 public abstract class Symbol<T> implements Cloneable {
 
     public Symbol<T> next = null;
@@ -20,12 +22,17 @@ public abstract class Symbol<T> implements Cloneable {
         linkTogether(newPrev, this);
     }
 
-    protected void linkTogether(final Symbol<T> first, final Symbol<T> second) {
+    protected static <T> void linkTogether(final Symbol<T> first, final Symbol<T> second) {
         first.next = second;
         second.prev = first;
     }
 
     public void substituteDigram(final Rule<T> rule, final Grammar<T> grammar) {
+        if (!(this.prev instanceof Dummy<?>))
+            grammar.removeDigram(this.prev);
+        grammar.removeDigram(this);
+        if (!(this.next.next instanceof Dummy<?>))
+            grammar.removeDigram(this.next);
         this.remove();
         this.next.remove();
         final NonTerminal<T> newSymbol = new NonTerminal<T>(rule);
@@ -37,9 +44,12 @@ public abstract class Symbol<T> implements Cloneable {
             grammar.checkDigram(newSymbol);
     }
 
+    /**
+     * Removes this symbol from the implicit linked list.
+     * Does no checking of digrams of something else.
+     */
     public void remove() {
-        this.prev.next = this.next;
-        this.next.prev = this.prev;
+        linkTogether(this.prev, this.next);
     }
 
     /**
@@ -50,7 +60,7 @@ public abstract class Symbol<T> implements Cloneable {
      *
      * @return whether this symbol could be melt with it's successor
      */
-    public abstract boolean meltDigram();
+    public abstract boolean meltDigram(final Grammar<T> grammar);
 
     // return a 2-bit header for this symbol
     public abstract int getHeader();

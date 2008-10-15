@@ -7,7 +7,7 @@ import java.util.Set;
 public class OutputSequence<T> {
 
     private final Grammar<T> grammar;
-    private final Rule<T> firstRule;
+    protected final Rule<T> firstRule;
     private final ObjectWriter<? super T> objectWriter;
 
     public OutputSequence() {
@@ -31,6 +31,7 @@ public class OutputSequence<T> {
         this.grammar = grammar;
         this.firstRule = firstRule;
         this.objectWriter = objectWriter;
+        grammar.newSequence(this);
     }
 
     public void append(final T obj) {
@@ -39,8 +40,8 @@ public class OutputSequence<T> {
 
     public void writeOut(final ObjectOutputStream objOut, final boolean includeGrammar) throws IOException {
         if (includeGrammar)
-            this.grammar.writeOut(objOut, this.objectWriter);
-        this.firstRule.writeOut(objOut, this.grammar, this.objectWriter, null);
+            writeOutGrammar(objOut);
+        DataOutput.writeLong(objOut, this.grammar.getRuleNr(this.firstRule));
     }
 
     public void writeOutGrammar(final ObjectOutputStream objOut) throws IOException {

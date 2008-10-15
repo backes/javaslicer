@@ -1,14 +1,13 @@
 package de.unisb.cs.st.javaslicer.tracer.util.sequitur.input;
 
 import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.Map.Entry;
+
+import de.unisb.cs.st.javaslicer.tracer.util.sequitur.input.Rule.Dummy;
 
 public class Grammar<T> {
 

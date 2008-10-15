@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.LinkedList;
 
+import de.unisb.cs.st.javaslicer.tracer.util.sequitur.output.Rule.Dummy;
+
 
 public class Terminal<T> extends Symbol<T> {
 
@@ -15,14 +17,24 @@ public class Terminal<T> extends Symbol<T> {
     }
 
     @Override
-    public boolean meltDigram() {
+    public boolean meltDigram(final Grammar<T> grammar) {
         if (this.next.getClass() != this.getClass())
             return false;
 
-        final Terminal<?> otherT = (Terminal<?>) this.next;
+        final Terminal<T> otherT = (Terminal<T>) this.next;
         if (this.value == null ? otherT.value == null : this.value.equals(otherT.value)) {
+            final boolean hasPrev = !(this.prev instanceof Dummy<?>);
+            final boolean hasNextNext = !(otherT.next instanceof Dummy<?>);
+            if (hasPrev)
+                grammar.removeDigram(this.prev);
+            if (hasNextNext)
+                grammar.removeDigram(otherT);
             this.count += otherT.count;
             otherT.remove();
+            if (hasPrev)
+                grammar.checkDigram(this.prev);
+            if (hasNextNext)
+                grammar.checkDigram(this);
             return true;
         }
         return false;
@@ -42,7 +54,10 @@ public class Terminal<T> extends Symbol<T> {
         if (this.count != 1) {
             DataOutput.writeLong(objOut, this.count);
         }
-        objectWriter.writeObject(this.value, objOut);
+        if (objectWriter == null)
+            objOut.writeObject(this.value);
+        else
+            objectWriter.writeObject(this.value, objOut);
     }
 
     @Override
@@ -65,7 +80,7 @@ public class Terminal<T> extends Symbol<T> {
         if (this.count == 1)
             return String.valueOf(this.value);
 
-        return new StringBuilder().append('R').append(this.value)
+        return new StringBuilder().append(this.value)
             .append('^').append(this.count).toString();
     }
 
