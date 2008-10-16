@@ -1,6 +1,6 @@
 package de.unisb.cs.st.javaslicer.tracer.traceSequences.uncompressed;
 
-import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -28,7 +28,6 @@ public class UncompressedIntegerTraceSequence implements IntegerTraceSequence {
      *
      * @throws IOException if an I/O error occures
      */
-    @SuppressWarnings("unused")
     protected OutputStream getOutputStream(final MultiplexOutputStream out) throws IOException {
         return out;
     }
@@ -39,15 +38,11 @@ public class UncompressedIntegerTraceSequence implements IntegerTraceSequence {
         this.dataOut.writeInt(value);
     }
 
-    public void writeOut(final DataOutput out) throws IOException {
+    public void writeOut(final DataOutputStream out) throws IOException {
         finish();
 
-        out.writeByte(getFormat() | TYPE_INTEGER);
+        out.writeByte(TYPE_INTEGER);
         out.writeInt(this.streamIndex);
-    }
-
-    protected byte getFormat() {
-        return FORMAT_UNCOMPRESSED;
     }
 
     public void finish() throws IOException {

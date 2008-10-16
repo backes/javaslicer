@@ -6,7 +6,8 @@ import java.util.LinkedList;
 
 import de.unisb.cs.st.javaslicer.tracer.util.sequitur.output.Rule.Dummy;
 
-public class NonTerminal<T> extends Symbol<T> {
+// package-private
+class NonTerminal<T> extends Symbol<T> {
 
     private final Rule<T> rule;
     private int count = 1;
@@ -95,7 +96,7 @@ public class NonTerminal<T> extends Symbol<T> {
             final ObjectWriter<? super T> objectWriter, final LinkedList<Rule<T>> queue) throws IOException {
         assert this.count >= 1;
         if (this.count != 1) {
-            DataOutput.writeLong(objOut, this.count);
+            DataOutput.writeInt(objOut, this.count);
         }
         DataOutput.writeLong(objOut, grammar.getRuleNr(this.rule, queue));
     }
@@ -110,7 +111,7 @@ public class NonTerminal<T> extends Symbol<T> {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
-        sb.append('R').append(this.rule.ruleNr);
+        sb.append('R').append(this.rule.hashCode());
         assert this.count >= 1;
         if (this.count > 1) {
             sb.append('^').append(this.count);

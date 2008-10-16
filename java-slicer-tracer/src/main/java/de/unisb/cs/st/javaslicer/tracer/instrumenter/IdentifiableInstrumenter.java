@@ -57,9 +57,10 @@ public class IdentifiableInstrumenter implements Opcodes {
                 Type.getInternalName(ObjectIdentifier.class), "instance",
                 "L" + Type.getInternalName(ObjectIdentifier.class) + ";"));
         getIdMethod.instructions.add(new VarInsnNode(ALOAD, 0));
+        getIdMethod.instructions.add(new InsnNode(ICONST_1));
         getIdMethod.instructions.add(new MethodInsnNode(INVOKEVIRTUAL,
-                Type.getInternalName(ObjectIdentifier.class), "getObjectId",
-                "(Ljava/lang/Object;)J"));
+                Type.getInternalName(ObjectIdentifier.class), "getNewId",
+                "(Ljava/lang/Object;Z)J"));
         getIdMethod.instructions.add(new FieldInsnNode(PUTFIELD, classNode.name, ID_FIELD_NAME, "J"));
         getIdMethod.instructions.add(l);
         getIdMethod.instructions.add(new VarInsnNode(ALOAD, 0));

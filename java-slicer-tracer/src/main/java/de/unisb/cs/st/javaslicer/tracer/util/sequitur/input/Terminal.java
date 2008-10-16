@@ -1,51 +1,43 @@
 package de.unisb.cs.st.javaslicer.tracer.util.sequitur.input;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
 
-public class Terminal<T> extends Symbol<T> {
+
+// package-private
+class Terminal<T> implements Symbol<T> {
 
     private final T value;
-    private int count = 1;
+    private final int count;
 
-    public Terminal(final T value) {
+    public Terminal(final T value, final int count) {
+        assert count > 0;
         this.value = value;
-    }
-
-    @Override
-    public boolean meltDigram() {
-        if (this.next.getClass() != this.getClass())
-            return false;
-
-        final Terminal<?> otherT = (Terminal<?>) this.next;
-        if (this.value == null ? otherT.value == null : this.value.equals(otherT.value)) {
-            this.count += otherT.count;
-            otherT.remove();
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    protected boolean singleEquals(final Symbol<?> obj) {
-        if (obj.getClass() != this.getClass())
-            return false;
-        final Terminal<?> other = (Terminal<?>) obj;
-        return this.count == other.count
-            && this.value == null ? other.value == null : this.value.equals(other.value);
-    }
-
-    @Override
-    protected int singleHashcode() {
-        return (this.value == null ? 0 : this.value.hashCode()) + 31*this.count;
+        this.count = count;
     }
 
     @Override
     public String toString() {
-        assert this.count >= 1;
         if (this.count == 1)
             return String.valueOf(this.value);
 
-        return new StringBuilder().append('R').append(this.value)
+        return new StringBuilder().append(this.value)
             .append('^').append(this.count).toString();
     }
+
+    @SuppressWarnings("unchecked")
+    public static <T> Terminal<T> readFrom(final ObjectInputStream objIn, final boolean counted,
+            final ObjectReader<? extends T> objectReader, final Class<? extends T> checkInstance) throws IOException, ClassNotFoundException {
+        final int count = counted ? DataInput.readInt(objIn) : 1;
+        if (objectReader == null) {
+            final Object value = objIn.readObject();
+            if (checkInstance != null && !checkInstance.isInstance(value))
+                throw new ClassCastException(value.getClass().getName()+" not assignment-compatible with "+checkInstance.getName());
+            return new Terminal<T>((T) value, count);
+        }
+        final T value = objectReader.readObject(objIn);
+        return new Terminal<T>(value, count);
+    }
+
 
 }

@@ -2,7 +2,6 @@ package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.EOFException;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -136,7 +135,7 @@ public abstract class AbstractInstruction implements Instruction {
     }
 
     // must be overridden by classes with dynamic parameters (e.g. array load/store)
-    public Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException, EOFException {
+    public Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException {
         return new AbstractInstance(this, backwardInstructionIterator.getNextInstructionOccurenceNumber(this.index), backwardInstructionIterator.getStackDepth());
     }
 

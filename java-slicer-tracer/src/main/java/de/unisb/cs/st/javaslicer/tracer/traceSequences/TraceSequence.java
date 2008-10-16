@@ -1,6 +1,6 @@
 package de.unisb.cs.st.javaslicer.tracer.traceSequences;
 
-import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
 public interface TraceSequence {
@@ -24,7 +24,7 @@ public interface TraceSequence {
     public static final byte TYPE_INTEGER = 1<<5;
     public static final byte TYPE_LONG = 1<<6;
 
-    void writeOut(DataOutput out) throws IOException;
+    void writeOut(DataOutputStream out) throws IOException;
 
     void finish() throws IOException;
 

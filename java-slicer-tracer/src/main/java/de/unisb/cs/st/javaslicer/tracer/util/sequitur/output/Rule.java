@@ -2,14 +2,14 @@ package de.unisb.cs.st.javaslicer.tracer.util.sequitur.output;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.List;
+import java.util.Queue;
 import java.util.Set;
+import java.util.TreeSet;
 
-
-public class Rule<T> {
+// package-private
+class Rule<T> {
 
     protected static class Dummy<T> extends Symbol<T> {
 
@@ -52,17 +52,13 @@ public class Rule<T> {
 
         @Override
         public void writeOut(final ObjectOutputStream objOut, final Grammar<T> grammar, final ObjectWriter<? super T> objectWriter,
-                final LinkedList<Rule<T>> queue) throws IOException {
+                final LinkedList<Rule<T>> queue) {
             assert false;
         }
     }
 
     protected final Dummy<T> dummy;
     private int useCount;
-
-    // TODO remove this (only needed for easier debugging)
-    private static long nextRuleNr = 0;
-    protected final long ruleNr = nextRuleNr++;
 
     public Rule() {
         this(true);
@@ -161,35 +157,32 @@ public class Rule<T> {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
-        sb.append("R").append(this.ruleNr).append(" --> ");
-        if (this.dummy.next != this.dummy) {
-            sb.append(this.dummy.next);
-            for (Symbol<T> s = this.dummy.next.next; s != this.dummy; s = s.next)
-                sb.append(" ").append(s);
-        }
+        sb.append("R").append(hashCode()).append(" -->");
+        for (Symbol<T> s = this.dummy.next; s != this.dummy; s = s.next)
+            sb.append(' ').append(s);
         return sb.toString();
     }
 
     public Set<Rule<T>> getUsedRules() {
-        final Set<Rule<T>> rules = new HashSet<Rule<T>>();
-        addUsedRules(rules);
-        return rules;
-    }
-
-    public void addUsedRules(final Set<Rule<T>> ruleSet) {
-        final List<Rule<T>> ruleQueue = new ArrayList<Rule<T>>();
+        Set<Rule<T>> rules = new HashSet<Rule<T>>();
+        long rulesAdded = 0;
+        final Queue<Rule<T>> ruleQueue = new LinkedList<Rule<T>>();
         ruleQueue.add(this);
 
-
         while (!ruleQueue.isEmpty()) {
-            final Rule<T> r = ruleQueue.remove(ruleQueue.size()-1);
+            final Rule<T> r = ruleQueue.poll();
             for (Symbol<T> s = r.dummy.next; s != r.dummy; s = s.next)
                 if (s instanceof NonTerminal<?>) {
                     final Rule<T> newR = ((NonTerminal<T>)s).getRule();
-                    if (ruleSet.add(newR))
+                    if (rules.add(newR)) {
+                        if (++rulesAdded == 1<<30)
+                            rules = new TreeSet<Rule<T>>(rules);
                         ruleQueue.add(newR);
+                    }
                 }
         }
+
+        return rules;
     }
 
 }

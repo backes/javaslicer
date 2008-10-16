@@ -6,8 +6,8 @@ import java.util.LinkedList;
 
 import de.unisb.cs.st.javaslicer.tracer.util.sequitur.output.Rule.Dummy;
 
-
-public class Terminal<T> extends Symbol<T> {
+// package-private
+class Terminal<T> extends Symbol<T> {
 
     private final T value;
     protected int count = 1;
@@ -52,7 +52,7 @@ public class Terminal<T> extends Symbol<T> {
             final LinkedList<Rule<T>> queue) throws IOException {
         assert this.count >= 1;
         if (this.count != 1) {
-            DataOutput.writeLong(objOut, this.count);
+            DataOutput.writeInt(objOut, this.count);
         }
         if (objectWriter == null)
             objOut.writeObject(this.value);

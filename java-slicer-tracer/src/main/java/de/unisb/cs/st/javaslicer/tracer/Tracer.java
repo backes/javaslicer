@@ -140,7 +140,7 @@ public class Tracer implements ClassFileTransformer {
     };
 
 
-    public static final TraceSequenceFactory seqFactory = new SwitchingTraceSequenceFactory();
+    public final TraceSequenceFactory seqFactory = new SwitchingTraceSequenceFactory();
 
     private final Map<Thread, ThreadTracer> threadTracers;
 

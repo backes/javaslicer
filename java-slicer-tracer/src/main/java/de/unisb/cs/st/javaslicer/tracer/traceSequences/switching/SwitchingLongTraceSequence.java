@@ -2,7 +2,7 @@ package de.unisb.cs.st.javaslicer.tracer.traceSequences.switching;
 
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Iterator;
@@ -120,7 +120,7 @@ public class SwitchingLongTraceSequence implements LongTraceSequence {
         }
     }
 
-    public void writeOut(final DataOutput out) throws IOException {
+    public void writeOut(final DataOutputStream out) throws IOException {
         finish();
 
         out.writeByte(getFormat() | TYPE_LONG);
@@ -158,7 +158,7 @@ public class SwitchingLongTraceSequence implements LongTraceSequence {
         } else {
             ByteArrayOutputStream invStreamFirstPart = null;
             OptimizedDataOutputStream optOut = null;
-            final BackwardLongStreamReader backwardReader = new BackwardLongStreamReader(oldMplexOut, oldMplexOut.getBlockSize()/8);
+            final BackwardLongStreamReader backwardReader = new BackwardLongStreamReader(oldMplexOut, 4*1024);
             if (oldMplexOut.length() <= 8*SWITCH_TO_GZIP_WHEN_GREATER) {
                 invStreamFirstPart = new ByteArrayOutputStream();
                 optOut = new OptimizedDataOutputStream(invStreamFirstPart, true);

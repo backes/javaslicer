@@ -2,7 +2,6 @@ package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.EOFException;
 import java.io.IOException;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
@@ -63,8 +62,7 @@ public class LabelMarker extends AbstractInstruction {
     }
 
     @Override
-    public Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException,
-            EOFException {
+    public Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException {
         if (this.additionalLabel) {
             return null;
         }

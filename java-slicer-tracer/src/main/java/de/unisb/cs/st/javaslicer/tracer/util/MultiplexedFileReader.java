@@ -181,7 +181,7 @@ public class MultiplexedFileReader {
         }
 
         @Override
-        public int available() throws IOException {
+        public int available() {
             return (int) Math.min(Integer.MAX_VALUE, this.dataLength - getPosition());
         }
 

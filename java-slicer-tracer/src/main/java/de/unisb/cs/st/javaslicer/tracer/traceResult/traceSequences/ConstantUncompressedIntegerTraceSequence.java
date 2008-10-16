@@ -6,11 +6,12 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+import de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences.ConstantTraceSequence.ConstantIntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.util.EmptyIterator;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader.MultiplexInputStream;
 
-public class ConstantUncompressedIntegerTraceSequence extends ConstantIntegerTraceSequence {
+public class ConstantUncompressedIntegerTraceSequence implements ConstantIntegerTraceSequence {
 
     protected final MultiplexedFileReader file;
     protected final int streamIndex;

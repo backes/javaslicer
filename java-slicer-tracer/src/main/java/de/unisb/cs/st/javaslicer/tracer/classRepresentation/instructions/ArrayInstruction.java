@@ -2,7 +2,6 @@ package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.EOFException;
 import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
@@ -39,7 +38,7 @@ public class ArrayInstruction extends AbstractInstruction {
     }
 
     @Override
-    public Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException, EOFException {
+    public Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException {
         final long arrayId = backwardInstructionIterator.getNextLong(this.arrayTraceSeqIndex);
         final int index = backwardInstructionIterator.getNextInteger(this.indexTraceSeqIndex);
         return new Instance(this, backwardInstructionIterator.getNextInstructionOccurenceNumber(getIndex()),

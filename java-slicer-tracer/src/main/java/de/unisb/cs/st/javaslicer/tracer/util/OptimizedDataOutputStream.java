@@ -42,94 +42,98 @@ public class OptimizedDataOutputStream extends FilterOutputStream {
     }
 
     public void writeInt(final int value) throws IOException {
-        int write;
         if (this.diff) {
-            write = value - this.lastInt;
+            writeInt0(value - this.lastInt, this.out);
             this.lastInt = value;
         } else
-            write = value;
-        if ((write | ~LOWER_7_BITS) == write || (write & LOWER_7_BITS) == write) {
-            if (write < -124)
-                this.out.write(MAGIC_1BYTE);
-            this.out.write(write);
-        } else if ((write | ~LOWER_15_BITS) == write || (write & LOWER_15_BITS) == write) {
-            this.out.write(MAGIC_2BYTES);
-            this.out.write(write >>> 8);
-            this.out.write(write);
-        } else if ((write | ~LOWER_23_BITS) == write || (write & LOWER_23_BITS) == write) {
-            this.out.write(MAGIC_3BYTES);
-            this.out.write(write >>> 16);
-            this.out.write(write >>> 8);
-            this.out.write(write);
+            writeInt0(value, this.out);
+    }
+
+    public static void writeInt0(final int value, final OutputStream out) throws IOException {
+        if ((value | ~LOWER_7_BITS) == value || (value & LOWER_7_BITS) == value) {
+            if (value < -124)
+                out.write(MAGIC_1BYTE);
+            out.write(value);
+        } else if ((value | ~LOWER_15_BITS) == value || (value & LOWER_15_BITS) == value) {
+            out.write(MAGIC_2BYTES);
+            out.write(value >>> 8);
+            out.write(value);
+        } else if ((value | ~LOWER_23_BITS) == value || (value & LOWER_23_BITS) == value) {
+            out.write(MAGIC_3BYTES);
+            out.write(value >>> 16);
+            out.write(value >>> 8);
+            out.write(value);
         } else {
-            this.out.write(MAGIC_4BYTES);
-            this.out.write(write >>> 24);
-            this.out.write(write >>> 16);
-            this.out.write(write >>> 8);
-            this.out.write(write);
+            out.write(MAGIC_4BYTES);
+            out.write(value >>> 24);
+            out.write(value >>> 16);
+            out.write(value >>> 8);
+            out.write(value);
         }
     }
 
     public void writeLong(final long value) throws IOException {
-        long write;
         if (this.diff) {
-            write = value - this.lastLong;
+            writeLong0(value - this.lastLong, this.out);
             this.lastLong = value;
         } else
-            write = value;
-        if ((write | ~LOWER_7_BITS) == write || (write & LOWER_7_BITS) == write) {
-            if (write < -124 || write > 123)
-                this.out.write(MAGIC_1BYTE);
-            this.out.write((int) write);
-        } else if ((write | ~LOWER_15_BITS) == write || (write & LOWER_15_BITS) == write) {
-            this.out.write(MAGIC_2BYTES);
-            this.out.write((int)(write >>> 8));
-            this.out.write((int)write);
-        } else if ((write | ~LOWER_23_BITS) == write || (write & LOWER_23_BITS) == write) {
-            this.out.write(MAGIC_3BYTES);
-            this.out.write((int)(write >>> 16));
-            this.out.write((int)(write >>> 8));
-            this.out.write((int)write);
-        } else if ((write | ~LOWER_31_BITS) == write || (write & LOWER_31_BITS) == write) {
-            this.out.write(MAGIC_4BYTES);
-            this.out.write((int)(write >>> 24));
-            this.out.write((int)(write >>> 16));
-            this.out.write((int)(write >>> 8));
-            this.out.write((int)write);
-        } else if ((write | ~LOWER_39_BITS) == write || (write & LOWER_39_BITS) == write) {
-            this.out.write(MAGIC_5BYTES);
-            this.out.write((int)(write >>> 32));
-            this.out.write((int)(write >>> 24));
-            this.out.write((int)(write >>> 16));
-            this.out.write((int)(write >>> 8));
-            this.out.write((int)write);
-        } else if ((write | ~LOWER_47_BITS) == write || (write & LOWER_47_BITS) == write) {
-            this.out.write(MAGIC_6BYTES);
-            this.out.write((int)(write >>> 40));
-            this.out.write((int)(write >>> 32));
-            this.out.write((int)(write >>> 24));
-            this.out.write((int)(write >>> 16));
-            this.out.write((int)(write >>> 8));
-            this.out.write((int)write);
-        } else if ((write | ~LOWER_55_BITS) == write || (write & LOWER_55_BITS) == write) {
-            this.out.write(MAGIC_7BYTES);
-            this.out.write((int)(write >>> 48));
-            this.out.write((int)(write >>> 40));
-            this.out.write((int)(write >>> 32));
-            this.out.write((int)(write >>> 24));
-            this.out.write((int)(write >>> 16));
-            this.out.write((int)(write >>> 8));
-            this.out.write((int)write);
+            writeLong0(value, this.out);
+    }
+
+    public static void writeLong0(final long value, final OutputStream out) throws IOException {
+        if ((value | ~LOWER_7_BITS) == value || (value & LOWER_7_BITS) == value) {
+            if (value < -124 || value > 123)
+                out.write(MAGIC_1BYTE);
+            out.write((int) value);
+        } else if ((value | ~LOWER_15_BITS) == value || (value & LOWER_15_BITS) == value) {
+            out.write(MAGIC_2BYTES);
+            out.write((int)(value >>> 8));
+            out.write((int)value);
+        } else if ((value | ~LOWER_23_BITS) == value || (value & LOWER_23_BITS) == value) {
+            out.write(MAGIC_3BYTES);
+            out.write((int)(value >>> 16));
+            out.write((int)(value >>> 8));
+            out.write((int)value);
+        } else if ((value | ~LOWER_31_BITS) == value || (value & LOWER_31_BITS) == value) {
+            out.write(MAGIC_4BYTES);
+            out.write((int)(value >>> 24));
+            out.write((int)(value >>> 16));
+            out.write((int)(value >>> 8));
+            out.write((int)value);
+        } else if ((value | ~LOWER_39_BITS) == value || (value & LOWER_39_BITS) == value) {
+            out.write(MAGIC_5BYTES);
+            out.write((int)(value >>> 32));
+            out.write((int)(value >>> 24));
+            out.write((int)(value >>> 16));
+            out.write((int)(value >>> 8));
+            out.write((int)value);
+        } else if ((value | ~LOWER_47_BITS) == value || (value & LOWER_47_BITS) == value) {
+            out.write(MAGIC_6BYTES);
+            out.write((int)(value >>> 40));
+            out.write((int)(value >>> 32));
+            out.write((int)(value >>> 24));
+            out.write((int)(value >>> 16));
+            out.write((int)(value >>> 8));
+            out.write((int)value);
+        } else if ((value | ~LOWER_55_BITS) == value || (value & LOWER_55_BITS) == value) {
+            out.write(MAGIC_7BYTES);
+            out.write((int)(value >>> 48));
+            out.write((int)(value >>> 40));
+            out.write((int)(value >>> 32));
+            out.write((int)(value >>> 24));
+            out.write((int)(value >>> 16));
+            out.write((int)(value >>> 8));
+            out.write((int)value);
         } else {
-            this.out.write(MAGIC_8BYTES);
-            this.out.write((int)(write >>> 56));
-            this.out.write((int)(write >>> 48));
-            this.out.write((int)(write >>> 40));
-            this.out.write((int)(write >>> 32));
-            this.out.write((int)(write >>> 24));
-            this.out.write((int)(write >>> 16));
-            this.out.write((int)(write >>> 8));
-            this.out.write((int)write);
+            out.write(MAGIC_8BYTES);
+            out.write((int)(value >>> 56));
+            out.write((int)(value >>> 48));
+            out.write((int)(value >>> 40));
+            out.write((int)(value >>> 32));
+            out.write((int)(value >>> 24));
+            out.write((int)(value >>> 16));
+            out.write((int)(value >>> 8));
+            out.write((int)value);
         }
     }
 

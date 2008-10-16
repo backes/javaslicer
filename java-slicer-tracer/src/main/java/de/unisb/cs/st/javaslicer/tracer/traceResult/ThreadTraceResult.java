@@ -1,6 +1,6 @@
 package de.unisb.cs.st.javaslicer.tracer.traceResult;
 
-import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -21,9 +21,10 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Type;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
-import de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences.ConstantIntegerTraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences.ConstantLongTraceSequence;
+import de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences.ConstantThreadTraces;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences.ConstantTraceSequence;
+import de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences.ConstantTraceSequence.ConstantIntegerTraceSequence;
+import de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences.ConstantTraceSequence.ConstantLongTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerToLongMap;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;
@@ -53,14 +54,15 @@ public class ThreadTraceResult {
         return this.threadName;
     }
 
-    public static ThreadTraceResult readFrom(final DataInput in, final TraceResult traceResult, final MultiplexedFileReader file) throws IOException {
+    public static ThreadTraceResult readFrom(final DataInputStream in, final TraceResult traceResult, final MultiplexedFileReader file) throws IOException {
         final long threadId = in.readLong();
         final String name = in.readUTF();
+        final ConstantThreadTraces threadTraces = ConstantThreadTraces.readFrom(in);
         int numSequences = in.readInt();
         final IntegerMap<ConstantTraceSequence> sequences = new IntegerMap<ConstantTraceSequence>();
         while (numSequences-- > 0) {
             final int nr = in.readInt();
-            final ConstantTraceSequence seq = ConstantTraceSequence.readFrom(in, file);
+            final ConstantTraceSequence seq = threadTraces.readSequence(in, file);
             if (sequences.put(nr, seq) != null)
                 throw new IOException("corrupted data");
         }

@@ -1,7 +1,7 @@
 package de.unisb.cs.st.javaslicer.tracer;
 
 import java.io.BufferedWriter;
-import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -11,6 +11,7 @@ import java.util.Map.Entry;
 
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.IntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.Type;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
@@ -20,6 +21,8 @@ public class TracingThreadTracer implements ThreadTracer {
     private final long threadId;
     private final String threadName;
     private final List<Type> threadSequenceTypes;
+
+    private final TraceSequenceFactory.PerThread traceSequenceFactory;
 
     private volatile int lastInstructionIndex = -1;
 
@@ -51,6 +54,7 @@ public class TracingThreadTracer implements ThreadTracer {
         this.threadName = thread.getName();
         this.threadSequenceTypes = threadSequenceTypes;
         this.tracer = tracer;
+        this.traceSequenceFactory = tracer.seqFactory.forThreadTracer(this);
     }
 
     public synchronized void traceInt(final int value, final int traceSequenceIndex) {
@@ -62,7 +66,7 @@ public class TracingThreadTracer implements ThreadTracer {
         TraceSequence seq = this.sequences.get(traceSequenceIndex);
         try {
             if (seq == null) {
-                seq = Tracer.seqFactory.createTraceSequence(
+                seq = this.traceSequenceFactory.createTraceSequence(
                         this.threadSequenceTypes.get(traceSequenceIndex), this.tracer);
                 this.sequences.put(traceSequenceIndex, seq);
             }
@@ -88,7 +92,7 @@ public class TracingThreadTracer implements ThreadTracer {
         TraceSequence seq = this.sequences.get(traceSequenceIndex);
         try {
             if (seq == null) {
-                seq = Tracer.seqFactory.createTraceSequence(
+                seq = this.traceSequenceFactory.createTraceSequence(
                         this.threadSequenceTypes.get(traceSequenceIndex), this.tracer);
                 this.sequences.put(traceSequenceIndex, seq);
             }
@@ -123,22 +127,32 @@ public class TracingThreadTracer implements ThreadTracer {
     }
 
     public synchronized void finish() throws IOException {
+//        final long startTime = System.nanoTime();
         pauseTracing();
 
         for (final TraceSequence seq: this.sequences.values())
             seq.finish();
+
+        this.traceSequenceFactory.finish();
+
+//        final long endTime = System.nanoTime();
+//        System.out.format("Finishing %s took %.3f seconds%n", this.threadName, 1e-9*(endTime - startTime));
     }
 
-    public void writeOut(final DataOutput out) throws IOException {
+    public void writeOut(final DataOutputStream out) throws IOException {
         finish();
+//        final long startTime = System.nanoTime();
         out.writeLong(this.threadId);
         out.writeUTF(this.threadName);
+        this.traceSequenceFactory.writeOut(out);
         out.writeInt(this.sequences.size());
         for (final Entry<Integer, TraceSequence> seq: this.sequences.entrySet()) {
             out.writeInt(seq.getKey());
             seq.getValue().writeOut(out);
         }
         out.writeInt(this.lastInstructionIndex);
+//        final long endTime = System.nanoTime();
+//        System.out.format("Writing %s took %.3f seconds%n", this.threadName, 1e-9*(endTime - startTime));
     }
 
     public synchronized void pauseTracing() {

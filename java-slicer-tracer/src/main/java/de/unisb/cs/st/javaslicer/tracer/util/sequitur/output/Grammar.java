@@ -14,7 +14,8 @@ import java.util.Map.Entry;
 
 import de.unisb.cs.st.javaslicer.tracer.util.sequitur.output.Rule.Dummy;
 
-public class Grammar<T> {
+// package-private
+class Grammar<T> {
 
     private final Map<Symbol<T>, Symbol<T>> digrams = new HashMap<Symbol<T>, Symbol<T>>();
 
@@ -210,8 +211,11 @@ public class Grammar<T> {
             objOut.write(0); // header: marked as being last
             objOut.write(0); // this rule contains 0 symbols
         } else {
+            long ruleNr = 0;
             while (!ruleQueue.isEmpty()) {
                 final Rule<T> rule = ruleQueue.poll();
+                assert getRuleNr(rule) == ruleNr;
+                ++ruleNr;
                 rule.writeOut(objOut, this, objectWriter, ruleQueue);
             }
         }

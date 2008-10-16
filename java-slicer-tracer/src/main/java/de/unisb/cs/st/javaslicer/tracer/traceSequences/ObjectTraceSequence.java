@@ -1,6 +1,6 @@
 package de.unisb.cs.st.javaslicer.tracer.traceSequences;
 
-import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
 public class ObjectTraceSequence implements TraceSequence {
@@ -19,7 +19,7 @@ public class ObjectTraceSequence implements TraceSequence {
         }
     }
 
-    public void writeOut(final DataOutput out) throws IOException {
+    public void writeOut(final DataOutputStream out) throws IOException {
         this.longTraceSequence.writeOut(out);
     }
 

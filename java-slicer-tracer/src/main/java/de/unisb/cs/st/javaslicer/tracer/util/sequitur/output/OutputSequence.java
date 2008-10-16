@@ -38,10 +38,14 @@ public class OutputSequence<T> {
         this.firstRule.append(new Terminal<T>(obj), this.grammar);
     }
 
+    public long getStartRuleNumber() {
+        return this.grammar.getRuleNr(this.firstRule);
+    }
+
     public void writeOut(final ObjectOutputStream objOut, final boolean includeGrammar) throws IOException {
         if (includeGrammar)
             writeOutGrammar(objOut);
-        DataOutput.writeLong(objOut, this.grammar.getRuleNr(this.firstRule));
+        DataOutput.writeLong(objOut, getStartRuleNumber());
     }
 
     public void writeOutGrammar(final ObjectOutputStream objOut) throws IOException {

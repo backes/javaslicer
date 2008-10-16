@@ -25,22 +25,25 @@ public class ObjectIdentifier {
 
     public long getObjectId(final Object obj) {
         final Long id = this.objectMap.get(obj);
-        return id == null ? getNewId(obj) : id;
+        return id == null ? getNewId(obj, false) : id;
     }
 
-    private long getNewId(final Object obj) {
+    public long getNewId(final Object obj, final boolean isIdentifiable) {
         Long newId = this.freeIds.poll();
         if (newId == null) {
             newId = this.nextId.getAndIncrement();
             if (newId.longValue() == 0)
                 throw new RuntimeException("long overflow in object ids");
         }
-        final Long oldId = this.objectMap.putIfAbsent(obj, newId);
-        if (oldId == null)
-            return newId;
+        if (!isIdentifiable) {
+            final Long oldId = this.objectMap.putIfAbsent(obj, newId);
+            if (oldId != null) {
+                this.freeIds.add(newId);
+                return oldId;
+            }
+        }
 
-        this.freeIds.add(newId);
-        return oldId;
+        return newId;
     }
 
 }

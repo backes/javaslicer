@@ -1,6 +1,6 @@
 package de.unisb.cs.st.javaslicer.tracer.traceSequences.uncompressed;
 
-import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -28,7 +28,6 @@ public class UncompressedLongTraceSequence implements LongTraceSequence {
      *
      * @throws IOException if an I/O error occures
      */
-    @SuppressWarnings("unused")
     protected OutputStream getOutputStream(final MultiplexOutputStream out) throws IOException {
         return out;
     }
@@ -39,7 +38,7 @@ public class UncompressedLongTraceSequence implements LongTraceSequence {
         this.dataOut.writeLong(value);
     }
 
-    public void writeOut(final DataOutput out) throws IOException {
+    public void writeOut(final DataOutputStream out) throws IOException {
         finish();
 
         out.writeByte(getFormat() | TYPE_LONG);

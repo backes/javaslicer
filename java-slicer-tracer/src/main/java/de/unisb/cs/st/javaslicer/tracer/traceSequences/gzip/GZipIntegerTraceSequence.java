@@ -19,9 +19,4 @@ public class GZipIntegerTraceSequence extends UncompressedIntegerTraceSequence {
         return new GZIPOutputStream(super.getOutputStream(out));
     }
 
-    @Override
-    protected byte getFormat() {
-        return FORMAT_GZIP;
-    }
-
 }

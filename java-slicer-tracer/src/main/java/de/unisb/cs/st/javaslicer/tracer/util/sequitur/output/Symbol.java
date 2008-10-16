@@ -6,7 +6,8 @@ import java.util.LinkedList;
 
 import de.unisb.cs.st.javaslicer.tracer.util.sequitur.output.Rule.Dummy;
 
-public abstract class Symbol<T> implements Cloneable {
+// package-private
+abstract class Symbol<T> implements Cloneable {
 
     public Symbol<T> next = null;
     public Symbol<T> prev = null;

@@ -8,12 +8,13 @@ import java.io.PushbackInputStream;
 import java.util.Iterator;
 import java.util.zip.GZIPInputStream;
 
+import de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences.ConstantTraceSequence.ConstantLongTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.util.EmptyIterator;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;
 import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader.MultiplexInputStream;
 
-public class ConstantSwitchingLongTraceSequence extends ConstantLongTraceSequence {
+public class ConstantSwitchingLongTraceSequence implements ConstantLongTraceSequence {
 
     protected final MultiplexedFileReader file;
     protected final boolean gzipped;

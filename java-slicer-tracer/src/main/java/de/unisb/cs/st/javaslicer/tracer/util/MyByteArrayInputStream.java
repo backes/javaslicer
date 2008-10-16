@@ -1,6 +1,5 @@
 package de.unisb.cs.st.javaslicer.tracer.util;
 
-import java.io.IOException;
 import java.io.InputStream;
 
 public class MyByteArrayInputStream extends InputStream {
@@ -14,7 +13,7 @@ public class MyByteArrayInputStream extends InputStream {
     }
 
     @Override
-    public int read() throws IOException {
+    public int read() {
         if (this.nextPos >= this.buf.length)
             return -1;
         return this.buf[this.nextPos++] & 0xff;

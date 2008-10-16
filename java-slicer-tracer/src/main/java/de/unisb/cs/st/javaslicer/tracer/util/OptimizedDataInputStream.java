@@ -26,141 +26,133 @@ public class OptimizedDataInputStream extends FilterInputStream {
         this.lastLong = lastLongValue;
     }
 
-    public int readInt() throws IOException {
+    public static int readInt0(final InputStream in) throws IOException {
         int b0, b1, b2;
-        int b3 = this.in.read();
-        int readValue;
+        int b3 = in.read();
         switch (b3) {
         case -1:
             throw new EOFException();
         case OptimizedDataOutputStream.MAGIC_1BYTE & 0xff:
-            b0 = this.in.read();
+            b0 = in.read();
             if (b0 < 0)
                 throw new EOFException();
-            readValue = (byte)b0;
-            break;
+            return (byte)b0;
         case OptimizedDataOutputStream.MAGIC_2BYTES & 0xff:
-            b1 = this.in.read();
-            b0 = this.in.read();
+            b1 = in.read();
+            b0 = in.read();
             if ((b0 | b1) < 0)
                 throw new EOFException();
-            readValue = ((byte)b1 << 8) | b0;
-            break;
+            return ((byte)b1 << 8) | b0;
         case OptimizedDataOutputStream.MAGIC_3BYTES & 0xff:
-            b2 = this.in.read();
-            b1 = this.in.read();
-            b0 = this.in.read();
+            b2 = in.read();
+            b1 = in.read();
+            b0 = in.read();
             if ((b0 | b1 | b2) < 0)
                 throw new EOFException();
-            readValue = ((byte)b2 << 16) | (b1 << 8) | b0;
-            break;
+            return ((byte)b2 << 16) | (b1 << 8) | b0;
         case OptimizedDataOutputStream.MAGIC_4BYTES & 0xff:
-            b3 = this.in.read();
-            b2 = this.in.read();
-            b1 = this.in.read();
-            b0 = this.in.read();
+            b3 = in.read();
+            b2 = in.read();
+            b1 = in.read();
+            b0 = in.read();
             if ((b0 | b1 | b2 | b3) < 0)
                 throw new EOFException();
-            readValue = ((byte)b3 << 24) | (b2 << 16) | (b1 << 8) | b0;
-            break;
+            return ((byte)b3 << 24) | (b2 << 16) | (b1 << 8) | b0;
         default:
-            readValue = (byte)b3;
-            break;
+            return (byte)b3;
         }
-        return this.diff ? this.lastInt += readValue : readValue;
     }
 
-    public long readLong() throws IOException {
+    public int readInt() throws IOException {
+        final int readValue = readInt0(this.in);
+        return this.diff ? this.lastInt += readValue  : readValue;
+    }
+
+    public static long readLong0(final InputStream in) throws IOException {
         int b0, b1, b2, b3, b4, b5, b6;
-        int b7 = this.in.read();
-        long readValue;
+        int b7 = in.read();
         switch (b7) {
         case -1:
             throw new EOFException();
         case OptimizedDataOutputStream.MAGIC_1BYTE & 0xff:
-            b0 = this.in.read();
+            b0 = in.read();
             if (b0 < 0)
                 throw new EOFException();
-            readValue = (byte)b0;
-            break;
+            return (byte)b0;
         case OptimizedDataOutputStream.MAGIC_2BYTES & 0xff:
-            b1 = this.in.read();
-            b0 = this.in.read();
+            b1 = in.read();
+            b0 = in.read();
             if ((b0 | b1) < 0)
                 throw new EOFException();
-            readValue = ((byte)b1 << 8) | b0;
-            break;
+            return ((byte)b1 << 8) | b0;
         case OptimizedDataOutputStream.MAGIC_3BYTES & 0xff:
-            b2 = this.in.read();
-            b1 = this.in.read();
-            b0 = this.in.read();
+            b2 = in.read();
+            b1 = in.read();
+            b0 = in.read();
             if ((b0 | b1 | b2) < 0)
                 throw new EOFException();
-            readValue = ((byte)b2 << 16) | (b1 << 8) | b0;
-            break;
+            return ((byte)b2 << 16) | (b1 << 8) | b0;
         case OptimizedDataOutputStream.MAGIC_4BYTES & 0xff:
-            b3 = this.in.read();
-            b2 = this.in.read();
-            b1 = this.in.read();
-            b0 = this.in.read();
+            b3 = in.read();
+            b2 = in.read();
+            b1 = in.read();
+            b0 = in.read();
             if ((b0 | b1 | b2 | b3) < 0)
                 throw new EOFException();
-            readValue = ((long)(byte)b3 << 24) | (b2 << 16) | (b1 << 8) | b0;
-            break;
+            return ((long)(byte)b3 << 24) | (b2 << 16) | (b1 << 8) | b0;
         case OptimizedDataOutputStream.MAGIC_5BYTES & 0xff:
-            b4 = this.in.read();
-            b3 = this.in.read();
-            b2 = this.in.read();
-            b1 = this.in.read();
-            b0 = this.in.read();
+            b4 = in.read();
+            b3 = in.read();
+            b2 = in.read();
+            b1 = in.read();
+            b0 = in.read();
             if ((b0 | b1 | b2 | b3 | b4) < 0)
                 throw new EOFException();
-            readValue = ((long)(byte)b4 << 32) | ((long)b3 << 24) | (b2 << 16) | (b1 << 8) | b0;
-            break;
+            return ((long)(byte)b4 << 32) | ((long)b3 << 24) | (b2 << 16) | (b1 << 8) | b0;
         case OptimizedDataOutputStream.MAGIC_6BYTES & 0xff:
-            b5 = this.in.read();
-            b4 = this.in.read();
-            b3 = this.in.read();
-            b2 = this.in.read();
-            b1 = this.in.read();
-            b0 = this.in.read();
+            b5 = in.read();
+            b4 = in.read();
+            b3 = in.read();
+            b2 = in.read();
+            b1 = in.read();
+            b0 = in.read();
             if ((b0 | b1 | b2 | b3 | b4 | b5) < 0)
                 throw new EOFException();
-            readValue = ((long)(byte)b5 << 40) | ((long)b4 << 32) |
+            return ((long)(byte)b5 << 40) | ((long)b4 << 32) |
                 ((long)b3 << 24) | (b2 << 16) | (b1 << 8) | b0;
-            break;
         case OptimizedDataOutputStream.MAGIC_7BYTES & 0xff:
-            b6 = this.in.read();
-            b5 = this.in.read();
-            b4 = this.in.read();
-            b3 = this.in.read();
-            b2 = this.in.read();
-            b1 = this.in.read();
-            b0 = this.in.read();
+            b6 = in.read();
+            b5 = in.read();
+            b4 = in.read();
+            b3 = in.read();
+            b2 = in.read();
+            b1 = in.read();
+            b0 = in.read();
             if ((b0 | b1 | b2 | b3 | b4 | b5 | b6) < 0)
                 throw new EOFException();
-            readValue = ((long)(byte)b6 << 48) | ((long)b5 << 40) | ((long)b4 << 32) |
+            return ((long)(byte)b6 << 48) | ((long)b5 << 40) | ((long)b4 << 32) |
                 ((long)b3 << 24) | (b2 << 16) | (b1 << 8) | b0;
-            break;
         case OptimizedDataOutputStream.MAGIC_8BYTES & 0xff:
-            b7 = this.in.read();
-            b6 = this.in.read();
-            b5 = this.in.read();
-            b4 = this.in.read();
-            b3 = this.in.read();
-            b2 = this.in.read();
-            b1 = this.in.read();
-            b0 = this.in.read();
+            b7 = in.read();
+            b6 = in.read();
+            b5 = in.read();
+            b4 = in.read();
+            b3 = in.read();
+            b2 = in.read();
+            b1 = in.read();
+            b0 = in.read();
             if ((b0 | b1 | b2 | b3 | b4 | b5 | b6 | b7) < 0)
                 throw new EOFException();
-            readValue = ((long)(byte)b7 << 56) | ((long)b6 << 48) | ((long)b5 << 40) | ((long)b4 << 32) |
+            return ((long)(byte)b7 << 56) | ((long)b6 << 48) | ((long)b5 << 40) | ((long)b4 << 32) |
                 ((long)b3 << 24) | (b2 << 16) | (b1 << 8) | b0;
-            break;
         default:
-            readValue = (byte)b7;
-            break;
+            return (byte)b7;
         }
-        return this.diff ? this.lastLong += readValue : readValue;
+    }
+
+    public long readLong() throws IOException {
+        final long readValue = readLong0(this.in);
+        return this.diff ? this.lastLong += readValue  : readValue;
     }
 
 }

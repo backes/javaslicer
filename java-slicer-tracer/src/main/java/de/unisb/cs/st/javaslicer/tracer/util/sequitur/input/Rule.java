@@ -1,144 +1,145 @@
 package de.unisb.cs.st.javaslicer.tracer.util.sequitur.input;
 
+import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
+import de.unisb.cs.st.javaslicer.tracer.util.MyByteArrayInputStream;
 
-public class Rule<T> {
+// package-private
+class Rule<T> {
 
-    protected static class Dummy<T> extends Symbol<T> {
+    protected final List<Symbol<T>> symbols;
 
-        private final Rule<T> rule;
+    protected Rule(final List<Symbol<T>> symbols) {
+        this.symbols = symbols;
+    }
 
-        public Dummy(final Rule<T> rule) {
-            this.rule = rule;
-            this.next = this;
-            this.prev = this;
-        }
-
-        @Override
-        protected boolean singleEquals(final Symbol<?> obj) {
-            // this method should not be called
-            assert false;
-            return false;
-        }
-
-        @Override
-        protected int singleHashcode() {
-            // this method should not be called
-            assert false;
-            return 0;
-        }
-
-        public Rule<T> getRule() {
-            return this.rule;
-        }
-
-        @Override
-        public boolean meltDigram() {
-            return false;
+    public void substituteRealRules(final Map<Long, Rule<T>> rules) {
+        final ListIterator<Symbol<T>> it = this.symbols.listIterator();
+        while (it.hasNext()) {
+            final Symbol<T> sym = it.next();
+            if (sym instanceof NonTerminal<?>)
+                it.set(((NonTerminal<T>)sym).substituteRealRules(rules));
         }
     }
 
-    protected final Dummy<T> dummy;
-    private int useCount;
+    public Set<Rule<T>> getUsedRules() {
+        Set<Rule<T>> rules = new HashSet<Rule<T>>();
+        long rulesAdded = 0;
+        final Queue<Rule<T>> ruleQueue = new LinkedList<Rule<T>>();
+        ruleQueue.add(this);
 
-    // TODO remove this (only needed for easier debugging)
-    private static long nextRuleNr = 0;
-    protected final long ruleNr = nextRuleNr++;
+        while (!ruleQueue.isEmpty()) {
+            final Rule<T> r = ruleQueue.poll();
+            for (final Symbol<T> s: r.symbols) {
+                if (s instanceof NonTerminal<?>) {
+                    final Rule<T> newR = ((NonTerminal<T>)s).getRule();
+                    if (rules.add(newR)) {
+                        if (++rulesAdded == 1<<30)
+                            rules = new TreeSet<Rule<T>>(rules);
+                        ruleQueue.add(newR);
+                    }
+                }
+            }
+        }
 
-    public Rule() {
-        this(true);
-    }
-
-    public Rule(final boolean mayBeReused) {
-        this.useCount = mayBeReused ? 0 : -1;
-        this.dummy = new Dummy<T>(this);
-    }
-
-    public Rule(final Symbol<T> first, final Symbol<T> second) {
-        this();
-        this.dummy.next = first;
-        first.next = second;
-        second.next = this.dummy;
-        this.dummy.prev = second;
-        second.prev = first;
-        first.prev = this.dummy;
-    }
-
-    public void append(final Symbol<T> newSymbol, final Grammar<T> grammar) {
-        this.dummy.insertBefore(newSymbol);
-        grammar.checkDigram(newSymbol.prev);
-    }
-
-    public boolean mayBeReused() {
-        return this.useCount >= 0;
-    }
-
-    public void incUseCount() {
-        assert this.useCount >= 0;
-        ++this.useCount;
-    }
-
-    public void decUseCount() {
-        assert this.useCount >= 0;
-        --this.useCount;
-    }
-
-    public int getUseCount() {
-        assert this.useCount >= 0;
-        return this.useCount;
-    }
-
-    public void writeOut(final ObjectOutputStream objOut, final Grammar<T> grammar,
-            final LinkedList<Rule<T>> ruleQueue) {
-        // TODO Auto-generated method stub
-
+        return rules;
     }
 
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
-        sb.append("R").append(this.ruleNr).append(" --> ");
-        if (this.dummy.next != this.dummy) {
-            sb.append(this.dummy.next);
-            for (Symbol<T> s = this.dummy.next.next; s != this.dummy; s = s.next)
-                sb.append(" ").append(s);
-        }
+        sb.append("R").append(hashCode()).append(" -->");
+        for (final Symbol<T> sym: this.symbols)
+            sb.append(' ').append(sym);
         return sb.toString();
     }
 
-    public Set<Rule<T>> getUsedRules() {
-        final Set<Rule<T>> rules = new HashSet<Rule<T>>();
-        addUsedRules(rules);
-        return rules;
-    }
+    @SuppressWarnings("fallthrough")
+    public static <T> Map<Long, Rule<T>> readAll(final ObjectInputStream objIn,
+            final ObjectReader<? extends T> objectReader,
+            final Class<? extends T> checkInstance) throws IOException, ClassNotFoundException {
 
-    public void addUsedRules(final Set<Rule<T>> ruleSet) {
-        final List<Rule<T>> ruleQueue = new ArrayList<Rule<T>>();
-        ruleQueue.add(this);
-
-
-        while (!ruleQueue.isEmpty()) {
-            final Rule<T> r = ruleQueue.remove(ruleQueue.size()-1);
-            for (Symbol<T> s = r.dummy.next; s != r.dummy; s = s.next)
-                if (s instanceof NonTerminal<?>) {
-                    final Rule<T> newR = ((NonTerminal<T>)s).getRule();
-                    if (ruleSet.add(newR))
-                        ruleQueue.add(newR);
+        Map<Long, Rule<T>> rules = new HashMap<Long, Rule<T>>();
+        long rulesRead = 0;
+        readRules:
+        while (true) {
+            int header = objIn.read();
+            long length;
+            boolean ready = false;
+            switch (header >> 6) {
+            case 0:
+                ready = true;
+                // fall through
+            case 1:
+                length = DataInput.readLong(objIn);
+                if (length == 0)
+                    break readRules;
+                break;
+            case 2:
+                length = 2;
+                break;
+            case 3:
+                length = 3;
+                break;
+            default:
+                throw new InternalError();
+            }
+            final long headerBytes = (length + 3) / 4;
+            if (headerBytes > Integer.MAX_VALUE)
+                throw new IOException("Rule longer than 4*Integer.MAX_VALUE??");
+            final byte[] headerBuf = new byte[(int) headerBytes];
+            final MyByteArrayInputStream headerInputStream = new MyByteArrayInputStream(headerBuf);
+            objIn.readFully(headerBuf);
+            final List<Symbol<T>> symbols = new ArrayList<Symbol<T>>((int)headerBytes);
+            int pos = 3;
+            while (length-- > 0) {
+                if (--pos < 0) {
+                    header = headerInputStream.read();
+                    pos = 3;
                 }
+                switch ((header >> pos) & 3) {
+                case 0:
+                    {
+                    final NonTerminal<T> readFrom = NonTerminal.readFrom(objIn, false);
+                    symbols.add(readFrom);
+                    }
+                    break;
+                case 1:
+                    {
+                    final NonTerminal<T> readFrom = NonTerminal.readFrom(objIn, true);
+                    symbols.add(readFrom);
+                    }
+                    break;
+                case 2:
+                    symbols.add(Terminal.readFrom(objIn, false, objectReader, checkInstance));
+                    break;
+                case 3:
+                    symbols.add(Terminal.readFrom(objIn, false, objectReader, checkInstance));
+                    break;
+                default:
+                    throw new InternalError();
+                }
+            }
+            if (rulesRead == 1<<30)
+                rules = new TreeMap<Long, Rule<T>>(rules);
+            rules.put(rulesRead++, new Rule<T>(symbols));
+            if (ready)
+                break;
         }
-    }
 
-    public static <T> Rule<T> readFrom(final ObjectInputStream objIn, final Grammar<T> grammar,
-            final Class<? extends T> checkInstance) {
-        // TODO
-        return null;
+        return rules;
     }
 
 }
