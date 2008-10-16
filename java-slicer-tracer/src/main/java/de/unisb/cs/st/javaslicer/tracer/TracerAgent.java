@@ -22,9 +22,9 @@ public class TracerAgent {
             try {
                 this.tracer.finish();
             } catch (final IOException e) {
-                Tracer.error(e);
+                this.tracer.error(e);
             }
-            Tracer.printFinalUserInfo();
+            this.tracer.printFinalUserInfo();
         }
 
     }
@@ -33,6 +33,10 @@ public class TracerAgent {
         try {
             String logFilename = null;
             final String[] args = agentArgs == null || agentArgs.length() == 0 ? new String[0] : agentArgs.split(",");
+
+            boolean debug = false;
+            boolean check = false;
+
             for (final String arg : args) {
                 final String[] parts = arg.split(":");
                 if (parts.length > 2) {
@@ -50,18 +54,18 @@ public class TracerAgent {
                     logFilename = value;
                 } else if ("debug".equalsIgnoreCase(key)) {
                     if (value == null || "true".equalsIgnoreCase(value)) {
-                        Tracer.debug = true;
+                        debug = true;
                     } else if ("false".equalsIgnoreCase(value)) {
-                        Tracer.debug = false;
+                        debug = false;
                     } else {
                         System.err.println("ERROR: illegal value for \"debug\" argument: \"" + value + "\"");
                         System.exit(1);
                     }
                 } else if ("check".equalsIgnoreCase(key)) {
                     if (value == null || "true".equalsIgnoreCase(value)) {
-                        Tracer.check = true;
+                        check = true;
                     } else if ("false".equalsIgnoreCase(value)) {
-                        Tracer.check = false;
+                        check = false;
                     } else {
                         System.err.println("ERROR: illegal value for \"check\" argument: \"" + value + "\"");
                         System.exit(1);
@@ -83,7 +87,7 @@ public class TracerAgent {
                 System.exit(1);
             }
 
-            Tracer.newInstance(logFile);
+            Tracer.newInstance(logFile, debug, check);
             final Tracer tracer = Tracer.getInstance();
             try {
                 tracer.add(inst, true);

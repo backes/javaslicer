@@ -118,8 +118,8 @@ public class Tracer implements ClassFileTransformer {
 
     private static Tracer instance = null;
 
-    public static boolean debug = false;
-    public static boolean check = false;
+    public final boolean debug;
+    public final boolean check;
 
     private final String[] pauseTracingClasses = new String[] {
             "java.lang.ClassLoader",
@@ -170,14 +170,16 @@ public class Tracer implements ClassFileTransformer {
     // the thread that just creates a threadTracer (needed to avoid stack overflowes)
     private Thread threadTracerBeingCreated = null;
 
-    private static final AtomicInteger errorCount = new AtomicInteger(0);
+    private final AtomicInteger errorCount = new AtomicInteger(0);
 
     private static final boolean COMPUTE_FRAMES = false;
-    private static String lastErrorString;
+    private String lastErrorString;
 
 
-    private Tracer(final File filename) throws IOException {
+    private Tracer(final File filename, final boolean debug, final boolean check) throws IOException {
         this.filename = filename;
+        this.debug = debug;
+        this.check = check;
         this.file = new MultiplexedFileWriter(filename, 512);
         this.file.setReuseStreamIds(true);
         final MultiplexOutputStream readClassesMultiplexedStream = this.file.newOutputStream();
@@ -206,22 +208,22 @@ public class Tracer implements ClassFileTransformer {
         this.threadTracers = threadTracersMap;
     }
 
-    public static void error(final Exception e) {
-        if (debug) {
+    public void error(final Exception e) {
+        if (this.debug) {
             final StringWriter sw = new StringWriter();
             final PrintWriter ps = new PrintWriter(sw);
             e.printStackTrace(ps);
-            lastErrorString = sw.toString();
+            this.lastErrorString = sw.toString();
             System.out.println(sw.toString());
         } else
-            lastErrorString = e.toString();
-        errorCount.getAndIncrement();
+            this.lastErrorString = e.toString();
+        this.errorCount.getAndIncrement();
     }
 
-    public static void newInstance(final File filename) throws IOException {
+    public static void newInstance(final File filename, final boolean debug, final boolean check) throws IOException {
         if (instance != null)
             throw new IllegalStateException("Tracer instance already exists");
-        instance = new Tracer(filename);
+        instance = new Tracer(filename, debug, check);
     }
 
     public static Tracer getInstance() {
@@ -260,7 +262,7 @@ public class Tracer implements ClassFileTransformer {
             }
             additionalClassesToRetransform.add(class1);
         }
-        if (check) {
+        if (this.check) {
             for (final String classname: this.classesToPreloadIfChecking) {
                 Class<?> class1;
                 try {
@@ -271,7 +273,7 @@ public class Tracer implements ClassFileTransformer {
                 additionalClassesToRetransform.add(class1);
             }
         }
-        if (debug) {
+        if (this.debug) {
             for (final String classname: this.classesToPreloadIfDebug) {
                 Class<?> class1;
                 try {
@@ -298,7 +300,7 @@ public class Tracer implements ClassFileTransformer {
             final ArrayList<Class<?>> classesToRetransform = new ArrayList<Class<?>>();
             for (final Class<?> class1: inst.getAllLoadedClasses()) {
                 final boolean isModifiable = inst.isModifiableClass(class1);
-                if (debug && !isModifiable && !class1.isPrimitive() && !class1.isArray())
+                if (this.debug && !isModifiable && !class1.isPrimitive() && !class1.isArray())
                     System.out.println("not modifiable: " + class1);
                 boolean modify = isModifiable && !class1.isInterface();
                 modify &= !class1.getName().startsWith("de.unisb.cs.st.javaslicer.tracer");
@@ -307,7 +309,7 @@ public class Tracer implements ClassFileTransformer {
             }
             for (final Class<?> class1: additionalClassesToRetransform) {
                 final boolean isModifiable = inst.isModifiableClass(class1);
-                if (debug && !isModifiable && !class1.isPrimitive() && !class1.isArray())
+                if (this.debug && !isModifiable && !class1.isPrimitive() && !class1.isArray())
                     System.out.println("not modifiable: " + class1);
                 boolean modify = isModifiable && !class1.isInterface();
                 modify &= !class1.getName().startsWith("de.unisb.cs.st.javaslicer.tracer");
@@ -316,7 +318,7 @@ public class Tracer implements ClassFileTransformer {
                 }
             }
 
-            if (debug) {
+            if (this.debug) {
                 System.out.println("classes to retransform (" + classesToRetransform.size() + "):");
                 for (final Class<?> c1 : classesToRetransform) {
                     System.out.println(c1);
@@ -326,13 +328,13 @@ public class Tracer implements ClassFileTransformer {
 
             try {
                 inst.retransformClasses(classesToRetransform.toArray(new Class<?>[classesToRetransform.size()]));
-                if (debug)
+                if (this.debug)
                     System.out.println("Initial instrumentation ready");
             } catch (final UnmodifiableClassException e) {
                 throw new TracerException(e);
             }
 
-            if (debug) {
+            if (this.debug) {
                 // print statistics once now and once when all finished
                 TracingMethodInstrumenter.printStats(System.out);
                 Runtime.getRuntime().addShutdownHook(new Thread("final stats printer") {
@@ -427,7 +429,7 @@ public class Tracer implements ClassFileTransformer {
 
                 final ClassWriter writer = new FixedClassWriter(computeFrames ? ClassWriter.COMPUTE_FRAMES : ClassWriter.COMPUTE_MAXS);
 
-                final ClassVisitor output = check ? new CheckClassAdapter(writer) : writer;
+                final ClassVisitor output = this.check ? new CheckClassAdapter(writer) : writer;
 
                 if (Arrays.asList(this.pauseTracingClasses).contains(javaClassName)
                         || className.startsWith("java/security/")) {
@@ -447,7 +449,7 @@ public class Tracer implements ClassFileTransformer {
 
                 final byte[] newClassfileBuffer = writer.toByteArray();
 
-                if (check) {
+                if (this.check) {
                     checkClass(newClassfileBuffer, readClass.getName());
                 }
 
@@ -690,14 +692,14 @@ public class Tracer implements ClassFileTransformer {
         return this.file.newOutputStream();
     }
 
-    public static void printFinalUserInfo() {
-        if (errorCount.get() == 1) {
-            System.out.println("There was an error while tracing: " + lastErrorString);
-        } else if (errorCount.get() > 1) {
-            System.out.println("There were several errors (" + errorCount.get() + ") while tracing.");
-            System.out.println("Last error message: " + lastErrorString);
+    public void printFinalUserInfo() {
+        if (this.errorCount.get() == 1) {
+            System.out.println("There was an error while tracing: " + this.lastErrorString);
+        } else if (this.errorCount.get() > 1) {
+            System.out.println("There were several errors (" + this.errorCount.get() + ") while tracing.");
+            System.out.println("Last error message: " + this.lastErrorString);
         } else {
-            if (Tracer.debug)
+            if (this.debug)
                 System.out.println("DEBUG: trace written successfully");
         }
     }

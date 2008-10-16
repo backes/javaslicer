@@ -123,13 +123,8 @@ public class SwitchingLongTraceSequence implements LongTraceSequence {
     public void writeOut(final DataOutputStream out) throws IOException {
         finish();
 
-        out.writeByte(getFormat() | TYPE_LONG);
-        out.writeBoolean(this.gzipped);
+        out.writeByte(TYPE_LONG | (this.gzipped ? 1 : 0));
         out.writeInt(this.mplexOut.getId());
-    }
-
-    protected byte getFormat() {
-        return FORMAT_SWITCHING;
     }
 
     public void finish() throws IOException {

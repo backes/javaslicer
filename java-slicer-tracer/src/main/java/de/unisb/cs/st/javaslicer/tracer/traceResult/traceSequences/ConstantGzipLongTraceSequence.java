@@ -8,44 +8,44 @@ import java.io.PushbackInputStream;
 import java.util.Iterator;
 import java.util.zip.GZIPInputStream;
 
-import de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences.ConstantTraceSequence.ConstantIntegerTraceSequence;
+import de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences.ConstantTraceSequence.ConstantLongTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.util.EmptyIterator;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;
 import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader.MultiplexInputStream;
 
-public class ConstantSwitchingIntegerTraceSequence implements ConstantIntegerTraceSequence {
+public class ConstantGzipLongTraceSequence implements ConstantLongTraceSequence {
 
     protected final MultiplexedFileReader file;
     protected final boolean gzipped;
     protected final int streamIndex;
 
-    public ConstantSwitchingIntegerTraceSequence(final MultiplexedFileReader file, final boolean gzipped, final int streamIndex) {
+    public ConstantGzipLongTraceSequence(final MultiplexedFileReader file, final boolean gzipped, final int streamIndex) {
         this.file = file;
         this.gzipped = gzipped;
         this.streamIndex = streamIndex;
     }
 
     @Override
-    public Iterator<Integer> backwardIterator() {
+    public Iterator<Long> backwardIterator() {
         try {
             return this.gzipped ? new GZippedBackwardIterator(this.file, this.streamIndex)
                 : new NoGzipBackwardIterator(this.file, this.streamIndex);
         } catch (final IOException e) {
-            return new EmptyIterator<Integer>();
+            return new EmptyIterator<Long>();
         }
     }
 
-    public static ConstantSwitchingIntegerTraceSequence readFrom(final DataInput in, final MultiplexedFileReader file)
+    public static ConstantGzipLongTraceSequence readFrom(final DataInput in, final MultiplexedFileReader file)
             throws IOException {
         final boolean gzipped = in.readBoolean();
         final int streamIndex = in.readInt();
         if (!file.getStreamIds().contains(streamIndex))
             throw new IOException("corrupted data");
-        return new ConstantSwitchingIntegerTraceSequence(file, gzipped, streamIndex);
+        return new ConstantGzipLongTraceSequence(file, gzipped, streamIndex);
     }
 
-    private static class GZippedBackwardIterator implements Iterator<Integer> {
+    private static class GZippedBackwardIterator implements Iterator<Long> {
 
         private final MultiplexInputStream multiplexedStream;
         private final OptimizedDataInputStream dataIn;
@@ -75,9 +75,9 @@ public class ConstantSwitchingIntegerTraceSequence implements ConstantIntegerTra
             }
         }
 
-        public Integer next() {
+        public Long next() {
             try {
-                return this.dataIn.readInt();
+                return this.dataIn.readLong();
             } catch (final IOException e) {
                 this.error = true;
                 return null;
@@ -90,7 +90,7 @@ public class ConstantSwitchingIntegerTraceSequence implements ConstantIntegerTra
 
     }
 
-    private static class NoGzipBackwardIterator implements Iterator<Integer> {
+    private static class NoGzipBackwardIterator implements Iterator<Long> {
 
         private final MultiplexInputStream multiplexedStream;
         private final OptimizedDataInputStream dataIn;
@@ -112,9 +112,9 @@ public class ConstantSwitchingIntegerTraceSequence implements ConstantIntegerTra
             }
         }
 
-        public Integer next() {
+        public Long next() {
             try {
-                return this.dataIn.readInt();
+                return this.dataIn.readLong();
             } catch (final IOException e) {
                 this.error = true;
                 return null;

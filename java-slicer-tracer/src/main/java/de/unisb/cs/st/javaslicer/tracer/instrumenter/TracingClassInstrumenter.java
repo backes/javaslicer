@@ -22,7 +22,7 @@ public class TracingClassInstrumenter implements Opcodes {
 
     protected TracingClassInstrumenter(final ReadClass readClass, final Tracer tracer,
             final boolean printDebug) {
-        if (Tracer.debug && printDebug)
+        if (tracer.debug && printDebug)
             System.out.println("instrumenting " + readClass.getName());
 	    this.tracer = tracer;
 	    this.readClass = readClass;

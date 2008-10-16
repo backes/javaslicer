@@ -39,7 +39,7 @@ public class SwitchingTraceSequenceFactory implements TraceSequenceFactory, Trac
 
     @Override
     public void writeOut(final OutputStream out) throws IOException {
-        out.write(TraceSequence.FORMAT_SWITCHING);
+        out.write(TraceSequence.FORMAT_GZIP);
     }
 
 }

@@ -759,7 +759,7 @@ public class TracingMethodInstrumenter implements Opcodes {
 
             // do not use registerInstruction, because the code has to be inserted *after* the label
             this.readMethod.addInstruction(lm);
-            if (Tracer.debug) {
+            if (this.tracer.debug) {
                 this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
                 this.instructionIterator.add(getIntConstInsn(lm.getIndex()));
                 this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,

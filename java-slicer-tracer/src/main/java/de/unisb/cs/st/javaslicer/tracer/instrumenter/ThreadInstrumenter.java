@@ -18,7 +18,7 @@ public class ThreadInstrumenter extends TracingClassInstrumenter {
 
     public ThreadInstrumenter(final ReadClass readClass, final Tracer tracer) {
         super(readClass, tracer, false);
-        if (Tracer.debug && readClass != null)
+        if (tracer.debug && readClass != null)
             System.out.println("instrumenting " + readClass.getName() + " (special)");
     }
 

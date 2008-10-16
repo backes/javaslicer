@@ -32,7 +32,7 @@ public class PauseTracingInstrumenter implements Opcodes {
 
     public PauseTracingInstrumenter(final ReadClass readClass, final Tracer tracer) {
         this.tracer = tracer;
-        if (Tracer.debug && readClass != null)
+        if (tracer.debug && readClass != null)
             System.out.println("instrumenting " + readClass.getName() + " (pause tracing)");
     }
 

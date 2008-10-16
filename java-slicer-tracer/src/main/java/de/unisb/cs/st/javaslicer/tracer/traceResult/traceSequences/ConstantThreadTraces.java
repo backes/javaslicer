@@ -24,8 +24,6 @@ public class ConstantThreadTraces {
             } catch (final ClassNotFoundException e) {
                 throw new IOException(e);
             }
-        else if ((format & TraceSequence.FORMAT_SWITCHING) != 0)
-            return new ConstantThreadTraces(TraceSequence.FORMAT_SWITCHING);
         else if ((format & TraceSequence.FORMAT_UNCOMPRESSED) != 0)
             return new ConstantThreadTraces(TraceSequence.FORMAT_UNCOMPRESSED);
         else if (format == 0)
@@ -39,9 +37,7 @@ public class ConstantThreadTraces {
         if ((type & TraceSequence.TYPE_INTEGER) != 0) {
             switch (this.format) {
             case TraceSequence.FORMAT_GZIP:
-                throw new UnsupportedOperationException();
-            case TraceSequence.FORMAT_SWITCHING:
-                return ConstantSwitchingIntegerTraceSequence.readFrom(in, file);
+                return ConstantGZipIntegerTraceSequence.readFrom(in, file, type);
             case TraceSequence.FORMAT_UNCOMPRESSED:
                 return ConstantUncompressedIntegerTraceSequence.readFrom(in, file);
             default:
@@ -50,9 +46,7 @@ public class ConstantThreadTraces {
         } else if ((type & TraceSequence.TYPE_LONG) != 0) {
             switch (this.format) {
             case TraceSequence.FORMAT_GZIP:
-                throw new UnsupportedOperationException();
-            case TraceSequence.FORMAT_SWITCHING:
-                return ConstantSwitchingLongTraceSequence.readFrom(in, file);
+                return ConstantGzipLongTraceSequence.readFrom(in, file);
             case TraceSequence.FORMAT_UNCOMPRESSED:
                 return ConstantUncompressedLongTraceSequence.readFrom(in, file);
             default:

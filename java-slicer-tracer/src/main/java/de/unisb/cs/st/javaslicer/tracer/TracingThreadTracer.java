@@ -18,6 +18,8 @@ import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
 
 public class TracingThreadTracer implements ThreadTracer {
 
+    private static final boolean DEBUG_TRACE_FILE = false;
+
     private final long threadId;
     private final String threadName;
     private final List<Type> threadSequenceTypes;
@@ -33,7 +35,7 @@ public class TracingThreadTracer implements ThreadTracer {
 
     protected static PrintWriter debugFile;
     static {
-        if (Tracer.debug) {
+        if (DEBUG_TRACE_FILE) {
             try {
                 debugFile = new PrintWriter(new BufferedWriter(new FileWriter(new File("debug.log"))));
                 Runtime.getRuntime().addShutdownHook(new Thread("debug file closer") {
@@ -74,7 +76,7 @@ public class TracingThreadTracer implements ThreadTracer {
 
             ((IntegerTraceSequence) seq).trace(value);
         } catch (final IOException e) {
-            Tracer.error(e);
+            this.tracer.error(e);
             System.err.println("Error writing the trace: " + e);
             System.exit(-1);
         }
@@ -100,7 +102,7 @@ public class TracingThreadTracer implements ThreadTracer {
 
             ((ObjectTraceSequence) seq).trace(obj);
         } catch (final IOException e) {
-            Tracer.error(e);
+            this.tracer.error(e);
             System.err.println("Error writing the trace: " + e);
             System.exit(-1);
         }
@@ -117,7 +119,7 @@ public class TracingThreadTracer implements ThreadTracer {
         if (this.paused > 0)
             return;
 
-        if (Tracer.debug && this.threadId == 1) {
+        if (this.tracer.debug && this.threadId == 1) {
             pauseTracing();
             debugFile.println(instructionIndex);
             unpauseTracing();

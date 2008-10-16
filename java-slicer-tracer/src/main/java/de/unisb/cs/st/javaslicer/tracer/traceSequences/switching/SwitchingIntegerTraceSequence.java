@@ -123,13 +123,8 @@ public class SwitchingIntegerTraceSequence implements IntegerTraceSequence {
     public void writeOut(final DataOutputStream out) throws IOException {
         finish();
 
-        out.writeByte(getFormat() | TYPE_INTEGER);
-        out.writeBoolean(this.gzipped);
+        out.writeByte(TYPE_INTEGER | (this.gzipped ? 1 : 0));
         out.writeInt(this.mplexOut.getId());
-    }
-
-    protected byte getFormat() {
-        return FORMAT_SWITCHING;
     }
 
     public void finish() throws IOException {
