@@ -2,11 +2,10 @@ package de.unisb.cs.st.javaslicer.tracer.util.sequitur.input;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.util.Map;
 
 
 // package-private
-class NonTerminal<T> implements Symbol<T> {
+class NonTerminal<T> extends Symbol<T> {
 
     // only needed while reading in the grammar
     private static class RuleReference<T> extends Rule<T> {
@@ -21,22 +20,25 @@ class NonTerminal<T> implements Symbol<T> {
     }
 
     private final Rule<T> rule;
-    private final int count;
 
     public NonTerminal(final Rule<T> rule, final int count) {
+        super(count);
         assert rule != null;
-        assert count > 0;
         this.rule = rule;
-        this.count = count;
     }
 
     public Rule<T> getRule() {
         return this.rule;
     }
 
-    public NonTerminal<T> substituteRealRules(final Map<Long, Rule<T>> rules) {
+    @Override
+    public long getLength(final boolean ignoreCount) {
+        return ignoreCount ? this.rule.getLength() : this.count * this.rule.getLength();
+    }
+
+    public NonTerminal<T> substituteRealRules(final Grammar<T> grammar) {
         if (this.rule instanceof RuleReference<?>) {
-            return new NonTerminal<T>(rules.get(((RuleReference<T>)this.rule).ruleNr), this.count);
+            return new NonTerminal<T>(grammar.getRule(((RuleReference<T>)this.rule).ruleNr), this.count);
         }
         return this;
     }

@@ -5,15 +5,22 @@ import java.io.ObjectInputStream;
 
 
 // package-private
-class Terminal<T> implements Symbol<T> {
+class Terminal<T> extends Symbol<T> {
 
     private final T value;
-    private final int count;
 
     public Terminal(final T value, final int count) {
-        assert count > 0;
+        super(count);
         this.value = value;
-        this.count = count;
+    }
+
+    public T getValue() {
+        return this.value;
+    }
+
+    @Override
+    public long getLength(final boolean ignoreCount) {
+        return ignoreCount ? 1 : this.count;
     }
 
     @Override
@@ -38,6 +45,5 @@ class Terminal<T> implements Symbol<T> {
         final T value = objectReader.readObject(objIn);
         return new Terminal<T>(value, count);
     }
-
 
 }
