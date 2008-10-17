@@ -5,7 +5,6 @@ import java.io.OutputStream;
 
 import de.unisb.cs.st.javaslicer.tracer.ThreadTracer;
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.Type;
@@ -19,8 +18,6 @@ public class SwitchingTraceSequenceFactory implements TraceSequenceFactory, Trac
             return new SwitchingIntegerTraceSequence(tracer);
         case LONG:
             return new SwitchingLongTraceSequence(tracer);
-        case OBJECT:
-            return new ObjectTraceSequence(new SwitchingLongTraceSequence(tracer));
         default:
             assert false;
             return null;

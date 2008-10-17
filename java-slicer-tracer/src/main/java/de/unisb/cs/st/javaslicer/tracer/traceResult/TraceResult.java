@@ -173,6 +173,7 @@ public class TraceResult {
         } catch (final IOException e) {
             System.err.println("Error opening trace file: " + e);
             System.exit(-1);
+            return;
         }
 
         final List<ThreadId> threads = tr.getThreads();
@@ -198,6 +199,7 @@ public class TraceResult {
             System.out.println(threadToTrace == null ? "Couldn't find a main thread."
                     : "The thread you selected was not found.");
             System.exit(-1);
+            return;
         }
 
         System.out.println(threadToTrace == null ? "Selected:" : "You selected:");

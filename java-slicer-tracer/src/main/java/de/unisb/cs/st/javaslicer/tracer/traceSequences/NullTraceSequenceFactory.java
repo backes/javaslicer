@@ -33,7 +33,7 @@ public class NullTraceSequenceFactory implements TraceSequenceFactory, TraceSequ
     }
 
     public TraceSequence createTraceSequence(final Type type, final Tracer tracer) {
-        return type == Type.OBJECT ? new ObjectTraceSequence(new NullTraceSequence()) : new NullTraceSequence();
+        return new NullTraceSequence();
     }
 
     @Override

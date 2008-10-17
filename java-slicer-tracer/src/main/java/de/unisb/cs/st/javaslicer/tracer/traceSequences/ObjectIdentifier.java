@@ -24,6 +24,9 @@ public class ObjectIdentifier {
     }
 
     public long getObjectId(final Object obj) {
+        if (obj instanceof Identifiable)
+            return ((Identifiable)obj).__tracing_get_object_id();
+
         final Long id = this.objectMap.get(obj);
         return id == null ? getNewId(obj, false) : id;
     }

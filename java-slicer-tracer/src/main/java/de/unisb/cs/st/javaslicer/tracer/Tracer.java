@@ -40,6 +40,7 @@ import org.objectweb.asm.util.CheckClassAdapter;
 import org.objectweb.asm.util.TraceClassVisitor;
 import org.objectweb.asm.util.TraceMethodVisitor;
 
+import de.unisb.cs.st.javaslicer.tracer.TracingThreadTracer.WriteOutThread;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
@@ -564,10 +565,6 @@ public class Tracer implements ClassFileTransformer {
         return newTraceSequence(TraceSequence.Type.LONG);
     }
 
-    public int newObjectTraceSequence() {
-        return newTraceSequence(TraceSequence.Type.OBJECT);
-    }
-
     private synchronized int newTraceSequence(final TraceSequence.Type type) {
         final int nextIndex = getNextSequenceIndex();
         this.traceSequenceTypes.add(type);
@@ -576,6 +573,8 @@ public class Tracer implements ClassFileTransformer {
 
     public ThreadTracer getThreadTracer() {
         final Thread currentThread = Thread.currentThread();
+        if (currentThread instanceof WriteOutThread)
+            return NullThreadTracer.instance;
         ThreadTracer tracer = this.threadTracers.get(currentThread);
         if (tracer != null)
             return tracer;

@@ -128,6 +128,7 @@ class Rule<T> {
             int pos = 3;
             while (length-- != 0) {
                 if (pos-- == 0) {
+                    assert headerInputStream != null;
                     header = headerInputStream.read();
                     pos = 3;
                 }

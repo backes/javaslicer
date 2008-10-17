@@ -8,7 +8,6 @@ import java.util.List;
 
 import de.unisb.cs.st.javaslicer.tracer.ThreadTracer;
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.Type;
@@ -52,10 +51,6 @@ public class SequiturTraceSequenceFactory implements TraceSequenceFactory {
                 longTraceSequence = new SequiturLongTraceSequence(this.longGrammar);
                 this.longSequences.add(longTraceSequence);
                 return longTraceSequence;
-            case OBJECT:
-                longTraceSequence = new SequiturLongTraceSequence(this.longGrammar);
-                this.longSequences.add(longTraceSequence);
-                return new ObjectTraceSequence(longTraceSequence);
             default:
                 assert false;
                 return null;

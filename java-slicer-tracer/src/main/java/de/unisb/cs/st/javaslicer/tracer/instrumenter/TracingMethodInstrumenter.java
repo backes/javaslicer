@@ -522,7 +522,7 @@ public class TracingMethodInstrumenter implements Opcodes {
                 // (add instruction *before* the current one
                 this.instructionIterator.previous();
                 this.instructionIterator.add(new InsnNode(DUP));
-                objectTraceSeqIndex = this.tracer.newObjectTraceSequence();
+                objectTraceSeqIndex = this.tracer.newLongTraceSequence();
                 ++TracingMethodInstrumenter.statsGetField;
                 //System.out.println("seq " + index + ": getField " + name + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             }
@@ -542,7 +542,7 @@ public class TracingMethodInstrumenter implements Opcodes {
                     this.instructionIterator.add(new InsnNode(POP2));
                     this.instructionIterator.add(new InsnNode(DUP_X2));
                 }
-                objectTraceSeqIndex = this.tracer.newObjectTraceSequence();
+                objectTraceSeqIndex = this.tracer.newLongTraceSequence();
                 ++TracingMethodInstrumenter.statsPutField;
                 //System.out.println("seq " + index + ": putField " + name + " in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             }
@@ -589,7 +589,7 @@ public class TracingMethodInstrumenter implements Opcodes {
         // array load:
         case IALOAD: case LALOAD: case FALOAD: case DALOAD: case AALOAD: case BALOAD: case CALOAD: case SALOAD:
             // to trace array manipulations, we need two traces: one for the array, one for the index
-            arrayTraceSeqIndex = this.tracer.newObjectTraceSequence();
+            arrayTraceSeqIndex = this.tracer.newLongTraceSequence();
             indexTraceSeqIndex = this.tracer.newIntegerTraceSequence();
             //System.out.println("seq " + arrayTraceIndex + ": array in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             //System.out.println("seq " + indexTraceIndex + ": array index in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
@@ -603,7 +603,7 @@ public class TracingMethodInstrumenter implements Opcodes {
         // array store:
         case IASTORE: case LASTORE: case FASTORE: case DASTORE: case AASTORE: case BASTORE: case CASTORE: case SASTORE:
             // to trace array manipulations, we need two traces: one for the array, one for the index
-            arrayTraceSeqIndex = this.tracer.newObjectTraceSequence();
+            arrayTraceSeqIndex = this.tracer.newLongTraceSequence();
             indexTraceSeqIndex = this.tracer.newIntegerTraceSequence();
             //System.out.println("seq " + arrayTraceIndex + ": array in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             //System.out.println("seq " + indexTraceIndex + ": arrayindex in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());

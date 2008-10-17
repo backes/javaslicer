@@ -13,7 +13,7 @@ public interface TraceSequence {
         public abstract void trace(final long value) throws IOException;
     }
 
-    public static enum Type { INTEGER, LONG, OBJECT }
+    public static enum Type { INTEGER, LONG }
 
     // some constants
     public static final byte FORMAT_SEQUITUR = 1<<0;
