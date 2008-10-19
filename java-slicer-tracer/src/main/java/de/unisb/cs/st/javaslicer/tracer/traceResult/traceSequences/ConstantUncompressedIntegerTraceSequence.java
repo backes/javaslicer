@@ -48,6 +48,8 @@ public class ConstantUncompressedIntegerTraceSequence implements ConstantInteger
             this.iStream = ConstantUncompressedIntegerTraceSequence.this.file.getInputStream(ConstantUncompressedIntegerTraceSequence.this.streamIndex);
             this.dataIn = new DataInputStream(this.iStream);
             this.nextPos = this.iStream.getDataLength()-4;
+            if ((this.nextPos & 3) != 0)
+                throw new IOException("corrupted data (illegal stream length)");
         }
 
         public boolean hasNext() {

@@ -21,10 +21,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import de.unisb.cs.st.javaslicer.tracer.UntracedThread;
 import de.unisb.cs.st.javaslicer.tracer.util.ConcurrentReferenceHashMap.Option;
 import de.unisb.cs.st.javaslicer.tracer.util.ConcurrentReferenceHashMap.ReferenceType;
 import de.unisb.cs.st.javaslicer.tracer.util.ConcurrentReferenceHashMap.RemoveStaleListener;
@@ -32,15 +30,6 @@ import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter.MultiplexOutp
 
 public class MultiplexedFileWriter {
 
-    protected static AtomicLong removeTime = new AtomicLong(0);
-    static {
-        Runtime.getRuntime().addShutdownHook(new UntracedThread() {
-            @Override
-            public void run() {
-                System.out.format("Removing in total %.3f seconds%n", 1e-9*removeTime.get());
-            }
-        });
-    }
     public class MultiplexOutputStream extends OutputStream {
 
         protected class InnerOutputStream extends OutputStream {
@@ -263,7 +252,6 @@ public class MultiplexedFileWriter {
             }
 
             public synchronized void remove() throws IOException {
-                final long startTime = System.nanoTime();
                 if (this.dataBlock == null)
                     throw new IOException("a closed stream cannot be removed any more");
 
@@ -316,7 +304,6 @@ public class MultiplexedFileWriter {
 
                 if (MultiplexedFileWriter.this.reuseStreamIds)
                     MultiplexedFileWriter.this.streamIdsToReuse.add(this.id);
-                removeTime.addAndGet(System.nanoTime() - startTime);
             }
 
         }

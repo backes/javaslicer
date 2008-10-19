@@ -747,6 +747,8 @@ public class LongArrayList<T> extends AbstractList<T> implements RandomAccess, C
      */
     protected void removeRange(final long fromIndex, final long toIndex) {
         moveBackward(fromIndex, this.size - toIndex);
+        // TODO null out elements
+        this.size -= toIndex - fromIndex;
     }
 
     /**

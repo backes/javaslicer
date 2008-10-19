@@ -85,10 +85,13 @@ public class MultiplexedFileReader {
                     readBlock(blockAddr, this.pointerBlocks[i]);
                 } else
                     reRead = reRead || this.pos[i] != newPos[i];
+                this.pos[i] = newPos[i];
             }
             if (reRead) {
                 readBlock(this.pointerBlocks[this.depth-1][newPos[this.depth-1]], this.dataBlock);
             }
+            this.pos[this.depth] = newPos[this.depth];
+            this.remainingInCurrentBlock = (int)Math.min(MultiplexedFileReader.this.blockSize-newPos[this.depth], this.dataLength-toPos);
         }
 
         private int[] getBlocksPos(final long position) {
