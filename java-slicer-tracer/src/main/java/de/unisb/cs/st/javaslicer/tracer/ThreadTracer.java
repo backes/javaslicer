@@ -20,4 +20,8 @@ public interface ThreadTracer {
 
     boolean isPaused();
 
+    void incStackSize();
+
+    void decStackSize();
+
 }

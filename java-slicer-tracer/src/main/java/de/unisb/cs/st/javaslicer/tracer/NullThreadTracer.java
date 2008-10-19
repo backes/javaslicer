@@ -41,4 +41,14 @@ public class NullThreadTracer implements ThreadTracer {
         // nop
     }
 
+    @Override
+    public void decStackSize() {
+        // nop
+    }
+
+    @Override
+    public void incStackSize() {
+        // nop
+    }
+
 }

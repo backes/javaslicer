@@ -36,7 +36,8 @@ public class ConstantGZipIntegerTraceSequence implements ConstantIntegerTraceSeq
         }
     }
 
-    public static ConstantGZipIntegerTraceSequence readFrom(final DataInput in, final MultiplexedFileReader file, final byte format)
+    public static ConstantGZipIntegerTraceSequence readFrom(final DataInput in, final MultiplexedFileReader file,
+            final byte format)
             throws IOException {
         final boolean gzipped = (format & 1) == 1;
         final int streamIndex = in.readInt();

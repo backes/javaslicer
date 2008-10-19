@@ -39,6 +39,7 @@ import org.objectweb.asm.tree.VarInsnNode;
 
 import de.unisb.cs.st.javaslicer.tracer.ThreadTracer;
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
+import de.unisb.cs.st.javaslicer.tracer.TracingThreadTracer;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.AbstractInstruction;
@@ -233,6 +234,10 @@ public class TracingMethodInstrumenter implements Opcodes {
             && this.readMethod.getInstructions().get(0) instanceof LabelMarker;
         this.readMethod.setMethodEntryLabel((LabelMarker) this.readMethod.getInstructions().get(0));
 
+        this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
+        this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
+                Type.getInternalName(ThreadTracer.class), "incStackSize", "()V"));
+
         // needed later:
         final LabelNode l0 = new LabelNode();
         this.instructionIterator.add(l0);
@@ -301,6 +306,9 @@ public class TracingMethodInstrumenter implements Opcodes {
         final AbstractInstruction methodLeaveLabel = this.readMethod.getInstructions().get(newPos);
         assert methodLeaveLabel instanceof LabelMarker;
         this.readMethod.setMethodLeaveLabel((LabelMarker) methodLeaveLabel);
+        this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
+        this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
+                Type.getInternalName(ThreadTracer.class), "decStackSize", "()V"));
         this.instructionIterator.add(new InsnNode(ATHROW));
 
         // add a try catch block around the method so that we can trace when this method is left
@@ -610,7 +618,7 @@ public class TracingMethodInstrumenter implements Opcodes {
             //System.out.println("seq " + indexTraceIndex + ": arrayindex in method " + readMethod.getReadClass().getClassName() + "." + readMethod.getName());
             // top three words on the stack: value, array index, array reference
             // after our manipulation: array index, array reference, value, array index, array reference
-            // (add instruction *before* the current one
+            // (add instruction *before* the current one)
             this.instructionIterator.previous();
             if (insn.getOpcode() == LASTORE || insn.getOpcode() == DASTORE) { // 2-word values
                 this.instructionIterator.add(new InsnNode(DUP2_X2));
@@ -646,6 +654,11 @@ public class TracingMethodInstrumenter implements Opcodes {
 
         // control-flow statements:
         case IRETURN: case LRETURN: case FRETURN: case DRETURN: case ARETURN: case RETURN:
+            this.instructionIterator.previous();
+            this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
+            this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
+                    Type.getInternalName(ThreadTracer.class), "decStackSize", "()V"));
+            this.instructionIterator.next();
             break;
 
         // special things
@@ -756,7 +769,7 @@ public class TracingMethodInstrumenter implements Opcodes {
 
             // do not use registerInstruction, because the code has to be inserted *after* the label
             this.readMethod.addInstruction(lm);
-            if (this.tracer.debug) {
+            if (TracingThreadTracer.DEBUG_TRACE_FILE) {
                 this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
                 this.instructionIterator.add(getIntConstInsn(lm.getIndex()));
                 this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,

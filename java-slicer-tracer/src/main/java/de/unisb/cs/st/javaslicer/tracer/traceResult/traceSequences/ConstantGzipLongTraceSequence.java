@@ -36,11 +36,12 @@ public class ConstantGzipLongTraceSequence implements ConstantLongTraceSequence 
         }
     }
 
-    public static ConstantGzipLongTraceSequence readFrom(final DataInput in, final MultiplexedFileReader file)
+    public static ConstantGzipLongTraceSequence readFrom(final DataInput in, final MultiplexedFileReader file,
+            final byte format)
             throws IOException {
-        final boolean gzipped = in.readBoolean();
+        final boolean gzipped = (format & 1) == 1;
         final int streamIndex = in.readInt();
-        if (!file.getStreamIds().contains(streamIndex))
+        if (!file.hasStreamId(streamIndex))
             throw new IOException("corrupted data");
         return new ConstantGzipLongTraceSequence(file, gzipped, streamIndex);
     }

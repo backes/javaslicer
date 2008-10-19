@@ -178,4 +178,9 @@ public class GZipLongTraceSequence implements LongTraceSequence {
         }
     }
 
+    @Override
+    public boolean useMultiThreading() {
+        return this.dataOut != null;
+    }
+
 }

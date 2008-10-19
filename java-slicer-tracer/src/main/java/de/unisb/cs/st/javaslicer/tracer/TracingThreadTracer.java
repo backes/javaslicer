@@ -6,11 +6,20 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.Identifiable;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectIdentifier;
@@ -23,6 +32,21 @@ import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
 
 public class TracingThreadTracer implements ThreadTracer {
 
+    public static class Finisher implements Callable<Boolean> {
+
+        private final TraceSequence seq;
+
+        public Finisher(final TraceSequence seq) {
+            this.seq = seq;
+        }
+
+        @Override
+        public Boolean call() throws Exception {
+            this.seq.finish();
+            return Boolean.TRUE;
+        }
+
+    }
     private static class WriteOutJob {
         public final int[] seqNr;
         public final int[] intSeqVal;
@@ -39,6 +63,27 @@ public class TracingThreadTracer implements ThreadTracer {
 
     }
     private static class WriteOutThread extends UntracedThread {
+
+        private static final ThreadPoolExecutor finishers;
+        static {
+            final int numThreads = Runtime.getRuntime().availableProcessors()+1;
+            finishers = new ThreadPoolExecutor(numThreads, numThreads,
+                    30, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(),
+                    new ThreadFactory() {
+                        private final AtomicInteger nextId = new AtomicInteger(0);
+
+                        public Thread newThread(final Runnable r) {
+                            final Thread t = new UntracedThread(r, "sequence finisher " + this.nextId.getAndIncrement());
+                            if (!t.isDaemon())
+                                t.setDaemon(true);
+                            if (t.getPriority() != Thread.NORM_PRIORITY)
+                                t.setPriority(Thread.NORM_PRIORITY);
+                            return t;
+                        }
+                    });
+            finishers.allowCoreThreadTimeOut(true);
+        }
+
 
         public final BlockingQueue<WriteOutJob> jobs = new ArrayBlockingQueue<WriteOutJob>(MAX_CACHED_BLOCKS);
 
@@ -138,8 +183,27 @@ public class TracingThreadTracer implements ThreadTracer {
         }
 
         private void finish() throws IOException {
-            for (final TraceSequence seq: this.sequences.values())
-                seq.finish();
+            final List<Future<Boolean>> finishing = new ArrayList<Future<Boolean>>();
+            for (final TraceSequence seq: this.sequences.values()) {
+                if (seq.useMultiThreading()) {
+                    final Finisher task = new Finisher(seq);
+                    finishing.add(finishers.submit(task));
+                } else {
+                    seq.finish();
+                }
+            }
+
+            for (final Future<Boolean> future: finishing) {
+                try {
+                    future.get();
+                } catch (final InterruptedException e) {
+                    this.tracer.error(e);
+                } catch (final ExecutionException e) {
+                    if (e.getCause() instanceof IOException)
+                        throw (IOException)e.getCause();
+                    this.tracer.error(e);
+                }
+            }
 
             this.traceSequenceFactory.finish();
 
@@ -157,7 +221,7 @@ public class TracingThreadTracer implements ThreadTracer {
 
     }
 
-    private static final boolean DEBUG_TRACE_FILE = false;
+    public static final boolean DEBUG_TRACE_FILE = true;
 
     private final long threadId;
     private final String threadName;
@@ -178,6 +242,8 @@ public class TracingThreadTracer implements ThreadTracer {
     private int longSeqIndex = 0;
 
     private final WriteOutThread writeOutThread;
+
+    private int stackSize = 0;
 
     protected static PrintWriter debugFile;
     static {
@@ -294,6 +360,7 @@ public class TracingThreadTracer implements ThreadTracer {
         out.writeUTF(this.threadName);
         this.writeOutThread.writeOut(out);
         out.writeInt(this.lastInstructionIndex);
+        out.writeInt(this.stackSize);
     }
 
     public synchronized void pauseTracing() {
@@ -311,6 +378,18 @@ public class TracingThreadTracer implements ThreadTracer {
 
     public long getThreadId() {
         return this.threadId;
+    }
+
+    @Override
+    public void decStackSize() {
+        if (this.paused == 0)
+            --this.stackSize;
+    }
+
+    @Override
+    public void incStackSize() {
+        if (this.paused == 0)
+            ++this.stackSize;
     }
 
 }

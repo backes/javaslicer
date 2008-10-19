@@ -27,4 +27,6 @@ public interface TraceSequence {
 
     void finish() throws IOException;
 
+    boolean useMultiThreading();
+
 }

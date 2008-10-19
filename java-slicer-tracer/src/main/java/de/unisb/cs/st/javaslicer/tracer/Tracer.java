@@ -647,6 +647,8 @@ public class Tracer implements ClassFileTransformer {
         try {
             final Thread exitingThread = Thread.currentThread();
             final ThreadTracer threadTracer = this.threadTracers.get(exitingThread);
+            if (threadTracer != null)
+                threadTracer.pauseTracing();
             if (threadTracer instanceof TracingThreadTracer) {
                 final TracingThreadTracer ttt = (TracingThreadTracer) threadTracer;
                 assert ttt.getThreadId() == exitingThread.getId();

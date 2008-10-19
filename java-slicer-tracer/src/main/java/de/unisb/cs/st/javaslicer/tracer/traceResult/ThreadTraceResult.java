@@ -32,19 +32,25 @@ import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;
 
 public class ThreadTraceResult {
 
+    public static final boolean WRITE_ITERATION_DEBUG_FILE = true; // TODO
+
     private final long threadId;
     private final String threadName;
     protected final IntegerMap<ConstantTraceSequence> sequences;
     protected final int lastInstructionIndex;
+    private final int lastStackDepth;
 
     private final TraceResult traceResult;
 
-    public ThreadTraceResult(final long threadId, final String threadName, final IntegerMap<ConstantTraceSequence> sequences, final int lastInstructionIndex, final TraceResult traceResult) {
+    public ThreadTraceResult(final long threadId, final String threadName,
+            final IntegerMap<ConstantTraceSequence> sequences, final int lastInstructionIndex,
+            final TraceResult traceResult, final int lastStackDepth) {
         this.threadId = threadId;
         this.threadName = threadName;
         this.sequences = sequences;
         this.lastInstructionIndex = lastInstructionIndex;
         this.traceResult = traceResult;
+        this.lastStackDepth = lastStackDepth;
     }
 
     public long getThreadId() {
@@ -60,7 +66,7 @@ public class ThreadTraceResult {
         final String name = in.readUTF();
         final ConstantThreadTraces threadTraces = ConstantThreadTraces.readFrom(in);
         int numSequences = in.readInt();
-        final IntegerMap<ConstantTraceSequence> sequences = new IntegerMap<ConstantTraceSequence>();
+        final IntegerMap<ConstantTraceSequence> sequences = new IntegerMap<ConstantTraceSequence>(numSequences*4/3+1);
         while (numSequences-- > 0) {
             final int nr = in.readInt();
             final ConstantTraceSequence seq = threadTraces.readSequence(in, file);
@@ -68,7 +74,8 @@ public class ThreadTraceResult {
                 throw new IOException("corrupted data");
         }
         final int lastInstructionIndex = in.readInt();
-        return new ThreadTraceResult(threadId, name, sequences, lastInstructionIndex, traceResult);
+        final int lastStackDepth = in.readInt();
+        return new ThreadTraceResult(threadId, name, sequences, lastInstructionIndex, traceResult, lastStackDepth);
     }
 
     public Iterator<Instance> getBackwardIterator() {
@@ -143,20 +150,21 @@ public class ThreadTraceResult {
         private final IntegerMap<Iterator<Long>> longSequenceBackwardIterators;
         private final IntegerToLongMap instructionNextOccurenceNumber;
 
-        private int stackDepth = 0;
+        private int stackDepth;
 
         private int instructionCount = 0;
         private int additionalInstructionCount = 0;
-        private PrintWriter debugFileWriter;
+        private final PrintWriter debugFileWriter;
 
         @SuppressWarnings("synthetic-access")
         public BackwardInstructionIterator() throws TracerException {
             this.integerSequenceBackwardIterators = new IntegerMap<Iterator<Integer>>();
             this.longSequenceBackwardIterators = new IntegerMap<Iterator<Long>>();
             this.instructionNextOccurenceNumber = new IntegerToLongMap();
-            if (ThreadTraceResult.this.traceResult.debug) {
+            PrintWriter debugFileWriterTmp = null;
+            if (WRITE_ITERATION_DEBUG_FILE) {
                 try {
-                    this.debugFileWriter = new PrintWriter(new FileOutputStream(new File("iteration_debug.log")));
+                    debugFileWriterTmp = new PrintWriter(new FileOutputStream(new File("iteration_debug.log")));
                     Runtime.getRuntime().addShutdownHook(new UntracedThread() {
                         @Override
                         public void run() {
@@ -167,6 +175,8 @@ public class ThreadTraceResult {
                     e.printStackTrace();
                 }
             }
+            this.debugFileWriter = debugFileWriterTmp;
+            this.stackDepth = ThreadTraceResult.this.lastStackDepth;
             try {
                 this.nextInstruction = getNextInstruction(null, ThreadTraceResult.this.lastInstructionIndex);
             } catch (final EOFException e) {
@@ -200,7 +210,7 @@ public class ThreadTraceResult {
         private Instance getNextInstruction(final ReadMethod oldMethod, final int nextIndex) throws TracerException, EOFException {
             int index = nextIndex;
             while (true) {
-                if (this.debugFileWriter != null) {
+                if (WRITE_ITERATION_DEBUG_FILE) {
                     this.debugFileWriter.println(index);
                 }
                 final Instruction backwardInstruction = findInstruction(index,

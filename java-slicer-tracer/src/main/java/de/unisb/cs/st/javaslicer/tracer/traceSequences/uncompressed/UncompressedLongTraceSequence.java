@@ -46,4 +46,8 @@ public class UncompressedLongTraceSequence implements LongTraceSequence {
         this.dataOut.close();
     }
 
+    @Override
+    public boolean useMultiThreading() {
+        return false;
+    }
 }

@@ -49,7 +49,7 @@ public class ConstantThreadTraces {
         } else if ((type & TraceSequence.TYPE_LONG) != 0) {
             switch (this.format) {
             case TraceSequence.FORMAT_GZIP:
-                return ConstantGzipLongTraceSequence.readFrom(in, file);
+                return ConstantGzipLongTraceSequence.readFrom(in, file, type);
             case TraceSequence.FORMAT_UNCOMPRESSED:
                 return ConstantUncompressedLongTraceSequence.readFrom(in, file);
             default:

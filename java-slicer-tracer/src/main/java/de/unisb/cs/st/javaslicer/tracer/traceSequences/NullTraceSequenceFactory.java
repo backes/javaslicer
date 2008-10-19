@@ -14,20 +14,29 @@ public class NullTraceSequenceFactory implements TraceSequenceFactory, TraceSequ
 
     public class NullTraceSequence implements IntegerTraceSequence, LongTraceSequence {
 
+        @Override
         public void finish() {
             // null
         }
 
+        @Override
         public void writeOut(final DataOutputStream out) {
             // null
         }
 
+        @Override
         public void trace(final int value) {
             // null
         }
 
+        @Override
         public void trace(final long value) {
             // null
+        }
+
+        @Override
+        public boolean useMultiThreading() {
+            return false;
         }
 
     }

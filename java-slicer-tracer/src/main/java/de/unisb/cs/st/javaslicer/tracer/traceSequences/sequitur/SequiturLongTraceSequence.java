@@ -45,4 +45,8 @@ public class SequiturLongTraceSequence implements LongTraceSequence {
         this.startRuleNumber = this.sequiturSeq.getStartRuleNumber();
     }
 
+    @Override
+    public boolean useMultiThreading() {
+        return false;
+    }
 }

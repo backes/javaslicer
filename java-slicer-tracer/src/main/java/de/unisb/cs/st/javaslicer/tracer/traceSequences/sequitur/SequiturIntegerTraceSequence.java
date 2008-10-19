@@ -45,4 +45,8 @@ public class SequiturIntegerTraceSequence implements IntegerTraceSequence {
         this.startRuleNumber = this.sequiturSeq.getStartRuleNumber();
     }
 
+    @Override
+    public boolean useMultiThreading() {
+        return false;
+    }
 }

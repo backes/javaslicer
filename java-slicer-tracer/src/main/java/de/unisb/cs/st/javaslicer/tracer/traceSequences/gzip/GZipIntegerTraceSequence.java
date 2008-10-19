@@ -178,4 +178,9 @@ public class GZipIntegerTraceSequence implements IntegerTraceSequence {
         }
     }
 
+    @Override
+    public boolean useMultiThreading() {
+        return this.dataOut != null;
+    }
+
 }

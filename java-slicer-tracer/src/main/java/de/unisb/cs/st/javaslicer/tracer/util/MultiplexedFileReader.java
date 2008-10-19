@@ -375,6 +375,10 @@ public class MultiplexedFileReader {
         return this.streamDefs.keySet();
     }
 
+    public boolean hasStreamId(final int streamIndex) {
+        return this.streamDefs.containsKey(streamIndex);
+    }
+
     public MultiplexInputStream getInputStream(final int index) throws IOException {
         final StreamDef def = this.streamDefs.get(index);
         if (def == null)

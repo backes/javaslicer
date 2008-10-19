@@ -190,7 +190,25 @@ public class IntegerMap<V> implements Map<Integer, V>, Cloneable {
      * @return <tt>true</tt> if this map contains a mapping for the specified key.
      */
     public boolean containsKey(final Object key) {
-        return getEntry(key) != null;
+        return key instanceof Integer ? containsKey(((Integer)key).intValue()) : false;
+    }
+
+    /**
+     * Returns <tt>true</tt> if this map contains a mapping for the specified key.
+     *
+     * @param key
+     *            The key whose presence in this map is to be tested
+     * @return <tt>true</tt> if this map contains a mapping for the specified key.
+     */
+    public boolean containsKey(final int key) {
+        if (this.list != null)
+            return key >= 0 && key < this.list.length && this.list[key] != null;
+
+        final int index = key & (this.mapTable.length - 1);
+        for (Entry<V> e = this.mapTable[index]; e != null; e = e.next)
+            if (e.key == key)
+                return true;
+        return false;
     }
 
     /**
@@ -205,7 +223,7 @@ public class IntegerMap<V> implements Map<Integer, V>, Cloneable {
 
     final Entry<V> getEntry(final int key) {
         if (this.list != null) {
-            if (key >= 0 && key < this.list.length)
+            if (key >= 0 && key < this.list.length && this.list[key] != null)
                 return new Entry<V>(key, this.list[key], null);
             return null;
         }

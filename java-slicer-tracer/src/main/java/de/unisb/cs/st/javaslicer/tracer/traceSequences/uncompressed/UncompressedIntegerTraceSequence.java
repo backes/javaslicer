@@ -42,4 +42,8 @@ public class UncompressedIntegerTraceSequence implements IntegerTraceSequence {
         this.dataOut.close();
     }
 
+    @Override
+    public boolean useMultiThreading() {
+        return false;
+    }
 }
