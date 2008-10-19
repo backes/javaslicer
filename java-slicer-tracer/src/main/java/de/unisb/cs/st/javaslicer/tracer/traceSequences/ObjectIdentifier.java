@@ -24,21 +24,19 @@ public class ObjectIdentifier {
     }
 
     public long getObjectId(final Object obj) {
-        if (obj instanceof Identifiable)
-            return ((Identifiable)obj).__tracing_get_object_id();
-
         final Long id = this.objectMap.get(obj);
-        return id == null ? getNewId(obj, false) : id;
+        return id == null ? getNewId(obj) : id;
     }
 
-    public long getNewId(final Object obj, final boolean isIdentifiable) {
+    // if obj != null, the id is stored in the objectMap
+    public long getNewId(final Object obj) {
         Long newId = this.freeIds.poll();
         if (newId == null) {
             newId = this.nextId.getAndIncrement();
             if (newId.longValue() == 0)
                 throw new RuntimeException("long overflow in object ids");
         }
-        if (!isIdentifiable) {
+        if (obj != null) {
             final Long oldId = this.objectMap.putIfAbsent(obj, newId);
             if (oldId != null) {
                 this.freeIds.add(newId);

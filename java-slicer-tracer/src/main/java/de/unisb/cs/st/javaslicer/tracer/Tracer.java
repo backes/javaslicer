@@ -37,10 +37,8 @@ import org.objectweb.asm.tree.analysis.AnalyzerException;
 import org.objectweb.asm.tree.analysis.BasicVerifier;
 import org.objectweb.asm.tree.analysis.Frame;
 import org.objectweb.asm.util.CheckClassAdapter;
-import org.objectweb.asm.util.TraceClassVisitor;
 import org.objectweb.asm.util.TraceMethodVisitor;
 
-import de.unisb.cs.st.javaslicer.tracer.TracingThreadTracer.WriteOutThread;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
@@ -54,7 +52,6 @@ import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectIdentifier;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.switching.SwitchingTraceSequenceFactory;
 import de.unisb.cs.st.javaslicer.tracer.util.ConcurrentReferenceHashMap;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter;
 import de.unisb.cs.st.javaslicer.tracer.util.SimpleArrayList;
@@ -141,7 +138,7 @@ public class Tracer implements ClassFileTransformer {
     };
 
 
-    public final TraceSequenceFactory seqFactory = new SwitchingTraceSequenceFactory();
+    protected final TraceSequenceFactory seqFactory;
 
     private final Map<Thread, ThreadTracer> threadTracers;
 
@@ -176,11 +173,16 @@ public class Tracer implements ClassFileTransformer {
     private static final boolean COMPUTE_FRAMES = false;
     private String lastErrorString;
 
+    private final Instrumentation instrumentation;
 
-    private Tracer(final File filename, final boolean debug, final boolean check) throws IOException {
+
+    private Tracer(final File filename, final boolean debug, final boolean check,
+            final TraceSequenceFactory seqFac, final Instrumentation instrumentation) throws IOException {
         this.filename = filename;
         this.debug = debug;
         this.check = check;
+        this.seqFactory = seqFac;
+        this.instrumentation = instrumentation;
         this.file = new MultiplexedFileWriter(filename, 512);
         this.file.setReuseStreamIds(true);
         final MultiplexOutputStream readClassesMultiplexedStream = this.file.newOutputStream();
@@ -214,17 +216,18 @@ public class Tracer implements ClassFileTransformer {
             final StringWriter sw = new StringWriter();
             final PrintWriter ps = new PrintWriter(sw);
             e.printStackTrace(ps);
-            this.lastErrorString = sw.toString();
-            System.out.println(sw.toString());
-        } else
-            this.lastErrorString = e.toString();
+            System.err.println(this.lastErrorString = sw.toString());
+        } else {
+            System.err.println(this.lastErrorString = e.toString());
+        }
         this.errorCount.getAndIncrement();
     }
 
-    public static void newInstance(final File filename, final boolean debug, final boolean check) throws IOException {
+    public static void newInstance(final File filename, final boolean debug, final boolean check,
+            final TraceSequenceFactory seqFac, final Instrumentation instrumentation) throws IOException {
         if (instance != null)
             throw new IllegalStateException("Tracer instance already exists");
-        instance = new Tracer(filename, debug, check);
+        instance = new Tracer(filename, debug, check, seqFac, instrumentation);
     }
 
     public static Tracer getInstance() {
@@ -338,7 +341,7 @@ public class Tracer implements ClassFileTransformer {
             if (this.debug) {
                 // print statistics once now and once when all finished
                 TracingMethodInstrumenter.printStats(System.out);
-                Runtime.getRuntime().addShutdownHook(new Thread("final stats printer") {
+                Runtime.getRuntime().addShutdownHook(new UntracedThread("final stats printer") {
                     @Override
                     public void run() {
                         TracingMethodInstrumenter.printStats(System.out);
@@ -364,63 +367,65 @@ public class Tracer implements ClassFileTransformer {
         if (this.tracingReady)
             return null;
 
-        // we have to synchronize on System.out first.
-        // otherwise it may lead to a deadlock if a thread calls removeStale() on ConcurrentReferenceHashMap
-        // while he holds the lock for System.out, but another thread is inside the transformation step and
-        // waits for the lock of System.out
-        synchronized (System.out) { synchronized (this.transformationLock) {
-            // disable tracing for the thread tracer of this thread
-            final ThreadTracer tt = getThreadTracer();
-            tt.pauseTracing();
+        // disable tracing for the thread tracer of this thread
+        final ThreadTracer tt = getThreadTracer();
+        tt.pauseTracing();
 
-            try {
-                final String javaClassName = Type.getObjectType(className).getClassName();
+        try {
+            final String javaClassName = Type.getObjectType(className).getClassName();
 
-                if (javaClassName.startsWith(Tracer.class.getPackage().getName()))
-                    return null;
+            if (javaClassName.startsWith(Tracer.class.getPackage().getName()))
+                return null;
 
-                //////////////////////////////////////////////////////////////////
-                // NOTE: these will be cleaned up when the system runs stable
-                //////////////////////////////////////////////////////////////////
+            //////////////////////////////////////////////////////////////////
+            // NOTE: these will be cleaned up when the system runs stable
+            //////////////////////////////////////////////////////////////////
 
-                /*
-                if (!className.equals("Test"))
-                    return null;
-                */
+            /*
+            if (!className.equals("Test"))
+                return null;
+            */
 
-                if (javaClassName.equals("java.lang.System"))
-                    return null;
-                if (javaClassName.equals("java.lang.VerifyError")
-                        || javaClassName.equals("java.lang.ClassCircularityError")
-                        || javaClassName.equals("java.lang.LinkageError")
-                        || javaClassName.equals("java.lang.Error")
-                        || javaClassName.equals("java.lang.Throwable"))
-                    return null;
+            if (javaClassName.equals("java.lang.System"))
+                return null;
+            if (javaClassName.equals("java.lang.VerifyError")
+                    || javaClassName.equals("java.lang.ClassCircularityError")
+                    || javaClassName.equals("java.lang.LinkageError")
+                    || javaClassName.equals("java.lang.Error")
+                    || javaClassName.equals("java.lang.Throwable"))
+                return null;
 
-                if (javaClassName.startsWith("java.util.Collections"))
-                    return null;
+            if (javaClassName.startsWith("java.util.Collections"))
+                return null;
 
-                if (javaClassName.startsWith("java.lang.Thread")
-                        && !"java.lang.Thread".equals(javaClassName))
-                    return null;
-                // because of Thread.getName()
-                if (javaClassName.equals("java.lang.String"))
-                    return null;
-                if (javaClassName.equals("java.util.Arrays"))
-                    return null;
-                if (javaClassName.equals("java.lang.Math"))
-                    return null;
+            if (javaClassName.startsWith("java.lang.Thread")
+                    && !"java.lang.Thread".equals(javaClassName))
+                return null;
+            // because of Thread.getName()
+            if (javaClassName.equals("java.lang.String"))
+                return null;
+            if (javaClassName.equals("java.util.Arrays"))
+                return null;
+            if (javaClassName.equals("java.lang.Math"))
+                return null;
 
-                // Object
-                if (javaClassName.equals("java.lang.Object"))
-                    return null;
-                if (javaClassName.startsWith("java.lang.ref."))
-                    return null;
+            // Object
+            if (javaClassName.equals("java.lang.Object"))
+                return null;
+            if (javaClassName.startsWith("java.lang.ref."))
+                return null;
 
-                final ClassReader reader = new ClassReader(classfileBuffer);
+            final ClassReader reader = new ClassReader(classfileBuffer);
 
-                final ClassNode classNode = new ClassNode();
-                reader.accept(classNode, 0);
+            final ClassNode classNode = new ClassNode();
+            reader.accept(classNode, 0);
+            final ClassWriter writer;
+
+            // we have to synchronize on System.out first.
+            // otherwise it may lead to a deadlock if a thread calls removeStale() on ConcurrentReferenceHashMap
+            // while he holds the lock for System.out, but another thread is inside the transformation step and
+            // waits for the lock of System.out
+            synchronized (System.out) { synchronized (this.transformationLock) {
 
                 // register that class for later reconstruction of the trace
                 final ReadClass readClass = new ReadClass(className, AbstractInstruction.getNextIndex(), classNode.access);
@@ -428,7 +433,7 @@ public class Tracer implements ClassFileTransformer {
                 //final boolean computeFrames = COMPUTE_FRAMES || Arrays.asList(this.pauseTracingClasses).contains(Type.getObjectType(className).getClassName());
                 final boolean computeFrames = COMPUTE_FRAMES;
 
-                final ClassWriter writer = new FixedClassWriter(computeFrames ? ClassWriter.COMPUTE_FRAMES : ClassWriter.COMPUTE_MAXS);
+                writer = new FixedClassWriter(computeFrames ? ClassWriter.COMPUTE_FRAMES : ClassWriter.COMPUTE_MAXS);
 
                 final ClassVisitor output = this.check ? new CheckClassAdapter(writer) : writer;
 
@@ -448,35 +453,36 @@ public class Tracer implements ClassFileTransformer {
 
                 readClass.setInstructionNumberEnd(AbstractInstruction.getNextIndex());
 
-                final byte[] newClassfileBuffer = writer.toByteArray();
-
-                if (this.check) {
-                    checkClass(newClassfileBuffer, readClass.getName());
-                }
-
                 // now we can write the class out
                 readClass.writeOut(this.readClassesOutputStream);
 
-                //printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
-                /*
-                if (className.equals("java/lang/ClassLoader"))
-                    printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
-                if (className.equals("java/util/zip/ZipFile"))
-                    printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
-                if (className.endsWith("line/Main"))
-                    printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
-                */
+            }}
 
-                return newClassfileBuffer;
-            } catch (final Throwable t) {
-                System.err.println("Error transforming class " + className + ":");
-                t.printStackTrace(System.err);
-                return null;
-            } finally {
-                tt.unpauseTracing();
+            final byte[] newClassfileBuffer = writer.toByteArray();
+
+            if (this.check) {
+                checkClass(newClassfileBuffer, className);
             }
-        }}
-    }
+
+            //printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
+            /*
+            if (className.equals("java/lang/ClassLoader"))
+                printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
+            if (className.equals("java/util/zip/ZipFile"))
+                printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
+            if (className.endsWith("line/Main"))
+                printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
+            */
+
+            return newClassfileBuffer;
+        } catch (final Throwable t) {
+            System.err.println("Error transforming class " + className + ":");
+            t.printStackTrace(System.err);
+            return null;
+        } finally {
+            tt.unpauseTracing();
+        }
+   }
 
     public int getNextSequenceIndex() {
         return this.traceSequenceTypes.size();
@@ -544,8 +550,27 @@ public class Tracer implements ClassFileTransformer {
 
     @SuppressWarnings("unused")
     private void printClass(final byte[] classfileBuffer, final String classname) {
+        /*
         final TraceClassVisitor v = new TraceClassVisitor(new PrintWriter(System.out));
         new ClassReader(classfileBuffer).accept(v, ClassReader.SKIP_DEBUG);
+        */
+        final ClassNode cn = new ClassNode();
+        final ClassReader cr = new ClassReader(classfileBuffer);
+        //cr.accept(new CheckClassAdapter(cn), ClassReader.SKIP_DEBUG);
+        cr.accept(new CheckClassAdapter(cn), 0);
+
+        for (final Object methodObj : cn.methods) {
+            final MethodNode method = (MethodNode) methodObj;
+            final Analyzer a = new Analyzer(new BasicVerifier());
+            //final Analyzer a = new Analyzer(new SimpleVerifier());
+            try {
+                a.analyze(cn.name, method);
+            } catch (final AnalyzerException e) {
+                System.err.println("// error in method " + classname + "." + method.name
+                        + method.desc + ":" + e);
+            }
+            printMethod(a, System.err, method);
+        }
     }
 
     private static String getShortName(final String name) {
@@ -573,7 +598,7 @@ public class Tracer implements ClassFileTransformer {
 
     public ThreadTracer getThreadTracer() {
         final Thread currentThread = Thread.currentThread();
-        if (currentThread instanceof WriteOutThread)
+        if (currentThread instanceof UntracedThread)
             return NullThreadTracer.instance;
         ThreadTracer tracer = this.threadTracers.get(currentThread);
         if (tracer != null)
@@ -657,29 +682,33 @@ public class Tracer implements ClassFileTransformer {
         }
     }
 
-    public synchronized void finish() throws IOException {
-        if (this.tracingReady)
-            return;
-        this.tracingReady = true;
-        final List<TracingThreadTracer> allThreadTracers = new ArrayList<TracingThreadTracer>();
-        synchronized (this.threadTracers) {
-            for (final Entry<Thread, ThreadTracer> e: this.threadTracers.entrySet()) {
-                final ThreadTracer t = e.getValue();
-                e.setValue(NullThreadTracer.instance);
-                if (t instanceof TracingThreadTracer)
-                    allThreadTracers.add((TracingThreadTracer) t);
+    private final Object finishLock = new Object();
+    public void finish() throws IOException {
+        synchronized (this.finishLock) {
+            if (this.tracingReady)
+                return;
+            this.tracingReady = true;
+            this.instrumentation.removeTransformer(this);
+            final List<TracingThreadTracer> allThreadTracers = new ArrayList<TracingThreadTracer>();
+            synchronized (this.threadTracers) {
+                for (final Entry<Thread, ThreadTracer> e: this.threadTracers.entrySet()) {
+                    final ThreadTracer t = e.getValue();
+                    e.setValue(NullThreadTracer.instance);
+                    if (t instanceof TracingThreadTracer)
+                        allThreadTracers.add((TracingThreadTracer) t);
+                }
             }
+            synchronized (this.readyThreadTracers) {
+                allThreadTracers.addAll(this.readyThreadTracers);
+                this.readyThreadTracers.clear();
+            }
+            for (final TracingThreadTracer t: allThreadTracers) {
+                writeOutIfNecessary(t);
+            }
+            this.threadTracersOutputStream.close();
+            this.readClassesOutputStream.close();
+            this.file.close();
         }
-        synchronized (this.readyThreadTracers) {
-            allThreadTracers.addAll(this.readyThreadTracers);
-            this.readyThreadTracers.clear();
-        }
-        for (final TracingThreadTracer t: allThreadTracers) {
-            writeOutIfNecessary(t);
-        }
-        this.threadTracersOutputStream.close();
-        this.readClassesOutputStream.close();
-        this.file.close();
     }
 
     public TraceResult getResult() throws IOException {

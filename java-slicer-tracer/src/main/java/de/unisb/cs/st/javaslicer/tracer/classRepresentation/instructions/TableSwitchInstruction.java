@@ -79,7 +79,9 @@ public class TableSwitchInstruction extends AbstractInstruction {
         }
     }
 
-    public static TableSwitchInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
+    public static TableSwitchInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo,
+            @SuppressWarnings("unused") final int opcode,
+            final int index, final int lineNumber) throws IOException {
         final int min = in.readInt();
         final int max = in.readInt();
         final LabelMarker defaultHandler = methodInfo.getLabel(in.readInt());

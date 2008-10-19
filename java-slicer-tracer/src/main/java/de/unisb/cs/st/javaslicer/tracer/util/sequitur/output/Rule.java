@@ -16,6 +16,7 @@ class Rule<T> {
         private final Rule<T> rule;
 
         public Dummy(final Rule<T> rule) {
+            super(0);
             this.rule = rule;
             this.next = this;
             this.prev = this;
@@ -71,12 +72,9 @@ class Rule<T> {
 
     public Rule(final Symbol<T> first, final Symbol<T> second) {
         this();
-        this.dummy.next = first;
-        first.next = second;
-        second.next = this.dummy;
-        this.dummy.prev = second;
-        second.prev = first;
-        first.prev = this.dummy;
+        Symbol.linkTogether(this.dummy, first);
+        Symbol.linkTogether(first, second);
+        Symbol.linkTogether(second, this.dummy);
     }
 
     public void append(final Symbol<T> newSymbol, final Grammar<T> grammar) {
@@ -89,13 +87,13 @@ class Rule<T> {
     }
 
     public void incUseCount() {
-        assert this.useCount >= 0;
-        ++this.useCount;
+        if (this.useCount != -1)
+            ++this.useCount;
     }
 
     public void decUseCount() {
-        assert this.useCount >= 0;
-        --this.useCount;
+        if (this.useCount != -1)
+            --this.useCount;
     }
 
     public int getUseCount() {

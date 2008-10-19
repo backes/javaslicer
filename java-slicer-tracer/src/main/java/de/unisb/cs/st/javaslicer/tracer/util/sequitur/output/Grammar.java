@@ -31,7 +31,7 @@ class Grammar<T> {
      * @return whether or not there was a substitution
      */
     public boolean checkDigram(final Symbol<T> first) {
-        if (first instanceof Dummy<?> || first.next instanceof Dummy<?>)
+        if (first.count == 0 || first.next.count == 0)
             return false;
 
         if (first.meltDigram(this))
@@ -41,7 +41,8 @@ class Grammar<T> {
         if (oldDigram == null) {
             this.digrams.put(first, first);
             return false;
-        }
+        } else if (oldDigram == first) // this is necessary, but it should not be...
+            return false;
 
         assert oldDigram.next != first && oldDigram != first;
 
@@ -60,19 +61,26 @@ class Grammar<T> {
                 && (rule = ((NonTerminal<T>)newDigram).getRule()).getUseCount() == 2) {
             assert oldDigram instanceof NonTerminal<?> && ((NonTerminal<T>)oldDigram).getRule() == rule;
             final Symbol<T> next = newDigram.next;
+            removeDigram(newDigram);
             if (!(next.next instanceof Dummy<?>))
                 removeDigram(next);
-            Symbol.linkTogether(next.prev, next.next);
+            Symbol.linkTogether(newDigram, next.next);
             removeDigram(oldDigram);
             if (!(oldDigram.next.next instanceof Dummy<?>))
                 removeDigram(oldDigram.next);
-            Symbol.linkTogether(oldDigram, oldDigram.next.next);
+            oldDigram.next.remove();
             rule.append(next, this);
+
+            // TODO check if rule is of length 1
+            if (((NonTerminal<T>)newDigram).count != 0)
+                ((NonTerminal<T>) newDigram).checkSubstRule(this);
+            if (((NonTerminal<T>)oldDigram).count != 0)
+                ((NonTerminal<T>) oldDigram).checkSubstRule(this);
+
             if (newDigram.prev == newDigram.next) {
                 assert newDigram.next instanceof Dummy<?>;
                 final Rule<T> otherRule = ((Dummy<T>)newDigram.next).getRule();
                 // rule is expanded inside the otherRule, since otherRule consisted of only this one nonterminal
-                // after that, rule is deleted
                 if (!(oldDigram.prev instanceof Dummy<?>))
                     removeDigram(oldDigram.prev);
                 if (!(oldDigram.next instanceof Dummy<?>))
@@ -84,19 +92,29 @@ class Grammar<T> {
                 oldDigram.next.insertBefore(new NonTerminal<T>(otherRule));
                 checkDigram(oldDigram.prev);
                 checkDigram(oldDigram.next);
-            }
-            if (oldDigram.prev == oldDigram.next) {
+            } else if (oldDigram.prev == oldDigram.next) {
                 assert oldDigram.next instanceof Dummy<?>;
                 final Rule<T> otherRule = ((Dummy<T>)oldDigram.next).getRule();
                 // rule is expanded inside the otherRule, since otherRule consisted of only this one nonterminal
-                // after that, rule is deleted
                 if (!(newDigram.prev instanceof Dummy<?>))
                     removeDigram(newDigram.prev);
                 if (!(newDigram.next instanceof Dummy<?>))
                     removeDigram(newDigram);
-                // newDigram.remove(); // not needed, because it is overwritten by these instructions:
-                Symbol.linkTogether(oldDigram.next, rule.dummy.next);
-                Symbol.linkTogether(rule.dummy.prev, oldDigram.next);
+                Symbol<T> firstSubst = rule.dummy.next;
+                Symbol<T> lastSubst = rule.dummy.prev;
+                // if rule is used more than twice (in newDigram and oldDigram), we have to clone it
+                if (rule.getUseCount() > 2) {
+                    firstSubst = rule.dummy.next.clone();
+                    Symbol<T> s = firstSubst;
+                    while (s.next != lastSubst) {
+                        (s.next = s.next.clone()).prev = s;
+                        s = s.next;
+                    }
+                    (s.next = lastSubst = lastSubst.clone()).prev = s;
+                }
+                // oldDigram.remove(); // not needed, because it is overwritten by these instructions:
+                Symbol.linkTogether(oldDigram.next, firstSubst);
+                Symbol.linkTogether(lastSubst, oldDigram.next);
                 newDigram.remove();
                 newDigram.next.insertBefore(new NonTerminal<T>(otherRule));
                 checkDigram(newDigram.prev);
@@ -114,9 +132,20 @@ class Grammar<T> {
                         ((NonTerminal<T>)s).checkExpand(this);
                 }
             }
+        } else if (newDigram.prev == newDigram.next.next
+                && (rule = ((Dummy<T>)newDigram.prev).getRule()).mayBeReused()) {
+            oldDigram.substituteDigram(rule, this);
+            if (rule.getUseCount() > 0) {
+                final Dummy<T> dummy = rule.dummy;
+                for (Symbol<T> s = dummy.next; s != dummy; s = s.next) {
+                    if (s instanceof NonTerminal<?>)
+                        ((NonTerminal<T>)s).checkExpand(this);
+                }
+            }
         } else {
             final Symbol<T> clone = newDigram.clone();
             rule = new Rule<T>(clone, newDigram.next.clone());
+            this.digrams.remove(clone);
             this.digrams.put(clone, clone);
             newDigram.substituteDigram(rule, this);
             oldDigram.substituteDigram(rule, this);
@@ -241,6 +270,12 @@ class Grammar<T> {
 
     protected void newSequence(final OutputSequence<T> seq) {
         this.usingSequences.add(seq);
+    }
+
+    // TODO remove
+    @Override
+    public String toString() {
+        return this.digrams.toString() + this.usingSequences.toString();
     }
 
 }

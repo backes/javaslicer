@@ -5,10 +5,14 @@ import java.io.IOException;
 import java.lang.instrument.Instrumentation;
 
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.gzip.GZipTraceSequenceFactory;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.sequitur.SequiturTraceSequenceFactory;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.uncompressed.UncompressedTraceSequenceFactory;
 
 public class TracerAgent {
 
-    public static class WriteTracefileThread extends Thread {
+    public static class WriteTracefileThread extends UntracedThread {
 
         private final Tracer tracer;
 
@@ -36,6 +40,7 @@ public class TracerAgent {
 
             boolean debug = false;
             boolean check = false;
+            TraceSequenceFactory seqFac = null;
 
             for (final String arg : args) {
                 final String[] parts = arg.split(":");
@@ -70,6 +75,17 @@ public class TracerAgent {
                         System.err.println("ERROR: illegal value for \"check\" argument: \"" + value + "\"");
                         System.exit(1);
                     }
+                } else if ("compression".equalsIgnoreCase(key)) {
+                    if ("none".equalsIgnoreCase(value) || "uncompressed".equalsIgnoreCase(value)) {
+                        seqFac = new UncompressedTraceSequenceFactory();
+                    } else if ("gzip".equalsIgnoreCase(value)) {
+                        seqFac = new GZipTraceSequenceFactory();
+                    } else if ("sequitur".equalsIgnoreCase(value)) {
+                        seqFac = new SequiturTraceSequenceFactory();
+                    } else {
+                        System.err.println("Unknown compression method: " + value);
+                        System.exit(1);
+                    }
                 } else {
                     System.err.println("Unknown argument: " + key);
                     System.exit(1);
@@ -87,7 +103,10 @@ public class TracerAgent {
                 System.exit(1);
             }
 
-            Tracer.newInstance(logFile, debug, check);
+            if (seqFac == null)
+                seqFac = new UncompressedTraceSequenceFactory();
+
+            Tracer.newInstance(logFile, debug, check, seqFac, inst);
             final Tracer tracer = Tracer.getInstance();
             try {
                 tracer.add(inst, true);
@@ -96,7 +115,10 @@ public class TracerAgent {
                 e.printStackTrace(System.err);
                 System.exit(1);
             }
+            final ThreadTracer tt = tracer.getThreadTracer();
+            tt.pauseTracing();
             Runtime.getRuntime().addShutdownHook(new WriteTracefileThread(tracer));
+            tt.unpauseTracing();
         } catch (final Throwable t) {
             System.err.println("ERROR in premain method:");
             t.printStackTrace(System.err);

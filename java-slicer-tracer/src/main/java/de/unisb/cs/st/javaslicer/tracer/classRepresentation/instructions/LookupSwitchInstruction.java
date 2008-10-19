@@ -71,7 +71,9 @@ public class LookupSwitchInstruction extends AbstractInstruction {
         }
     }
 
-    public static LookupSwitchInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
+    public static LookupSwitchInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo,
+            @SuppressWarnings("unused") final int opcode,
+            final int index, final int lineNumber) throws IOException {
         final LabelMarker defaultHandler = methodInfo.getLabel(in.readInt());
         int handlerSize = in.readInt();
         final IntegerMap<LabelMarker> handlers = new IntegerMap<LabelMarker>(handlerSize*4/3+1);

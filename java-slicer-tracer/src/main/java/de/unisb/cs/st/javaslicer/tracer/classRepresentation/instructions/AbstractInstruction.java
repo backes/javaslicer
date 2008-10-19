@@ -22,7 +22,6 @@ public abstract class AbstractInstruction implements Instruction {
 
     private static int nextIndex = 0;
 
-    // TODO optimize this
     private static final Class<?>[] instructions =
         new Class<?>[] {
             ArrayInstruction.class,
@@ -41,6 +40,22 @@ public abstract class AbstractInstruction implements Instruction {
             TypeInstruction.class,
             VarInstruction.class
         };
+    private static final Method[] readMethods = new Method[instructions.length];
+    static {
+        for (int i = 0; i < instructions.length; ++i) {
+            try {
+                readMethods[i] = instructions[i].getMethod("readFrom",
+                        DataInput.class, MethodReadInformation.class, int.class, int.class, int.class);
+            } catch (final SecurityException e) {
+                throw new RuntimeException(e);
+            } catch (final NoSuchMethodException e) {
+                throw new InternalError("Internal error: class " + instructions[i]
+                   + " does not implement readFrom");
+            } catch (final IllegalArgumentException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
 
     private final int index;
     protected final ReadMethod method;
@@ -104,24 +119,18 @@ public abstract class AbstractInstruction implements Instruction {
     public static AbstractInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo) throws IOException {
         // first determine the type
         final byte type = in.readByte();
-        if (type < 0 || type >= instructions.length)
+        if (type < 0 || type >= readMethods.length)
             throw new IOException("corrupted data");
         final int index = in.readInt();
         final int lineNumber = in.readInt();
         final int opcode = in.readInt();
 
-        final Class<?> instrClass = instructions[type];
+        final Method readFromMethod = readMethods[type];
         try {
-            final Method readFromMethod = instrClass.getMethod("readFrom",
-                    DataInput.class, MethodReadInformation.class, int.class, int.class, int.class);
             final Object o = readFromMethod.invoke(null, in, methodInfo, opcode, index, lineNumber);
             if (o instanceof AbstractInstruction)
                 return (AbstractInstruction)o;
             throw new RuntimeException("readFrom does not return AbstractInstruction");
-        } catch (final SecurityException e) {
-            throw new RuntimeException(e);
-        } catch (final NoSuchMethodException e) {
-            throw new RuntimeException("Internal error: class " + instrClass + " does not implement readFrom", e);
         } catch (final IllegalArgumentException e) {
             throw new RuntimeException(e);
         } catch (final IllegalAccessException e) {
@@ -131,7 +140,6 @@ public abstract class AbstractInstruction implements Instruction {
                 throw (IOException)e.getCause();
             throw new RuntimeException(e);
         }
-
     }
 
     // must be overridden by classes with dynamic parameters (e.g. array load/store)

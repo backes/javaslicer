@@ -41,7 +41,8 @@ public class SimpleInstruction extends AbstractInstruction {
         super(readMethod, opcode, lineNumber, index);
     }
 
-    public static SimpleInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode,
+    public static SimpleInstruction readFrom(@SuppressWarnings("unused") final DataInput in,
+            final MethodReadInformation methodInfo, final int opcode,
             final int index, final int lineNumber) {
         return new SimpleInstruction(methodInfo.getMethod(), lineNumber, opcode, index);
     }

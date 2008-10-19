@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
+import de.unisb.cs.st.javaslicer.tracer.UntracedThread;
 import de.unisb.cs.st.javaslicer.tracer.util.ConcurrentReferenceHashMap.Option;
 import de.unisb.cs.st.javaslicer.tracer.util.ConcurrentReferenceHashMap.ReferenceType;
 import de.unisb.cs.st.javaslicer.tracer.util.ConcurrentReferenceHashMap.RemoveStaleListener;
@@ -33,7 +34,7 @@ public class MultiplexedFileWriter {
 
     protected static AtomicLong removeTime = new AtomicLong(0);
     static {
-        Runtime.getRuntime().addShutdownHook(new Thread() {
+        Runtime.getRuntime().addShutdownHook(new UntracedThread() {
             @Override
             public void run() {
                 System.out.format("Removing in total %.3f seconds%n", 1e-9*removeTime.get());

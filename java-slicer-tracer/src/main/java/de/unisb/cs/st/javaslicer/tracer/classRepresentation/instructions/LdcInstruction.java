@@ -65,7 +65,9 @@ public class LdcInstruction extends AbstractInstruction {
         }
     }
 
-    public static LdcInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
+    public static LdcInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo,
+            @SuppressWarnings("unused") final int opcode,
+            final int index, final int lineNumber) throws IOException {
         final byte type = in.readByte();
         Object constant;
         switch (type) {

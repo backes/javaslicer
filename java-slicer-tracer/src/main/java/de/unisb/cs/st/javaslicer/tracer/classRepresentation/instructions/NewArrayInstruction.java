@@ -59,7 +59,9 @@ public class NewArrayInstruction extends AbstractInstruction {
         out.writeInt(this.arrayElemType);
     }
 
-    public static NewArrayInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
+    public static NewArrayInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo,
+            @SuppressWarnings("unused") final int opcode,
+            final int index, final int lineNumber) throws IOException {
         final int arrayElemType = in.readInt();
         return new NewArrayInstruction(methodInfo.getMethod(), lineNumber, arrayElemType, index);
     }

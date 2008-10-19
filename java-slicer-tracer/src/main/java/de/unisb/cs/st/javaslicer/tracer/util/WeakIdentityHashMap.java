@@ -496,6 +496,11 @@ public class WeakIdentityHashMap<K, V> implements Map<K, V> {
     }
 
     // hook for subclasses
+    /**
+     * Is called when a value is removed from this map due to garbage collection.
+     *
+     * @param value the value that has been removed
+     */
     protected void removing(final V value) {
         // nothing
     }

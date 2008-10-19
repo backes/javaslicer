@@ -15,15 +15,11 @@ public class OutputSequence<T> {
     }
 
     public OutputSequence(final SharedOutputGrammar<T> g) {
-        this(new Rule<T>(false), g.grammar, null);
+        this(new Rule<T>(false), g.grammar, g.objectWriter);
     }
 
     public OutputSequence(final ObjectWriter<? super T> objectWriter) {
         this(new Rule<T>(false), new Grammar<T>(), objectWriter);
-    }
-
-    public OutputSequence(final SharedOutputGrammar<T> g, final ObjectWriter<? super T> objectWriter) {
-        this(new Rule<T>(false), g.grammar, objectWriter);
     }
 
     private OutputSequence(final Rule<T> firstRule, final Grammar<T> grammar,
@@ -64,6 +60,8 @@ public class OutputSequence<T> {
         final Set<Rule<T>> rules = this.firstRule.getUsedRules();
         for (final Rule<T> r: rules)
             sb.append(System.getProperty("line.separator")).append(r);
+        // TODO remove
+        sb.append(System.getProperty("line.separator")).append(System.getProperty("line.separator"));
         return sb.toString();
     }
 

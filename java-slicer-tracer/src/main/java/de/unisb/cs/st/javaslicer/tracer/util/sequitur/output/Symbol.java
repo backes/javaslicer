@@ -11,6 +11,11 @@ abstract class Symbol<T> implements Cloneable {
 
     public Symbol<T> next = null;
     public Symbol<T> prev = null;
+    protected int count;
+
+    protected Symbol(final int count) {
+        this.count = count;
+    }
 
     /**
      * Rawly inserts the given Symbol before this Symbol in the implicit linked list.
@@ -51,6 +56,7 @@ abstract class Symbol<T> implements Cloneable {
      */
     public void remove() {
         linkTogether(this.prev, this.next);
+        this.count = 0;
     }
 
     /**

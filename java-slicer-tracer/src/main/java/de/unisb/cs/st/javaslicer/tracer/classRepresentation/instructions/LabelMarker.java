@@ -77,7 +77,9 @@ public class LabelMarker extends AbstractInstruction {
         out.writeInt(this.labelNr);
     }
 
-    public static LabelMarker readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
+    public static LabelMarker readFrom(final DataInput in, final MethodReadInformation methodInfo,
+            @SuppressWarnings("unused") final int opcode,
+            final int index, final int lineNumber) throws IOException {
         final int traceSeqIndex = in.readInt();
         final boolean additionalLabel = in.readBoolean();
         final int labelNr = in.readInt();

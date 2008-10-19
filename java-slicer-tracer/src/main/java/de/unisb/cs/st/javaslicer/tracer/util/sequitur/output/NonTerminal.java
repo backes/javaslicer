@@ -10,9 +10,9 @@ import de.unisb.cs.st.javaslicer.tracer.util.sequitur.output.Rule.Dummy;
 class NonTerminal<T> extends Symbol<T> {
 
     private final Rule<T> rule;
-    private int count = 1;
 
     public NonTerminal(final Rule<T> rule) {
+        super(1);
         assert rule != null;
         this.rule = rule;
         rule.incUseCount();
@@ -42,7 +42,6 @@ class NonTerminal<T> extends Symbol<T> {
     }
 
     public void checkExpand(final Grammar<T> grammar) {
-        assert this.rule.getUseCount() > 0;
         assert this.count >= 1;
         if (this.count == 1 && this.rule.getUseCount() == 1) {
             if (!(this.prev instanceof Dummy<?>))
@@ -54,6 +53,22 @@ class NonTerminal<T> extends Symbol<T> {
             linkTogether(this.rule.dummy.prev, this.next);
             grammar.checkDigram(this.prev);
             grammar.checkDigram(this.rule.dummy.prev);
+        }
+    }
+
+    public void checkSubstRule(final Grammar<T> grammar) {
+        assert this.count >= 1;
+        if (this.rule.dummy.next.next == this.rule.dummy) {
+            if (!(this.prev instanceof Dummy<?>))
+                grammar.removeDigram(this.prev);
+            if (!(this.next instanceof Dummy<?>))
+                grammar.removeDigram(this);
+            final Symbol<T> newSymbol = this.rule.dummy.next.clone();
+            newSymbol.count *= this.count;
+            remove();
+            this.next.insertBefore(newSymbol);
+            if (!grammar.checkDigram(this.prev))
+                grammar.checkDigram(this);
         }
     }
 

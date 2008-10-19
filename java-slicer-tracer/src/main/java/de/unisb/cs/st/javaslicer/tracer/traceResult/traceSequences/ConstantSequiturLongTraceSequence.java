@@ -1,5 +1,6 @@
 package de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences;
 
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.ListIterator;
 
@@ -13,8 +14,13 @@ public class ConstantSequiturLongTraceSequence implements ConstantLongTraceSeque
 
         private final ListIterator<Long> it;
 
-        public BackwardIterator(final ListIterator<Long> it) {
+        private long lastValue;
+
+        public BackwardIterator(final ListIterator<Long> it) throws IOException {
             this.it = it;
+            if (!it.hasPrevious())
+                throw new IOException("Illegal sequitur sequence");
+            this.lastValue = it.previous();
         }
 
         @Override
@@ -24,7 +30,9 @@ public class ConstantSequiturLongTraceSequence implements ConstantLongTraceSeque
 
         @Override
         public Long next() {
-            return this.it.previous();
+            final long oldValue = this.lastValue;
+            this.lastValue -= this.it.previous();
+            return oldValue;
         }
 
         @Override
@@ -41,7 +49,7 @@ public class ConstantSequiturLongTraceSequence implements ConstantLongTraceSeque
     }
 
     @Override
-    public Iterator<Long> backwardIterator() {
+    public Iterator<Long> backwardIterator() throws IOException {
         return new BackwardIterator(this.sequence.iterator(this.sequence.getLength()));
     }
 

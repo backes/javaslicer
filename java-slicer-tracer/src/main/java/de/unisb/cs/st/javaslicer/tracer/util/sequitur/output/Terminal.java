@@ -9,10 +9,10 @@ import de.unisb.cs.st.javaslicer.tracer.util.sequitur.output.Rule.Dummy;
 // package-private
 class Terminal<T> extends Symbol<T> {
 
-    private final T value;
-    protected int count = 1;
+    protected final T value;
 
     public Terminal(final T value) {
+        super(1);
         this.value = value;
     }
 

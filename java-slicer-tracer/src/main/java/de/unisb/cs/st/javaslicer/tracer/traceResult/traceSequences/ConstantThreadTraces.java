@@ -16,20 +16,23 @@ public class ConstantThreadTraces {
 
     public static ConstantThreadTraces readFrom(final DataInputStream in) throws IOException {
         final byte format = in.readByte();
-        if ((format & TraceSequence.FORMAT_GZIP) != 0)
+        switch (format) {
+        case 0:
+            // just for debugging (NullThreadTracer)
+            return new ConstantThreadTraces((byte) 0);
+        case TraceSequence.FORMAT_GZIP:
             return new ConstantThreadTraces(TraceSequence.FORMAT_GZIP);
-        else if ((format & TraceSequence.FORMAT_SEQUITUR) != 0)
+        case TraceSequence.FORMAT_SEQUITUR:
             try {
                 return new SequiturThreadTraces(in);
             } catch (final ClassNotFoundException e) {
                 throw new IOException(e);
             }
-        else if ((format & TraceSequence.FORMAT_UNCOMPRESSED) != 0)
+        case TraceSequence.FORMAT_UNCOMPRESSED:
             return new ConstantThreadTraces(TraceSequence.FORMAT_UNCOMPRESSED);
-        else if (format == 0)
-            return new ConstantThreadTraces((byte) 0);
-        else
+        default:
             throw new IOException("corrupted data (unknown trace sequence format)");
+        }
     }
 
     public ConstantTraceSequence readSequence(final DataInputStream in, final MultiplexedFileReader file) throws IOException {

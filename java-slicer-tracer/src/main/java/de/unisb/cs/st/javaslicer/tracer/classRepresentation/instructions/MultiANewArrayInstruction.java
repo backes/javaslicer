@@ -43,7 +43,9 @@ public class MultiANewArrayInstruction extends AbstractInstruction {
         out.writeInt(this.dims);
     }
 
-    public static MultiANewArrayInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
+    public static MultiANewArrayInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo,
+            @SuppressWarnings("unused") final int opcode,
+            final int index, final int lineNumber) throws IOException {
         final String typeDesc = in.readUTF();
         final int dims = in.readInt();
         return new MultiANewArrayInstruction(methodInfo.getMethod(), typeDesc, dims, lineNumber, index);

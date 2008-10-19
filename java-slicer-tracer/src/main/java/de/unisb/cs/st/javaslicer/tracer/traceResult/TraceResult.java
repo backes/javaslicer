@@ -123,15 +123,14 @@ public class TraceResult {
 
         while ((mid = (left + right) / 2) != left) {
             final ThreadTraceResult midVal = this.threadTraces.get(mid);
-            if (midVal.getThreadId() < threadId)
+            if (midVal.getThreadId() <= threadId)
                 left = mid;
-            else if (midVal.getThreadId() > threadId)
-                right = mid;
             else
-                return midVal;
+                right = mid;
         }
-        // not found:
-        return null;
+
+        final ThreadTraceResult found = this.threadTraces.get(mid);
+        return found.getThreadId() == threadId ? found : null;
     }
 
     /**

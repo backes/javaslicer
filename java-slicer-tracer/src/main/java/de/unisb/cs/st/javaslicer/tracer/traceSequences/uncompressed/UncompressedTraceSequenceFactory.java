@@ -12,7 +12,7 @@ import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.Type;
 public class UncompressedTraceSequenceFactory implements TraceSequenceFactory, TraceSequenceFactory.PerThread {
 
     @Override
-    public TraceSequence createTraceSequence(final Type type, final Tracer tracer) throws IOException {
+    public TraceSequence createTraceSequence(final Type type, final Tracer tracer) {
         switch (type) {
         case INTEGER:
             return new UncompressedIntegerTraceSequence(tracer);

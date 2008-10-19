@@ -43,7 +43,9 @@ public class IIncInstruction extends AbstractInstruction {
         out.writeInt(this.localVarIndex);
     }
 
-    public static IIncInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
+    public static IIncInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo,
+            @SuppressWarnings("unused") final int opcode,
+            final int index, final int lineNumber) throws IOException {
         final int localVarIndex = in.readInt();
         return new IIncInstruction(methodInfo.getMethod(), localVarIndex, lineNumber, index);
     }

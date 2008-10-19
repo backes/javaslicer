@@ -6,7 +6,7 @@ import java.io.ObjectOutputStream;
 public class SharedOutputGrammar<T> {
 
     protected final Grammar<T> grammar;
-    private final ObjectWriter<? super T> objectWriter;
+    protected final ObjectWriter<? super T> objectWriter;
 
     public SharedOutputGrammar() {
         this(null);
@@ -25,6 +25,11 @@ public class SharedOutputGrammar<T> {
 
     public void writeOut(final ObjectOutputStream objOut) throws IOException {
         this.grammar.writeOut(objOut, this.objectWriter);
+    }
+
+    @Override
+    public String toString() {
+        return this.grammar.toString();
     }
 
 }

@@ -281,9 +281,10 @@ public class TracingMethodInstrumenter implements Opcodes {
                 transformMultiANewArrayInsn((MultiANewArrayInsnNode)insnNode);
                 break;
             case AbstractInsnNode.FRAME:
+                // ignore
                 break;
             case AbstractInsnNode.LINE:
-                transformLineNumber((LineNumberNode)insnNode);
+                // ignore
                 break;
             default:
                 throw new RuntimeException("Unknown instruction type " + insnNode.getType()
@@ -690,10 +691,6 @@ public class TracingMethodInstrumenter implements Opcodes {
 
     private void transformLdcInsn(final LdcInsnNode insn) {
         registerInstruction(new LdcInstruction(this.readMethod, this.currentLine, insn.cst));
-    }
-
-    private void transformLineNumber(final LineNumberNode lineNumber) {
-        //this.labelLineNumbers.put(lineNumber.start, lineNumber.line);
     }
 
     private void transformLookupSwitchInsn(final LookupSwitchInsnNode insn) {

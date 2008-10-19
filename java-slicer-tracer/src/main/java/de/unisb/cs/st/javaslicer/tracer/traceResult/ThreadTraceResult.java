@@ -14,6 +14,7 @@ import java.util.NoSuchElementException;
 
 import org.objectweb.asm.Opcodes;
 
+import de.unisb.cs.st.javaslicer.tracer.UntracedThread;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
@@ -156,7 +157,7 @@ public class ThreadTraceResult {
             if (ThreadTraceResult.this.traceResult.debug) {
                 try {
                     this.debugFileWriter = new PrintWriter(new FileOutputStream(new File("iteration_debug.log")));
-                    Runtime.getRuntime().addShutdownHook(new Thread() {
+                    Runtime.getRuntime().addShutdownHook(new UntracedThread() {
                         @Override
                         public void run() {
                             BackwardInstructionIterator.this.debugFileWriter.close();
@@ -237,7 +238,11 @@ public class ThreadTraceResult {
         public long getNextLong(final int seqIndex) throws TracerException {
             Iterator<Long> it = this.longSequenceBackwardIterators.get(seqIndex);
             if (it == null) {
-                it = ((ConstantLongTraceSequence)ThreadTraceResult.this.sequences.get(seqIndex)).backwardIterator();
+                try {
+                    it = ((ConstantLongTraceSequence)ThreadTraceResult.this.sequences.get(seqIndex)).backwardIterator();
+                } catch (final IOException e) {
+                    throw new TracerException(e);
+                }
                 this.longSequenceBackwardIterators.put(seqIndex, it);
             }
             if (!it.hasNext())
@@ -248,7 +253,11 @@ public class ThreadTraceResult {
         public int getNextInteger(final int seqIndex) throws TracerException {
             Iterator<Integer> it = this.integerSequenceBackwardIterators.get(seqIndex);
             if (it == null) {
-                it = ((ConstantIntegerTraceSequence)ThreadTraceResult.this.sequences.get(seqIndex)).backwardIterator();
+                try {
+                    it = ((ConstantIntegerTraceSequence)ThreadTraceResult.this.sequences.get(seqIndex)).backwardIterator();
+                } catch (final IOException e) {
+                    throw new TracerException(e);
+                }
                 this.integerSequenceBackwardIterators.put(seqIndex, it);
             }
             if (!it.hasNext())

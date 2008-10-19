@@ -8,9 +8,11 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
 
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.Identifiable;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectIdentifier;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
@@ -36,9 +38,9 @@ public class TracingThreadTracer implements ThreadTracer {
         }
 
     }
-    protected static class WriteOutThread extends Thread {
+    private static class WriteOutThread extends UntracedThread {
 
-        public final LinkedBlockingQueue<WriteOutJob> jobs = new LinkedBlockingQueue<WriteOutJob>(MAX_CACHED_BLOCKS);
+        public final BlockingQueue<WriteOutJob> jobs = new ArrayBlockingQueue<WriteOutJob>(MAX_CACHED_BLOCKS);
 
         private final TraceSequenceFactory.PerThread traceSequenceFactory;
         private final IntegerMap<TraceSequence> sequences = new IntegerMap<TraceSequence>();
@@ -48,9 +50,16 @@ public class TracingThreadTracer implements ThreadTracer {
 
         public CountDownLatch ready = new CountDownLatch(1);
 
+        private final int minPrio;
+        private final int maxPrio;
+
         public WriteOutThread(final String threadName, final TraceSequenceFactory.PerThread traceSequenceFactory,
-                final List<Type> threadSequenceTypes, final Tracer tracer) {
+                final List<Type> threadSequenceTypes, final Tracer tracer, final int minPrio, final int maxPrio) {
             super("Writer for " + threadName);
+            setDaemon(true);
+            setPriority(minPrio);
+            this.minPrio = minPrio;
+            this.maxPrio = maxPrio;
             this.traceSequenceFactory = traceSequenceFactory;
             this.threadSequenceTypes = threadSequenceTypes;
             this.tracer = tracer;
@@ -64,9 +73,10 @@ public class TracingThreadTracer implements ThreadTracer {
                     try {
                         job = this.jobs.take();
                     } catch (final InterruptedException e) {
-                        e.printStackTrace();
+                        this.tracer.error(e);
                         return;
                     }
+                    adjustPriority();
                     final int count = job.count;
                     final int[] seqNr = job.seqNr;
                     if (job.intSeqVal != null) {
@@ -104,21 +114,36 @@ public class TracingThreadTracer implements ThreadTracer {
                 System.err.println("Error writing the trace: " + e);
                 this.tracer.error(e);
             }
+
+        }
+
+        public void addJob(final WriteOutJob job) {
+            try {
+                /*
+                System.out.println(Thread.currentThread().getName() + " queue length:  " +
+                        this.jobs.size());
+                */
+                this.jobs.put(job);
+                adjustPriority();
+            } catch (final InterruptedException e) {
+                System.err.println(e);
+                this.tracer.error(e);
+                // and return without unpause:
+                return;
+            }
+        }
+
+        private void adjustPriority() {
+            this.setPriority(this.minPrio + (this.maxPrio - this.minPrio) * this.jobs.size() / MAX_CACHED_BLOCKS);
         }
 
         private void finish() throws IOException {
-//          final long startTime = System.nanoTime();
-
             for (final TraceSequence seq: this.sequences.values())
                 seq.finish();
 
             this.traceSequenceFactory.finish();
 
             this.ready.countDown();
-
-//            final long endTime = System.nanoTime();
-//            System.out.format("Finishing %s took %.3f seconds%n", this.threadName, 1e-9*(endTime - startTime));
-
         }
 
         public void writeOut(final DataOutputStream out) throws IOException {
@@ -142,7 +167,7 @@ public class TracingThreadTracer implements ThreadTracer {
     private final Tracer tracer;
     private volatile int paused = 0;
 
-    protected static int MAX_CACHED_BLOCKS = 10;
+    protected static int MAX_CACHED_BLOCKS = 5;
 
     private static int CACHE_SIZE = 1<<18;
     private int[] intSeqNr = new int[CACHE_SIZE];
@@ -159,7 +184,7 @@ public class TracingThreadTracer implements ThreadTracer {
         if (DEBUG_TRACE_FILE) {
             try {
                 debugFile = new PrintWriter(new BufferedWriter(new FileWriter(new File("debug.log"))));
-                Runtime.getRuntime().addShutdownHook(new Thread("debug file closer") {
+                Runtime.getRuntime().addShutdownHook(new UntracedThread("debug file closer") {
                     @Override
                     public void run() {
                         debugFile.close();
@@ -177,7 +202,8 @@ public class TracingThreadTracer implements ThreadTracer {
         this.threadName = thread.getName();
         this.tracer = tracer;
         this.writeOutThread = new WriteOutThread(this.threadName, tracer.seqFactory.forThreadTracer(this),
-                threadSequenceTypes, tracer);
+                threadSequenceTypes, tracer, Thread.MIN_PRIORITY, Thread.MAX_PRIORITY);
+        this.writeOutThread.start();
     }
 
     public synchronized void traceInt(final int value, final int traceSequenceIndex) {
@@ -188,7 +214,7 @@ public class TracingThreadTracer implements ThreadTracer {
         this.intSeqVal[this.intSeqIndex] = value;
         if (++this.intSeqIndex == CACHE_SIZE) {
             pauseTracing();
-            this.writeOutThread.jobs.add(new WriteOutJob(this.intSeqNr, this.intSeqVal, null, CACHE_SIZE));
+            this.writeOutThread.addJob(new WriteOutJob(this.intSeqNr, this.intSeqVal, null, CACHE_SIZE));
             unpauseTracing();
             this.intSeqIndex = 0;
             this.intSeqNr = new int[CACHE_SIZE];
@@ -200,12 +226,20 @@ public class TracingThreadTracer implements ThreadTracer {
         if (this.paused > 0)
             return;
 
-        final long objId = ObjectIdentifier.instance.getObjectId(obj);
+        final long objId;
+        if (obj instanceof Identifiable) {
+            objId = ((Identifiable)obj).__tracing_get_object_id();
+        } else {
+            pauseTracing();
+            objId = ObjectIdentifier.instance.getObjectId(obj);
+            unpauseTracing();
+        }
+        assert objId != 0;
         this.longSeqNr[this.longSeqIndex] = traceSequenceIndex;
         this.longSeqVal[this.longSeqIndex] = objId;
         if (++this.longSeqIndex == CACHE_SIZE) {
             pauseTracing();
-            this.writeOutThread.jobs.add(new WriteOutJob(this.longSeqNr, null, this.longSeqVal, CACHE_SIZE));
+            this.writeOutThread.addJob(new WriteOutJob(this.longSeqNr, null, this.longSeqVal, CACHE_SIZE));
             unpauseTracing();
             this.longSeqIndex = 0;
             this.longSeqNr = new int[CACHE_SIZE];
@@ -221,7 +255,7 @@ public class TracingThreadTracer implements ThreadTracer {
         if (this.paused > 0)
             return;
 
-        if (this.tracer.debug && this.threadId == 1) {
+        if (DEBUG_TRACE_FILE && this.threadId == 1) {
             pauseTracing();
             debugFile.println(instructionIndex);
             unpauseTracing();
@@ -230,28 +264,36 @@ public class TracingThreadTracer implements ThreadTracer {
         this.lastInstructionIndex = instructionIndex;
     }
 
-    public synchronized void finish() throws IOException {
+    public synchronized void finish() {
         if (this.writeOutThread.ready.getCount() == 0)
             return;
+
+        final long startTime = System.nanoTime();
+
         pauseTracing();
 
-        this.writeOutThread.jobs.add(new WriteOutJob(null, null, null, 0));
+        if (this.intSeqIndex != 0)
+            this.writeOutThread.addJob(new WriteOutJob(this.intSeqNr, this.intSeqVal, null, this.intSeqIndex));
+        if (this.longSeqIndex != 0)
+            this.writeOutThread.addJob(new WriteOutJob(this.longSeqNr, null, this.longSeqVal, this.longSeqIndex));
+
+        this.writeOutThread.addJob(new WriteOutJob(null, null, null, 0));
         try {
             this.writeOutThread.ready.await();
         } catch (final InterruptedException e) {
             this.tracer.error(e);
         }
+
+        final long endTime = System.nanoTime();
+        System.out.format("Finishing %s took %.3f seconds%n", this.threadName, 1e-9*(endTime - startTime));
     }
 
     public void writeOut(final DataOutputStream out) throws IOException {
         finish();
-//        final long startTime = System.nanoTime();
         out.writeLong(this.threadId);
         out.writeUTF(this.threadName);
         this.writeOutThread.writeOut(out);
         out.writeInt(this.lastInstructionIndex);
-//        final long endTime = System.nanoTime();
-//        System.out.format("Writing %s took %.3f seconds%n", this.threadName, 1e-9*(endTime - startTime));
     }
 
     public synchronized void pauseTracing() {

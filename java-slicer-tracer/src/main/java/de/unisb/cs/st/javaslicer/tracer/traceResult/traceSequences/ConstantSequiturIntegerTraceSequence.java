@@ -1,5 +1,6 @@
 package de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences;
 
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.ListIterator;
 
@@ -13,8 +14,13 @@ public class ConstantSequiturIntegerTraceSequence implements ConstantIntegerTrac
 
         private final ListIterator<Integer> it;
 
-        public BackwardIterator(final ListIterator<Integer> it) {
+        private int lastValue;
+
+        public BackwardIterator(final ListIterator<Integer> it) throws IOException {
             this.it = it;
+            if (!it.hasPrevious())
+                throw new IOException("Illegal sequitur sequence");
+            this.lastValue = it.previous();
         }
 
         @Override
@@ -24,7 +30,9 @@ public class ConstantSequiturIntegerTraceSequence implements ConstantIntegerTrac
 
         @Override
         public Integer next() {
-            return this.it.previous();
+            final int oldValue = this.lastValue;
+            this.lastValue -= this.it.previous();
+            return oldValue;
         }
 
         @Override
@@ -41,7 +49,7 @@ public class ConstantSequiturIntegerTraceSequence implements ConstantIntegerTrac
     }
 
     @Override
-    public Iterator<Integer> backwardIterator() {
+    public Iterator<Integer> backwardIterator() throws IOException {
         return new BackwardIterator(this.sequence.iterator(this.sequence.getLength()));
     }
 
