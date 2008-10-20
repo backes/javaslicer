@@ -42,12 +42,12 @@ public class NullThreadTracer implements ThreadTracer {
     }
 
     @Override
-    public void decStackSize() {
+    public void enterMethod(final int instructionIndex) {
         // nop
     }
 
     @Override
-    public void incStackSize() {
+    public void leaveMethod(final int instructionIndex) {
         // nop
     }
 

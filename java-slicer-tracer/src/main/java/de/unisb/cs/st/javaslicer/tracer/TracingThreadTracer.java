@@ -131,7 +131,7 @@ public class TracingThreadTracer implements ThreadTracer {
                             if (seq == null) {
                                 seq = this.traceSequenceFactory.createTraceSequence(
                                         this.threadSequenceTypes.get(seqNr[i]), this.tracer);
-                                this.sequences.put(job.seqNr[i], seq);
+                                this.sequences.put(seqNr[i], seq);
                             }
                             assert seq instanceof IntegerTraceSequence;
 
@@ -144,7 +144,7 @@ public class TracingThreadTracer implements ThreadTracer {
                             if (seq == null) {
                                 seq = this.traceSequenceFactory.createTraceSequence(
                                         this.threadSequenceTypes.get(seqNr[i]), this.tracer);
-                                this.sequences.put(job.seqNr[i], seq);
+                                this.sequences.put(seqNr[i], seq);
                             }
                             assert seq instanceof LongTraceSequence;
 
@@ -221,7 +221,7 @@ public class TracingThreadTracer implements ThreadTracer {
 
     }
 
-    public static final boolean DEBUG_TRACE_FILE = true;
+    public static final boolean DEBUG_TRACE_FILE = false;
 
     private final long threadId;
     private final String threadName;
@@ -243,7 +243,7 @@ public class TracingThreadTracer implements ThreadTracer {
 
     private final WriteOutThread writeOutThread;
 
-    private int stackSize = 0;
+    private volatile int stackSize = 0;
 
     protected static PrintWriter debugFile;
     static {
@@ -381,15 +381,33 @@ public class TracingThreadTracer implements ThreadTracer {
     }
 
     @Override
-    public void decStackSize() {
-        if (this.paused == 0)
-            --this.stackSize;
+    public synchronized void enterMethod(final int instructionIndex) {
+        if (this.paused > 0)
+            return;
+        ++this.stackSize;
+
+        if (DEBUG_TRACE_FILE && this.threadId == 1) {
+            pauseTracing();
+            debugFile.println(instructionIndex);
+            unpauseTracing();
+        }
+
+        this.lastInstructionIndex = instructionIndex;
     }
 
     @Override
-    public void incStackSize() {
-        if (this.paused == 0)
-            ++this.stackSize;
+    public synchronized void leaveMethod(final int instructionIndex) {
+        if (this.paused > 0)
+            return;
+        --this.stackSize;
+
+        if (DEBUG_TRACE_FILE && this.threadId == 1) {
+            pauseTracing();
+            debugFile.println(instructionIndex);
+            unpauseTracing();
+        }
+
+        this.lastInstructionIndex = instructionIndex;
     }
 
 }

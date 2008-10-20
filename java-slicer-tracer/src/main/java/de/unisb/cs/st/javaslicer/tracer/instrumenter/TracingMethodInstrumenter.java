@@ -124,6 +124,8 @@ public class TracingMethodInstrumenter implements Opcodes {
 
     }
 
+    private static enum LabelType { METHODENTRY, METHODEXIT, DEFAULT }
+
     private final Tracer tracer;
     private final ReadMethod readMethod;
     private final ClassNode classNode;
@@ -229,14 +231,10 @@ public class TracingMethodInstrumenter implements Opcodes {
 
         // each method must start with a (dedicated) label:
         assert this.readMethod.getInstructions().isEmpty();
-        traceLabel(null);
+        traceLabel(null, LabelType.METHODENTRY);
         assert this.readMethod.getInstructions().size() == 1
             && this.readMethod.getInstructions().get(0) instanceof LabelMarker;
         this.readMethod.setMethodEntryLabel((LabelMarker) this.readMethod.getInstructions().get(0));
-
-        this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
-        this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
-                Type.getInternalName(ThreadTracer.class), "incStackSize", "()V"));
 
         // needed later:
         final LabelNode l0 = new LabelNode();
@@ -301,14 +299,11 @@ public class TracingMethodInstrumenter implements Opcodes {
         final LabelNode l1 = new LabelNode();
         this.instructionIterator.add(l1);
         final int newPos = this.readMethod.getInstructions().size();
-        traceLabel(null);
+        traceLabel(null, LabelType.METHODEXIT);
         assert this.readMethod.getInstructions().size() == newPos+1;
         final AbstractInstruction methodLeaveLabel = this.readMethod.getInstructions().get(newPos);
         assert methodLeaveLabel instanceof LabelMarker;
         this.readMethod.setMethodLeaveLabel((LabelMarker) methodLeaveLabel);
-        this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
-        this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
-                Type.getInternalName(ThreadTracer.class), "decStackSize", "()V"));
         this.instructionIterator.add(new InsnNode(ATHROW));
 
         // add a try catch block around the method so that we can trace when this method is left
@@ -451,7 +446,7 @@ public class TracingMethodInstrumenter implements Opcodes {
             else
                 break;
         }
-        traceLabel(null);
+        traceLabel(null, LabelType.DEFAULT);
     }
 
     private boolean isPrivateNotNative(final String methodName, final String methodDesc) {
@@ -586,6 +581,7 @@ public class TracingMethodInstrumenter implements Opcodes {
         int arrayTraceSeqIndex = -1;
         int indexTraceSeqIndex = -1;
 
+        LabelType type = LabelType.DEFAULT;
         switch (insn.getOpcode()) {
         // the not interesting ones:
         case NOP:
@@ -654,11 +650,7 @@ public class TracingMethodInstrumenter implements Opcodes {
 
         // control-flow statements:
         case IRETURN: case LRETURN: case FRETURN: case DRETURN: case ARETURN: case RETURN:
-            this.instructionIterator.previous();
-            this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
-            this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
-                    Type.getInternalName(ThreadTracer.class), "decStackSize", "()V"));
-            this.instructionIterator.next();
+            type = LabelType.METHODEXIT;
             break;
 
         // special things
@@ -686,10 +678,10 @@ public class TracingMethodInstrumenter implements Opcodes {
             this.instructionIterator.next();
 
             registerInstruction(new ArrayInstruction(this.readMethod, insn.getOpcode(), this.currentLine,
-                    arrayTraceSeqIndex, indexTraceSeqIndex));
+                    arrayTraceSeqIndex, indexTraceSeqIndex), type);
         } else {
             assert indexTraceSeqIndex == -1;
-            registerInstruction(new SimpleInstruction(this.readMethod, insn.getOpcode(), this.currentLine));
+            registerInstruction(new SimpleInstruction(this.readMethod, insn.getOpcode(), this.currentLine), type);
         }
     }
 
@@ -743,10 +735,10 @@ public class TracingMethodInstrumenter implements Opcodes {
         final Integer line = this.labelLineNumbers.get(label);
         if (line != null)
             this.currentLine = line;
-        traceLabel(label);
+        traceLabel(label, LabelType.DEFAULT);
     }
 
-    private void traceLabel(final LabelNode label) {
+    private void traceLabel(final LabelNode label, final LabelType type) {
         if (label == null || this.jumpTargetLabels.contains(label)) {
             final int seq = this.tracer.newIntegerTraceSequence();
             final boolean isAdditionalLabel = label == null;
@@ -772,8 +764,19 @@ public class TracingMethodInstrumenter implements Opcodes {
             if (TracingThreadTracer.DEBUG_TRACE_FILE) {
                 this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
                 this.instructionIterator.add(getIntConstInsn(lm.getIndex()));
-                this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
-                        Type.getInternalName(ThreadTracer.class), "passInstruction", "(I)V"));
+                switch (type) {
+                case METHODENTRY:
+                    this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
+                            Type.getInternalName(ThreadTracer.class), "enterMethod", "(I)V"));
+                    break;
+                case METHODEXIT:
+                    this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
+                            Type.getInternalName(ThreadTracer.class), "leaveMethod", "(I)V"));
+                    break;
+                default:
+                    this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
+                            Type.getInternalName(ThreadTracer.class), "passInstruction", "(I)V"));
+                }
             }
             ++TracingMethodInstrumenter.statsInstructions;
         } else {
@@ -782,12 +785,26 @@ public class TracingMethodInstrumenter implements Opcodes {
     }
 
     private void registerInstruction(final AbstractInstruction instruction) {
+        registerInstruction(instruction, LabelType.DEFAULT);
+    }
+    private void registerInstruction(final AbstractInstruction instruction, final LabelType type) {
         this.readMethod.addInstruction(instruction);
         this.instructionIterator.previous();
         this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
         this.instructionIterator.add(getIntConstInsn(instruction.getIndex()));
-        this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
-                Type.getInternalName(ThreadTracer.class), "passInstruction", "(I)V"));
+        switch (type) {
+        case METHODENTRY:
+            this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
+                    Type.getInternalName(ThreadTracer.class), "enterMethod", "(I)V"));
+            break;
+        case METHODEXIT:
+            this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
+                    Type.getInternalName(ThreadTracer.class), "leaveMethod", "(I)V"));
+            break;
+        default:
+            this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
+                    Type.getInternalName(ThreadTracer.class), "passInstruction", "(I)V"));
+        }
         this.instructionIterator.next();
         ++TracingMethodInstrumenter.statsInstructions;
     }

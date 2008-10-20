@@ -266,7 +266,9 @@ public class IntegerMap<V> implements Map<Integer, V>, Cloneable {
                 switchToMap();
                 // and continue with the map code below...
             } else {
-                final int newSize = 3 * key / 2 + 1;
+                int newSize = 3 * key / 2 + 1;
+                if (newSize < 0 || newSize < this.list.length)
+                    newSize = Integer.MAX_VALUE;
                 final V[] oldList = this.list;
                 this.list = (V[]) new Object[newSize];
                 System.arraycopy(oldList, 0, this.list, 0, oldList.length);
@@ -291,10 +293,13 @@ public class IntegerMap<V> implements Map<Integer, V>, Cloneable {
     @SuppressWarnings("unchecked")
     private void switchToMap() {
         this.modCount++;
-        final int minTableSize = (int) (1.1 * this.list.length / this.loadFactor);
+        final double minTableSize = 1.1 * this.list.length / this.loadFactor;
         int mapTableSize = 1;
-        while (mapTableSize < minTableSize)
+        while (mapTableSize < minTableSize) {
+            if (mapTableSize == MAXIMUM_CAPACITY)
+                throw new IllegalStateException("Maximum map size exceeded");
             mapTableSize <<= 1;
+        }
 
         this.mapTable = new Entry[mapTableSize];
         boolean minSet = false;

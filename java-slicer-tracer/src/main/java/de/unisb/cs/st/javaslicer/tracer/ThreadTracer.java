@@ -4,13 +4,13 @@ import java.io.IOException;
 
 public interface ThreadTracer {
 
-    void traceInt(final int value, final int traceSequenceIndex);
+    void traceInt(int value, int traceSequenceIndex);
 
-    void traceObject(final Object obj, final int traceSequenceIndex);
+    void traceObject(Object obj, int traceSequenceIndex);
 
-    void traceLastInstructionIndex(final int traceSequenceIndex);
+    void traceLastInstructionIndex(int traceSequenceIndex);
 
-    void passInstruction(final int instructionIndex);
+    void passInstruction(int instructionIndex);
 
     void finish() throws IOException;
 
@@ -20,8 +20,8 @@ public interface ThreadTracer {
 
     boolean isPaused();
 
-    void incStackSize();
+    void enterMethod(int instructionIndex);
 
-    void decStackSize();
+    void leaveMethod(int instructionIndex);
 
 }
