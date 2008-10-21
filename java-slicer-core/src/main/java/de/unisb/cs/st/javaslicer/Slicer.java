@@ -15,32 +15,49 @@ import java.util.Stack;
 
 import org.apache.commons.collections.Transformer;
 import org.apache.commons.collections.map.LazyMap;
+import org.objectweb.asm.Opcodes;
 
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.IIncInstruction;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult.ThreadId;
 
-public class Slicer {
+public class Slicer implements Opcodes {
 
-    public class ExecutionFrame {
+    protected static class ExecutionFrame {
 
-        final Set<Instruction> interestingInstructions = new HashSet<Instruction>();
+        public final Set<Instruction> interestingInstructions = new HashSet<Instruction>();
 
-    }
-
-    public class DynamicInformation {
-
-        public Collection<Variable> getUsedVariables() {
+        public Variable getLocalVariable(final int localVarIndex) {
             // TODO Auto-generated method stub
             return null;
         }
 
+    }
+
+    private static class DynamicInformation {
+
+        @SuppressWarnings("unchecked")
+        public static final DynamicInformation EMPTY = new DynamicInformation(Collections.EMPTY_SET, null);
+
+        private final Collection<Variable> usedVariables;
+        private final Variable definedVariables;
+
+
+        public DynamicInformation(final Collection<Variable> usedVariables, final Variable definedVariables) {
+            this.usedVariables = usedVariables;
+            this.definedVariables = definedVariables;
+        }
+
+        public Collection<Variable> getUsedVariables() {
+            return this.usedVariables;
+        }
+
         public Variable getDefinedVariable() {
-            // TODO Auto-generated method stub
-            return null;
+            return this.definedVariables;
         }
 
     }
@@ -147,6 +164,7 @@ public class Slicer {
                     });
 
         final Stack<ExecutionFrame> frames = new Stack<ExecutionFrame>();
+        frames.push(new ExecutionFrame());
         final Stack<Instruction> operandStack = new Stack<Instruction>();
 
         final Set<Variable> interestingVariables = new HashSet<Variable>();
@@ -156,7 +174,7 @@ public class Slicer {
             final Instance instance = backwardInsnItr.next();
             final Instruction instruction = instance.getInstruction();
 
-            final DynamicInformation dynInfo = simulateInstructions(instance);
+            final DynamicInformation dynInfo = simulateInstruction(instance, operandStack, frames.peek());
 
             while (frames.size() <= instance.getStackDepth()) {
                 frames.push(new ExecutionFrame());
@@ -232,9 +250,57 @@ public class Slicer {
         return intersection;
     }
 
-    private DynamicInformation simulateInstructions(final Instance inst) {
+    private DynamicInformation simulateInstruction(final Instance inst, final Stack<Instruction> operandStack, final ExecutionFrame executionFrame) {
+        final Variable var;
+        final Collection<Variable> vars;
+        switch (inst.getType()) {
+        case IINC:
+            var = executionFrame.getLocalVariable(((IIncInstruction)inst).getLocalVarIndex());
+            return new DynamicInformation(Collections.singleton(var), var);
+        case INT:
+            operandStack.push(inst.getInstruction());
+            return DynamicInformation.EMPTY;
+        case SIMPLE:
+            return simpulateSimpleInsn(inst, operandStack, executionFrame);
+        }
         // TODO Auto-generated method stub
         return null;
+    }
+
+    private DynamicInformation simpulateSimpleInsn(final Instance inst, final Stack<Instruction> operandStack,
+            final ExecutionFrame executionFrame) {
+        DynamicInformation dynInfo;
+        Collection<Variable> vars;
+        switch (inst.getOpcode()) {
+        case NOP:
+            return DynamicInformation.EMPTY;
+
+        case ACONST_NULL: case ICONST_M1: case ICONST_0: case ICONST_1: case ICONST_2: case ICONST_3:
+        case ICONST_4: case ICONST_5: case LCONST_0: case LCONST_1: case FCONST_0: case FCONST_1: case FCONST_2:
+        case DCONST_0: case DCONST_1:
+            operandStack.push(inst.getInstruction());
+            return DynamicInformation.EMPTY;
+
+        case POP: case POP2: case DUP: case DUP_X1: case DUP_X2: case DUP2: case DUP2_X1: case DUP2_X2: case SWAP:
+        case IADD: case LADD: case FADD: case DADD: case ISUB: case LSUB: case FSUB: case DSUB: case IMUL:
+        case LMUL: case FMUL: case DMUL: case IDIV: case LDIV: case FDIV: case DDIV: case IREM: case LREM:
+        case FREM: case DREM: case INEG: case LNEG: case FNEG: case DNEG: case ISHL: case LSHL: case ISHR:
+        case LSHR: case IUSHR: case LUSHR: case IAND: case LAND: case IOR: case LOR: case IXOR: case LXOR:
+
+        case I2L: case I2F: case I2D: case L2I: case L2F: case L2D: case F2I: case F2L: case F2D: case D2I:
+        case D2L: case D2F: case I2B: case I2C: case I2S:
+            vars = Collections.singleton((Variable)new StackEntry(operandStack.size()-1));
+            dynInfo = new DynamicInformation(vars, null);
+            operandStack.push(inst.getInstruction());
+            return dynInfo;
+
+        case LCMP: case FCMPL: case FCMPG: case DCMPL: case DCMPG:
+        case IRETURN: case LRETURN: case FRETURN: case DRETURN: case ARETURN: case RETURN:
+        case ARRAYLENGTH: case ATHROW: case MONITORENTER: case MONITOREXIT:
+        default:
+            assert false;
+            return null;
+        }
     }
 
 }
