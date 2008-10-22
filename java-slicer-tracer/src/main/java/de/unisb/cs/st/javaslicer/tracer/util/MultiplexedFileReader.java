@@ -60,12 +60,14 @@ public class MultiplexedFileReader {
             }
         }
 
-        private int compDepth(final long len) {
+        private int compDepth(final long len) throws IOException {
             int d = 0;
             long max = MultiplexedFileReader.this.blockSize;
             while (max < len) {
                 ++d;
                 max *= MultiplexedFileReader.this.blockSize/4;
+                if (max <= MultiplexedFileReader.this.blockSize)
+                    throw new IOException("Illegal stream length: " + len);
             }
             return d;
         }

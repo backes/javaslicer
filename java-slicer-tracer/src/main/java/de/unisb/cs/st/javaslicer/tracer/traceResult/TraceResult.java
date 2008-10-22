@@ -213,11 +213,9 @@ public class TraceResult {
                     "Nr", "Location", "Dep", "OccNr", "Instruction");
             while (it.hasNext()) {
                 final Instance inst = it.next();
-                if (++nr % 1000000 != 0)
-                    continue;
                 final ReadMethod method = inst.getMethod();
                 final ReadClass class0 = method.getReadClass();
-                System.out.format(format, nr, class0.getName()+"."
+                System.out.format(format, nr++, class0.getName()+"."
                         +method.getName()+":"+inst.getLineNumber(),
                         inst.getStackDepth(),
                         inst.getOccurenceNumber(), inst.toString());

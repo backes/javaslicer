@@ -295,6 +295,8 @@ public class TracingThreadTracer implements ThreadTracer {
         final long objId;
         if (obj instanceof Identifiable) {
             objId = ((Identifiable)obj).__tracing_get_object_id();
+        } else if (obj == null) {
+            objId = 0;
         } else {
             pauseTracing();
             objId = ObjectIdentifier.instance.getObjectId(obj);
