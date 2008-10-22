@@ -2,6 +2,7 @@ package de.unisb.cs.st.javaslicer;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -12,55 +13,24 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.collections.Transformer;
 import org.apache.commons.collections.map.LazyMap;
 import org.objectweb.asm.Opcodes;
 
+import de.unisb.cs.st.javaslicer.VariableUsages.SimpleVariableUsage;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.IIncInstruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.VarInstruction;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult.ThreadId;
 
 public class Slicer implements Opcodes {
-
-    protected static class ExecutionFrame {
-
-        public final Set<Instruction> interestingInstructions = new HashSet<Instruction>();
-
-        public Variable getLocalVariable(final int localVarIndex) {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-    }
-
-    private static class DynamicInformation {
-
-        @SuppressWarnings("unchecked")
-        public static final DynamicInformation EMPTY = new DynamicInformation(Collections.EMPTY_SET, null);
-
-        private final Collection<Variable> usedVariables;
-        private final Variable definedVariables;
-
-
-        public DynamicInformation(final Collection<Variable> usedVariables, final Variable definedVariables) {
-            this.usedVariables = usedVariables;
-            this.definedVariables = definedVariables;
-        }
-
-        public Collection<Variable> getUsedVariables() {
-            return this.usedVariables;
-        }
-
-        public Variable getDefinedVariable() {
-            return this.definedVariables;
-        }
-
-    }
 
     private final TraceResult trace;
 
@@ -87,14 +57,22 @@ public class Slicer implements Opcodes {
             // ignore
         }
 
-        final SlicingCriterion sc = readSlicingCriteria(args[threadId == null ? 1 : 2]);
-
         TraceResult trace = null;
         try {
             trace = TraceResult.readFrom(traceFile);
         } catch (final IOException e) {
             System.err.println("Could not read the trace file: " + e);
             System.exit(-1);
+            return;
+        }
+
+        SlicingCriterion sc = null;
+        try {
+            sc = readSlicingCriteria(args[threadId == null ? 1 : 2], trace.getReadClasses());
+        } catch (final IllegalParameterException e) {
+            System.err.println("Error parsing slicing criterion: " + e.getMessage());
+            System.exit(-1);
+            return;
         }
 
         final List<ThreadId> threads = trace.getThreads();
@@ -120,7 +98,7 @@ public class Slicer implements Opcodes {
         }
 
         final long startTime = System.nanoTime();
-        final Set<Instruction> slice = new Slicer(trace).getDynamicSlice(tracing, sc);
+        final Set<Instruction> slice = new Slicer(trace).getDynamicSlice(tracing, sc.getInstance());
         final long endTime = System.nanoTime();
 
         System.out.println("The dynamic slice for " + sc + ":");
@@ -139,19 +117,20 @@ public class Slicer implements Opcodes {
                 + " <trace file> [<threadId>] <loc>[(<occ>)]:<var>[,<loc>[(<occ>)]:<var>]*");
     }
 
-    private static SlicingCriterion readSlicingCriteria(final String string) {
+    private static SlicingCriterion readSlicingCriteria(final String string, final List<ReadClass> readClasses)
+            throws IllegalParameterException {
         final String[] criteria = string.split(",");
         if (criteria.length == 1)
-            return SimpleSlicingCriterion.parse(criteria[0]);
+            return SimpleSlicingCriterion.parse(criteria[0], readClasses);
 
         final CompoundSlicingCriterion crit = new CompoundSlicingCriterion();
         for (final String c: criteria)
-            crit.add(SimpleSlicingCriterion.parse(c));
+            crit.add(SimpleSlicingCriterion.parse(c, readClasses));
         return crit;
     }
 
     @SuppressWarnings("unchecked")
-    private Set<Instruction> getDynamicSlice(final ThreadId thread, final SlicingCriterion sc) {
+    private Set<Instruction> getDynamicSlice(final ThreadId thread, final SlicingCriterion.Instance slicingCriterion) {
         final Iterator<Instance> backwardInsnItr = this.trace.getBackwardIterator(thread.getThreadId());
 
         final Map<ReadMethod, Map<Instruction, Set<Instruction>>> allControlDependencies =
@@ -165,7 +144,7 @@ public class Slicer implements Opcodes {
 
         final Stack<ExecutionFrame> frames = new Stack<ExecutionFrame>();
         frames.push(new ExecutionFrame());
-        final Stack<Instruction> operandStack = new Stack<Instruction>();
+        final AtomicInteger operandStack = new AtomicInteger(0);
 
         final Set<Variable> interestingVariables = new HashSet<Variable>();
         final Set<Instruction> dynamicSlice = new HashSet<Instruction>();
@@ -174,13 +153,13 @@ public class Slicer implements Opcodes {
             final Instance instance = backwardInsnItr.next();
             final Instruction instruction = instance.getInstruction();
 
-            final DynamicInformation dynInfo = simulateInstruction(instance, operandStack, frames.peek());
-
-            while (frames.size() <= instance.getStackDepth()) {
+            while (frames.size() < instance.getStackDepth()) {
                 frames.push(new ExecutionFrame());
             }
-            final ExecutionFrame currentFrame = frames.get(instance.getStackDepth());
-            while (frames.size() + 1 > instance.getStackDepth()) {
+            final ExecutionFrame currentFrame = frames.get(instance.getStackDepth()-1);
+            final VariableUsages dynInfo = simulateInstruction(instance, operandStack, currentFrame);
+
+            while (frames.size() > instance.getStackDepth()) {
                 final ExecutionFrame lastFrame = frames.pop();
                 if (!lastFrame.interestingInstructions.isEmpty()) {
                     dynamicSlice.add(instruction); // TODO check if this is the instr. that called the method
@@ -189,8 +168,8 @@ public class Slicer implements Opcodes {
                 }
             }
 
-            if (sc.matches(instance)) {
-                interestingVariables.addAll(sc.getInterestingVariables());
+            if (slicingCriterion.matches(instance)) {
+                interestingVariables.addAll(slicingCriterion.getInterestingVariables(currentFrame));
                 currentFrame.interestingInstructions.add(instruction); // TODO check this
                 dynamicSlice.add(instruction); // TODO check this
             }
@@ -208,13 +187,13 @@ public class Slicer implements Opcodes {
                 }
             }
 
-            final Variable definedVariable = dynInfo.getDefinedVariable();
-            if (definedVariable != null && interestingVariables.contains(definedVariable)) {
-                currentFrame.interestingInstructions.add(instruction);
-                dynamicSlice.add(instruction);
-                interestingVariables.remove(definedVariable);
-                if (!dynInfo.getUsedVariables().isEmpty())
-                    interestingVariables.addAll(dynInfo.getUsedVariables());
+            for (final Variable definedVariable: dynInfo.getDefinedVariables()) {
+                if (interestingVariables.contains(definedVariable)) {
+                    currentFrame.interestingInstructions.add(instruction);
+                    dynamicSlice.add(instruction);
+                    interestingVariables.remove(definedVariable);
+                    interestingVariables.addAll(dynInfo.getUsedVariables(definedVariable));
+                }
             }
 
         }
@@ -250,36 +229,69 @@ public class Slicer implements Opcodes {
         return intersection;
     }
 
-    private DynamicInformation simulateInstruction(final Instance inst, final Stack<Instruction> operandStack, final ExecutionFrame executionFrame) {
+    private VariableUsages simulateInstruction(final Instance inst, final AtomicInteger operandStack, final ExecutionFrame executionFrame) {
         final Variable var;
-        final Collection<Variable> vars;
+        Collection<Variable> vars = Collections.emptySet();
         switch (inst.getType()) {
         case IINC:
-            var = executionFrame.getLocalVariable(((IIncInstruction)inst).getLocalVarIndex());
-            return new DynamicInformation(Collections.singleton(var), var);
+            var = executionFrame.getLocalVariable(((IIncInstruction)inst.getInstruction()).getLocalVarIndex());
+            vars = Collections.singleton(var);
+            return new SimpleVariableUsage(vars, vars);
         case INT:
-            operandStack.push(inst.getInstruction());
-            return DynamicInformation.EMPTY;
+            return new SimpleVariableUsage(vars,
+                    Collections.singleton((Variable)new StackEntry(operandStack.decrementAndGet())));
         case SIMPLE:
-            return simpulateSimpleInsn(inst, operandStack, executionFrame);
+            return simulateSimpleInsn(inst, operandStack);
+        case VAR:
+            return simulateVarInstruction((VarInstruction) inst.getInstruction(), operandStack, executionFrame);
+        default:
+            assert false;
+            return null;
         }
-        // TODO Auto-generated method stub
-        return null;
     }
 
-    private DynamicInformation simpulateSimpleInsn(final Instance inst, final Stack<Instruction> operandStack,
+    private VariableUsages simulateVarInstruction(final VarInstruction inst, final AtomicInteger operandStack,
             final ExecutionFrame executionFrame) {
-        DynamicInformation dynInfo;
-        Collection<Variable> vars;
+        switch (inst.getOpcode()) {
+        case ILOAD: case FLOAD: case ALOAD:
+            int stackDepth = operandStack.addAndGet(-2);
+            return new SimpleVariableUsage(
+                    Collections.singleton(executionFrame.getLocalVariable(inst.getLocalVarIndex())),
+                    Arrays.asList((Variable)new StackEntry(stackDepth), new StackEntry(stackDepth+1)));
+        case LLOAD: case DLOAD:
+            stackDepth = operandStack.decrementAndGet();
+            return new SimpleVariableUsage(
+                    Collections.singleton(executionFrame.getLocalVariable(inst.getLocalVarIndex())),
+                    Collections.singleton((Variable)new StackEntry(stackDepth)));
+        case ISTORE: case FSTORE: case ASTORE:
+            stackDepth = operandStack.getAndIncrement();
+            return new SimpleVariableUsage(
+                    Collections.singleton((Variable)new StackEntry(stackDepth)),
+                    Collections.singleton(executionFrame.getLocalVariable(inst.getLocalVarIndex())));
+        case LSTORE: case DSTORE:
+            stackDepth = operandStack.getAndAdd(2);
+            return new SimpleVariableUsage(
+                    Arrays.asList((Variable)new StackEntry(stackDepth), new StackEntry(stackDepth+1)),
+                    Collections.singleton(executionFrame.getLocalVariable(inst.getLocalVarIndex())));
+        case RET:
+            final Set<Variable> emptySet = Collections.emptySet();
+            return new SimpleVariableUsage(Collections.singleton(executionFrame.getLocalVariable(inst.getLocalVarIndex())),
+                    emptySet);
+        default:
+            assert false;
+            return null;
+        }
+    }
+
+    private VariableUsages simulateSimpleInsn(final Instance inst, final AtomicInteger operandStackSize) {
         switch (inst.getOpcode()) {
         case NOP:
-            return DynamicInformation.EMPTY;
+            return stackManipulation(operandStackSize, 0, 0);
 
         case ACONST_NULL: case ICONST_M1: case ICONST_0: case ICONST_1: case ICONST_2: case ICONST_3:
         case ICONST_4: case ICONST_5: case LCONST_0: case LCONST_1: case FCONST_0: case FCONST_1: case FCONST_2:
         case DCONST_0: case DCONST_1:
-            operandStack.push(inst.getInstruction());
-            return DynamicInformation.EMPTY;
+            return stackManipulation(operandStackSize, 0, 1);
 
         case POP: case POP2: case DUP: case DUP_X1: case DUP_X2: case DUP2: case DUP2_X1: case DUP2_X2: case SWAP:
         case IADD: case LADD: case FADD: case DADD: case ISUB: case LSUB: case FSUB: case DSUB: case IMUL:
@@ -287,20 +299,71 @@ public class Slicer implements Opcodes {
         case FREM: case DREM: case INEG: case LNEG: case FNEG: case DNEG: case ISHL: case LSHL: case ISHR:
         case LSHR: case IUSHR: case LUSHR: case IAND: case LAND: case IOR: case LOR: case IXOR: case LXOR:
 
-        case I2L: case I2F: case I2D: case L2I: case L2F: case L2D: case F2I: case F2L: case F2D: case D2I:
-        case D2L: case D2F: case I2B: case I2C: case I2S:
-            vars = Collections.singleton((Variable)new StackEntry(operandStack.size()-1));
-            dynInfo = new DynamicInformation(vars, null);
-            operandStack.push(inst.getInstruction());
-            return dynInfo;
+        case I2F: case F2I:
+        case D2F: case I2B: case I2C: case I2S:
+            return stackManipulation(operandStackSize, 1, 1);
+        case I2L: case I2D: case F2L: case F2D:
+            return stackManipulation(operandStackSize, 1, 2);
+        case L2I: case L2F: case D2I:
+            return stackManipulation(operandStackSize, 2, 1);
+        case L2D: case D2L:
+            return stackManipulation(operandStackSize, 2, 2);
 
-        case LCMP: case FCMPL: case FCMPG: case DCMPL: case DCMPG:
-        case IRETURN: case LRETURN: case FRETURN: case DRETURN: case ARETURN: case RETURN:
-        case ARRAYLENGTH: case ATHROW: case MONITORENTER: case MONITOREXIT:
+        case LCMP: case DCMPL: case DCMPG:
+            return stackManipulation(operandStackSize, 4, 1);
+        case FCMPL: case FCMPG:
+            return stackManipulation(operandStackSize, 2, 1);
+
+        case IRETURN: case FRETURN: case ARETURN:
+            return stackManipulation(operandStackSize, 1, 0);
+        case DRETURN: case LRETURN:
+            return stackManipulation(operandStackSize, 2, 0);
+        case RETURN:
+            return stackManipulation(operandStackSize, 0, 0);
+
+        case ARRAYLENGTH:
+            return stackManipulation(operandStackSize, 1, 1);
+
+        case ATHROW:
+            return stackManipulation(operandStackSize, 1, 0);
+        case MONITORENTER: case MONITOREXIT:
+            return stackManipulation(operandStackSize, 1, 0);
         default:
             assert false;
             return null;
         }
+    }
+
+    private VariableUsages stackManipulation(final AtomicInteger operandStackSize, final int read, final int write) {
+        final int oldStackSize = read == write ? operandStackSize.get() : operandStackSize.getAndAdd(read - write);
+        final int newStackSize = oldStackSize + read - write;
+        final Variable[] readVarsArr;
+        final Variable[] writtenVarsArr;
+        Collection<Variable> readVars;
+        final Collection<Variable> writtenVars;
+        if (read == 0) {
+            readVars = Collections.emptySet();
+        } else if (read == 1) {
+            readVars = Collections.singleton((Variable)new StackEntry(newStackSize-1));
+        } else {
+            readVarsArr = new Variable[read];
+            for (int i = 0; i < read; ++i)
+                readVarsArr[i] = new StackEntry(newStackSize-i-1);
+            readVars = Arrays.asList(readVarsArr);
+        }
+        if (write == read) {
+            writtenVars = readVars;
+        } else if (write == 0) {
+            writtenVars = Collections.emptySet();
+        } else if (write == 1) {
+            writtenVars = Collections.singleton((Variable)new StackEntry(oldStackSize-1));
+        } else {
+            writtenVarsArr = new Variable[write];
+            for (int i = 0; i < write; ++i)
+                writtenVarsArr[i] = new StackEntry(oldStackSize-i-1);
+            writtenVars = Arrays.asList(writtenVarsArr);
+        }
+        return new SimpleVariableUsage(readVars, writtenVars);
     }
 
 }

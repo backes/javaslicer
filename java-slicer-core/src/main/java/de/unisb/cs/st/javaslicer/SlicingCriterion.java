@@ -2,12 +2,18 @@ package de.unisb.cs.st.javaslicer;
 
 import java.util.Collection;
 
-import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 
 public interface SlicingCriterion {
 
-    boolean matches(Instance instructionInstance);
+    public interface Instance {
 
-    Collection<Variable> getInterestingVariables();
+        boolean matches(Instruction.Instance instructionInstance);
+
+        Collection<Variable> getInterestingVariables(ExecutionFrame execFrame);
+
+    }
+
+    Instance getInstance();
 
 }
