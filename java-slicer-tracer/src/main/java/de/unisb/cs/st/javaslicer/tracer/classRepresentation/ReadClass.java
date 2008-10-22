@@ -4,6 +4,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 import org.objectweb.asm.Type;
 
@@ -90,6 +92,18 @@ public class ReadClass {
         while (numMethods-- > 0)
             rc.methods.add(ReadMethod.readFrom(in, rc));
         rc.methods.trimToSize();
+        Collections.sort(rc.methods, new Comparator<ReadMethod>() {
+            @Override
+            public int compare(final ReadMethod o1, final ReadMethod o2) {
+                int cmp = o1.getName().compareTo(o2.getName());
+                if (cmp != 0)
+                    return cmp;
+                cmp = o1.getDesc().compareTo(o2.getDesc());
+                if (cmp != 0)
+                    return cmp;
+                return o1.getAccess() - o2.getAccess();
+            }
+        });
         final String source = in.readUTF();
         if (source.length() > 0)
             rc.setSource(source);

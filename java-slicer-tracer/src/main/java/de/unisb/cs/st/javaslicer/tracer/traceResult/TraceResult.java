@@ -84,6 +84,12 @@ public class TraceResult {
             readClasses.add(ReadClass.readFrom(readClassesInputStream));
         }
         readClasses.trimToSize();
+        Collections.sort(readClasses, new Comparator<ReadClass>() {
+            @Override
+            public int compare(final ReadClass o1, final ReadClass o2) {
+                return o1.getName().compareTo(o2.getName());
+            }
+        });
 
         final MultiplexInputStream threadTracersStream = file.getInputStream(1);
         if (threadTracersStream == null)

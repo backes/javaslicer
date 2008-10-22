@@ -5,6 +5,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Queue;
 
@@ -45,6 +47,7 @@ public class ReadMethod {
     private int instructionNumberEnd;
     private LabelMarker methodEntryLabel;
     private LabelMarker methodLeaveLabel;
+    private final List<LocalVariable> localVariables;
 
     public ReadMethod(final ReadClass readClass, final int access, final String name, final String desc, final int instructionNumberStart) {
         this.readClass = readClass;
@@ -54,6 +57,7 @@ public class ReadMethod {
         this.instructionNumberStart = instructionNumberStart;
         // default: no instructions
         this.instructionNumberEnd = instructionNumberStart;
+        this.localVariables = new ArrayList<LocalVariable>();
     }
 
     public int addInstruction(final AbstractInstruction instruction) {
@@ -113,6 +117,10 @@ public class ReadMethod {
         this.methodLeaveLabel = methodLeaveLabel;
     }
 
+    public List<LocalVariable> getLocalVariables() {
+        return this.localVariables;
+    }
+
     public void writeOut(final DataOutput out) throws IOException {
         out.writeInt(this.access);
         out.writeUTF(this.name);
@@ -133,6 +141,9 @@ public class ReadMethod {
         } else {
             out.writeBoolean(false);
         }
+        out.writeInt(this.localVariables.size());
+        for (final LocalVariable v: this.localVariables)
+            v.writeOut(out);
     }
 
     public static ReadMethod readFrom(final DataInput in, final ReadClass readClass) throws IOException {
@@ -183,6 +194,16 @@ public class ReadMethod {
             else
                 throw new IOException("corrupted data");
         }
+
+        int localVarsNr = in.readInt();
+        while (localVarsNr-- > 0)
+            rm.localVariables.add(LocalVariable.readFrom(in));
+        Collections.sort(rm.localVariables, new Comparator<LocalVariable>() {
+            @Override
+            public int compare(final LocalVariable o1, final LocalVariable o2) {
+                return o1.getIndex() - o2.getIndex();
+            }
+        });
 
         return rm;
     }

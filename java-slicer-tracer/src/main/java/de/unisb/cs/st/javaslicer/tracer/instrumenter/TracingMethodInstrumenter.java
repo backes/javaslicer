@@ -40,6 +40,7 @@ import org.objectweb.asm.tree.VarInsnNode;
 import de.unisb.cs.st.javaslicer.tracer.ThreadTracer;
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
 import de.unisb.cs.st.javaslicer.tracer.TracingThreadTracer;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.LocalVariable;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.AbstractInstruction;
@@ -231,6 +232,12 @@ public class TracingMethodInstrumenter implements Opcodes {
             final LocalVariableNode localVar = (LocalVariableNode) o;
             if (localVar.index >= this.tracerLocalVarIndex)
                 ++localVar.index;
+        }
+
+        // store information about local variables in the ReadMethod object
+        for (final Object o: method.localVariables) {
+            final LocalVariableNode localVar = (LocalVariableNode) o;
+            this.readMethod.getLocalVariables().add(new LocalVariable(localVar.index, localVar.name, localVar.desc));
         }
 
         // each method must start with a (dedicated) label:
