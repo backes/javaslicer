@@ -25,6 +25,7 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.FieldInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.IIncInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.VarInstruction;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
@@ -233,6 +234,8 @@ public class Slicer implements Opcodes {
         final Variable var;
         Collection<Variable> vars = Collections.emptySet();
         switch (inst.getType()) {
+        case FIELD:
+            return simulateFieldInstruction((FieldInstruction.Instance)inst, operandStack);
         case IINC:
             var = executionFrame.getLocalVariable(((IIncInstruction)inst.getInstruction()).getLocalVarIndex());
             vars = Collections.singleton(var);
@@ -240,10 +243,63 @@ public class Slicer implements Opcodes {
         case INT:
             return new SimpleVariableUsage(vars,
                     Collections.singleton((Variable)new StackEntry(operandStack.decrementAndGet())));
+        case LABEL:
+            return VariableUsages.EMPTY;
         case SIMPLE:
             return simulateSimpleInsn(inst, operandStack);
         case VAR:
             return simulateVarInstruction((VarInstruction) inst.getInstruction(), operandStack, executionFrame);
+        default:
+            assert false;
+            return null;
+        }
+    }
+
+    private VariableUsages simulateFieldInstruction(final FieldInstruction.Instance instance, final AtomicInteger operandStack) {
+        int stackDepth;
+        final FieldInstruction instruction = (FieldInstruction) instance.getInstruction();
+        switch (instruction.getOpcode()) {
+        case GETFIELD:
+            if (instruction.isLongValue()) {
+                stackDepth = operandStack.decrementAndGet();
+                return new SimpleVariableUsage(Arrays.asList(new StackEntry(stackDepth-1),
+                            new ObjectField(instance.getObjectId(), instruction.getFieldName())),
+                        Arrays.asList((Variable)new StackEntry(stackDepth-1), new StackEntry(stackDepth)));
+            }
+            stackDepth = operandStack.get();
+            return new SimpleVariableUsage(Arrays.asList(new StackEntry(stackDepth-1),
+                        new ObjectField(instance.getObjectId(), instruction.getFieldName())),
+                    Collections.singleton((Variable)new StackEntry(stackDepth-1)));
+        case GETSTATIC:
+            if (instruction.isLongValue()) {
+                stackDepth = operandStack.addAndGet(-2);
+                return new SimpleVariableUsage(Collections.singleton((Variable)new ObjectField(-1, instruction.getFieldName())),
+                        Arrays.asList((Variable)new StackEntry(stackDepth), new StackEntry(stackDepth+1)));
+            }
+            stackDepth = operandStack.decrementAndGet();
+            return new SimpleVariableUsage(Collections.singleton((Variable)new ObjectField(-1, instruction.getFieldName())),
+                    Arrays.asList((Variable)new StackEntry(stackDepth)));
+        case PUTFIELD:
+            if (instruction.isLongValue()) {
+                stackDepth = operandStack.getAndAdd(3);
+                return new SimpleVariableUsage(Arrays.asList((Variable)new StackEntry(stackDepth),
+                        new StackEntry(stackDepth+1), new StackEntry(stackDepth+2)),
+                        Collections.singleton((Variable)new ObjectField(instance.getObjectId(), instruction.getFieldName())));
+            }
+            stackDepth = operandStack.getAndAdd(2);
+            return new SimpleVariableUsage(Arrays.asList((Variable)new StackEntry(stackDepth),
+                    new StackEntry(stackDepth+1)),
+                    Collections.singleton((Variable)new ObjectField(instance.getObjectId(), instruction.getFieldName())));
+        case PUTSTATIC:
+            if (instruction.isLongValue()) {
+                stackDepth = operandStack.getAndAdd(2);
+                return new SimpleVariableUsage(Arrays.asList((Variable)new StackEntry(stackDepth),
+                        new StackEntry(stackDepth+1)),
+                        Collections.singleton((Variable)new ObjectField(-1, instruction.getFieldName())));
+            }
+            stackDepth = operandStack.getAndIncrement();
+            return new SimpleVariableUsage(Collections.singleton((Variable)new StackEntry(stackDepth)),
+                    Collections.singleton((Variable)new ObjectField(-1, instruction.getFieldName())));
         default:
             assert false;
             return null;
