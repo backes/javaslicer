@@ -532,7 +532,7 @@ public class TracingMethodInstrumenter implements Opcodes {
             break;
 
         case GETFIELD:
-            if (!insn.name.startsWith("this$")) {
+            if (!insn.name.startsWith("this$")) { // TODO can we lift this?
                 // top item on stack is the object reference: duplicate it
                 // (add instruction *before* the current one
                 this.instructionIterator.previous();

@@ -23,6 +23,7 @@ public class FieldInstruction extends AbstractInstruction {
     private final String fieldName;
     private final String fieldDesc;
     private final int objectTraceSeqIndex;
+    private final boolean longValue;
 
     public FieldInstruction(final ReadMethod readMethod, final int opcode,
             final int lineNumber, final String ownerInternalClassName,
@@ -33,6 +34,7 @@ public class FieldInstruction extends AbstractInstruction {
         this.fieldName = fieldName;
         this.fieldDesc = fieldDesc;
         this.objectTraceSeqIndex = objectTraceSeqIndex;
+        this.longValue = org.objectweb.asm.Type.getType(fieldDesc).getSize() == 2;
     }
 
     private FieldInstruction(final ReadMethod readMethod, final int opcode, final int lineNumber,
@@ -43,6 +45,7 @@ public class FieldInstruction extends AbstractInstruction {
         this.fieldName = fieldName;
         this.fieldDesc = fieldDesc;
         this.objectTraceSeqIndex = objectTraceSeqIndex;
+        this.longValue = org.objectweb.asm.Type.getType(fieldDesc).getSize() == 2;
     }
 
     public String getOwnerInternalClassName() {
@@ -55,6 +58,10 @@ public class FieldInstruction extends AbstractInstruction {
 
     public String getFieldDesc() {
         return this.fieldDesc;
+    }
+
+    public boolean isLongValue() {
+        return this.longValue;
     }
 
     @Override
