@@ -159,7 +159,7 @@ public class IntegerMap<V> implements Map<Integer, V>, Cloneable {
      * <p>
      * A return value of {@code null} does not <i>necessarily</i> indicate that the map contains no mapping for the
      * key; it's also possible that the map explicitly maps the key to {@code null}. The
-     * {@link #containsKey containsKey} operation may be used to distinguish these two cases.
+     * {@link #containsKey(Object) containsKey} operation may be used to distinguish these two cases.
      *
      * @see #put(Object, Object)
      */
