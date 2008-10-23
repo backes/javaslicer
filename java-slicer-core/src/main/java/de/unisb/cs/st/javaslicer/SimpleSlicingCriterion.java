@@ -37,11 +37,12 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
 
     public class Instance implements SlicingCriterion.Instance {
 
-        long seenOccurences = 0;
+        private long seenOccurences = 0;
+        private boolean beingInRun = false;
 
         @Override
         public Collection<Variable> getInterestingVariables(final ExecutionFrame execFrame) {
-            final List<Variable> varList = new ArrayList<Variable>();
+            final List<Variable> varList = new ArrayList<Variable>(SimpleSlicingCriterion.this.variables.size());
             for (final CriterionVariable var: SimpleSlicingCriterion.this.variables)
                 varList.add(var.instantiate(execFrame));
 
@@ -50,14 +51,20 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
 
         @Override
         public boolean matches(final Instruction.Instance instructionInstance) {
-            if (this.seenOccurences == SimpleSlicingCriterion.this.occurence)
+            if ((SimpleSlicingCriterion.this.occurence != null &&
+                    this.seenOccurences == SimpleSlicingCriterion.this.occurence)
+                || instructionInstance.getMethod() != SimpleSlicingCriterion.this.method
+                || instructionInstance.getLineNumber() != SimpleSlicingCriterion.this.lineNumber) {
+                if (this.beingInRun)
+                    this.beingInRun = false;
                 return false;
-            if (instructionInstance.getLineNumber() != SimpleSlicingCriterion.this.lineNumber)
-                return false;
-            if (instructionInstance.getMethod() != SimpleSlicingCriterion.this.method)
-                return false;
+            }
 
-            return ++this.seenOccurences == SimpleSlicingCriterion.this.occurence;
+            if (this.beingInRun)
+                return true;
+            this.beingInRun = SimpleSlicingCriterion.this.occurence == null ||
+                ++this.seenOccurences == SimpleSlicingCriterion.this.occurence;
+            return this.beingInRun;
         }
 
     }
@@ -138,12 +145,12 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
         }
 
         final ReadClass foundClass = readClasses.get(mid);
-        if (foundClass.getName() != className)
+        if (!className.equals(foundClass.getName()))
             throw new IllegalParameterException("Class does not exist: " + className);
 
         final ArrayList<ReadMethod> methods = foundClass.getMethods();
         left = 0;
-        right = methods.size()-1;
+        right = methods.size();
 
         while ((mid = (left + right) / 2) != left) {
             final ReadMethod midVal = methods.get(mid);
@@ -180,20 +187,20 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
             if (!matcher.matches())
                 throw new IllegalParameterException("Illegal variable definition: " + part);
             final String localVarStr = matcher.group(1);
-            if (localVarStr != null) {
-                int localVarIndex = -1;
-                for (final LocalVariable var: method.getLocalVariables()) {
-                    if (localVarStr.equals(var.getName())) {
-                        localVarIndex = var.getIndex();
-                        break;
-                    }
+            if (localVarStr == null)
+                throw new IllegalParameterException("Illegal variable definition: " + part);
+
+            int localVarIndex = -1;
+            for (final LocalVariable var: method.getLocalVariables()) {
+                if (localVarStr.equals(var.getName())) {
+                    localVarIndex = var.getIndex();
+                    break;
                 }
-                if (localVarIndex == -1)
-                    throw new IllegalParameterException("Local variable '"+localVarStr+"' not found in method "
-                            + method.getReadClass().getName()+"."+method.getName());
-                varList.add(new LocalVariableCriterion(localVarIndex));
             }
-            throw new IllegalParameterException("Illegal variable definition: " + part);
+            if (localVarIndex == -1)
+                throw new IllegalParameterException("Local variable '"+localVarStr+"' not found in method "
+                        + method.getReadClass().getName()+"."+method.getName());
+            varList.add(new LocalVariableCriterion(localVarIndex));
         }
 
         return varList;

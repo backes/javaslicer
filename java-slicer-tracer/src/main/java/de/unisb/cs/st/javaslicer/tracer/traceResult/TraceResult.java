@@ -12,9 +12,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
 
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;
@@ -60,9 +62,36 @@ public class TraceResult {
     private final List<ReadClass> readClasses;
     private final List<ThreadTraceResult> threadTraces;
 
-    public TraceResult(final List<ReadClass> readClasses, final List<ThreadTraceResult> threadTraces) {
+    private final Instruction[] instructions;
+
+    public TraceResult(final List<ReadClass> readClasses, final List<ThreadTraceResult> threadTraces) throws IOException {
         this.readClasses = readClasses;
         this.threadTraces = threadTraces;
+        this.instructions = getInstructionArray(readClasses);
+    }
+
+    private static Instruction[] getInstructionArray(final List<ReadClass> classes) throws IOException {
+        int numInstructions = 0;
+        for (final ReadClass c: classes)
+            if (c.getInstructionNumberEnd() > numInstructions)
+                numInstructions = c.getInstructionNumberEnd();
+        final Instruction[] instructions = new Instruction[numInstructions];
+        int written = 0;
+        for (final ReadClass c: classes) {
+            for (final ReadMethod m: c.getMethods()) {
+                written += m.getInstructions().size();
+                for (final AbstractInstruction instr: m.getInstructions()) {
+                    if (instructions[instr.getIndex()] != null)
+                        throw new IOException("Same instruction index given twice.");
+                    instructions[instr.getIndex()] = instr;
+                }
+            }
+        }
+
+        if (written != numInstructions)
+            throw new IOException("Omitted some instruction indexes.");
+
+        return instructions;
     }
 
     public static TraceResult readFrom(final File filename) throws IOException {
@@ -153,6 +182,12 @@ public class TraceResult {
 
     public List<ReadClass> getReadClasses() {
         return this.readClasses;
+    }
+
+    public Instruction getInstruction(final int index) {
+        if (index < 0 || index >= this.instructions.length)
+            return null;
+        return this.instructions[index];
     }
 
     public static void main(final String[] args) {
