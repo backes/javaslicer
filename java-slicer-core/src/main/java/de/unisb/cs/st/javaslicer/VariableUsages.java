@@ -34,10 +34,10 @@ public interface VariableUsages {
     public static final Set<Variable> EMPTY_VARIABLE_SET = Collections.emptySet();
     public static final VariableUsages EMPTY = new SimpleVariableUsage(EMPTY_VARIABLE_SET, EMPTY_VARIABLE_SET);
 
-    public Collection<Variable> getUsedVariables();
+    public Collection<? extends Variable> getUsedVariables();
 
-    public Collection<Variable> getDefinedVariables();
+    public Collection<? extends Variable> getDefinedVariables();
 
-    public Collection<Variable> getUsedVariables(Variable definedVariable);
+    public Collection<? extends Variable> getUsedVariables(Variable definedVariable);
 
 }

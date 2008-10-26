@@ -3,6 +3,7 @@ package de.unisb.cs.st.javaslicer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -48,6 +49,17 @@ public class CompoundSlicingCriterion implements SlicingCriterion {
     @Override
     public SlicingCriterion.Instance getInstance() {
         return new Instance();
+    }
+
+    @Override
+    public String toString() {
+        final Iterator<SlicingCriterion> it = this.criteria.iterator();
+        final StringBuilder sb = new StringBuilder();
+        if (it.hasNext())
+            sb.append(it.next());
+        while (it.hasNext())
+            sb.append(',').append(it.next());
+        return sb.toString();
     }
 
 }

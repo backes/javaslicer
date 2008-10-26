@@ -2,6 +2,8 @@ package de.unisb.cs.st.javaslicer;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -16,15 +18,26 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
 
     public static class LocalVariableCriterion implements CriterionVariable {
 
+        private final ReadMethod method;
         private final int varIndex;
 
-        public LocalVariableCriterion(final int varIndex) {
+        public LocalVariableCriterion(final ReadMethod method, final int varIndex) {
+            this.method = method;
             this.varIndex = varIndex;
         }
 
         @Override
         public Variable instantiate(final ExecutionFrame execFrame) {
             return execFrame.getLocalVariable(this.varIndex);
+        }
+
+        @Override
+        public String toString() {
+            final List<LocalVariable> locals = this.method.getLocalVariables();
+            for (final LocalVariable loc: locals)
+                if (loc.getIndex() == this.varIndex)
+                    return loc.getName();
+            return "<unknown>";
         }
 
     }
@@ -67,6 +80,11 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
             return this.beingInRun;
         }
 
+        @Override
+        public String toString() {
+            return SimpleSlicingCriterion.this.toString();
+        }
+
     }
 
     protected final ReadMethod method;
@@ -90,16 +108,23 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
             sb.append(':').append(this.lineNumber.intValue());
         if (this.occurence != null)
             sb.append('(').append(this.occurence.longValue()).append(')');
+        if (this.variables != null && !this.variables.isEmpty()) {
+            final Iterator<CriterionVariable> it = this.variables.iterator();
+            sb.append(":{").append(it.next());
+            while (it.hasNext())
+                sb.append(',').append(it.next());
+            sb.append('}');
+        }
         return sb.toString();
     }
 
     private static final Pattern slicingCriterionPattern = Pattern.compile(
-            "(.+)\\.(.+?)(?::(\\d+))?(?:\\((\\d+)\\))?(?::(.*?))");
+            "([^:{}]+)\\.([^:{}]+?)(?::(\\d+))?(?:\\((\\d+)\\))?(?::\\{(.*?)\\})?");
 
     public static SlicingCriterion parse(final String string, final List<ReadClass> readClasses) throws IllegalParameterException {
         final Matcher matcher = slicingCriterionPattern.matcher(string);
         if (!matcher.matches())
-            return null;
+            throw new IllegalParameterException("Slicing could not be parsed: " + string);
 
         final String className = matcher.group(1);
         final String methodName = matcher.group(2);
@@ -180,6 +205,8 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
             + ")\\s*");
 
     private static Collection<CriterionVariable> parseVariables(final ReadMethod method, final String variables) throws IllegalParameterException {
+        if (variables == null)
+            return Collections.emptySet();
         final String[] parts = variables.split(",");
         final List<CriterionVariable> varList = new ArrayList<CriterionVariable>();
         for (final String part: parts) {
@@ -200,7 +227,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
             if (localVarIndex == -1)
                 throw new IllegalParameterException("Local variable '"+localVarStr+"' not found in method "
                         + method.getReadClass().getName()+"."+method.getName());
-            varList.add(new LocalVariableCriterion(localVarIndex));
+            varList.add(new LocalVariableCriterion(method, localVarIndex));
         }
 
         return varList;

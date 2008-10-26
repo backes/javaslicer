@@ -2,6 +2,7 @@ package de.unisb.cs.st.javaslicer;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -25,8 +26,10 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.ArrayInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.FieldInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.IIncInstruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.MethodInvocationInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.VarInstruction;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult.ThreadId;
@@ -96,14 +99,18 @@ public class Slicer implements Opcodes {
             System.err.println(threadId == null ? "Couldn't find the main thread."
                     : "The thread you specified was not found.");
             System.exit(-1);
+            return;
         }
 
         final long startTime = System.nanoTime();
-        final Set<Instruction> slice = new Slicer(trace).getDynamicSlice(tracing, sc.getInstance());
+        final Set<Instruction> slice = new Slicer(trace).getDynamicSlice(tracing.getThreadId(), sc.getInstance());
         final long endTime = System.nanoTime();
 
-        System.out.println("The dynamic slice for " + sc + ":");
-        for (final Instruction insn: slice) {
+        final List<Instruction> sliceList = new ArrayList<Instruction>(slice);
+        Collections.sort(sliceList);
+
+        System.out.println("The dynamic slice for criterion " + sc + ":");
+        for (final Instruction insn: sliceList) {
             System.out.format((Locale)null, "%s.%s:%d %s%n",
                     insn.getMethod().getReadClass().getName(),
                     insn.getMethod().getName(),
@@ -118,21 +125,42 @@ public class Slicer implements Opcodes {
                 + " <trace file> [<threadId>] <loc>[(<occ>)]:<var>[,<loc>[(<occ>)]:<var>]*");
     }
 
-    private static SlicingCriterion readSlicingCriteria(final String string, final List<ReadClass> readClasses)
+    public static SlicingCriterion readSlicingCriteria(final String string, final List<ReadClass> readClasses)
             throws IllegalParameterException {
-        final String[] criteria = string.split(",");
-        if (criteria.length == 1)
-            return SimpleSlicingCriterion.parse(criteria[0], readClasses);
+        CompoundSlicingCriterion crit = null;
+        int oldPos = 0;
+        while (true) {
+            int bracketPos = string.indexOf('{');
+            int commaPos = string.indexOf(',');
+            while (bracketPos != -1 && bracketPos < commaPos) {
+                final int closeBracketPos = string.indexOf('}', bracketPos+1);
+                if (closeBracketPos == -1)
+                    throw new IllegalParameterException("Couldn't find matching '}'");
+                bracketPos = string.indexOf('{', closeBracketPos+1);
+                commaPos = string.indexOf(',', closeBracketPos+1);
+            }
 
-        final CompoundSlicingCriterion crit = new CompoundSlicingCriterion();
-        for (final String c: criteria)
-            crit.add(SimpleSlicingCriterion.parse(c, readClasses));
-        return crit;
+            final SlicingCriterion newCrit = SimpleSlicingCriterion.parse(
+                    string.substring(oldPos, commaPos == -1 ? string.length() : commaPos),
+                    readClasses);
+            oldPos = commaPos;
+
+            if (crit == null) {
+                if (commaPos == -1)
+                    return newCrit;
+                crit = new CompoundSlicingCriterion();
+            }
+
+            crit.add(newCrit);
+
+            if (commaPos == -1)
+                return crit;
+        }
     }
 
     @SuppressWarnings("unchecked")
-    private Set<Instruction> getDynamicSlice(final ThreadId thread, final SlicingCriterion.Instance slicingCriterion) {
-        final Iterator<Instance> backwardInsnItr = this.trace.getBackwardIterator(thread.getThreadId());
+    public Set<Instruction> getDynamicSlice(final long threadId, final SlicingCriterion.Instance slicingCriterion) {
+        final Iterator<Instance> backwardInsnItr = this.trace.getBackwardIterator(threadId);
 
         final Map<ReadMethod, Map<Instruction, Set<Instruction>>> allControlDependencies =
             LazyMap.decorate(new HashMap<ReadMethod, Map<Instruction, Set<Instruction>>>(),
@@ -154,19 +182,34 @@ public class Slicer implements Opcodes {
             final Instance instance = backwardInsnItr.next();
             final Instruction instruction = instance.getInstruction();
 
+            // TODO remove
+            if (!instance.getMethod().getName().equals("main"))
+                break;
+
+            ExecutionFrame removedFrame = null;
+            boolean removedFrameIsInteresting = false;
+            while (frames.size() > instance.getStackDepth()) {
+                removedFrame = frames.pop();
+                if (!removedFrame.interestingInstructions.isEmpty()) {
+                    // ok, we have a control dependency since the method was called by (or for) this instruction
+                    removedFrameIsInteresting = true;
+                }
+            }
+
             while (frames.size() < instance.getStackDepth()) {
                 frames.push(new ExecutionFrame());
             }
             final ExecutionFrame currentFrame = frames.get(instance.getStackDepth()-1);
-            final VariableUsages dynInfo = simulateInstruction(instance, operandStack, currentFrame);
+            if (currentFrame.method == null)
+                currentFrame.method = instruction.getMethod();
+            assert currentFrame.method == instance.getMethod();
 
-            while (frames.size() > instance.getStackDepth()) {
-                final ExecutionFrame lastFrame = frames.pop();
-                if (!lastFrame.interestingInstructions.isEmpty()) {
-                    dynamicSlice.add(instruction); // TODO check if this is the instr. that called the method
-                    currentFrame.interestingInstructions.add(instruction);
-                    interestingVariables.addAll(dynInfo.getUsedVariables()); // TODO should not be necessary
-                }
+            final VariableUsages dynInfo = simulateInstruction(instance, operandStack, currentFrame, removedFrame);
+
+            if (removedFrameIsInteresting) {
+                dynamicSlice.add(instruction); // TODO check if this is the instr. that called the method
+                currentFrame.interestingInstructions.add(instruction);
+                interestingVariables.addAll(dynInfo.getUsedVariables()); // TODO should not be necessary
             }
 
             if (slicingCriterion.matches(instance)) {
@@ -230,10 +273,13 @@ public class Slicer implements Opcodes {
         return intersection;
     }
 
-    private VariableUsages simulateInstruction(final Instance inst, final AtomicInteger operandStack, final ExecutionFrame executionFrame) {
+    private VariableUsages simulateInstruction(final Instance inst, final AtomicInteger operandStack,
+            final ExecutionFrame executionFrame, final ExecutionFrame removedFrame) {
         final Variable var;
         Collection<Variable> vars = Collections.emptySet();
         switch (inst.getType()) {
+        case ARRAY:
+            return simulateArrayInstruction((ArrayInstruction.Instance)inst, operandStack);
         case FIELD:
             return simulateFieldInstruction((FieldInstruction.Instance)inst, operandStack);
         case IINC:
@@ -245,6 +291,9 @@ public class Slicer implements Opcodes {
                     Collections.singleton((Variable)new StackEntry(operandStack.decrementAndGet())));
         case LABEL:
             return VariableUsages.EMPTY;
+        case METHODINVOCATION:
+            return simulateMethodInsn((MethodInvocationInstruction)inst.getInstruction(), operandStack,
+                    executionFrame, removedFrame);
         case SIMPLE:
             return simulateSimpleInsn(inst, operandStack);
         case VAR:
@@ -253,6 +302,45 @@ public class Slicer implements Opcodes {
             assert false;
             return null;
         }
+    }
+
+    private VariableUsages simulateArrayInstruction(final ArrayInstruction.Instance inst, final AtomicInteger operandStack) {
+        switch (inst.getOpcode()) {
+        case IALOAD: case FALOAD: case AALOAD: case BALOAD: case CALOAD: case SALOAD:
+            int stackDepth = operandStack.getAndIncrement();
+            return new SimpleVariableUsage(Arrays.asList(new StackEntry(stackDepth-1), new StackEntry(stackDepth),
+                    new ArrayElement(inst.getArrayId(), inst.getArrayIndex())),
+                    Collections.singleton((Variable)new StackEntry(stackDepth-1)));
+        case LALOAD: case DALOAD:
+            stackDepth = operandStack.get();
+            return new SimpleVariableUsage(Arrays.asList(new StackEntry(stackDepth-2), new StackEntry(stackDepth-1),
+                    new ArrayElement(inst.getArrayId(), inst.getArrayIndex())),
+                    Arrays.asList((Variable)new StackEntry(stackDepth-2), new StackEntry(stackDepth-1)));
+
+        case IASTORE: case FASTORE: case AASTORE: case BASTORE: case CASTORE: case SASTORE:
+        case LASTORE: case DASTORE:
+            // TODO
+        }
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    private VariableUsages simulateMethodInsn(final MethodInvocationInstruction inst, final AtomicInteger operandStack,
+            final ExecutionFrame executionFrame, final ExecutionFrame removedFrame) {
+        final boolean hasRemovedFrame = removedFrame != null && removedFrame.method == inst.getMethod();
+        int paramCount = inst.getOpcode() == INVOKEINTERFACE ? 0 : 1;
+        for (int param = inst.getParameterCount()-1; param >= 0; --param)
+            paramCount += inst.parameterIsLong(param) ? 2 : 1;
+        final int returnedSize = inst.returnValueIsLong() ? 2 : 1;
+        if (!hasRemovedFrame) {
+            final int parametersStackOffset = operandStack.getAndAdd(paramCount-returnedSize)-1;
+            return new MethodInvokationVariableUsages(parametersStackOffset,
+                    paramCount, returnedSize, executionFrame);
+        }
+
+        final int parametersStackOffset = operandStack.getAndAdd(paramCount)-returnedSize-1;
+        return new MethodInvokationVariableUsages(parametersStackOffset,
+                paramCount, 0, removedFrame);
     }
 
     private VariableUsages simulateFieldInstruction(final FieldInstruction.Instance instance, final AtomicInteger operandStack) {
@@ -310,28 +398,28 @@ public class Slicer implements Opcodes {
             final ExecutionFrame executionFrame) {
         switch (inst.getOpcode()) {
         case ILOAD: case FLOAD: case ALOAD:
-            int stackDepth = operandStack.addAndGet(-2);
+            int stackDepth = operandStack.decrementAndGet();
             return new SimpleVariableUsage(
-                    Collections.singleton(executionFrame.getLocalVariable(inst.getLocalVarIndex())),
-                    Arrays.asList((Variable)new StackEntry(stackDepth), new StackEntry(stackDepth+1)));
-        case LLOAD: case DLOAD:
-            stackDepth = operandStack.decrementAndGet();
-            return new SimpleVariableUsage(
-                    Collections.singleton(executionFrame.getLocalVariable(inst.getLocalVarIndex())),
+                    Collections.singleton((Variable)executionFrame.getLocalVariable(inst.getLocalVarIndex())),
                     Collections.singleton((Variable)new StackEntry(stackDepth)));
+        case LLOAD: case DLOAD:
+            stackDepth = operandStack.addAndGet(-2);
+            return new SimpleVariableUsage(
+                    Collections.singleton((Variable)executionFrame.getLocalVariable(inst.getLocalVarIndex())),
+                    Arrays.asList((Variable)new StackEntry(stackDepth), new StackEntry(stackDepth+1)));
         case ISTORE: case FSTORE: case ASTORE:
             stackDepth = operandStack.getAndIncrement();
             return new SimpleVariableUsage(
                     Collections.singleton((Variable)new StackEntry(stackDepth)),
-                    Collections.singleton(executionFrame.getLocalVariable(inst.getLocalVarIndex())));
+                    Collections.singleton((Variable)executionFrame.getLocalVariable(inst.getLocalVarIndex())));
         case LSTORE: case DSTORE:
             stackDepth = operandStack.getAndAdd(2);
             return new SimpleVariableUsage(
                     Arrays.asList((Variable)new StackEntry(stackDepth), new StackEntry(stackDepth+1)),
-                    Collections.singleton(executionFrame.getLocalVariable(inst.getLocalVarIndex())));
+                    Collections.singleton((Variable)executionFrame.getLocalVariable(inst.getLocalVarIndex())));
         case RET:
             final Set<Variable> emptySet = Collections.emptySet();
-            return new SimpleVariableUsage(Collections.singleton(executionFrame.getLocalVariable(inst.getLocalVarIndex())),
+            return new SimpleVariableUsage(Collections.singleton((Variable)executionFrame.getLocalVariable(inst.getLocalVarIndex())),
                     emptySet);
         default:
             assert false;
@@ -341,49 +429,60 @@ public class Slicer implements Opcodes {
 
     private VariableUsages simulateSimpleInsn(final Instance inst, final AtomicInteger operandStackSize) {
         switch (inst.getOpcode()) {
+        case DUP_X1: case DUP_X2: case DUP2_X1: case DUP2_X2: case SWAP:
+            // TODO
+            return null;
+
         case NOP:
-            return stackManipulation(operandStackSize, 0, 0);
+        case RETURN:
+            return VariableUsages.EMPTY;
 
         case ACONST_NULL: case ICONST_M1: case ICONST_0: case ICONST_1: case ICONST_2: case ICONST_3:
-        case ICONST_4: case ICONST_5: case LCONST_0: case LCONST_1: case FCONST_0: case FCONST_1: case FCONST_2:
-        case DCONST_0: case DCONST_1:
+        case ICONST_4: case ICONST_5: case FCONST_0: case FCONST_1: case FCONST_2:
             return stackManipulation(operandStackSize, 0, 1);
 
-        case POP: case POP2: case DUP: case DUP_X1: case DUP_X2: case DUP2: case DUP2_X1: case DUP2_X2: case SWAP:
-        case IADD: case LADD: case FADD: case DADD: case ISUB: case LSUB: case FSUB: case DSUB: case IMUL:
-        case LMUL: case FMUL: case DMUL: case IDIV: case LDIV: case FDIV: case DDIV: case IREM: case LREM:
-        case FREM: case DREM: case INEG: case LNEG: case FNEG: case DNEG: case ISHL: case LSHL: case ISHR:
-        case LSHR: case IUSHR: case LUSHR: case IAND: case LAND: case IOR: case LOR: case IXOR: case LXOR:
+        case DCONST_0: case DCONST_1: case LCONST_0: case LCONST_1:
+            return stackManipulation(operandStackSize, 0, 2);
 
-        case I2F: case F2I:
-        case D2F: case I2B: case I2C: case I2S:
+        case IRETURN: case FRETURN: case ARETURN:
+        case ATHROW:
+        case MONITORENTER: case MONITOREXIT:
+        case POP:
+            return stackManipulation(operandStackSize, 1, 0);
+
+        case I2F: case F2I: case D2F: case I2B: case I2C: case I2S:
+        case ARRAYLENGTH:
+        case INEG: case FNEG:
             return stackManipulation(operandStackSize, 1, 1);
+
         case I2L: case I2D: case F2L: case F2D:
+        case DUP:
             return stackManipulation(operandStackSize, 1, 2);
+
+        case DRETURN: case LRETURN:
+        case POP2:
+            return stackManipulation(operandStackSize, 2, 0);
+
         case L2I: case L2F: case D2I:
+        case FCMPL: case FCMPG:
+        case IADD: case FADD: case ISUB: case FSUB: case IMUL: case FMUL: case IDIV: case FDIV: case IREM:
+        case FREM: case ISHL: case ISHR: case IUSHR: case IAND: case IOR: case IXOR:
             return stackManipulation(operandStackSize, 2, 1);
+
         case L2D: case D2L:
+        case LNEG: case DNEG:
             return stackManipulation(operandStackSize, 2, 2);
+
+        case DUP2:
+            return stackManipulation(operandStackSize, 2, 4);
 
         case LCMP: case DCMPL: case DCMPG:
             return stackManipulation(operandStackSize, 4, 1);
-        case FCMPL: case FCMPG:
-            return stackManipulation(operandStackSize, 2, 1);
 
-        case IRETURN: case FRETURN: case ARETURN:
-            return stackManipulation(operandStackSize, 1, 0);
-        case DRETURN: case LRETURN:
-            return stackManipulation(operandStackSize, 2, 0);
-        case RETURN:
-            return stackManipulation(operandStackSize, 0, 0);
+        case LADD: case DADD: case LSUB: case DSUB: case LMUL: case DMUL: case LDIV: case DDIV: case LREM:
+        case DREM: case LSHL: case LSHR: case LUSHR: case LAND: case LOR: case LXOR:
+            return stackManipulation(operandStackSize, 4, 2);
 
-        case ARRAYLENGTH:
-            return stackManipulation(operandStackSize, 1, 1);
-
-        case ATHROW:
-            return stackManipulation(operandStackSize, 1, 0);
-        case MONITORENTER: case MONITOREXIT:
-            return stackManipulation(operandStackSize, 1, 0);
         default:
             assert false;
             return null;

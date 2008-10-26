@@ -9,11 +9,13 @@ public class StackEntry implements Variable {
     }
 
     @Override
+    public String toString() {
+        return "stack#" + this.index;
+    }
+
+    @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + this.index;
-        return result;
+        return this.index;
     }
 
     @Override
