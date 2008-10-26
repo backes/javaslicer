@@ -12,6 +12,21 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 public class SimpleSlicingTest1 extends AbstractSlicingTest {
 
     @Test
+    public void test1() throws IllegalParameterException, IOException {
+        final List<Instruction> slice = getSlice(new File("traces/simple1"), "main", "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:7:{a}");
+        checkSlice(slice, new String[][] {
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "ALOAD 0" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "ICONST_0" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "AALOAD" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "ICONST_0" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "INVOKEVIRTUAL java/lang/String.charAt(I)C" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "BIPUSH 48" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "ISUB" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "ISTORE 1" },
+            });
+    }
+
+    @Test
     public void test2a() throws IllegalParameterException, IOException {
         final List<Instruction> slice = getSlice(new File("traces/simple1"), "main", "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:8:{b}");
         checkSlice(slice, new String[][] {
@@ -46,6 +61,48 @@ public class SimpleSlicingTest1 extends AbstractSlicingTest {
                 new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "8", "ILOAD 1" },
                 new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "8", "IMUL" },
                 new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "8", "ISTORE 2" },
+            });
+    }
+
+    @Test
+    public void test2c() throws IllegalParameterException, IOException {
+        final List<Instruction> slice = getSlice(new File("traces/simple1"), "main", "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:8:{a,b}");
+        checkSlice(slice, new String[][] {
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "ALOAD 0" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "ICONST_0" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "AALOAD" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "ICONST_0" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "INVOKEVIRTUAL java/lang/String.charAt(I)C" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "BIPUSH 48" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "ISUB" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "ISTORE 1" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "8", "ICONST_2" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "8", "ILOAD 1" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "8", "IMUL" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "8", "ISTORE 2" },
+            });
+    }
+
+    @Test
+    public void test3() throws IllegalParameterException, IOException {
+        final List<Instruction> slice = getSlice(new File("traces/simple1"), "main", "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:9:{c}");
+        checkSlice(slice, new String[][] {
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "ALOAD 0" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "ICONST_0" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "AALOAD" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "ICONST_0" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "INVOKEVIRTUAL java/lang/String.charAt(I)C" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "BIPUSH 48" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "ISUB" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "7", "ISTORE 1" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "8", "ICONST_2" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "8", "ILOAD 1" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "8", "IMUL" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "8", "ISTORE 2" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "9", "ICONST_2" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "9", "ILOAD 2" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "9", "IMUL" },
+                new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main", "9", "ISTORE 3" },
             });
     }
 
