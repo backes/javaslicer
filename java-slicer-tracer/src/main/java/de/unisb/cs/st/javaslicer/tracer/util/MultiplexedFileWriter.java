@@ -934,16 +934,6 @@ public class MultiplexedFileWriter {
             long endTime = System.nanoTime();
             System.out.format("Compaction took %.3f seconds%n", 1e-9*(endTime - startTime));
 
-            // write some meta information to the file
-            final ByteBuffer header = ByteBuffer.allocate(headerSize);
-            header.putInt(MAGIC_HEADER);
-            header.putInt(this.blockSize);
-            header.put(this.byteOrder == ByteOrder.BIG_ENDIAN ? (byte)0 : (byte)1);
-            header.putInt(streamDefsStartBlock);
-            header.putLong(this.streamDefs.innerOut.dataLength);
-            header.position(0);
-            this.fileChannel.write(header, 0);
-
             System.out.println("Forcing mappings out...");
             startTime = System.nanoTime();
             int runs = 0;
@@ -999,6 +989,16 @@ public class MultiplexedFileWriter {
             memoryConsumingList = null;
             endTime = System.nanoTime();
             System.out.format("Truncation took %.3f seconds, %d runs%n", 1e-9*(endTime - startTime), runs);
+
+            // write some meta information to the file to make it valid
+            final ByteBuffer header = ByteBuffer.allocate(headerSize);
+            header.putInt(MAGIC_HEADER);
+            header.putInt(this.blockSize);
+            header.put(this.byteOrder == ByteOrder.BIG_ENDIAN ? (byte)0 : (byte)1);
+            header.putInt(streamDefsStartBlock);
+            header.putLong(this.streamDefs.innerOut.dataLength);
+            header.position(0);
+            this.fileChannel.write(header, 0);
 
             System.out.println("Closing file...");
             startTime = System.nanoTime();
