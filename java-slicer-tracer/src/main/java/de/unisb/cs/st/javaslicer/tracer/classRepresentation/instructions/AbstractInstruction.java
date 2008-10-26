@@ -169,6 +169,14 @@ public abstract class AbstractInstruction implements Instruction {
         return next;
     }
 
+    @Override
+    public int compareTo(final Instruction o) {
+        final int cmp = getMethod().compareTo(o.getMethod());
+        if (cmp != 0)
+            return cmp;
+        return getIndex() - o.getIndex();
+    }
+
     public static class AbstractInstance extends InstructionWrapper
             implements Instance {
 

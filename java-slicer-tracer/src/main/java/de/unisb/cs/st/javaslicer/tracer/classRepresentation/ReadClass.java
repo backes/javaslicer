@@ -9,7 +9,7 @@ import java.util.Comparator;
 
 import org.objectweb.asm.Type;
 
-public class ReadClass {
+public class ReadClass implements Comparable<ReadClass> {
 
     private final String internalClassName;
     private final String className;
@@ -113,6 +113,11 @@ public class ReadClass {
     @Override
     public String toString() {
         return this.className;
+    }
+
+    @Override
+    public int compareTo(final ReadClass o) {
+        return this.className.compareTo(o.className);
     }
 
 }

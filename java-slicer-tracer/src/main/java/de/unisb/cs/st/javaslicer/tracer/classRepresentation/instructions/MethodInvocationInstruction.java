@@ -20,22 +20,40 @@ public class MethodInvocationInstruction extends AbstractInstruction {
     private final String internalClassName;
     private final String methodName;
     private final String methodDesc;
+    private final boolean[] parameterIsLong;
+    private final boolean returnValueIsLong;
 
     public MethodInvocationInstruction(final ReadMethod readMethod, final int opcode,
             final int lineNumber, final String internalClassName, final String methodName,
             final String methodDesc) {
         super(readMethod, opcode, lineNumber);
+        assert opcode == Opcodes.INVOKEVIRTUAL || opcode == Opcodes.INVOKESPECIAL
+            || opcode == Opcodes.INVOKESTATIC || opcode == Opcodes.INVOKEINTERFACE;
         this.internalClassName = internalClassName;
         this.methodName = methodName;
         this.methodDesc = methodDesc;
+        final org.objectweb.asm.Type[] parameterTypes = org.objectweb.asm.Type.getArgumentTypes(methodDesc);
+        this.parameterIsLong = new boolean[parameterTypes.length];
+        for (int i = 0; i < parameterTypes.length; ++i) {
+            this.parameterIsLong[i] = parameterTypes[i].getSize() == 2;
+        }
+        this.returnValueIsLong = org.objectweb.asm.Type.getReturnType(methodDesc).getSize() == 2;
     }
 
     private MethodInvocationInstruction(final ReadMethod readMethod, final int lineNumber, final int opcode,
             final String internalClassName, final String methodName, final String methodDesc, final int index) {
         super(readMethod, opcode, lineNumber, index);
+        assert opcode == Opcodes.INVOKEVIRTUAL || opcode == Opcodes.INVOKESPECIAL
+            || opcode == Opcodes.INVOKESTATIC || opcode == Opcodes.INVOKEINTERFACE;
         this.internalClassName = internalClassName;
         this.methodName = methodName;
         this.methodDesc = methodDesc;
+        final org.objectweb.asm.Type[] parameterTypes = org.objectweb.asm.Type.getArgumentTypes(methodDesc);
+        this.parameterIsLong = new boolean[parameterTypes.length];
+        for (int i = 0; i < parameterTypes.length; ++i) {
+            this.parameterIsLong[i] = parameterTypes[i].getSize() == 2;
+        }
+        this.returnValueIsLong = org.objectweb.asm.Type.getReturnType(methodDesc).getSize() == 2;
     }
 
     public String getInternalClassName() {
@@ -48,6 +66,20 @@ public class MethodInvocationInstruction extends AbstractInstruction {
 
     public String getMethodDesc() {
         return this.methodDesc;
+    }
+
+    public int getParameterCount() {
+        return this.parameterIsLong.length;
+    }
+
+    public boolean parameterIsLong(final int paramIndex) {
+        if (paramIndex < 0 || paramIndex >= this.parameterIsLong.length)
+            throw new IllegalArgumentException("Parameter count: " + this.parameterIsLong.length + "; requested: " + paramIndex);
+        return this.parameterIsLong[paramIndex];
+    }
+
+    public boolean returnValueIsLong() {
+        return this.returnValueIsLong;
     }
 
     @Override

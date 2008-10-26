@@ -14,7 +14,7 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.Abstrac
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
 
-public class ReadMethod {
+public class ReadMethod implements Comparable<ReadMethod> {
 
     public static class MethodReadInformation {
 
@@ -198,6 +198,8 @@ public class ReadMethod {
         int localVarsNr = in.readInt();
         while (localVarsNr-- > 0)
             rm.localVariables.add(LocalVariable.readFrom(in));
+        if (rm.localVariables instanceof ArrayList<?>)
+            ((ArrayList<?>)rm.localVariables).trimToSize();
         Collections.sort(rm.localVariables, new Comparator<LocalVariable>() {
             @Override
             public int compare(final LocalVariable o1, final LocalVariable o2) {
@@ -211,6 +213,17 @@ public class ReadMethod {
     @Override
     public String toString() {
         return this.name + this.desc;
+    }
+
+    @Override
+    public int compareTo(final ReadMethod o) {
+        int cmp = getReadClass().compareTo(o.getReadClass());
+        if (cmp != 0)
+            return cmp;
+        cmp = this.name.compareTo(o.name);
+        if (cmp != 0)
+            return cmp;
+        return this.desc.compareTo(o.desc);
     }
 
 }

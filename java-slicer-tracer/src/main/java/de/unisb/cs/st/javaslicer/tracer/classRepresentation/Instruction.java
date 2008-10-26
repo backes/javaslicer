@@ -27,7 +27,7 @@ import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardIn
  *
  * @author Clemens Hammacher
  */
-public interface Instruction {
+public interface Instruction extends Comparable<Instruction> {
 
     public interface Instance extends Instruction {
 

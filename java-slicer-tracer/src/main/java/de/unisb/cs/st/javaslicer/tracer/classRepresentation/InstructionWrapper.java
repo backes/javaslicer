@@ -85,4 +85,9 @@ public abstract class InstructionWrapper implements Instruction {
         return this.wrappedInstruction.toString();
     }
 
+    @Override
+    public int compareTo(final Instruction o) {
+        return this.wrappedInstruction.compareTo(o);
+    }
+
 }

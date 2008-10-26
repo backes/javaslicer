@@ -19,6 +19,21 @@ import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardIn
  */
 public class FieldInstruction extends AbstractInstruction {
 
+    public static class Instance extends AbstractInstance {
+
+        private final long objectId;
+
+        public Instance(final FieldInstruction fieldInstr, final long occurenceNumber, final int stackDepth, final long objectId) {
+            super(fieldInstr, occurenceNumber, stackDepth);
+            this.objectId = objectId;
+        }
+
+        public long getObjectId() {
+            return this.objectId;
+        }
+
+    }
+
     private final String ownerInternalClassName;
     private final String fieldName;
     private final String fieldDesc;
@@ -31,7 +46,7 @@ public class FieldInstruction extends AbstractInstruction {
             final int objectTraceSeqIndex) {
         super(readMethod, opcode, lineNumber);
         this.ownerInternalClassName = ownerInternalClassName;
-        this.fieldName = fieldName;
+        this.fieldName = fieldName.intern();
         this.fieldDesc = fieldDesc;
         this.objectTraceSeqIndex = objectTraceSeqIndex;
         this.longValue = org.objectweb.asm.Type.getType(fieldDesc).getSize() == 2;
@@ -42,7 +57,7 @@ public class FieldInstruction extends AbstractInstruction {
             final String fieldDesc, final int objectTraceSeqIndex, final int index) {
         super(readMethod, opcode, lineNumber, index);
         this.ownerInternalClassName = ownerInternalClassName;
-        this.fieldName = fieldName;
+        this.fieldName = fieldName.intern();
         this.fieldDesc = fieldDesc;
         this.objectTraceSeqIndex = objectTraceSeqIndex;
         this.longValue = org.objectweb.asm.Type.getType(fieldDesc).getSize() == 2;
@@ -78,23 +93,6 @@ public class FieldInstruction extends AbstractInstruction {
     }
 
     @Override
-    public void writeOut(final DataOutput out) throws IOException {
-        super.writeOut(out);
-        out.writeUTF(this.fieldDesc);
-        out.writeUTF(this.fieldName);
-        out.writeInt(this.objectTraceSeqIndex);
-        out.writeUTF(this.ownerInternalClassName);
-    }
-
-    public static FieldInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
-        final String fieldDesc = in.readUTF();
-        final String fieldName = in.readUTF();
-        final int objectTraceSeqIndex = in.readInt();
-        final String ownerInternalClassName = in.readUTF();
-        return new FieldInstruction(methodInfo.getMethod(), opcode, lineNumber, ownerInternalClassName, fieldName, fieldDesc, objectTraceSeqIndex, index);
-    }
-
-    @Override
     public String toString() {
         String type;
         switch (getOpcode()) {
@@ -124,19 +122,21 @@ public class FieldInstruction extends AbstractInstruction {
         return sb.toString();
     }
 
-    public static class Instance extends AbstractInstance {
+    @Override
+    public void writeOut(final DataOutput out) throws IOException {
+        super.writeOut(out);
+        out.writeUTF(this.fieldDesc);
+        out.writeUTF(this.fieldName);
+        out.writeInt(this.objectTraceSeqIndex);
+        out.writeUTF(this.ownerInternalClassName);
+    }
 
-        private final long objectId;
-
-        public Instance(final FieldInstruction fieldInstr, final long occurenceNumber, final int stackDepth, final long objectId) {
-            super(fieldInstr, occurenceNumber, stackDepth);
-            this.objectId = objectId;
-        }
-
-        public long getObjectId() {
-            return this.objectId;
-        }
-
+    public static FieldInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
+        final String fieldDesc = in.readUTF();
+        final String fieldName = in.readUTF();
+        final int objectTraceSeqIndex = in.readInt();
+        final String ownerInternalClassName = in.readUTF();
+        return new FieldInstruction(methodInfo.getMethod(), opcode, lineNumber, ownerInternalClassName, fieldName, fieldDesc, objectTraceSeqIndex, index);
     }
 
 }

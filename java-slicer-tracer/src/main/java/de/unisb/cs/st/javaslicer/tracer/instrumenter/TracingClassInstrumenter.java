@@ -50,7 +50,7 @@ public class TracingClassInstrumenter implements Opcodes {
             return;
         }
 
-        new TracingMethodInstrumenter(this.tracer, readMethod, classNode).transform(method, methodIt);
+        new TracingMethodInstrumenter(this.tracer, readMethod, classNode, method).transform(methodIt);
     }
 
 }
