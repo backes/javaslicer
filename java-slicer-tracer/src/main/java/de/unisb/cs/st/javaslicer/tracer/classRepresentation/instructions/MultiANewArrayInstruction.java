@@ -31,6 +31,14 @@ public class MultiANewArrayInstruction extends AbstractInstruction {
         this.dims = dims;
     }
 
+    public int getDimension() {
+        return this.dims;
+    }
+
+    public String getTypeDesc() {
+        return this.typeDesc;
+    }
+
     @Override
     public Type getType() {
         return Type.MULTIANEWARRAY;

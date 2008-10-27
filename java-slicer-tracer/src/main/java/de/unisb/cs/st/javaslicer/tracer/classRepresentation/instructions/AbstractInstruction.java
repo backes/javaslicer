@@ -171,10 +171,11 @@ public abstract class AbstractInstruction implements Instruction {
 
     @Override
     public int compareTo(final Instruction o) {
-        final int cmp = getMethod().compareTo(o.getMethod());
+        int cmp = getMethod().getReadClass().compareTo(o.getMethod().getReadClass());
         if (cmp != 0)
             return cmp;
-        return getIndex() - o.getIndex();
+        cmp = getLineNumber() - o.getLineNumber();
+        return cmp != 0 ? cmp : getIndex() - o.getIndex();
     }
 
     public static class AbstractInstance extends InstructionWrapper
