@@ -12,7 +12,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>java-slicer-core</artifactId>
 	<name>Java-Slicer Core</name>
-	<description>Computes trace on java bytecode level base on a trace.</description>
+	<description>Computes slices of Java programs, based on a bytecode trace.</description>
 	<packaging>jar</packaging>
 	
 	<dependencies>
