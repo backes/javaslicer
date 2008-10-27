@@ -14,13 +14,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.collections.Transformer;
 import org.apache.commons.collections.map.LazyMap;
 import org.objectweb.asm.Opcodes;
 
-import de.unisb.cs.st.javaslicer.VariableUsages.SimpleVariableUsage;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
@@ -30,6 +28,7 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.ArrayIn
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.FieldInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.IIncInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.MethodInvocationInstruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.MultiANewArrayInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.VarInstruction;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult.ThreadId;
@@ -173,7 +172,6 @@ public class Slicer implements Opcodes {
 
         final Stack<ExecutionFrame> frames = new Stack<ExecutionFrame>();
         frames.push(new ExecutionFrame());
-        final AtomicInteger operandStack = new AtomicInteger(0);
 
         final Set<Variable> interestingVariables = new HashSet<Variable>();
         final Set<Instruction> dynamicSlice = new HashSet<Instruction>();
@@ -183,7 +181,7 @@ public class Slicer implements Opcodes {
             final Instruction instruction = instance.getInstruction();
 
             // TODO remove
-            if (!instance.getMethod().getName().equals("main"))
+            if (!instance.getMethod().getReadClass().getName().startsWith("de.unisb."))
                 break;
 
             ExecutionFrame removedFrame = null;
@@ -204,23 +202,24 @@ public class Slicer implements Opcodes {
                 currentFrame.method = instruction.getMethod();
             assert currentFrame.method == instance.getMethod();
 
-            final VariableUsages dynInfo = simulateInstruction(instance, operandStack, currentFrame, removedFrame);
+            final VariableUsages dynInfo = simulateInstruction(instance, currentFrame, removedFrame, frames);
 
             if (removedFrameIsInteresting) {
                 dynamicSlice.add(instruction); // TODO check if this is the instr. that called the method
                 currentFrame.interestingInstructions.add(instruction);
-                interestingVariables.addAll(dynInfo.getUsedVariables()); // TODO should not be necessary
+                //interestingVariables.addAll(dynInfo.getUsedVariables()); // TODO should not be necessary
             }
 
             if (slicingCriterion.matches(instance)) {
                 interestingVariables.addAll(slicingCriterion.getInterestingVariables(currentFrame));
-                currentFrame.interestingInstructions.add(instruction); // TODO check this
-                dynamicSlice.add(instruction); // TODO check this
+                //currentFrame.interestingInstructions.add(instruction); // TODO check this
+                //dynamicSlice.add(instruction); // TODO check this
             }
 
             if (!currentFrame.interestingInstructions.isEmpty()) {
                 final Set<Instruction> controlDependencies =
                     allControlDependencies.get(instance.getMethod()).get(instruction);
+                // get all interesting instructions, that are dependent on the current one
                 final Set<Instruction> dependantInterestingInstructions = intersect(controlDependencies,
                         currentFrame.interestingInstructions);
                 if (!dependantInterestingInstructions.isEmpty()) {
@@ -273,153 +272,193 @@ public class Slicer implements Opcodes {
         return intersection;
     }
 
-    private VariableUsages simulateInstruction(final Instance inst, final AtomicInteger operandStack,
-            final ExecutionFrame executionFrame, final ExecutionFrame removedFrame) {
+    private VariableUsages simulateInstruction(final Instance inst,
+            final ExecutionFrame executionFrame, final ExecutionFrame removedFrame, final Stack<ExecutionFrame> allFrames) {
         final Variable var;
         Collection<Variable> vars = Collections.emptySet();
         switch (inst.getType()) {
         case ARRAY:
-            return simulateArrayInstruction((ArrayInstruction.Instance)inst, operandStack);
+            return simulateArrayInstruction((ArrayInstruction.Instance)inst, executionFrame);
         case FIELD:
-            return simulateFieldInstruction((FieldInstruction.Instance)inst, operandStack);
+            return simulateFieldInstruction((FieldInstruction.Instance)inst, executionFrame);
         case IINC:
             var = executionFrame.getLocalVariable(((IIncInstruction)inst.getInstruction()).getLocalVarIndex());
             vars = Collections.singleton(var);
             return new SimpleVariableUsage(vars, vars);
         case INT:
-            return new SimpleVariableUsage(vars,
-                    Collections.singleton((Variable)new StackEntry(operandStack.decrementAndGet())));
+            return new SimpleVariableUsage(vars, Collections.singleton(
+                    (Variable)executionFrame.getStackEntry(executionFrame.operandStack.decrementAndGet())));
         case LABEL:
             return VariableUsages.EMPTY;
         case METHODINVOCATION:
-            return simulateMethodInsn((MethodInvocationInstruction)inst.getInstruction(), operandStack,
+            return simulateMethodInsn((MethodInvocationInstruction)inst.getInstruction(),
                     executionFrame, removedFrame);
+        case MULTIANEWARRAY:
+            return stackManipulation(executionFrame, ((MultiANewArrayInstruction)inst.getInstruction()).getDimension(), 1);
+        case NEWARRAY:
+            return stackManipulation(executionFrame, 1, 1);
         case SIMPLE:
-            return simulateSimpleInsn(inst, operandStack);
+            return simulateSimpleInsn(inst, executionFrame, inst.getStackDepth() < 2 ? null : allFrames.get(inst.getStackDepth()-2));
         case VAR:
-            return simulateVarInstruction((VarInstruction) inst.getInstruction(), operandStack, executionFrame);
+            return simulateVarInstruction((VarInstruction) inst.getInstruction(), executionFrame);
         default:
             assert false;
             return null;
         }
     }
 
-    private VariableUsages simulateArrayInstruction(final ArrayInstruction.Instance inst, final AtomicInteger operandStack) {
+    private VariableUsages simulateArrayInstruction(final ArrayInstruction.Instance inst, final ExecutionFrame frame) {
         switch (inst.getOpcode()) {
         case IALOAD: case FALOAD: case AALOAD: case BALOAD: case CALOAD: case SALOAD:
-            int stackDepth = operandStack.getAndIncrement();
-            return new SimpleVariableUsage(Arrays.asList(new StackEntry(stackDepth-1), new StackEntry(stackDepth),
-                    new ArrayElement(inst.getArrayId(), inst.getArrayIndex())),
-                    Collections.singleton((Variable)new StackEntry(stackDepth-1)));
+            int stackDepth = frame.operandStack.getAndIncrement();
+            ArrayElement arrayElem = new ArrayElement(inst.getArrayId(), inst.getArrayIndex());
+            return new SimpleVariableUsage(Arrays.asList(frame.getStackEntry(stackDepth-1), frame.getStackEntry(stackDepth),
+                    arrayElem), frame.getStackEntry(stackDepth-1));
+            /*
+            Collection<Variable> varColl = Collections.singleton((Variable)arrayElem);
+            Map<Variable, Collection<Variable>> definition = Collections.singletonMap((Variable)frame.getStackEntry(stackDepth-1),
+                    varColl);
+            return new ComplexVariableUsage(Arrays.asList(frame.getStackEntry(stackDepth-1), frame.getStackEntry(stackDepth),
+                    arrayElem), definition);
+            */
         case LALOAD: case DALOAD:
-            stackDepth = operandStack.get();
-            return new SimpleVariableUsage(Arrays.asList(new StackEntry(stackDepth-2), new StackEntry(stackDepth-1),
-                    new ArrayElement(inst.getArrayId(), inst.getArrayIndex())),
-                    Arrays.asList((Variable)new StackEntry(stackDepth-2), new StackEntry(stackDepth-1)));
-
+            stackDepth = frame.operandStack.get();
+            arrayElem = new ArrayElement(inst.getArrayId(), inst.getArrayIndex());
+            return new SimpleVariableUsage(Arrays.asList(frame.getStackEntry(stackDepth-2), frame.getStackEntry(stackDepth-1),
+                    arrayElem), Arrays.asList((Variable)frame.getStackEntry(stackDepth-2), frame.getStackEntry(stackDepth-1)));
+            /*
+            varColl = Collections.singleton((Variable)arrayElem);
+            definition = new HashMap<Variable, Collection<Variable>>();
+            definition.put(frame.getStackEntry(stackDepth-2), varColl);
+            definition.put(frame.getStackEntry(stackDepth-1), varColl);
+            return new ComplexVariableUsage(Arrays.asList(frame.getStackEntry(stackDepth-2), frame.getStackEntry(stackDepth-1),
+                    arrayElem), definition);
+            */
         case IASTORE: case FASTORE: case AASTORE: case BASTORE: case CASTORE: case SASTORE:
+            stackDepth = frame.operandStack.getAndAdd(3);
+            arrayElem = new ArrayElement(inst.getArrayId(), inst.getArrayIndex());
+            return new SimpleVariableUsage(Arrays.asList((Variable)frame.getStackEntry(stackDepth),
+                    frame.getStackEntry(stackDepth+1), frame.getStackEntry(stackDepth+2)),
+                    arrayElem);
+            /*
+            varColl = Collections.singleton((Variable)frame.getStackEntry(stackDepth+2));
+            Map<Variable, Collection<Variable>> definition = Collections.singletonMap((Variable)arrayElem, varColl);
+            return new ComplexVariableUsage(Arrays.asList((Variable)frame.getStackEntry(stackDepth),
+                    frame.getStackEntry(stackDepth+1), frame.getStackEntry(stackDepth+2)),
+                    definition);
+            */
         case LASTORE: case DASTORE:
-            // TODO
+            stackDepth = frame.operandStack.getAndAdd(4);
+            arrayElem = new ArrayElement(inst.getArrayId(), inst.getArrayIndex());
+            return new SimpleVariableUsage(Arrays.asList((Variable)frame.getStackEntry(stackDepth),
+                    frame.getStackEntry(stackDepth+1), frame.getStackEntry(stackDepth+2), frame.getStackEntry(stackDepth+3)),
+                    arrayElem);
+            /*
+            varColl = Arrays.asList((Variable)frame.getStackEntry(stackDepth+2), frame.getStackEntry(stackDepth+3));
+            definition = Collections.singletonMap((Variable)arrayElem, varColl);
+            return new ComplexVariableUsage(Arrays.asList((Variable)frame.getStackEntry(stackDepth),
+                    frame.getStackEntry(stackDepth+1), frame.getStackEntry(stackDepth+2), frame.getStackEntry(stackDepth+3)),
+                    definition);
+            */
+        default:
+            assert false;
+            return null;
         }
-        // TODO Auto-generated method stub
-        return null;
     }
 
-    private VariableUsages simulateMethodInsn(final MethodInvocationInstruction inst, final AtomicInteger operandStack,
+    private VariableUsages simulateMethodInsn(final MethodInvocationInstruction inst,
             final ExecutionFrame executionFrame, final ExecutionFrame removedFrame) {
-        final boolean hasRemovedFrame = removedFrame != null && removedFrame.method == inst.getMethod();
-        int paramCount = inst.getOpcode() == INVOKEINTERFACE ? 0 : 1;
+        final boolean hasRemovedFrame = removedFrame != null
+            && inst.getMethodName().equals(removedFrame.method.getName())
+            && inst.getMethodDesc().equals(removedFrame.method.getDesc());
+        int paramCount = inst.getOpcode() == INVOKESTATIC ? 0 : 1;
         for (int param = inst.getParameterCount()-1; param >= 0; --param)
             paramCount += inst.parameterIsLong(param) ? 2 : 1;
         final int returnedSize = inst.returnValueIsLong() ? 2 : 1;
         if (!hasRemovedFrame) {
-            final int parametersStackOffset = operandStack.getAndAdd(paramCount-returnedSize)-1;
+            final int parametersStackOffset = executionFrame.operandStack.getAndAdd(paramCount-returnedSize)-1;
             return new MethodInvokationVariableUsages(parametersStackOffset,
-                    paramCount, returnedSize, executionFrame);
+                    paramCount, returnedSize, executionFrame, null);
         }
 
-        final int parametersStackOffset = operandStack.getAndAdd(paramCount)-returnedSize-1;
+        final int parametersStackOffset = executionFrame.operandStack.getAndAdd(paramCount)+returnedSize-1;
         return new MethodInvokationVariableUsages(parametersStackOffset,
-                paramCount, 0, removedFrame);
+                paramCount, 0, executionFrame, removedFrame);
     }
 
-    private VariableUsages simulateFieldInstruction(final FieldInstruction.Instance instance, final AtomicInteger operandStack) {
+    private VariableUsages simulateFieldInstruction(final FieldInstruction.Instance instance, final ExecutionFrame frame) {
         int stackDepth;
         final FieldInstruction instruction = (FieldInstruction) instance.getInstruction();
         switch (instruction.getOpcode()) {
         case GETFIELD:
             if (instruction.isLongValue()) {
-                stackDepth = operandStack.decrementAndGet();
-                return new SimpleVariableUsage(Arrays.asList(new StackEntry(stackDepth-1),
+                stackDepth = frame.operandStack.decrementAndGet();
+                return new SimpleVariableUsage(Arrays.asList(frame.getStackEntry(stackDepth-1),
                             new ObjectField(instance.getObjectId(), instruction.getFieldName())),
-                        Arrays.asList((Variable)new StackEntry(stackDepth-1), new StackEntry(stackDepth)));
+                        Arrays.asList((Variable)frame.getStackEntry(stackDepth-1), frame.getStackEntry(stackDepth)));
             }
-            stackDepth = operandStack.get();
-            return new SimpleVariableUsage(Arrays.asList(new StackEntry(stackDepth-1),
+            stackDepth = frame.operandStack.get();
+            return new SimpleVariableUsage(Arrays.asList(frame.getStackEntry(stackDepth-1),
                         new ObjectField(instance.getObjectId(), instruction.getFieldName())),
-                    Collections.singleton((Variable)new StackEntry(stackDepth-1)));
+                    frame.getStackEntry(stackDepth-1));
         case GETSTATIC:
             if (instruction.isLongValue()) {
-                stackDepth = operandStack.addAndGet(-2);
-                return new SimpleVariableUsage(Collections.singleton((Variable)new ObjectField(-1, instruction.getFieldName())),
-                        Arrays.asList((Variable)new StackEntry(stackDepth), new StackEntry(stackDepth+1)));
+                stackDepth = frame.operandStack.addAndGet(-2);
+                return new SimpleVariableUsage(new ObjectField(-1, instruction.getFieldName()),
+                        Arrays.asList((Variable)frame.getStackEntry(stackDepth), frame.getStackEntry(stackDepth+1)));
             }
-            stackDepth = operandStack.decrementAndGet();
-            return new SimpleVariableUsage(Collections.singleton((Variable)new ObjectField(-1, instruction.getFieldName())),
-                    Arrays.asList((Variable)new StackEntry(stackDepth)));
+            stackDepth = frame.operandStack.decrementAndGet();
+            return new SimpleVariableUsage(new ObjectField(-1, instruction.getFieldName()),
+                    Arrays.asList((Variable)frame.getStackEntry(stackDepth)));
         case PUTFIELD:
             if (instruction.isLongValue()) {
-                stackDepth = operandStack.getAndAdd(3);
-                return new SimpleVariableUsage(Arrays.asList((Variable)new StackEntry(stackDepth),
-                        new StackEntry(stackDepth+1), new StackEntry(stackDepth+2)),
-                        Collections.singleton((Variable)new ObjectField(instance.getObjectId(), instruction.getFieldName())));
+                stackDepth = frame.operandStack.getAndAdd(3);
+                return new SimpleVariableUsage(Arrays.asList((Variable)frame.getStackEntry(stackDepth),
+                        frame.getStackEntry(stackDepth+1), frame.getStackEntry(stackDepth+2)),
+                        new ObjectField(instance.getObjectId(), instruction.getFieldName()));
             }
-            stackDepth = operandStack.getAndAdd(2);
-            return new SimpleVariableUsage(Arrays.asList((Variable)new StackEntry(stackDepth),
-                    new StackEntry(stackDepth+1)),
-                    Collections.singleton((Variable)new ObjectField(instance.getObjectId(), instruction.getFieldName())));
+            stackDepth = frame.operandStack.getAndAdd(2);
+            return new SimpleVariableUsage(Arrays.asList((Variable)frame.getStackEntry(stackDepth),
+                    frame.getStackEntry(stackDepth+1)),
+                    new ObjectField(instance.getObjectId(), instruction.getFieldName()));
         case PUTSTATIC:
             if (instruction.isLongValue()) {
-                stackDepth = operandStack.getAndAdd(2);
-                return new SimpleVariableUsage(Arrays.asList((Variable)new StackEntry(stackDepth),
-                        new StackEntry(stackDepth+1)),
-                        Collections.singleton((Variable)new ObjectField(-1, instruction.getFieldName())));
+                stackDepth = frame.operandStack.getAndAdd(2);
+                return new SimpleVariableUsage(Arrays.asList((Variable)frame.getStackEntry(stackDepth),
+                        frame.getStackEntry(stackDepth+1)),
+                        new ObjectField(-1, instruction.getFieldName()));
             }
-            stackDepth = operandStack.getAndIncrement();
-            return new SimpleVariableUsage(Collections.singleton((Variable)new StackEntry(stackDepth)),
-                    Collections.singleton((Variable)new ObjectField(-1, instruction.getFieldName())));
+            stackDepth = frame.operandStack.getAndIncrement();
+            return new SimpleVariableUsage(Collections.singleton((Variable)frame.getStackEntry(stackDepth)),
+                    new ObjectField(-1, instruction.getFieldName()));
         default:
             assert false;
             return null;
         }
     }
 
-    private VariableUsages simulateVarInstruction(final VarInstruction inst, final AtomicInteger operandStack,
-            final ExecutionFrame executionFrame) {
+    private VariableUsages simulateVarInstruction(final VarInstruction inst, final ExecutionFrame frame) {
         switch (inst.getOpcode()) {
         case ILOAD: case FLOAD: case ALOAD:
-            int stackDepth = operandStack.decrementAndGet();
-            return new SimpleVariableUsage(
-                    Collections.singleton((Variable)executionFrame.getLocalVariable(inst.getLocalVarIndex())),
-                    Collections.singleton((Variable)new StackEntry(stackDepth)));
+            int stackDepth = frame.operandStack.decrementAndGet();
+            return new SimpleVariableUsage(frame.getLocalVariable(inst.getLocalVarIndex()),
+                    frame.getStackEntry(stackDepth));
         case LLOAD: case DLOAD:
-            stackDepth = operandStack.addAndGet(-2);
-            return new SimpleVariableUsage(
-                    Collections.singleton((Variable)executionFrame.getLocalVariable(inst.getLocalVarIndex())),
-                    Arrays.asList((Variable)new StackEntry(stackDepth), new StackEntry(stackDepth+1)));
+            stackDepth = frame.operandStack.addAndGet(-2);
+            return new SimpleVariableUsage(frame.getLocalVariable(inst.getLocalVarIndex()),
+                    Arrays.asList((Variable)frame.getStackEntry(stackDepth), frame.getStackEntry(stackDepth+1)));
         case ISTORE: case FSTORE: case ASTORE:
-            stackDepth = operandStack.getAndIncrement();
-            return new SimpleVariableUsage(
-                    Collections.singleton((Variable)new StackEntry(stackDepth)),
-                    Collections.singleton((Variable)executionFrame.getLocalVariable(inst.getLocalVarIndex())));
+            stackDepth = frame.operandStack.getAndIncrement();
+            return new SimpleVariableUsage(frame.getStackEntry(stackDepth),
+                    frame.getLocalVariable(inst.getLocalVarIndex()));
         case LSTORE: case DSTORE:
-            stackDepth = operandStack.getAndAdd(2);
+            stackDepth = frame.operandStack.getAndAdd(2);
             return new SimpleVariableUsage(
-                    Arrays.asList((Variable)new StackEntry(stackDepth), new StackEntry(stackDepth+1)),
-                    Collections.singleton((Variable)executionFrame.getLocalVariable(inst.getLocalVarIndex())));
+                    Arrays.asList((Variable)frame.getStackEntry(stackDepth), frame.getStackEntry(stackDepth+1)),
+                    frame.getLocalVariable(inst.getLocalVarIndex()));
         case RET:
             final Set<Variable> emptySet = Collections.emptySet();
-            return new SimpleVariableUsage(Collections.singleton((Variable)executionFrame.getLocalVariable(inst.getLocalVarIndex())),
+            return new SimpleVariableUsage(frame.getLocalVariable(inst.getLocalVarIndex()),
                     emptySet);
         default:
             assert false;
@@ -427,11 +466,55 @@ public class Slicer implements Opcodes {
         }
     }
 
-    private VariableUsages simulateSimpleInsn(final Instance inst, final AtomicInteger operandStackSize) {
+    private VariableUsages simulateSimpleInsn(final Instance inst, final ExecutionFrame frame, final ExecutionFrame lowerFrame) {
         switch (inst.getOpcode()) {
-        case DUP_X1: case DUP_X2: case DUP2_X1: case DUP2_X2: case SWAP:
-            // TODO
-            return null;
+        case DUP:
+            int stackHeight = frame.operandStack.decrementAndGet();
+            return new SimpleVariableUsage(frame.getStackEntry(stackHeight-1), frame.getStackEntry(stackHeight));
+        case DUP2:
+            stackHeight = frame.operandStack.addAndGet(-2);
+            return new SimpleVariableUsage(
+                    Arrays.asList((Variable)frame.getStackEntry(stackHeight-2), frame.getStackEntry(stackHeight-1)),
+                    Arrays.asList((Variable)frame.getStackEntry(stackHeight), frame.getStackEntry(stackHeight+1)));
+        case DUP_X1:
+            stackHeight = frame.operandStack.decrementAndGet();
+            return new SimpleVariableUsage(
+                    Arrays.asList((Variable)frame.getStackEntry(stackHeight-2), frame.getStackEntry(stackHeight-1)),
+                    Arrays.asList((Variable)frame.getStackEntry(stackHeight-2), frame.getStackEntry(stackHeight-1),
+                            frame.getStackEntry(stackHeight)));
+        case DUP_X2:
+            stackHeight = frame.operandStack.decrementAndGet();
+            return new SimpleVariableUsage(
+                    Arrays.asList((Variable)frame.getStackEntry(stackHeight-3), frame.getStackEntry(stackHeight-2),
+                            frame.getStackEntry(stackHeight-1)),
+                    Arrays.asList((Variable)frame.getStackEntry(stackHeight-3), frame.getStackEntry(stackHeight-2),
+                            frame.getStackEntry(stackHeight-1), frame.getStackEntry(stackHeight)));
+        case DUP2_X1:
+            stackHeight = frame.operandStack.addAndGet(-2);
+            return new SimpleVariableUsage(
+                    Arrays.asList((Variable)frame.getStackEntry(stackHeight-3), frame.getStackEntry(stackHeight-2),
+                            frame.getStackEntry(stackHeight-1)),
+                    Arrays.asList((Variable)frame.getStackEntry(stackHeight-3), frame.getStackEntry(stackHeight-2),
+                            frame.getStackEntry(stackHeight-1), frame.getStackEntry(stackHeight), frame.getStackEntry(stackHeight+1)));
+        case DUP2_X2:
+            stackHeight = frame.operandStack.addAndGet(-2);
+            return new SimpleVariableUsage(
+                    Arrays.asList((Variable)frame.getStackEntry(stackHeight-4), frame.getStackEntry(stackHeight-3),
+                            frame.getStackEntry(stackHeight-2), frame.getStackEntry(stackHeight-1)),
+                    Arrays.asList((Variable)frame.getStackEntry(stackHeight-4), frame.getStackEntry(stackHeight-3),
+                            frame.getStackEntry(stackHeight-2), frame.getStackEntry(stackHeight-1),
+                            frame.getStackEntry(stackHeight), frame.getStackEntry(stackHeight+1)));
+
+        case IRETURN: case FRETURN: case ARETURN:
+            return new SimpleVariableUsage(frame.getStackEntry(frame.operandStack.getAndIncrement()),
+                    lowerFrame.getStackEntry(lowerFrame.operandStack.decrementAndGet()));
+        case DRETURN: case LRETURN:
+            final int thisFrameStackHeight = frame.operandStack.getAndAdd(2);
+            final int lowerFrameStackHeight = lowerFrame.operandStack.addAndGet(-2);
+            return new SimpleVariableUsage(Arrays.asList((Variable)frame.getStackEntry(thisFrameStackHeight),
+                        frame.getStackEntry(thisFrameStackHeight+1)),
+                    Arrays.asList((Variable)lowerFrame.getStackEntry(lowerFrameStackHeight),
+                            lowerFrame.getStackEntry(lowerFrameStackHeight+1)));
 
         case NOP:
         case RETURN:
@@ -439,49 +522,44 @@ public class Slicer implements Opcodes {
 
         case ACONST_NULL: case ICONST_M1: case ICONST_0: case ICONST_1: case ICONST_2: case ICONST_3:
         case ICONST_4: case ICONST_5: case FCONST_0: case FCONST_1: case FCONST_2:
-            return stackManipulation(operandStackSize, 0, 1);
+            return stackManipulation(frame, 0, 1);
 
         case DCONST_0: case DCONST_1: case LCONST_0: case LCONST_1:
-            return stackManipulation(operandStackSize, 0, 2);
+            return stackManipulation(frame, 0, 2);
 
-        case IRETURN: case FRETURN: case ARETURN:
         case ATHROW:
         case MONITORENTER: case MONITOREXIT:
         case POP:
-            return stackManipulation(operandStackSize, 1, 0);
+            return stackManipulation(frame, 1, 0);
 
         case I2F: case F2I: case D2F: case I2B: case I2C: case I2S:
         case ARRAYLENGTH:
         case INEG: case FNEG:
-            return stackManipulation(operandStackSize, 1, 1);
+            return stackManipulation(frame, 1, 1);
 
         case I2L: case I2D: case F2L: case F2D:
-        case DUP:
-            return stackManipulation(operandStackSize, 1, 2);
+            return stackManipulation(frame, 1, 2);
 
-        case DRETURN: case LRETURN:
         case POP2:
-            return stackManipulation(operandStackSize, 2, 0);
+            return stackManipulation(frame, 2, 0);
 
         case L2I: case L2F: case D2I:
         case FCMPL: case FCMPG:
         case IADD: case FADD: case ISUB: case FSUB: case IMUL: case FMUL: case IDIV: case FDIV: case IREM:
         case FREM: case ISHL: case ISHR: case IUSHR: case IAND: case IOR: case IXOR:
-            return stackManipulation(operandStackSize, 2, 1);
+            return stackManipulation(frame, 2, 1);
 
         case L2D: case D2L:
         case LNEG: case DNEG:
-            return stackManipulation(operandStackSize, 2, 2);
-
-        case DUP2:
-            return stackManipulation(operandStackSize, 2, 4);
+        case SWAP:
+            return stackManipulation(frame, 2, 2);
 
         case LCMP: case DCMPL: case DCMPG:
-            return stackManipulation(operandStackSize, 4, 1);
+            return stackManipulation(frame, 4, 1);
 
         case LADD: case DADD: case LSUB: case DSUB: case LMUL: case DMUL: case LDIV: case DDIV: case LREM:
         case DREM: case LSHL: case LSHR: case LUSHR: case LAND: case LOR: case LXOR:
-            return stackManipulation(operandStackSize, 4, 2);
+            return stackManipulation(frame, 4, 2);
 
         default:
             assert false;
@@ -489,8 +567,8 @@ public class Slicer implements Opcodes {
         }
     }
 
-    private VariableUsages stackManipulation(final AtomicInteger operandStackSize, final int read, final int write) {
-        final int oldStackSize = read == write ? operandStackSize.get() : operandStackSize.getAndAdd(read - write);
+    private VariableUsages stackManipulation(final ExecutionFrame frame, final int read, final int write) {
+        final int oldStackSize = read == write ? frame.operandStack.get() : frame.operandStack.getAndAdd(read - write);
         final int newStackSize = oldStackSize + read - write;
         final Variable[] readVarsArr;
         final Variable[] writtenVarsArr;
@@ -499,11 +577,11 @@ public class Slicer implements Opcodes {
         if (read == 0) {
             readVars = Collections.emptySet();
         } else if (read == 1) {
-            readVars = Collections.singleton((Variable)new StackEntry(newStackSize-1));
+            readVars = Collections.singleton((Variable)frame.getStackEntry(newStackSize-1));
         } else {
             readVarsArr = new Variable[read];
             for (int i = 0; i < read; ++i)
-                readVarsArr[i] = new StackEntry(newStackSize-i-1);
+                readVarsArr[i] = frame.getStackEntry(newStackSize-i-1);
             readVars = Arrays.asList(readVarsArr);
         }
         if (write == read) {
@@ -511,11 +589,11 @@ public class Slicer implements Opcodes {
         } else if (write == 0) {
             writtenVars = Collections.emptySet();
         } else if (write == 1) {
-            writtenVars = Collections.singleton((Variable)new StackEntry(oldStackSize-1));
+            writtenVars = Collections.singleton((Variable)frame.getStackEntry(oldStackSize-1));
         } else {
             writtenVarsArr = new Variable[write];
             for (int i = 0; i < write; ++i)
-                writtenVarsArr[i] = new StackEntry(oldStackSize-i-1);
+                writtenVarsArr[i] = frame.getStackEntry(oldStackSize-i-1);
             writtenVars = Arrays.asList(writtenVarsArr);
         }
         return new SimpleVariableUsage(readVars, writtenVars);

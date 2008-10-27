@@ -2,20 +2,22 @@ package de.unisb.cs.st.javaslicer;
 
 public class StackEntry implements Variable {
 
+    private final ExecutionFrame frame;
     private final int index;
 
-    public StackEntry(final int index) {
+    public StackEntry(final ExecutionFrame frame, final int index) {
+        this.frame = frame;
         this.index = index;
     }
 
     @Override
     public String toString() {
-        return "stack#" + this.index;
+        return "stack["+this.frame.hashCode()+","+this.index+"]";
     }
 
     @Override
     public int hashCode() {
-        return this.index;
+        return this.frame.hashCode() + this.index;
     }
 
     @Override
@@ -27,6 +29,8 @@ public class StackEntry implements Variable {
         if (getClass() != obj.getClass())
             return false;
         final StackEntry other = (StackEntry) obj;
+        if (!this.frame.equals(other.frame))
+            return false;
         if (this.index != other.index)
             return false;
         return true;
