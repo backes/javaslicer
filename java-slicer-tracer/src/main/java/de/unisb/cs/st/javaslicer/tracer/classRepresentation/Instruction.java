@@ -1,6 +1,6 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
 
-import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 
@@ -119,7 +119,7 @@ public interface Instruction extends Comparable<Instruction> {
 
     Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException, EOFException;
 
-    void writeOut(final DataOutput out) throws IOException;
+    void writeOut(final DataOutputStream out, StringCacheOutput stringCache) throws IOException;
 
     Type getType();
 

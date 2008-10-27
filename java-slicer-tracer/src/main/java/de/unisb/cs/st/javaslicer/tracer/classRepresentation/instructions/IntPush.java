@@ -1,13 +1,17 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheInput;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheOutput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
 
 /**
  * Class representing an instruction that just pushes an integer onto the stack (
@@ -41,13 +45,15 @@ public class IntPush extends AbstractInstruction {
     }
 
     @Override
-    public void writeOut(final DataOutput out) throws IOException {
-        super.writeOut(out);
-        out.writeInt(this.operand);
+    public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
+        super.writeOut(out, stringCache);
+        OptimizedDataOutputStream.writeInt0(this.operand, out);
     }
 
-    public static IntPush readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
-        final int operand = in.readInt();
+    public static IntPush readFrom(final DataInputStream in, final MethodReadInformation methodInfo,
+            @SuppressWarnings("unused") final StringCacheInput stringCache,
+            final int opcode, final int index, final int lineNumber) throws IOException {
+        final int operand = OptimizedDataInputStream.readInt0(in);
         return new IntPush(methodInfo.getMethod(), lineNumber, opcode, operand, index);
     }
 

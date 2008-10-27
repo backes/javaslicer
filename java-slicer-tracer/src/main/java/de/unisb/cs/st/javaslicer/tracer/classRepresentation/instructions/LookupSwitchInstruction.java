@@ -1,7 +1,7 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -12,8 +12,12 @@ import java.util.Map.Entry;
 import org.objectweb.asm.Opcodes;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheInput;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheOutput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
 
 /**
  * Class representing a LOOKUPSWITCH instruction.
@@ -61,25 +65,26 @@ public class LookupSwitchInstruction extends AbstractInstruction {
     }
 
     @Override
-    public void writeOut(final DataOutput out) throws IOException {
-        super.writeOut(out);
-        out.writeInt(this.defaultHandler.getLabelNr());
-        out.writeInt(this.handlers.size());
+    public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
+        super.writeOut(out, stringCache);
+        OptimizedDataOutputStream.writeInt0(this.defaultHandler.getLabelNr(), out);
+        OptimizedDataOutputStream.writeInt0(this.handlers.size(), out);
         for (final Entry<Integer, LabelMarker> e: this.handlers.entrySet()) {
-            out.writeInt(e.getKey());
-            out.writeInt(e.getValue().getLabelNr());
+            OptimizedDataOutputStream.writeInt0(e.getKey(), out);
+            OptimizedDataOutputStream.writeInt0(e.getValue().getLabelNr(), out);
         }
     }
 
-    public static LookupSwitchInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo,
+    public static LookupSwitchInstruction readFrom(final DataInputStream in, final MethodReadInformation methodInfo,
+            @SuppressWarnings("unused") final StringCacheInput stringCache,
             @SuppressWarnings("unused") final int opcode,
             final int index, final int lineNumber) throws IOException {
-        final LabelMarker defaultHandler = methodInfo.getLabel(in.readInt());
-        int handlerSize = in.readInt();
+        final LabelMarker defaultHandler = methodInfo.getLabel(OptimizedDataInputStream.readInt0(in));
+        int handlerSize = OptimizedDataInputStream.readInt0(in);
         final IntegerMap<LabelMarker> handlers = new IntegerMap<LabelMarker>(handlerSize*4/3+1);
         while (handlerSize-- > 0) {
-            final int key = in.readInt();
-            final LabelMarker lm = methodInfo.getLabel(in.readInt());
+            final int key = OptimizedDataInputStream.readInt0(in);
+            final LabelMarker lm = methodInfo.getLabel(OptimizedDataInputStream.readInt0(in));
             handlers.put(key, lm);
         }
         return new LookupSwitchInstruction(methodInfo.getMethod(), lineNumber, defaultHandler, handlers, index);

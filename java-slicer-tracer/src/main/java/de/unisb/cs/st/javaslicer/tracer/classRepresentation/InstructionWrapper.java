@@ -1,6 +1,6 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
 
-import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 
@@ -59,8 +59,8 @@ public abstract class InstructionWrapper implements Instruction {
         return this.wrappedInstruction.getPrevious();
     }
 
-    public void writeOut(final DataOutput out) throws IOException {
-        this.wrappedInstruction.writeOut(out);
+    public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
+        this.wrappedInstruction.writeOut(out, stringCache);
     }
 
     @Override

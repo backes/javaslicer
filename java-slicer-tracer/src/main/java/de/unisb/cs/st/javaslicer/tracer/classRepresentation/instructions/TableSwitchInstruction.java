@@ -1,13 +1,17 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheInput;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheOutput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
 
 /**
  * Class representing a TABLESWITCH instruction.
@@ -19,22 +23,20 @@ public class TableSwitchInstruction extends AbstractInstruction {
     private LabelMarker defaultHandler;
     private LabelMarker[] handlers;
     private final int min;
-    private final int max;
 
     public TableSwitchInstruction(final ReadMethod readMethod, final int lineNumber, final int min,
             final int max, final LabelMarker defaultHandler, final LabelMarker[] handlers) {
         super(readMethod, Opcodes.TABLESWITCH, lineNumber);
+        assert min + handlers.length - 1 == max;
         this.min = min;
-        this.max = max;
         this.defaultHandler = defaultHandler;
         this.handlers = handlers;
     }
 
-    private TableSwitchInstruction(final ReadMethod readMethod, final int min, final int max,
+    private TableSwitchInstruction(final ReadMethod readMethod, final int min,
             final int lineNumber, final LabelMarker defaultHandler, final LabelMarker[] handlers, final int index) {
         super(readMethod, Opcodes.TABLESWITCH, lineNumber, index);
         this.min = min;
-        this.max = max;
         this.defaultHandler = defaultHandler;
         this.handlers = handlers;
     }
@@ -60,7 +62,7 @@ public class TableSwitchInstruction extends AbstractInstruction {
     }
 
     public int getMax() {
-        return this.max;
+        return this.min + this.handlers.length - 1;
     }
 
     @Override
@@ -69,27 +71,27 @@ public class TableSwitchInstruction extends AbstractInstruction {
     }
 
     @Override
-    public void writeOut(final DataOutput out) throws IOException {
-        super.writeOut(out);
-        out.writeInt(this.min);
-        out.writeInt(this.max);
-        out.writeInt(this.defaultHandler.getLabelNr());
+    public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
+        super.writeOut(out, stringCache);
+        OptimizedDataOutputStream.writeInt0(this.min, out);
+        OptimizedDataOutputStream.writeInt0(this.defaultHandler.getLabelNr(), out);
+        OptimizedDataOutputStream.writeInt0(this.handlers.length, out);
         for (final LabelMarker lm: this.handlers) {
-            out.writeInt(lm.getLabelNr());
+            OptimizedDataOutputStream.writeInt0(lm.getLabelNr(), out);
         }
     }
 
-    public static TableSwitchInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo,
+    public static TableSwitchInstruction readFrom(final DataInputStream in, final MethodReadInformation methodInfo,
+            @SuppressWarnings("unused") final StringCacheInput stringCache,
             @SuppressWarnings("unused") final int opcode,
             final int index, final int lineNumber) throws IOException {
-        final int min = in.readInt();
-        final int max = in.readInt();
-        final LabelMarker defaultHandler = methodInfo.getLabel(in.readInt());
-        final int handlersSize = max - min + 1;
+        final int min = OptimizedDataInputStream.readInt0(in);
+        final LabelMarker defaultHandler = methodInfo.getLabel(OptimizedDataInputStream.readInt0(in));
+        final int handlersSize = OptimizedDataInputStream.readInt0(in);
         final LabelMarker[] handlers = new LabelMarker[handlersSize];
         for (int i = 0; i < handlersSize; ++i)
-            handlers[i] = methodInfo.getLabel(in.readInt());
-        return new TableSwitchInstruction(methodInfo.getMethod(), min, max, lineNumber, defaultHandler, handlers, index);
+            handlers[i] = methodInfo.getLabel(OptimizedDataInputStream.readInt0(in));
+        return new TableSwitchInstruction(methodInfo.getMethod(), min, lineNumber, defaultHandler, handlers, index);
     }
 
     @Override

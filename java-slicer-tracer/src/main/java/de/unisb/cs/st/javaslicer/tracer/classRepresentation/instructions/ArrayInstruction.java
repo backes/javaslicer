@@ -1,15 +1,19 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheInput;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheOutput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
 
 /**
  * Class representing an array load or array store (*ALOAD / *ASTORE) instruction.
@@ -51,15 +55,17 @@ public class ArrayInstruction extends AbstractInstruction {
     }
 
     @Override
-    public void writeOut(final DataOutput out) throws IOException {
-        super.writeOut(out);
-        out.writeInt(this.arrayTraceSeqIndex);
-        out.writeInt(this.indexTraceSeqIndex);
+    public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
+        super.writeOut(out, stringCache);
+        OptimizedDataOutputStream.writeInt0(this.arrayTraceSeqIndex, out);
+        OptimizedDataOutputStream.writeInt0(this.indexTraceSeqIndex, out);
     }
 
-    public static ArrayInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
-        final int arrayTraceSeqIndex = in.readInt();
-        final int indexTraceSeqIndex = in.readInt();
+    public static ArrayInstruction readFrom(final DataInputStream in, final MethodReadInformation methodInfo,
+            @SuppressWarnings("unused") final StringCacheInput stringCache,
+            final int opcode, final int index, final int lineNumber) throws IOException {
+        final int arrayTraceSeqIndex = OptimizedDataInputStream.readInt0(in);
+        final int indexTraceSeqIndex = OptimizedDataInputStream.readInt0(in);
         return new ArrayInstruction(methodInfo.getMethod(), lineNumber, opcode, arrayTraceSeqIndex, indexTraceSeqIndex, index);
     }
 

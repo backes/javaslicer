@@ -1,7 +1,7 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
 
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -13,6 +13,8 @@ import java.util.Queue;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
 
 public class ReadMethod implements Comparable<ReadMethod> {
 
@@ -121,19 +123,17 @@ public class ReadMethod implements Comparable<ReadMethod> {
         return this.localVariables;
     }
 
-    public void writeOut(final DataOutput out) throws IOException {
-        out.writeInt(this.access);
-        out.writeUTF(this.name);
-        out.writeUTF(this.desc);
-        out.writeInt(this.instructionNumberStart);
-        out.writeInt(this.instructionNumberEnd);
-        out.writeInt(this.instructions.size());
+    public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
+        OptimizedDataOutputStream.writeInt0(this.access, out);
+        stringCache.writeString(this.name, out);
+        stringCache.writeString(this.desc, out);
+        OptimizedDataOutputStream.writeInt0(this.instructions.size(), out);
         for (final Instruction instr: this.instructions)
             if (instr instanceof LabelMarker)
-                instr.writeOut(out);
+                instr.writeOut(out, stringCache);
         for (final Instruction instr: this.instructions)
             if (!(instr instanceof LabelMarker))
-                instr.writeOut(out);
+                instr.writeOut(out, stringCache);
         if (this.methodEntryLabel != null && this.methodLeaveLabel != null) {
             assert this.methodEntryLabel == this.instructions.get(0);
             assert this.methodLeaveLabel == this.instructions.get(this.instructions.size()-1);
@@ -141,26 +141,25 @@ public class ReadMethod implements Comparable<ReadMethod> {
         } else {
             out.writeBoolean(false);
         }
-        out.writeInt(this.localVariables.size());
+        OptimizedDataOutputStream.writeInt0(this.localVariables.size(), out);
         for (final LocalVariable v: this.localVariables)
             v.writeOut(out);
     }
 
-    public static ReadMethod readFrom(final DataInput in, final ReadClass readClass) throws IOException {
-        final int access = in.readInt();
-        final String name = in.readUTF();
-        final String desc = in.readUTF();
-        final int instructionNumberStart = in.readInt();
-        final int instructionNumberEnd = in.readInt();
+    public static ReadMethod readFrom(final DataInputStream in, final ReadClass readClass, final int instructionNumberStart,
+            final StringCacheInput stringCache) throws IOException {
+        final int access = OptimizedDataInputStream.readInt0(in);
+        final String name = stringCache.readString(in);
+        final String desc = stringCache.readString(in);
         final ReadMethod rm = new ReadMethod(readClass, access, name, desc, instructionNumberStart);
-        rm.setInstructionNumberEnd(instructionNumberEnd);
-        int numInstr = in.readInt();
+        int numInstr = OptimizedDataInputStream.readInt0(in);
+        rm.setInstructionNumberEnd(instructionNumberStart+numInstr);
         rm.instructions.ensureCapacity(numInstr);
         final Queue<LabelMarker> labels = new ArrayDeque<LabelMarker>();
         final MethodReadInformation mri = new MethodReadInformation(rm);
         AbstractInstruction instr = null;
         while (numInstr-- > 0) {
-            instr = AbstractInstruction.readFrom(in, mri);
+            instr = AbstractInstruction.readFrom(in, mri, stringCache);
             if (!(instr instanceof LabelMarker))
                 break;
             final LabelMarker lm = (LabelMarker) instr;
@@ -170,7 +169,7 @@ public class ReadMethod implements Comparable<ReadMethod> {
         }
         while (instr != null || numInstr-- > 0) {
             if (instr == null)
-                instr = AbstractInstruction.readFrom(in, mri);
+                instr = AbstractInstruction.readFrom(in, mri, stringCache);
             while (!labels.isEmpty() && labels.peek().getIndex() < instr.getIndex())
                 rm.instructions.add(labels.poll());
             rm.instructions.add(instr);
@@ -195,7 +194,7 @@ public class ReadMethod implements Comparable<ReadMethod> {
                 throw new IOException("corrupted data");
         }
 
-        int localVarsNr = in.readInt();
+        int localVarsNr = OptimizedDataInputStream.readInt0(in);
         while (localVarsNr-- > 0)
             rm.localVariables.add(LocalVariable.readFrom(in));
         if (rm.localVariables instanceof ArrayList<?>)

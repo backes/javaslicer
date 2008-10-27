@@ -1,13 +1,16 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
 
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 
 import org.objectweb.asm.Type;
+
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
 
 public class ReadClass implements Comparable<ReadClass> {
 
@@ -66,31 +69,33 @@ public class ReadClass implements Comparable<ReadClass> {
         this.source = source;
     }
 
-    public void writeOut(final DataOutput out) throws IOException {
-        out.writeUTF(this.internalClassName);
-        out.writeInt(this.instructionNumberStart);
-        out.writeInt(this.instructionNumberEnd);
-        out.writeInt(this.access);
-        out.writeInt(this.methods.size());
+    public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
+        stringCache.writeString(this.internalClassName, out);
+        OptimizedDataOutputStream.writeInt0(this.instructionNumberStart, out);
+        OptimizedDataOutputStream.writeInt0(this.access, out);
+        OptimizedDataOutputStream.writeInt0(this.methods.size(), out);
         for (final ReadMethod rm: this.methods) {
-            rm.writeOut(out);
+            rm.writeOut(out, stringCache);
         }
-        out.writeUTF(this.source == null ? "" : this.source);
+        stringCache.writeString(this.source == null ? "" : this.source, out);
     }
 
-    public static ReadClass readFrom(final DataInput in) throws IOException {
-        final String intName = in.readUTF();
+    public static ReadClass readFrom(final DataInputStream in, final StringCacheInput stringCache) throws IOException {
+        final String intName = stringCache.readString(in);
         if (intName.isEmpty())
             throw new IOException("corrupted data");
-        final int instructionNumberStart = in.readInt();
-        final int instructionNumberEnd = in.readInt();
-        final int access = in.readInt();
+        final int instructionNumberStart = OptimizedDataInputStream.readInt0(in);
+        final int access = OptimizedDataInputStream.readInt0(in);
         final ReadClass rc = new ReadClass(intName, instructionNumberStart, access);
-        rc.setInstructionNumberEnd(instructionNumberEnd);
-        int numMethods = in.readInt();
+        int numMethods = OptimizedDataInputStream.readInt0(in);
         rc.methods.ensureCapacity(numMethods);
-        while (numMethods-- > 0)
-            rc.methods.add(ReadMethod.readFrom(in, rc));
+        int instrIndex = instructionNumberStart;
+        while (numMethods-- > 0) {
+            final ReadMethod newMethod = ReadMethod.readFrom(in, rc, instrIndex, stringCache);
+            instrIndex = newMethod.getInstructionNumberEnd();
+            rc.methods.add(newMethod);
+        }
+        rc.setInstructionNumberEnd(instrIndex);
         rc.methods.trimToSize();
         Collections.sort(rc.methods, new Comparator<ReadMethod>() {
             @Override
@@ -104,7 +109,7 @@ public class ReadClass implements Comparable<ReadClass> {
                 return o1.getAccess() - o2.getAccess();
             }
         });
-        final String source = in.readUTF();
+        final String source = stringCache.readString(in);
         if (source.length() > 0)
             rc.setSource(source);
         return rc;

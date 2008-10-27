@@ -1,15 +1,19 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheInput;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheOutput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
 
 
 /**
@@ -123,19 +127,21 @@ public class FieldInstruction extends AbstractInstruction {
     }
 
     @Override
-    public void writeOut(final DataOutput out) throws IOException {
-        super.writeOut(out);
-        out.writeUTF(this.fieldDesc);
-        out.writeUTF(this.fieldName);
-        out.writeInt(this.objectTraceSeqIndex);
-        out.writeUTF(this.ownerInternalClassName);
+    public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
+        super.writeOut(out, stringCache);
+        stringCache.writeString(this.fieldDesc, out);
+        stringCache.writeString(this.fieldName, out);
+        OptimizedDataOutputStream.writeInt0(this.objectTraceSeqIndex, out);
+        stringCache.writeString(this.ownerInternalClassName, out);
     }
 
-    public static FieldInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
-        final String fieldDesc = in.readUTF();
-        final String fieldName = in.readUTF();
-        final int objectTraceSeqIndex = in.readInt();
-        final String ownerInternalClassName = in.readUTF();
+    public static FieldInstruction readFrom(final DataInputStream in, final MethodReadInformation methodInfo,
+            final StringCacheInput stringCache,
+            final int opcode, final int index, final int lineNumber) throws IOException {
+        final String fieldDesc = stringCache.readString(in);
+        final String fieldName = stringCache.readString(in);
+        final int objectTraceSeqIndex = OptimizedDataInputStream.readInt0(in);
+        final String ownerInternalClassName = stringCache.readString(in);
         return new FieldInstruction(methodInfo.getMethod(), opcode, lineNumber, ownerInternalClassName, fieldName, fieldDesc, objectTraceSeqIndex, index);
     }
 

@@ -1,10 +1,11 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
-import java.io.DataInput;
+import java.io.DataInputStream;
 
 import org.objectweb.asm.Opcodes;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheInput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
 
 /**
@@ -41,9 +42,10 @@ public class SimpleInstruction extends AbstractInstruction {
         super(readMethod, opcode, lineNumber, index);
     }
 
-    public static SimpleInstruction readFrom(@SuppressWarnings("unused") final DataInput in,
-            final MethodReadInformation methodInfo, final int opcode,
-            final int index, final int lineNumber) {
+    public static SimpleInstruction readFrom(@SuppressWarnings("unused") final DataInputStream in,
+            final MethodReadInformation methodInfo,
+            @SuppressWarnings("unused") final StringCacheInput stringCache,
+            final int opcode, final int index, final int lineNumber) {
         return new SimpleInstruction(methodInfo.getMethod(), lineNumber, opcode, index);
     }
 

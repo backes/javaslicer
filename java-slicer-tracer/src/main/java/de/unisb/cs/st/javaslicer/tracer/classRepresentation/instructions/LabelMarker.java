@@ -1,13 +1,17 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheInput;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheOutput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
 
 
 /**
@@ -70,19 +74,20 @@ public class LabelMarker extends AbstractInstruction {
     }
 
     @Override
-    public void writeOut(final DataOutput out) throws IOException {
-        super.writeOut(out);
-        out.writeInt(this.traceSeqIndex);
+    public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
+        super.writeOut(out, stringCache);
+        OptimizedDataOutputStream.writeInt0(this.traceSeqIndex, out);
         out.writeBoolean(this.additionalLabel);
-        out.writeInt(this.labelNr);
+        OptimizedDataOutputStream.writeInt0(this.labelNr, out);
     }
 
-    public static LabelMarker readFrom(final DataInput in, final MethodReadInformation methodInfo,
+    public static LabelMarker readFrom(final DataInputStream in, final MethodReadInformation methodInfo,
+            @SuppressWarnings("unused") final StringCacheInput stringCache,
             @SuppressWarnings("unused") final int opcode,
             final int index, final int lineNumber) throws IOException {
-        final int traceSeqIndex = in.readInt();
+        final int traceSeqIndex = OptimizedDataInputStream.readInt0(in);
         final boolean additionalLabel = in.readBoolean();
-        final int labelNr = in.readInt();
+        final int labelNr = OptimizedDataInputStream.readInt0(in);
         return new LabelMarker(methodInfo.getMethod(), lineNumber, traceSeqIndex, additionalLabel, labelNr, index);
     }
 

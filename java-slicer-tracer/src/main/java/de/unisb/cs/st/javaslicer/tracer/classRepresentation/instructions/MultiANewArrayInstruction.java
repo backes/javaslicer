@@ -1,13 +1,17 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheInput;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheOutput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
 
 /**
  * Class representing a MULTIANEWARRAY instruction.
@@ -45,17 +49,18 @@ public class MultiANewArrayInstruction extends AbstractInstruction {
     }
 
     @Override
-    public void writeOut(final DataOutput out) throws IOException {
-        super.writeOut(out);
-        out.writeUTF(this.typeDesc);
-        out.writeInt(this.dims);
+    public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
+        super.writeOut(out, stringCache);
+        stringCache.writeString(this.typeDesc, out);
+        OptimizedDataOutputStream.writeInt0(this.dims, out);
     }
 
-    public static MultiANewArrayInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo,
+    public static MultiANewArrayInstruction readFrom(final DataInputStream in, final MethodReadInformation methodInfo,
+            final StringCacheInput stringCache,
             @SuppressWarnings("unused") final int opcode,
             final int index, final int lineNumber) throws IOException {
-        final String typeDesc = in.readUTF();
-        final int dims = in.readInt();
+        final String typeDesc = stringCache.readString(in);
+        final int dims = OptimizedDataInputStream.readInt0(in);
         return new MultiANewArrayInstruction(methodInfo.getMethod(), typeDesc, dims, lineNumber, index);
     }
 

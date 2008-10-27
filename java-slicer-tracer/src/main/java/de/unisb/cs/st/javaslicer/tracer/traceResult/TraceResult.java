@@ -15,6 +15,7 @@ import java.util.zip.GZIPInputStream;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheInput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
@@ -107,10 +108,11 @@ public class TraceResult {
         final DataInputStream readClassesInputStream = new DataInputStream(
                 pushBackInput);
         final ArrayList<ReadClass> readClasses = new ArrayList<ReadClass>();
+        final StringCacheInput stringCache = new StringCacheInput();
         int testRead;
         while ((testRead = pushBackInput.read()) != -1) {
             pushBackInput.unread(testRead);
-            readClasses.add(ReadClass.readFrom(readClassesInputStream));
+            readClasses.add(ReadClass.readFrom(readClassesInputStream, stringCache));
         }
         readClasses.trimToSize();
         Collections.sort(readClasses, new Comparator<ReadClass>() {

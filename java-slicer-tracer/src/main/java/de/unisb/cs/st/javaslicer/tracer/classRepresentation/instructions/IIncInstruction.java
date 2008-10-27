@@ -1,13 +1,17 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheInput;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheOutput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
 
 /**
  * Class representing an IINC instruction.
@@ -45,17 +49,18 @@ public class IIncInstruction extends AbstractInstruction {
     }
 
     @Override
-    public void writeOut(final DataOutput out) throws IOException {
-        super.writeOut(out);
-        out.writeInt(this.localVarIndex);
-        out.writeInt(this.increment);
+    public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
+        super.writeOut(out, stringCache);
+        OptimizedDataOutputStream.writeInt0(this.localVarIndex, out);
+        OptimizedDataOutputStream.writeInt0(this.increment, out);
     }
 
-    public static IIncInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo,
+    public static IIncInstruction readFrom(final DataInputStream in, final MethodReadInformation methodInfo,
+            @SuppressWarnings("unused") final StringCacheInput stringCache,
             @SuppressWarnings("unused") final int opcode,
             final int index, final int lineNumber) throws IOException {
-        final int localVarIndex = in.readInt();
-        final int increment = in.readInt();
+        final int localVarIndex = OptimizedDataInputStream.readInt0(in);
+        final int increment = OptimizedDataInputStream.readInt0(in);
         return new IIncInstruction(methodInfo.getMethod(), localVarIndex, increment, lineNumber, index);
     }
 

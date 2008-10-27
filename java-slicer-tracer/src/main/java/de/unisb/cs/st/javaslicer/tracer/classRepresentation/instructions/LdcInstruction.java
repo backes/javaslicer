@@ -1,13 +1,17 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheInput;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheOutput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
 
 /**
  * Class representing an LDC instruction.
@@ -40,54 +44,55 @@ public class LdcInstruction extends AbstractInstruction {
     }
 
     @Override
-    public void writeOut(final DataOutput out) throws IOException {
-        super.writeOut(out);
+    public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
+        super.writeOut(out, stringCache);
         if (this.constant instanceof Integer) {
             out.writeByte(0);
-            out.writeInt((Integer)this.constant);
+            OptimizedDataOutputStream.writeInt0((Integer)this.constant, out);
         } else if (this.constant instanceof Double) {
             out.writeByte(1);
             out.writeDouble((Double)this.constant);
         } else if (this.constant instanceof String) {
             out.writeByte(2);
-            out.writeUTF((String)this.constant);
+            stringCache.writeString((String)this.constant, out);
         } else if (this.constant instanceof Long) {
             out.writeByte(3);
-            out.writeLong((Long)this.constant);
+            OptimizedDataOutputStream.writeLong0((Long)this.constant, out);
         } else if (this.constant instanceof Float) {
             out.writeByte(4);
             out.writeFloat((Float)this.constant);
         } else if (this.constant instanceof org.objectweb.asm.Type) {
             out.writeByte(5);
-            out.writeUTF(((org.objectweb.asm.Type)this.constant).getDescriptor());
+            stringCache.writeString(((org.objectweb.asm.Type)this.constant).getDescriptor(), out);
         } else {
-            throw new RuntimeException("Unknown LDC constant type: " + this.constant.getClass().getName());
+            throw new InternalError("Unknown LDC constant type: " + this.constant.getClass().getName());
         }
     }
 
-    public static LdcInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo,
+    public static LdcInstruction readFrom(final DataInputStream in, final MethodReadInformation methodInfo,
+            final StringCacheInput stringCache,
             @SuppressWarnings("unused") final int opcode,
             final int index, final int lineNumber) throws IOException {
         final byte type = in.readByte();
         Object constant;
         switch (type) {
         case 0:
-            constant = Integer.valueOf(in.readInt());
+            constant = Integer.valueOf(OptimizedDataInputStream.readInt0(in));
             break;
         case 1:
             constant = Double.valueOf(in.readDouble());
             break;
         case 2:
-            constant = in.readUTF();
+            constant = stringCache.readString(in);
             break;
         case 3:
-            constant = Long.valueOf(in.readLong());
+            constant = Long.valueOf(OptimizedDataInputStream.readLong0(in));
             break;
         case 4:
             constant = Float.valueOf(in.readFloat());
             break;
         case 5:
-            constant = org.objectweb.asm.Type.getType(in.readUTF());
+            constant = org.objectweb.asm.Type.getType(stringCache.readString(in));
             break;
         default:
             throw new IOException("corrupted data");

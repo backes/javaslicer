@@ -1,13 +1,17 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheInput;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheOutput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
 
 /**
  * Class representing a NEWARRAY instruction.
@@ -44,6 +48,23 @@ public class NewArrayInstruction extends AbstractInstruction {
         this.arrayElemType = arrayElemType;
     }
 
+    /**
+     * Returns the type of the array's elements.
+     *
+     * The integer is one of these constants:
+     * <ul>
+     *   <li>org.objectweb.asm.Opcodes.T_BOOLEAN (4)</li>
+     *   <li>org.objectweb.asm.Opcodes.T_CHAR (5)</li>
+     *   <li>org.objectweb.asm.Opcodes.T_FLOAT (6)</li>
+     *   <li>org.objectweb.asm.Opcodes.T_DOUBLE (7)</li>
+     *   <li>org.objectweb.asm.Opcodes.T_BYTE (8)</li>
+     *   <li>org.objectweb.asm.Opcodes.T_SHORT (9)</li>
+     *   <li>org.objectweb.asm.Opcodes.T_INT (10)</li>
+     *   <li>org.objectweb.asm.Opcodes.T_LONG (11)</li>
+     * </ul>
+     *
+     * @return the type the array's elements
+     */
     public int getArrayElemType() {
         return this.arrayElemType;
     }
@@ -54,15 +75,16 @@ public class NewArrayInstruction extends AbstractInstruction {
     }
 
     @Override
-    public void writeOut(final DataOutput out) throws IOException {
-        super.writeOut(out);
-        out.writeInt(this.arrayElemType);
+    public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
+        super.writeOut(out, stringCache);
+        OptimizedDataOutputStream.writeInt0(this.arrayElemType, out);
     }
 
-    public static NewArrayInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo,
+    public static NewArrayInstruction readFrom(final DataInputStream in, final MethodReadInformation methodInfo,
+            @SuppressWarnings("unused") final StringCacheInput stringCache,
             @SuppressWarnings("unused") final int opcode,
             final int index, final int lineNumber) throws IOException {
-        final int arrayElemType = in.readInt();
+        final int arrayElemType = OptimizedDataInputStream.readInt0(in);
         return new NewArrayInstruction(methodInfo.getMethod(), lineNumber, arrayElemType, index);
     }
 

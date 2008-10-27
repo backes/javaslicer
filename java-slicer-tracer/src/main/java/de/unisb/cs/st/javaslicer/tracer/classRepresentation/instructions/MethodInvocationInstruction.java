@@ -1,12 +1,14 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheInput;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheOutput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
 
 /**
@@ -88,17 +90,19 @@ public class MethodInvocationInstruction extends AbstractInstruction {
     }
 
     @Override
-    public void writeOut(final DataOutput out) throws IOException {
-        super.writeOut(out);
-        out.writeUTF(this.internalClassName);
-        out.writeUTF(this.methodName);
-        out.writeUTF(this.methodDesc);
+    public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
+        super.writeOut(out, stringCache);
+        stringCache.writeString(this.internalClassName, out);
+        stringCache.writeString(this.methodName, out);
+        stringCache.writeString(this.methodDesc, out);
     }
 
-    public static MethodInvocationInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo, final int opcode, final int index, final int lineNumber) throws IOException {
-        final String internalClassName = in.readUTF();
-        final String methodName = in.readUTF();
-        final String methodDesc = in.readUTF();
+    public static MethodInvocationInstruction readFrom(final DataInputStream in, final MethodReadInformation methodInfo,
+            final StringCacheInput stringCache,
+            final int opcode, final int index, final int lineNumber) throws IOException {
+        final String internalClassName = stringCache.readString(in);
+        final String methodName = stringCache.readString(in);
+        final String methodDesc = stringCache.readString(in);
         return new MethodInvocationInstruction(methodInfo.getMethod(), lineNumber, opcode, internalClassName, methodName, methodDesc, index);
     }
 

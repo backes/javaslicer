@@ -1,17 +1,24 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions;
 
-import java.io.DataInput;
-import java.io.DataOutput;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.InstructionWrapper;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheInput;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheOutput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
+import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
 
 /**
  * Abstract superclass that builds the basis for most Instruction implementing classes.
@@ -22,34 +29,36 @@ public abstract class AbstractInstruction implements Instruction {
 
     private static int nextIndex = 0;
 
-    private static final Class<?>[] instructions =
-        new Class<?>[] {
-            ArrayInstruction.class,
-            FieldInstruction.class,
-            IIncInstruction.class,
-            IntPush.class,
-            JumpInstruction.class,
-            LabelMarker.class,
-            LdcInstruction.class,
-            LookupSwitchInstruction.class,
-            MethodInvocationInstruction.class,
-            MultiANewArrayInstruction.class,
-            NewArrayInstruction.class,
-            SimpleInstruction.class,
-            TableSwitchInstruction.class,
-            TypeInstruction.class,
-            VarInstruction.class
-        };
-    private static final Method[] readMethods = new Method[instructions.length];
+    private static final Map<Class<?>, Integer> instructions = new HashMap<Class<?>, Integer>();
     static {
-        for (int i = 0; i < instructions.length; ++i) {
+        instructions.put(ArrayInstruction.class, instructions.size());
+        instructions.put(FieldInstruction.class, instructions.size());
+        instructions.put(IIncInstruction.class, instructions.size());
+        instructions.put(IntPush.class, instructions.size());
+        instructions.put(JumpInstruction.class, instructions.size());
+        instructions.put(LabelMarker.class, instructions.size());
+        instructions.put(LdcInstruction.class, instructions.size());
+        instructions.put(LookupSwitchInstruction.class, instructions.size());
+        instructions.put(MethodInvocationInstruction.class, instructions.size());
+        instructions.put(MultiANewArrayInstruction.class, instructions.size());
+        instructions.put(NewArrayInstruction.class, instructions.size());
+        instructions.put(SimpleInstruction.class, instructions.size());
+        instructions.put(TableSwitchInstruction.class, instructions.size());
+        instructions.put(TypeInstruction.class, instructions.size());
+        instructions.put(VarInstruction.class, instructions.size());
+    }
+
+    private static final Method[] readMethods = new Method[instructions.size()];
+    static {
+        for (final Entry<Class<?>, Integer> entry: instructions.entrySet()) {
             try {
-                readMethods[i] = instructions[i].getMethod("readFrom",
-                        DataInput.class, MethodReadInformation.class, int.class, int.class, int.class);
+                readMethods[entry.getValue()] = entry.getKey().getMethod("readFrom",
+                        DataInputStream.class, MethodReadInformation.class, StringCacheInput.class,
+                        int.class, int.class, int.class);
             } catch (final SecurityException e) {
                 throw new RuntimeException(e);
             } catch (final NoSuchMethodException e) {
-                throw new InternalError("Internal error: class " + instructions[i]
+                throw new InternalError("Internal error: class " + entry.getKey()
                    + " does not implement readFrom");
             } catch (final IllegalArgumentException e) {
                 throw new RuntimeException(e);
@@ -99,35 +108,30 @@ public abstract class AbstractInstruction implements Instruction {
         return this.index - 1;
     }
 
-    public void writeOut(final DataOutput out) throws IOException {
+    public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
         // write out type of the instruction
-        boolean typeFound = false;
-        for (int i = 0; i < instructions.length; ++i) {
-            if (instructions[i].equals(getClass())) {
-                typeFound = true;
-                out.writeByte(i);
-                break;
-            }
-        }
-        if (!typeFound)
+        final Integer typeIndex = instructions.get(getClass());
+        if (typeIndex == null)
             throw new RuntimeException("Class " + getClass() + " has no index to export");
-        out.writeInt(this.index);
-        out.writeInt(this.lineNumber);
-        out.writeInt(this.opcode);
+        out.writeByte(typeIndex.byteValue());
+        OptimizedDataOutputStream.writeInt0(this.index, out);
+        OptimizedDataOutputStream.writeInt0(this.lineNumber, out);
+        OptimizedDataOutputStream.writeInt0(this.opcode, out);
     }
 
-    public static AbstractInstruction readFrom(final DataInput in, final MethodReadInformation methodInfo) throws IOException {
+    public static AbstractInstruction readFrom(final DataInputStream in, final MethodReadInformation methodInfo,
+            final StringCacheInput stringCache) throws IOException {
         // first determine the type
         final byte type = in.readByte();
         if (type < 0 || type >= readMethods.length)
             throw new IOException("corrupted data");
-        final int index = in.readInt();
-        final int lineNumber = in.readInt();
-        final int opcode = in.readInt();
+        final int index = OptimizedDataInputStream.readInt0(in);
+        final int lineNumber = OptimizedDataInputStream.readInt0(in);
+        final int opcode = OptimizedDataInputStream.readInt0(in);
 
         final Method readFromMethod = readMethods[type];
         try {
-            final Object o = readFromMethod.invoke(null, in, methodInfo, opcode, index, lineNumber);
+            final Object o = readFromMethod.invoke(null, in, methodInfo, stringCache, opcode, index, lineNumber);
             if (o instanceof AbstractInstruction)
                 return (AbstractInstruction)o;
             throw new RuntimeException("readFrom does not return AbstractInstruction");

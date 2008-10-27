@@ -42,6 +42,7 @@ import org.objectweb.asm.util.CheckClassAdapter;
 import org.objectweb.asm.util.TraceMethodVisitor;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheOutput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.instrumenter.IdentifiableInstrumenter;
@@ -150,6 +151,7 @@ public class Tracer implements ClassFileTransformer {
 
     private final File filename;
     private final MultiplexedFileWriter file;
+    private final StringCacheOutput readClassesStringCache = new StringCacheOutput();
     private final DataOutputStream readClassesOutputStream;
     private final DataOutputStream threadTracersOutputStream;
 
@@ -447,7 +449,7 @@ public class Tracer implements ClassFileTransformer {
             readClass.setInstructionNumberEnd(AbstractInstruction.getNextIndex());
 
             // now we can write the class out
-            readClass.writeOut(this.readClassesOutputStream);
+            readClass.writeOut(this.readClassesOutputStream, this.readClassesStringCache);
 
         }}
 
