@@ -231,6 +231,16 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-surefire-plugin</artifactId>
+              <configuration>
+                <includes>
+                  <include>**/*Test*.java</include>
+                </includes>
+                <argLine>-Xmx1536m</argLine>
+              </configuration>
+            </plugin>
         </plugins>
         <pluginManagement>
             <plugins>

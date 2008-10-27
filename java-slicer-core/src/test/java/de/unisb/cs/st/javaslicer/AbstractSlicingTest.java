@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -16,8 +17,9 @@ import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult.ThreadId;
 
 public abstract class AbstractSlicingTest {
 
-    protected static List<Instruction> getSlice(final File traceFile, final String thread, final String criterion)
-            throws IllegalParameterException, IOException {
+    protected static List<Instruction> getSlice(final String traceFilename, final String thread, final String criterion)
+            throws IllegalParameterException, IOException, URISyntaxException {
+        final File traceFile = new File(AbstractSlicingTest.class.getResource(traceFilename).toURI());
         final TraceResult trace = TraceResult.readFrom(traceFile);
 
         final SlicingCriterion sc = Slicer.readSlicingCriteria(criterion, trace.getReadClasses());

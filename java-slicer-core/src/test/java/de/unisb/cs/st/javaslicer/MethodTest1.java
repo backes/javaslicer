@@ -1,7 +1,7 @@
 package de.unisb.cs.st.javaslicer;
 
-import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.List;
 
 import org.junit.Test;
@@ -12,8 +12,8 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 public class MethodTest1 extends AbstractSlicingTest {
 
     @Test
-    public void testAll() throws IllegalParameterException, IOException {
-        final List<Instruction> slice = getSlice(new File("traces/method1"), "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:11:{a,b,c,d,e}");
+    public void testAll() throws IllegalParameterException, IOException, URISyntaxException {
+        final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:11:{a,b,c,d,e}");
         checkSlice(slice, new String[][] {
                 new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Method1.main", "7", "ALOAD 0" },
                 new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Method1.main", "7", "ICONST_0" },
@@ -54,8 +54,8 @@ public class MethodTest1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void testAa() throws IllegalParameterException, IOException {
-        final List<Instruction> slice = getSlice(new File("traces/method1"), "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:12:{a}");
+    public void testAa() throws IllegalParameterException, IOException, URISyntaxException {
+        final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:12:{a}");
         checkSlice(slice, new String[][] {
                 new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Method1.main", "7", "ALOAD 0" },
                 new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Method1.main", "7", "ICONST_0" },
@@ -69,8 +69,8 @@ public class MethodTest1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void testAb() throws IllegalParameterException, IOException {
-        final List<Instruction> slice = getSlice(new File("traces/method1"), "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:7:{a}");
+    public void testAb() throws IllegalParameterException, IOException, URISyntaxException {
+        final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:7:{a}");
         checkSlice(slice, new String[][] {
                 new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Method1.main", "7", "ALOAD 0" },
                 new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Method1.main", "7", "ICONST_0" },
@@ -84,8 +84,8 @@ public class MethodTest1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void testC() throws IllegalParameterException, IOException {
-        final List<Instruction> slice = getSlice(new File("traces/method1"), "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:12:{c}");
+    public void testC() throws IllegalParameterException, IOException, URISyntaxException {
+        final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:12:{c}");
         checkSlice(slice, new String[][] {
                 new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Method1.main", "7", "ALOAD 0" },
                 new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Method1.main", "7", "ICONST_0" },
@@ -104,8 +104,8 @@ public class MethodTest1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void testD() throws IllegalParameterException, IOException {
-        final List<Instruction> slice = getSlice(new File("traces/method1"), "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:12:{d}");
+    public void testD() throws IllegalParameterException, IOException, URISyntaxException {
+        final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:12:{d}");
         checkSlice(slice, new String[][] {
                 new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Method1.main", "7", "ALOAD 0" },
                 new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Method1.main", "7", "ICONST_0" },
@@ -128,8 +128,8 @@ public class MethodTest1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void testE() throws IllegalParameterException, IOException {
-        final List<Instruction> slice = getSlice(new File("traces/method1"), "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:12:{e}");
+    public void testE() throws IllegalParameterException, IOException, URISyntaxException {
+        final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:12:{e}");
         checkSlice(slice, new String[][] {
                 new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Method1.main", "7", "ALOAD 0" },
                 new String[] { "de.unisb.cs.st.javaslicer.tracedCode.Method1.main", "7", "ICONST_0" },
