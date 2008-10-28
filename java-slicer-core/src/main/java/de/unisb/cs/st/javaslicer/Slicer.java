@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -14,9 +13,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
+import java.util.Map.Entry;
 
-import org.apache.commons.collections.Transformer;
-import org.apache.commons.collections.map.LazyMap;
 import org.objectweb.asm.Opcodes;
 
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
@@ -27,11 +25,13 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.ArrayInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.FieldInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.IIncInstruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.JumpInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.MethodInvocationInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.MultiANewArrayInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.VarInstruction;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult.ThreadId;
+import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
 
 public class Slicer implements Opcodes {
 
@@ -157,18 +157,10 @@ public class Slicer implements Opcodes {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public Set<Instruction> getDynamicSlice(final long threadId, final SlicingCriterion.Instance slicingCriterion) {
         final Iterator<Instance> backwardInsnItr = this.trace.getBackwardIterator(threadId);
 
-        final Map<ReadMethod, Map<Instruction, Set<Instruction>>> allControlDependencies =
-            LazyMap.decorate(new HashMap<ReadMethod, Map<Instruction, Set<Instruction>>>(),
-                    new Transformer() {
-                        @Override
-                        public Object transform(final Object method) {
-                            return ControlFlowAnalyser.getInstance().getControlDependencies((ReadMethod) method);
-                        }
-                    });
+        final IntegerMap<Set<Instruction>> controlDependencies = new IntegerMap<Set<Instruction>>();
 
         final Stack<ExecutionFrame> frames = new Stack<ExecutionFrame>();
         frames.push(new ExecutionFrame());
@@ -217,10 +209,13 @@ public class Slicer implements Opcodes {
             }
 
             if (!currentFrame.interestingInstructions.isEmpty()) {
-                final Set<Instruction> controlDependencies =
-                    allControlDependencies.get(instance.getMethod()).get(instruction);
+                Set<Instruction> instrControlDependencies = controlDependencies.get(instruction.getIndex());
+                if (instrControlDependencies == null) {
+                    computeControlDependencies(instruction.getMethod(), controlDependencies);
+                    instrControlDependencies = controlDependencies.get(instruction.getIndex());
+                }
                 // get all interesting instructions, that are dependent on the current one
-                final Set<Instruction> dependantInterestingInstructions = intersect(controlDependencies,
+                final Set<Instruction> dependantInterestingInstructions = intersect(instrControlDependencies,
                         currentFrame.interestingInstructions);
                 if (!dependantInterestingInstructions.isEmpty()) {
                     dynamicSlice.add(instruction);
@@ -242,6 +237,15 @@ public class Slicer implements Opcodes {
         }
 
         return dynamicSlice;
+    }
+
+    private void computeControlDependencies(final ReadMethod method, final IntegerMap<Set<Instruction>> controlDependencies) {
+        final Map<Instruction, Set<Instruction>> deps = ControlFlowAnalyser.getInstance().getControlDependencies(method);
+        for (final Entry<Instruction, Set<Instruction>> entry: deps.entrySet()) {
+            final int index = entry.getKey().getIndex();
+            assert !controlDependencies.containsKey(index);
+            controlDependencies.put(index, entry.getValue());
+        }
     }
 
     private static <T> Set<T> intersect(final Set<T> set1,
@@ -275,7 +279,7 @@ public class Slicer implements Opcodes {
     private VariableUsages simulateInstruction(final Instance inst,
             final ExecutionFrame executionFrame, final ExecutionFrame removedFrame, final Stack<ExecutionFrame> allFrames) {
         final Variable var;
-        Collection<Variable> vars = Collections.emptySet();
+        Collection<Variable> vars;
         switch (inst.getType()) {
         case ARRAY:
             return simulateArrayInstruction((ArrayInstruction.Instance)inst, executionFrame);
@@ -286,8 +290,11 @@ public class Slicer implements Opcodes {
             vars = Collections.singleton(var);
             return new SimpleVariableUsage(vars, vars);
         case INT:
+            vars = Collections.emptySet();
             return new SimpleVariableUsage(vars, Collections.singleton(
                     (Variable)executionFrame.getStackEntry(executionFrame.operandStack.decrementAndGet())));
+        case JUMP:
+            return simulateJumpInsn((JumpInstruction)inst.getInstruction(), executionFrame);
         case LABEL:
             return VariableUsages.EMPTY;
         case METHODINVOCATION:
@@ -301,6 +308,30 @@ public class Slicer implements Opcodes {
             return simulateSimpleInsn(inst, executionFrame, inst.getStackDepth() < 2 ? null : allFrames.get(inst.getStackDepth()-2));
         case VAR:
             return simulateVarInstruction((VarInstruction) inst.getInstruction(), executionFrame);
+        default:
+            assert false;
+            return null;
+        }
+    }
+
+    private VariableUsages simulateJumpInsn(final JumpInstruction instruction, final ExecutionFrame frame) {
+        switch (instruction.getOpcode()) {
+        case IFEQ: case IFNE: case IFLT: case IFGE: case IFGT: case IFLE:
+            return new SimpleVariableUsage(frame.getStackEntry(frame.operandStack.getAndIncrement()), VariableUsages.EMPTY_VARIABLE_SET);
+
+        case IF_ICMPEQ: case IF_ICMPNE: case IF_ICMPLT: case IF_ICMPGE:
+        case IF_ICMPGT: case IF_ICMPLE: case IF_ACMPEQ: case IF_ACMPNE:
+        case IFNULL: case IFNONNULL:
+            final int oldSize = frame.operandStack.getAndAdd(2);
+            return new SimpleVariableUsage(Arrays.asList((Variable)frame.getStackEntry(oldSize), frame.getStackEntry(oldSize+1)),
+                    VariableUsages.EMPTY_VARIABLE_SET);
+
+        case GOTO:
+            return VariableUsages.EMPTY;
+
+        case JSR:
+            return new SimpleVariableUsage(VariableUsages.EMPTY_VARIABLE_SET, frame.getStackEntry(frame.operandStack.decrementAndGet()));
+
         default:
             assert false;
             return null;

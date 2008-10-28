@@ -41,9 +41,10 @@ public class ControlFlowAnalyser {
             case JUMP:
                 // GOTO and JSR are not conditional
                 if (opcode == Opcodes.GOTO || opcode == Opcodes.JSR) {
-                    invControlDeps.put(insn, emptyInsnSet);
-                } else {
                     invControlDeps.put(insn, getBasicBlock(((JumpInstruction)insn).getLabel()));
+                } else {
+                    invControlDeps.put(insn, getBasicBlock(((JumpInstruction)insn).getLabel(),
+                            getBasicBlock(insn.getNext())));
                 }
                 break;
             case LOOKUPSWITCH:
@@ -75,13 +76,17 @@ public class ControlFlowAnalyser {
     }
 
     private Set<Instruction> getBasicBlock(final Instruction startInsn) {
-        final Set<Instruction> basicBlock = new HashSet<Instruction>();
-        basicBlock.add(startInsn);
+        final Set<Instruction> instructions = new HashSet<Instruction>();
+        return getBasicBlock(startInsn, instructions);
+    }
+
+    private Set<Instruction> getBasicBlock(final Instruction startInsn, final Set<Instruction> instructions) {
+        instructions.add(startInsn);
         searchNextBranch:
         for (Instruction next = startInsn.getNext(); next != null; next = next.getNext()) {
             switch (next.getType()) {
                 case JUMP:
-                    final int opcode = next.getOpcode();
+                    int opcode = next.getOpcode();
                     // GOTO and JSR are not conditional
                     if (opcode != Opcodes.GOTO && opcode != Opcodes.JSR)
                         break searchNextBranch;
@@ -89,12 +94,24 @@ public class ControlFlowAnalyser {
                 case TABLESWITCH:
                 case LOOKUPSWITCH:
                     break searchNextBranch;
+                case SIMPLE:
+                    opcode = next.getOpcode();
+                    switch (opcode) {
+                    case Opcodes.IRETURN: case Opcodes.LRETURN: case Opcodes.FRETURN:
+                    case Opcodes.DRETURN: case Opcodes.ARETURN: case Opcodes.RETURN:
+                        break searchNextBranch;
+                    }
+                    break;
+                case VAR:
+                    if (next.getOpcode() == Opcodes.RET)
+                        break searchNextBranch;
+                    break;
                 default:
                     break;
             }
-            basicBlock.add(next);
+            instructions.add(next);
         }
-        return basicBlock;
+        return instructions;
     }
 
 }
