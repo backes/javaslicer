@@ -177,9 +177,10 @@ public class TracingMethodInstrumenter implements Opcodes {
             usedLocalVars += t.getSize();
         if (methodNode.localVariables != null) {
             for (final Object locVarNode: methodNode.localVariables) {
-                final int index = ((LocalVariableNode)locVarNode).index;
-                if (index >= usedLocalVars)
-                    usedLocalVars = index + 1;
+                final LocalVariableNode locVar = (LocalVariableNode)locVarNode;
+                final int index = locVar.index + Type.getType(locVar.desc).getSize();
+                if (usedLocalVars < index)
+                    usedLocalVars = index;
             }
         }
         this.tracerLocalVarIndex = usedLocalVars;
@@ -327,7 +328,7 @@ public class TracingMethodInstrumenter implements Opcodes {
         this.instructionIterator.add(new InsnNode(ATHROW));
 
         // add a try catch block around the method so that we can trace when this method is left
-        this.methodNode.tryCatchBlocks.add(new TryCatchBlockNode(l0 , l1 , l1, null));
+        this.methodNode.tryCatchBlocks.add(new TryCatchBlockNode(l0, l1, l1, null));
 
         // now add the code that is executed if no tracing should be performed
         this.methodNode.instructions.add(noTracingLabel);
@@ -348,6 +349,10 @@ public class TracingMethodInstrumenter implements Opcodes {
             final MethodNode newMethod = new MethodNode(this.methodNode.access, this.methodNode.name, newMethodDesc,
                     this.methodNode.signature, (String[]) this.methodNode.exceptions.toArray(new String[this.methodNode.exceptions.size()]));
             methodIt.add(newMethod);
+
+            int threadTracerParamPos = ((this.readMethod.getAccess() & Opcodes.ACC_STATIC) == 0 ? 1 : 0);
+            for (final Type t: oldMethodArguments)
+                threadTracerParamPos += t.getSize();
 
             final Map<LabelNode, LabelNode> newMethodLabels = LazyMap.decorate(
                     new HashMap<LabelNode, LabelNode>(), new Factory() {
@@ -380,7 +385,9 @@ public class TracingMethodInstrumenter implements Opcodes {
             }
 
             // skip the first 6 instructions, replace them with these:
-            newMethod.instructions.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
+            newMethod.instructions.add(new VarInsnNode(ALOAD, threadTracerParamPos));
+            newMethod.instructions.add(new InsnNode(DUP));
+            newMethod.instructions.add(new VarInsnNode(ASTORE, this.tracerLocalVarIndex));
             newMethod.instructions.add(new JumpInsnNode(IFNULL, newMethodLabels.get(noTracingLabel)));
             final Iterator<AbstractInsnNode> oldInsnIt = this.methodNode.instructions.iterator(6);
             // and add all the other instructions
@@ -811,7 +818,7 @@ public class TracingMethodInstrumenter implements Opcodes {
                 methodName = "passInstruction";
                 break;
             case SAFE:
-                if (TracingThreadTracer.DEBUG_TRACE_FILE)
+                if (TracingThreadTracer.DEBUG_TRACE_FILE || followedByJumpLabel(this.instructionIterator))
                     methodName = "passInstruction";
                 break;
             }
@@ -841,7 +848,7 @@ public class TracingMethodInstrumenter implements Opcodes {
             methodName = "passInstruction";
             break;
         case SAFE:
-            if (TracingThreadTracer.DEBUG_TRACE_FILE)
+            if (TracingThreadTracer.DEBUG_TRACE_FILE || followedByJumpLabel(this.instructionIterator))
                 methodName = "passInstruction";
             break;
         }
@@ -854,6 +861,20 @@ public class TracingMethodInstrumenter implements Opcodes {
             this.instructionIterator.next();
         }
         ++TracingMethodInstrumenter.statsInstructions;
+    }
+
+    private boolean followedByJumpLabel(final ListIterator<AbstractInsnNode> iterator) {
+        if (!iterator.hasNext())
+            return false;
+        final AbstractInsnNode nextInsn = iterator.next();
+        iterator.previous();
+        for (AbstractInsnNode insn = nextInsn; insn != null; insn = insn.getNext()) {
+            if (insn instanceof LabelNode && this.jumpTargetLabels.contains(insn))
+                return true;
+            if (!(insn instanceof FrameNode || insn instanceof LineNumberNode))
+                break;
+        }
+        return false;
     }
 
     private AbstractInsnNode getIntConstInsn(final int value) {

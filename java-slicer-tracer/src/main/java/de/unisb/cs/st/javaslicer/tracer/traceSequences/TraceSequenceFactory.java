@@ -22,4 +22,6 @@ public interface TraceSequenceFactory {
 
     PerThread forThreadTracer(ThreadTracer tt);
 
+    boolean shouldAutoFlushFile();
+
 }

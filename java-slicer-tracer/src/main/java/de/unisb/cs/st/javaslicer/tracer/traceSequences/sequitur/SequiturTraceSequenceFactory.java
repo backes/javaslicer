@@ -85,4 +85,9 @@ public class SequiturTraceSequenceFactory implements TraceSequenceFactory {
         return new PerThread();
     }
 
+    @Override
+    public boolean shouldAutoFlushFile() {
+        return true;
+    }
+
 }

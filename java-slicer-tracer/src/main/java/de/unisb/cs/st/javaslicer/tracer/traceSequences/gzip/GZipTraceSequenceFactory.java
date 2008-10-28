@@ -39,4 +39,9 @@ public class GZipTraceSequenceFactory implements TraceSequenceFactory, TraceSequ
         out.write(TraceSequence.FORMAT_GZIP);
     }
 
+    @Override
+    public boolean shouldAutoFlushFile() {
+        return false;
+    }
+
 }

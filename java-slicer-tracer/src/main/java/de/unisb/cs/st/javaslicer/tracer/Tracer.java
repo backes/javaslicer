@@ -10,6 +10,7 @@ import java.io.StringWriter;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
+import java.nio.ByteOrder;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -130,7 +131,8 @@ public class Tracer implements ClassFileTransformer {
     // these must be loaded a-priori, otherwise circular dependencies may occur
     private final String[] classesToPreload = {
             "java.io.IOException",
-            "java.io.EOFException"
+            "java.io.EOFException",
+            NullThreadTracer.class.getName(),
     };
 
 
@@ -183,7 +185,8 @@ public class Tracer implements ClassFileTransformer {
         this.check = check;
         this.seqFactory = seqFac;
         this.instrumentation = instrumentation;
-        this.file = new MultiplexedFileWriter(filename, 512);
+        this.file = new MultiplexedFileWriter(filename, 512, MultiplexedFileWriter.is64bitVM,
+                ByteOrder.nativeOrder(), seqFac.shouldAutoFlushFile());
         this.file.setReuseStreamIds(true);
         final MultiplexOutputStream readClassesMultiplexedStream = this.file.newOutputStream();
         if (readClassesMultiplexedStream.getId() != 0)
@@ -529,7 +532,7 @@ public class Tracer implements ClassFileTransformer {
         }
         for (int j = 0; j < method.tryCatchBlocks.size(); ++j) {
             ((TryCatchBlockNode) method.tryCatchBlocks.get(j)).accept(mv);
-            out.print(" " + mv.text.get(j));
+            out.print(" " + mv.text.get(method.instructions.size()+j));
         }
         out.println(" MAXSTACK " + method.maxStack);
         out.println(" MAXLOCALS " + method.maxLocals);

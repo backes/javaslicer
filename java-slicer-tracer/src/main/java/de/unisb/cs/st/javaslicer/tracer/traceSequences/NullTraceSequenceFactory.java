@@ -60,4 +60,9 @@ public class NullTraceSequenceFactory implements TraceSequenceFactory, TraceSequ
         out.write(0);
     }
 
+    @Override
+    public boolean shouldAutoFlushFile() {
+        return false;
+    }
+
 }

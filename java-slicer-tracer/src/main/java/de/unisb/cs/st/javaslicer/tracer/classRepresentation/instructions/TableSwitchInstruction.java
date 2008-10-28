@@ -25,9 +25,10 @@ public class TableSwitchInstruction extends AbstractInstruction {
     private final int min;
 
     public TableSwitchInstruction(final ReadMethod readMethod, final int lineNumber, final int min,
-            final int max, final LabelMarker defaultHandler, final LabelMarker[] handlers) {
+            @SuppressWarnings("unused") final int max, final LabelMarker defaultHandler, final LabelMarker[] handlers) {
         super(readMethod, Opcodes.TABLESWITCH, lineNumber);
-        assert min + handlers.length - 1 == max;
+        // in initialization, defaultHandler and handlers is null...
+        //assert min + handlers.length - 1 == max;
         this.min = min;
         this.defaultHandler = defaultHandler;
         this.handlers = handlers;

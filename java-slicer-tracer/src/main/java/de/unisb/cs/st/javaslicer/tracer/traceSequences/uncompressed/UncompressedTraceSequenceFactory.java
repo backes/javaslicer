@@ -39,4 +39,9 @@ public class UncompressedTraceSequenceFactory implements TraceSequenceFactory, T
         out.write(TraceSequence.FORMAT_UNCOMPRESSED);
     }
 
+    @Override
+    public boolean shouldAutoFlushFile() {
+        return true;
+    }
+
 }
