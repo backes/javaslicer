@@ -21,21 +21,28 @@ import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
 public class LdcInstruction extends AbstractInstruction {
 
     private final Object constant;
+    private final boolean isLongObject;
 
     public LdcInstruction(final ReadMethod readMethod, final int lineNumber, final Object constant) {
         super(readMethod, Opcodes.LDC, lineNumber);
         assert constant instanceof Number || constant instanceof String || constant instanceof org.objectweb.asm.Type;
         this.constant = constant;
+        this.isLongObject = constant instanceof Long || constant instanceof Double;
     }
 
     private LdcInstruction(final ReadMethod readMethod, final int lineNumber, final Object constant, final int index) {
         super(readMethod, Opcodes.LDC, lineNumber, index);
         assert constant instanceof Number || constant instanceof String || constant instanceof org.objectweb.asm.Type;
         this.constant = constant;
+        this.isLongObject = constant instanceof Long || constant instanceof Double;
     }
 
     public Object getConstant() {
         return this.constant;
+    }
+
+    public boolean constantIsLong() {
+        return this.isLongObject;
     }
 
     @Override

@@ -1,7 +1,5 @@
 package de.unisb.cs.st.javaslicer.tracer;
 
-// TODO try final (to increase performance of instanceOf??)
-// TODO try interface instead of subclass
 public class UntracedThread extends Thread {
 
     public UntracedThread() {
