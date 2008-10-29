@@ -1,6 +1,7 @@
 package de.unisb.cs.st.javaslicer;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -51,7 +52,8 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
     public class Instance implements SlicingCriterion.Instance {
 
         private long seenOccurences = 0;
-        private boolean beingInRun = false;
+        private boolean[] beingInRun = new boolean[1];
+        private int stackDepth = 0;
 
         @Override
         public Collection<Variable> getInterestingVariables(final ExecutionFrame execFrame) {
@@ -64,20 +66,29 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
 
         @Override
         public boolean matches(final Instruction.Instance instructionInstance) {
+            if (this.stackDepth != instructionInstance.getStackDepth()) {
+                if (instructionInstance.getStackDepth() > this.beingInRun.length) {
+                    this.beingInRun = Arrays.copyOf(this.beingInRun, Math.max(2*this.beingInRun.length, instructionInstance.getStackDepth()));
+                }
+                while (this.stackDepth < instructionInstance.getStackDepth()) {
+                    this.beingInRun[this.stackDepth++] = false;
+                }
+                this.stackDepth = instructionInstance.getStackDepth();
+            }
             if ((SimpleSlicingCriterion.this.occurence != null &&
                     this.seenOccurences == SimpleSlicingCriterion.this.occurence)
                 || instructionInstance.getMethod() != SimpleSlicingCriterion.this.method
                 || instructionInstance.getLineNumber() != SimpleSlicingCriterion.this.lineNumber) {
-                if (this.beingInRun)
-                    this.beingInRun = false;
+                if (this.beingInRun[instructionInstance.getStackDepth()-1])
+                    this.beingInRun[instructionInstance.getStackDepth()-1] = false;
                 return false;
             }
 
-            if (this.beingInRun)
-                return true;
-            this.beingInRun = SimpleSlicingCriterion.this.occurence == null ||
+            if (this.beingInRun[instructionInstance.getStackDepth()-1])
+                return false;
+            this.beingInRun[instructionInstance.getStackDepth()-1] = SimpleSlicingCriterion.this.occurence == null ||
                 ++this.seenOccurences == SimpleSlicingCriterion.this.occurence;
-            return this.beingInRun;
+            return this.beingInRun[instructionInstance.getStackDepth()-1];
         }
 
         @Override

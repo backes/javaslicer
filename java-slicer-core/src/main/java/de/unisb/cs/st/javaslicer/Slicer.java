@@ -29,6 +29,7 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.JumpIns
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.LdcInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.MethodInvocationInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.MultiANewArrayInstruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.TypeInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.VarInstruction;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult.ThreadId;
@@ -299,8 +300,11 @@ public class Slicer implements Opcodes {
                 return new SimpleVariableUsage(vars, Arrays.asList((Variable)executionFrame.getStackEntry(stackHeight),
                         executionFrame.getStackEntry(stackHeight+1)));
             }
-            return new SimpleVariableUsage(vars, Collections.singleton(
-                    (Variable)executionFrame.getStackEntry(executionFrame.operandStack.getAndDecrement())));
+            return new SimpleVariableUsage(vars, executionFrame.getStackEntry(executionFrame.operandStack.getAndDecrement()));
+        case LOOKUPSWITCH:
+        case TABLESWITCH:
+            return new SimpleVariableUsage(executionFrame.getStackEntry(executionFrame.operandStack.getAndIncrement()),
+                    VariableUsages.EMPTY_VARIABLE_SET);
         case METHODINVOCATION:
             return simulateMethodInsn((MethodInvocationInstruction)inst.getInstruction(),
                     executionFrame, removedFrame);
@@ -310,8 +314,26 @@ public class Slicer implements Opcodes {
             return stackManipulation(executionFrame, 1, 1);
         case SIMPLE:
             return simulateSimpleInsn(inst, executionFrame, inst.getStackDepth() < 2 ? null : allFrames.get(inst.getStackDepth()-2));
+        case TYPE:
+            return simulateTypeInsn((TypeInstruction)inst.getInstruction(), executionFrame);
         case VAR:
             return simulateVarInstruction((VarInstruction) inst.getInstruction(), executionFrame);
+        default:
+            assert false;
+            return null;
+        }
+    }
+
+    private VariableUsages simulateTypeInsn(final TypeInstruction instruction, final ExecutionFrame frame) {
+        switch (instruction.getOpcode()) {
+        case Opcodes.NEW:
+            return stackManipulation(frame, 0, 1);
+        case Opcodes.ANEWARRAY:
+            return stackManipulation(frame, 1, 1);
+        case Opcodes.CHECKCAST:
+            return new SimpleVariableUsage(frame.getStackEntry(frame.operandStack.get()-1), VariableUsages.EMPTY_VARIABLE_SET);
+        case Opcodes.INSTANCEOF:
+            return stackManipulation(frame, 1, 1);
         default:
             assert false;
             return null;
