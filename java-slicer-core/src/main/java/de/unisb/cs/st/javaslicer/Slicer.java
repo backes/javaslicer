@@ -26,6 +26,7 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.ArrayIn
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.FieldInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.IIncInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.JumpInstruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.LdcInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.MethodInvocationInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.MultiANewArrayInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.VarInstruction;
@@ -172,10 +173,6 @@ public class Slicer implements Opcodes {
             final Instance instance = backwardInsnItr.next();
             final Instruction instruction = instance.getInstruction();
 
-            // TODO remove
-            if (!instance.getMethod().getReadClass().getName().startsWith("de.unisb."))
-                break;
-
             ExecutionFrame removedFrame = null;
             boolean removedFrameIsInteresting = false;
             while (frames.size() > instance.getStackDepth()) {
@@ -192,20 +189,18 @@ public class Slicer implements Opcodes {
             final ExecutionFrame currentFrame = frames.get(instance.getStackDepth()-1);
             if (currentFrame.method == null)
                 currentFrame.method = instruction.getMethod();
-            assert currentFrame.method == instance.getMethod();
+            // at stack depth 1, there could be several methods (not nice, but it is ok)
+            assert instance.getStackDepth() == 1 || currentFrame.method == instance.getMethod();
 
             final VariableUsages dynInfo = simulateInstruction(instance, currentFrame, removedFrame, frames);
 
             if (removedFrameIsInteresting) {
                 dynamicSlice.add(instruction); // TODO check if this is the instr. that called the method
                 currentFrame.interestingInstructions.add(instruction);
-                //interestingVariables.addAll(dynInfo.getUsedVariables()); // TODO should not be necessary
             }
 
             if (slicingCriterion.matches(instance)) {
                 interestingVariables.addAll(slicingCriterion.getInterestingVariables(currentFrame));
-                //currentFrame.interestingInstructions.add(instruction); // TODO check this
-                //dynamicSlice.add(instruction); // TODO check this
             }
 
             if (!currentFrame.interestingInstructions.isEmpty()) {
@@ -297,6 +292,15 @@ public class Slicer implements Opcodes {
             return simulateJumpInsn((JumpInstruction)inst.getInstruction(), executionFrame);
         case LABEL:
             return VariableUsages.EMPTY;
+        case LDC:
+            vars = Collections.emptySet();
+            if (((LdcInstruction)inst.getInstruction()).constantIsLong()) {
+                final int stackHeight = executionFrame.operandStack.addAndGet(-2);
+                return new SimpleVariableUsage(vars, Arrays.asList((Variable)executionFrame.getStackEntry(stackHeight),
+                        executionFrame.getStackEntry(stackHeight+1)));
+            }
+            return new SimpleVariableUsage(vars, Collections.singleton(
+                    (Variable)executionFrame.getStackEntry(executionFrame.operandStack.getAndDecrement())));
         case METHODINVOCATION:
             return simulateMethodInsn((MethodInvocationInstruction)inst.getInstruction(),
                     executionFrame, removedFrame);
@@ -538,7 +542,8 @@ public class Slicer implements Opcodes {
 
         case IRETURN: case FRETURN: case ARETURN:
             return new SimpleVariableUsage(frame.getStackEntry(frame.operandStack.getAndIncrement()),
-                    lowerFrame.getStackEntry(lowerFrame.operandStack.decrementAndGet()));
+                    lowerFrame == null ? VariableUsages.EMPTY_VARIABLE_SET :
+                        Collections.singleton((Variable)lowerFrame.getStackEntry(lowerFrame.operandStack.decrementAndGet())));
         case DRETURN: case LRETURN:
             final int thisFrameStackHeight = frame.operandStack.getAndAdd(2);
             final int lowerFrameStackHeight = lowerFrame.operandStack.addAndGet(-2);
