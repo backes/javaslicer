@@ -169,13 +169,8 @@
     <repositories>
         <repository>
             <id>public-chair</id>
-            <name>Public Chair Repository</name>
-            <url>http://maven.st.cs.uni-sb.de/archiva/repository/public</url>
-        </repository>
-        <repository>
-            <id>3rdparty-chair</id>
-            <name>3rd Party Chair Repository</name>
-            <url>http://maven.st.cs.uni-sb.de/archiva/repository/3rdparty</url>
+            <name>Archiva Managed Internal Repository Group</name>
+            <url>https://maven.st.cs.uni-sb.de/archiva/repository/group-internal</url>
         </repository>
     </repositories>
 
@@ -383,10 +378,15 @@
     <!-- See: http://wiki.st.cs.uni-sb.de/wiki/Maven_Archiva -->
     <distributionManagement>
         <repository>
-            <id>chair-public-webdav</id>
-            <name>Chair's Public Repository</name>
-            <url>https://maven.st.cs.uni-sb.de/archiva/repository/public/</url>
+            <id>internal-releases</id>
+            <name>internal artifacts released by the chair</name>
+            <url>https://maven.st.cs.uni-sb.de/archiva/repository/internal-releases</url>
         </repository>
+        <snapshotRepository>
+            <id>internal-snapshots</id>
+            <name>internal snapshots deployed by the chair</name>
+            <url>https://maven.st.cs.uni-sb.de/archiva/repository/internal-snapshots</url>
+        </snapshotRepository>
         <site>
             <id>chair-public-website</id>
             <name>Chair's Projects Website</name>
