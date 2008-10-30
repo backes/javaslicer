@@ -187,11 +187,15 @@ public class Slicer implements Opcodes {
             while (frames.size() < instance.getStackDepth()) {
                 frames.push(new ExecutionFrame());
             }
-            final ExecutionFrame currentFrame = frames.get(instance.getStackDepth()-1);
-            if (currentFrame.method == null)
+            ExecutionFrame currentFrame = frames.get(instance.getStackDepth()-1);
+            if (currentFrame.method == null) {
                 currentFrame.method = instruction.getMethod();
-            // at stack depth 1, there could be several methods (not nice, but it is ok)
-            assert instance.getStackDepth() == 1 || currentFrame.method == instance.getMethod();
+            } else if (instance.getStackDepth() == 1 && currentFrame.method != instance.getMethod()) {
+                currentFrame = new ExecutionFrame();
+                currentFrame.method = instruction.getMethod();
+                frames.set(instance.getStackDepth()-1, currentFrame);
+            }
+            assert currentFrame.method == instance.getMethod();
 
             final VariableUsages dynInfo = simulateInstruction(instance, currentFrame, removedFrame, frames);
 
