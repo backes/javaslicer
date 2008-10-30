@@ -148,8 +148,10 @@ public class ThreadTraceResult {
                     this.debugFileWriter.println(index);
                 }
                 final Instruction backwardInstruction = findInstruction(index);
-                if (backwardInstruction == null)
+                if (backwardInstruction == null) {
+                    assert index == -1;
                     return null;
+                }
                 assert backwardInstruction.getIndex() == index;
                 if (backwardInstruction == backwardInstruction.getMethod().getMethodEntryLabel()) {
                     --this.stackDepth;
