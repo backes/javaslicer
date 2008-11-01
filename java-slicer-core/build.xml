@@ -1,12 +1,12 @@
 <?xml version="1.0"?>
 
-<project name="Tracer" default="jar_and_clean" basedir=".">
-	<description>Tracing Component of the Java Bytecode Slicer</description>
+<project name="Slicer" default="jar_and_clean" basedir=".">
+	<description>Java Bytecode Slicer</description>
 
 	<!-- global properties for this build -->
 	<property name="src" value="src/main/java" />
 	<property name="build" value="antbuild" />
-	<property name="jarfile" value="tracer.jar" />
+	<property name="jarfile" value="slicer.jar" />
 	<property name="manifest" value="src/main/resources/META-INF/MANIFEST.MF" />
 	<property name="debug" value="true" />
 	
@@ -16,14 +16,15 @@
 	<filelist dir="${M2_REPO}" id="libraries">
 		<file name="log4j/log4j/1.2.14/log4j-1.2.14.jar" />
 		<file name="junit/junit/4.4/junit-4.4.jar" />
-		<file name="commons-collections/commons-collections/3.2/commons-collections-3.2.jar" />
+		<file name="commons-collections/commons-collections/3.2.1/commons-collections-3.2.1.jar" />
 		<file name="asm/asm-all/3.1/asm-all-3.1.jar" />
 		<file name="commons-io/commons-io/1.4/commons-io-1.4.jar" />
 		<file name="commons-lang/commons-lang/2.4/commons-lang-2.4.jar" />
 	</filelist>
 
 	<path id="classpath">
-		<filelist refid="libraries" />
+		<!--filelist refid="libraries" /-->
+		<pathelement path="../java-slicer-tracer/tracer.jar" />
 	</path>
 
 	<target name="clean">
@@ -46,10 +47,11 @@
 			<fileset dir="${build}" />
 			<!--zipfileset src="${M2_REPO}/log4j/log4j/1.2.14/log4j-1.2.14.jar" /-->
 			<!--zipfileset src="${M2_REPO}/junit/junit/4.4/junit-4.4.jar" /-->
-			<zipfileset src="${M2_REPO}/commons-collections/commons-collections/3.2/commons-collections-3.2.jar" />
-			<zipfileset src="${M2_REPO}/asm/asm-all/3.1/asm-all-3.1.jar" />
+			<!--zipfileset src="${M2_REPO}/commons-collections/commons-collections/3.2.1/commons-collections-3.2.1.jar" /-->
+			<!--zipfileset src="${M2_REPO}/asm/asm-all/3.1/asm-all-3.1.jar" /-->
 			<!--zipfileset src="${M2_REPO}/commons-io/commons-io/1.4/commons-io-1.4.jar" /-->
 			<!--zipfileset src="${M2_REPO}/commons-lang/commons-lang/2.4/commons-lang-2.4.jar" /-->
+			<zipfileset src="../java-slicer-tracer/tracer.jar" />
 		</jar>
 	</target>
 	
