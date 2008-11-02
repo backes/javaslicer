@@ -105,4 +105,32 @@ public class BranchesTest1 extends AbstractSlicingTest {
             });
     }
 
+    @Test
+    public void testD() throws IllegalParameterException, IOException, URISyntaxException {
+        final List<Instruction> slice = getSlice("/traces/branches1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:11:{d}");
+        checkSlice(slice, new String[] {
+                "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:7 ALOAD 0",
+                "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:7 ICONST_0",
+                "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:7 AALOAD",
+                "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:7 ICONST_0",
+                "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:7 INVOKEVIRTUAL java/lang/String.charAt(I)C",
+                "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:7 BIPUSH 48",
+                "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:7 ISUB",
+                "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:7 ISTORE 1", // definition of a (== 1)
+
+                "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:9 ICONST_2",
+                "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:9 ILOAD 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:9 IMUL",
+                "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:9 ISTORE 2", // definition of b (== 2)
+
+                "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:11 ILOAD 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:11 ICONST_5",
+                "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:11 IF_ICMPGE L0",
+                "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:11 ILOAD 2",
+                //"de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:11 GOTO L1",
+                //"de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:11 ILOAD 3", // instruction after ":" unused
+                "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:11 ISTORE 4", // definition of d
+            });
+    }
+
 }
