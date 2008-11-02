@@ -192,7 +192,11 @@ public class DiffPrint {
             this.inserts = show_to;
         }
 
-        /** Print the script header which identifies the files compared. */
+        /**
+         * Print the script header which identifies the files compared.
+         * @param filea the first compared file
+         * @param fileb the second compared file
+         */
         protected void print_header(final String filea, final String fileb) {
             setupOutput();
         }
@@ -203,20 +207,22 @@ public class DiffPrint {
             this.outfile.println(pre + linbuf.toString());
         }
 
-        /** Print a pair of line numbers with SEPCHAR, translated for file FILE.
-           If the two numbers are identical, print just one number.
+        /**
+         * Print a pair of line numbers with SEPCHAR, translated for file FILE.
+         * If the two numbers are identical, print just one number.
+         *
+         * Args a and b are internal line numbers.
+         * We print the translated (real) line numbers.
+         */
 
-           Args A and B are internal line numbers.
-           We print the translated (real) line numbers.  */
-
-        protected void print_number_range(final char sepchar, int a, int b) {
+        protected void print_number_range(final char sepchar, final int a, final int b) {
             /* Note: we can have B < A in the case of a range of no lines.
             In this case, we should print the line number before the range,
             which is B.  */
-            if (++b > ++a)
-                this.outfile.print("" + a + sepchar + b);
+            if (b > a)
+                this.outfile.print("" + (a+1) + sepchar + (b+1));
             else
-                this.outfile.print(b);
+                this.outfile.print(b+1);
         }
 
         public static char change_letter(final int inserts, final int deletes) {
@@ -356,11 +362,24 @@ public class DiffPrint {
             print_context_label("---", new File(fileb), fileb);
         }
 
-        /** If function_regexp defined, search for start of function. */
-        private String find_function(final Object[] lines, final int start) {
+        /**
+         * Try to find the function that the change is contained in.
+         *
+         * @param file  the compared file
+         * @param start the line number of the change
+         */
+        protected String find_function(final Object[] file, final int start) {
             return null;
         }
 
+        /**
+         * Try to find a function that the change is in
+         * (see {@link #find_function(Object[], int)}), and
+         * include its name in the header of the diff section.
+         *
+         * @param file  the compared file
+         * @param start the line number of the change
+         */
         protected void print_function(final Object[] file, final int start) {
             final String function = find_function(this.file0, this.first0);
             if (function != null) {
@@ -553,7 +572,7 @@ public class DiffPrint {
      */
     static String[] slurp(final String file) throws IOException {
         final BufferedReader rdr = new BufferedReader(new FileReader(file));
-        final Vector s = new Vector();
+        final Vector<String> s = new Vector<String>();
         for (;;) {
             final String line = rdr.readLine();
             if (line == null)
