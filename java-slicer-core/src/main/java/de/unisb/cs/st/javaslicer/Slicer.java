@@ -162,7 +162,7 @@ public class Slicer implements Opcodes {
     public Set<Instruction> getDynamicSlice(final long threadId, final SlicingCriterion.Instance slicingCriterion) {
         final Iterator<Instance> backwardInsnItr = this.trace.getBackwardIterator(threadId);
 
-        final IntegerMap<Set<Instruction>> controlDependencies = new IntegerMap<Set<Instruction>>();
+        final IntegerMap<Collection<Instruction>> controlDependencies = new IntegerMap<Collection<Instruction>>();
 
         final Stack<ExecutionFrame> frames = new Stack<ExecutionFrame>();
         frames.push(new ExecutionFrame());
@@ -209,7 +209,7 @@ public class Slicer implements Opcodes {
             }
 
             if (!currentFrame.interestingInstructions.isEmpty()) {
-                Set<Instruction> instrControlDependencies = controlDependencies.get(instruction.getIndex());
+                Collection<Instruction> instrControlDependencies = controlDependencies.get(instruction.getIndex());
                 if (instrControlDependencies == null) {
                     computeControlDependencies(instruction.getMethod(), controlDependencies);
                     instrControlDependencies = controlDependencies.get(instruction.getIndex());
@@ -239,21 +239,22 @@ public class Slicer implements Opcodes {
         return dynamicSlice;
     }
 
-    private void computeControlDependencies(final ReadMethod method, final IntegerMap<Set<Instruction>> controlDependencies) {
-        final Map<Instruction, Set<Instruction>> deps = ControlFlowAnalyser.getInstance().getControlDependencies(method);
-        for (final Entry<Instruction, Set<Instruction>> entry: deps.entrySet()) {
+    private void computeControlDependencies(final ReadMethod method, final IntegerMap<Collection<Instruction>> controlDependencies) {
+        final Map<Instruction, Collection<Instruction>> deps = ControlFlowAnalyser.getInstance().getInvControlDependencies(method);
+        for (final Entry<Instruction, Collection<Instruction>> entry: deps.entrySet()) {
             final int index = entry.getKey().getIndex();
             assert !controlDependencies.containsKey(index);
             controlDependencies.put(index, entry.getValue());
         }
     }
 
-    private static <T> Set<T> intersect(final Set<T> set1,
-            final Set<T> set2) {
+    private static <T> Set<T> intersect(final Collection<T> set1,
+            final Collection<T> set2) {
         if (set1.size() == 0 || set2.size() == 0)
             return Collections.emptySet();
 
-        Set<T> smallerSet, biggerSet;
+        Collection<T> smallerSet;
+        Collection<T> biggerSet;
         if (set1.size() < set2.size()) {
             smallerSet = set1;
             biggerSet = set2;

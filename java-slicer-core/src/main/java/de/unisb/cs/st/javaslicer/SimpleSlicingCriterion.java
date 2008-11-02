@@ -6,14 +6,20 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.objectweb.asm.Opcodes;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.LocalVariable;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Type;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.AbstractInstruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.VarInstruction;
 
 public class SimpleSlicingCriterion implements SlicingCriterion {
 
@@ -160,9 +166,36 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
         final ReadMethod method = findMethod(readClasses, className, methodName, lineNumber);
         assert method != null;
 
-        final Collection<CriterionVariable> variables = parseVariables(method, variableDef);
+        final Collection<CriterionVariable> variables = variableDef == null
+            ? getUsedVariables(method, lineNumber)
+            : parseVariables(method, variableDef);
 
         return new SimpleSlicingCriterion(method, lineNumber, occurence, variables);
+    }
+
+    private static Collection<CriterionVariable> getUsedVariables(final ReadMethod method, final Integer lineNumber) {
+        final Set<Integer> usedLocalVariables = new TreeSet<Integer>();
+        for (final Instruction instr: method.getInstructions()) {
+            if ((lineNumber == null || instr.getLineNumber() == lineNumber) &&
+                    instr.getType() == Type.VAR) {
+                final VarInstruction vInstr = (VarInstruction) instr;
+                switch (vInstr.getOpcode()) {
+                case Opcodes.ILOAD:
+                case Opcodes.LLOAD:
+                case Opcodes.FLOAD:
+                case Opcodes.DLOAD:
+                case Opcodes.ALOAD:
+                    usedLocalVariables.add(vInstr.getLocalVarIndex());
+                    break;
+                }
+            }
+        }
+        if (usedLocalVariables.isEmpty())
+            return Collections.emptySet();
+        final List<CriterionVariable> vars = new ArrayList<CriterionVariable>();
+        for (final Integer i: usedLocalVariables)
+            vars.add(new LocalVariableCriterion(method, i));
+        return vars;
     }
 
     private static ReadMethod findMethod(final List<ReadClass> readClasses, final String className, final String methodName,
@@ -216,8 +249,6 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
             + ")\\s*");
 
     private static Collection<CriterionVariable> parseVariables(final ReadMethod method, final String variables) throws IllegalParameterException {
-        if (variables == null)
-            return Collections.emptySet();
         final String[] parts = variables.split(",");
         final List<CriterionVariable> varList = new ArrayList<CriterionVariable>();
         for (final String part: parts) {
