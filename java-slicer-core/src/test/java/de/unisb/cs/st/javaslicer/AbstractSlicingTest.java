@@ -95,15 +95,6 @@ public abstract class AbstractSlicingTest {
         return sliceList;
     }
 
-    @Deprecated
-    protected static void checkSlice(final List<Instruction> slice, final String[][] expected) {
-        final String[] exp2 = new String[expected.length];
-        for (int i = 0; i < expected.length; ++i) {
-            exp2[i] = expected[i][0] + ":" + expected[i][1] + " " + expected[i][2];
-        }
-        checkSlice(slice, exp2);
-    }
-
     private static Pattern sliceEntryPattern = Pattern.compile("^([^ ]+):([0-9]+) (.*)$");
 
     protected static void checkSlice(final List<Instruction> slice, final String[] expected) {
