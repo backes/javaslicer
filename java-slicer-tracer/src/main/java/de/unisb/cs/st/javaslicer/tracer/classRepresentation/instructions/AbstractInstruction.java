@@ -151,23 +151,23 @@ public abstract class AbstractInstruction implements Instruction {
         return new AbstractInstance(this, backwardInstructionIterator.getNextInstructionOccurenceNumber(this.index), backwardInstructionIterator.getStackDepth());
     }
 
-    public Instruction getPrevious() {
+    public AbstractInstruction getPrevious() {
         assert getIndex() >= getMethod().getInstructionNumberStart()
-            && getIndex() <= getMethod().getInstructionNumberEnd();
+            && getIndex() < getMethod().getInstructionNumberEnd();
         if (getIndex() == getMethod().getInstructionNumberStart())
             return null;
-        final Instruction previous = getMethod().getInstructions().get(
+        final AbstractInstruction previous = getMethod().getInstructions().get(
                 getIndex()-1-getMethod().getInstructionNumberStart());
         assert previous.getIndex() == getIndex()-1;
         return previous;
     }
 
-    public Instruction getNext() {
+    public AbstractInstruction getNext() {
         assert getIndex() >= getMethod().getInstructionNumberStart()
-            && getIndex() <= getMethod().getInstructionNumberEnd();
+            && getIndex() < getMethod().getInstructionNumberEnd();
         if (getIndex() + 1 == getMethod().getInstructionNumberEnd())
             return null;
-        final Instruction next = getMethod().getInstructions().get(
+        final AbstractInstruction next = getMethod().getInstructions().get(
                 getIndex()+1-getMethod().getInstructionNumberStart());
         assert next.getIndex() == getIndex()+1;
         return next;
