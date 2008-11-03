@@ -2,7 +2,6 @@ package de.unisb.cs.st.javaslicer.tracedCode;
 
 public class Exceptions1 {
 
-    @SuppressWarnings("unused")
     public static void main(final String[] args) {
         int[] a = new int[1];
         int[] b = null;
@@ -28,6 +27,7 @@ public class Exceptions1 {
         } catch (final NullPointerException e) {
             c = 3;
         }
+        a[0] = c;
     }
 
     private static int useArrays(final int[] a, final int[] b) {
