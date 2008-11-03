@@ -1,17 +1,22 @@
 #!/bin/bash
 
 KAFFE_DIR=${KAFFE_DIR:-/usr/local/kaffe}
+SUN_DIR=${SUN_DIR:-/usr/lib/jvm/java-6-sun}
+MEMORY="2000m"
+RUNS=5
 
 if [[ ! -d $KAFFE_DIR ]]; then
   echo Kaffe directory does not exist: $KAFFE_DIR
   exit 1
 fi
 
+dir=`pwd`
+
 if [[ $# -eq 1 ]]; then
   cases[0]=$1
 elif [[ $# -eq 0 ]]; then
   for i in *; do
-    if [[ -d $i && -e $i/criterion ]]; then
+    if [[ -d $i && -e $i/my_criterion && -e $i/jslice_criterion && -e $i/commandline ]]; then
       cases[${#cases[@]}]=$i
     fi
   done
@@ -34,7 +39,106 @@ for (( i = 0; i < ${#cases[@]}; ++i )); do
   echo --------------------------------------
   echo Executing: $case
 
-  #java -noclassgc -slicing -foreclipse criteria jslice_result de.unisb.cs.st.javaslicer.tracedCode.Simple1 1
-  rm -rf $tmpdir/*
+  for (( run = 1; run <= $RUNS; ++run )); do
+    echo "Run $run..."
+
+    cp $case/* $tmpdir
+  
+    cd $tmpdir
+  
+    # my slicer:
+  
+    echo "## Slice computation using my slicer:"
+    echo Compiling...
+    find . -name "*.java" | xargs $SUN_DIR/bin/javac
+    criterion=`cat my_criterion`
+  
+    starttime=`date +'%s*1000+%N/1000000' | sed 's/+0*/+/'`
+  
+    echo Running program and tracing...
+    $SUN_DIR/bin/java -Xmx$MEMORY -javaagent:$dir/tracer.jar=logfile:trace.log `cat commandline`
+  
+    echo Computing slice...
+    $SUN_DIR/bin/java -Xmx$MEMORY -jar $dir/slicer.jar trace.log 1 $criterion |
+      tee myslicer_out |
+      sed -nr 's/^([^ :]+\.)?([^ :.]+)\.([^ :.]+):([0-9]+) .*$/\2.java \4/ p' |
+      sort |
+      uniq >unified_mine
+    #java -noclassgc -slicing -foreclipse criteria jslice_result de.unisb.cs.st.javaslicer.tracedCode.Simple1 1
+  
+    endtime=`date +'%s*1000+%N/1000000' | sed 's/+0*/+/'`
+    millis=$(( ($endtime) - ($starttime) ))
+  
+    echo "My slicer: $millis msec"
+    times_mine[$run]=$millis
+  
+  
+    # JSlice
+  
+    echo "## Slice computation using JSlice:"
+    echo Compiling...
+    find . -name "*.java" | xargs $KAFFE_DIR/bin/javac
+  
+    starttime=`date +'%s*1000+%N/1000000' | sed 's/+0*/+/'`
+  
+    echo Running program and computing slice...
+    $KAFFE_DIR/bin/java -mx $MEMORY -noclassgc -slicing -foreclipse jslice_criterion jslice_result `cat commandline`
+    
+    cat jslice_result |
+      awk '/.java$/ { file=$0; getline; printf "%s %s\n", file, $0; }' |
+      sort |
+      uniq >unified_jslice
+  
+    endtime=`date +'%s*1000+%N/1000000' | sed 's/+0*/+/'`
+    millis=$(( ($endtime) - ($starttime) ))
+  
+    echo "JSlice: $millis msec"
+    times_jslice[$run]=$millis
+  
+    if ! diff -U0 unified_mine unified_jslice >diff; then
+      echo "There is a diff in the slices:"
+      egrep -v '^@@' diff
+      echo
+      echo ENTER to continue
+      read
+    fi
+  
+    cd $dir
+  
+    rm -rf $tmpdir/*
+  done
+
+  printf '"%s",' $case >>$tmpdir/result
+  sum=0
+  for (( run = 1; run <= $RUNS; ++run )); do
+    printf '%d,' ${times_mine[$run]} >>$tmpdir/result
+    sum=$(( sum + ${times_mine[$run]} ))
+  done
+  printf "%d," $(( sum / RUNS )) >>$tmpdir/result
+  sum=0
+  for (( run = 1; run <= $RUNS; ++run )); do
+    printf '%d,' ${times_jslice[$run]} >>$tmpdir/result
+    sum=$(( sum + ${times_jslice[$run]} ))
+  done
+  printf "%d\n" $(( sum / RUNS )) >>$tmpdir/result
 done
+
+echo "Ready."
+echo
+echo "Result (CSV, also stored in \"result\"):"
+
+printf "Testcase,"
+for (( run = 1; run <= $RUNS; ++run )); do
+  printf '"mine, run %d",' $run
+done
+printf '"mine, avg",'
+for (( run = 1; run <= $RUNS; ++run )); do
+  printf '"jslice, run %d",' $run
+done
+printf '"jslice, avg"\n'
+
+mv $tmpdir/result result
+cat result
+
+rm -rf $tmpdir
 

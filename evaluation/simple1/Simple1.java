@@ -1,5 +1,3 @@
-package de.unisb.cs.st.javaslicer.tracedCode;
-
 public class Simple1 {
 
     public static void main(final String[] args) {
