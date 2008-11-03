@@ -1,7 +1,6 @@
 package de.unisb.cs.st.javaslicer.controlflowanalysis;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,6 +12,8 @@ import java.util.Set;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowGraph.InstrNode;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Type;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.LabelMarker;
 
 public class ControlFlowAnalyser {
 
@@ -31,13 +32,28 @@ public class ControlFlowAnalyser {
      * @param method
      * @return a map that contains for every instruction all instructions that are dependent on this one
      */
-    public Map<Instruction, Collection<Instruction>> getInvControlDependencies(final ReadMethod method) {
-        final Map<Instruction, Collection<Instruction>> invControlDeps = new HashMap<Instruction, Collection<Instruction>>();
+    public Map<Instruction, Set<Instruction>> getInvControlDependencies(final ReadMethod method) {
+        final Map<Instruction, Set<Instruction>> invControlDeps = new HashMap<Instruction, Set<Instruction>>();
         final Set<Instruction> emptyInsnSet = Collections.emptySet();
         final ControlFlowGraph graph = ControlFlowGraph.create(method);
         for (final Instruction insn: method.getInstructions()) {
             final InstrNode node = graph.getNode(insn);
-            if (node.getOutDeg() > 1) {
+            if (insn.getType() == Type.LABEL) {
+                final LabelMarker label = (LabelMarker) insn;
+                if (label.isCatchBlock()) {
+                    // TODO this may not be correct in all cases
+                    final Map<InstrNode, Boolean> availableIfException = node.getAvailableNodes();
+                    final Map<InstrNode, Boolean> availableWithoutException = graph.getNode(
+                            method.getInstructions().iterator().next()).getAvailableNodes();
+                    final Set<Instruction> deps = new HashSet<Instruction>();
+                    for (final InstrNode succ: availableIfException.keySet()) {
+                        if (!availableWithoutException.containsKey(succ) && succ.getInstruction() != insn)
+                            deps.add(succ.getInstruction());
+                    }
+                    invControlDeps.put(insn, deps.isEmpty() ? emptyInsnSet : deps);
+                } else
+                    invControlDeps.put(insn, emptyInsnSet);
+            } else if (node.getOutDeg() > 1) {
                 assert node.getOutDeg() == node.getSuccessors().size();
                 final List<Map<InstrNode, Boolean>> succAvailableNodes = new ArrayList<Map<InstrNode,Boolean>>(node.getOutDeg());
                 final Set<InstrNode> allInstrNodes = new HashSet<InstrNode>();
@@ -47,7 +63,7 @@ public class ControlFlowAnalyser {
                     succAvailableNodes.add(availableNodes);
                     allInstrNodes.addAll(availableNodes.keySet());
                 }
-                final ArrayList<Instruction> deps = new ArrayList<Instruction>();
+                final Set<Instruction> deps = new HashSet<Instruction>();
                 for (final InstrNode succ: allInstrNodes) {
                     final Iterator<Map<InstrNode, Boolean>> it = succAvailableNodes.iterator();
                     final Boolean b = it.next().get(succ);
@@ -59,12 +75,7 @@ public class ControlFlowAnalyser {
                         }
                     }
                 }
-                if (deps.isEmpty())
-                    invControlDeps.put(insn, emptyInsnSet);
-                else {
-                    deps.trimToSize();
-                    invControlDeps.put(insn, deps);
-                }
+                invControlDeps.put(insn, deps.isEmpty() ? emptyInsnSet : deps);
             } else {
                 invControlDeps.put(insn, emptyInsnSet);
             }

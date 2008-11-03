@@ -122,6 +122,11 @@ public abstract class AbstractSlicingTest {
         final StringWriter output = new StringWriter();
         output.append("Slice differs from expected slice:").append(System.getProperty("line.separator"));
 
+        if (expectedEntries.length != gotEntries.length) {
+            output.append("Expected " + expectedEntries.length + " entries, got " + gotEntries.length + "." +
+                    System.getProperty("line.separator"));
+        }
+
         final DiffPrint.Base diffPrinter = new DiffPrint.Base(expectedEntries, gotEntries) {
             @Override
             protected void print_hunk(final change hunk) {

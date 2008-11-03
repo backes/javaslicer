@@ -22,10 +22,12 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Type;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.ArrayInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.FieldInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.IIncInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.JumpInstruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.LdcInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.MethodInvocationInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.MultiANewArrayInstruction;
@@ -131,8 +133,8 @@ public class Slicer implements Opcodes {
         CompoundSlicingCriterion crit = null;
         int oldPos = 0;
         while (true) {
-            int bracketPos = string.indexOf('{');
-            int commaPos = string.indexOf(',');
+            int bracketPos = string.indexOf('{', oldPos);
+            int commaPos = string.indexOf(',', oldPos);
             while (bracketPos != -1 && bracketPos < commaPos) {
                 final int closeBracketPos = string.indexOf('}', bracketPos+1);
                 if (closeBracketPos == -1)
@@ -144,7 +146,7 @@ public class Slicer implements Opcodes {
             final SlicingCriterion newCrit = SimpleSlicingCriterion.parse(
                     string.substring(oldPos, commaPos == -1 ? string.length() : commaPos),
                     readClasses);
-            oldPos = commaPos;
+            oldPos = commaPos+1;
 
             if (crit == null) {
                 if (commaPos == -1)
@@ -162,7 +164,7 @@ public class Slicer implements Opcodes {
     public Set<Instruction> getDynamicSlice(final long threadId, final SlicingCriterion.Instance slicingCriterion) {
         final Iterator<Instance> backwardInsnItr = this.trace.getBackwardIterator(threadId);
 
-        final IntegerMap<Collection<Instruction>> controlDependencies = new IntegerMap<Collection<Instruction>>();
+        final IntegerMap<Set<Instruction>> controlDependencies = new IntegerMap<Set<Instruction>>();
 
         final Stack<ExecutionFrame> frames = new Stack<ExecutionFrame>();
         frames.push(new ExecutionFrame());
@@ -177,6 +179,7 @@ public class Slicer implements Opcodes {
             ExecutionFrame removedFrame = null;
             boolean removedFrameIsInteresting = false;
             while (frames.size() > instance.getStackDepth()) {
+                assert frames.size() == instance.getStackDepth()+1;
                 removedFrame = frames.pop();
                 if (!removedFrame.interestingInstructions.isEmpty()) {
                     // ok, we have a control dependency since the method was called by (or for) this instruction
@@ -184,8 +187,14 @@ public class Slicer implements Opcodes {
                 }
             }
 
+            ExecutionFrame topFrame = null;
             while (frames.size() < instance.getStackDepth()) {
-                frames.push(new ExecutionFrame());
+                if (topFrame == null && frames.size() > 0)
+                    topFrame = frames.peek();
+                final ExecutionFrame newFrame = new ExecutionFrame();
+                if (topFrame != null && topFrame.atCacheBlockStart != null)
+                    newFrame.throwsException = true;
+                frames.push(newFrame);
             }
             ExecutionFrame currentFrame = frames.get(instance.getStackDepth()-1);
             if (currentFrame.method == null) {
@@ -208,17 +217,33 @@ public class Slicer implements Opcodes {
                 interestingVariables.addAll(slicingCriterion.getInterestingVariables(currentFrame));
             }
 
-            if (!currentFrame.interestingInstructions.isEmpty()) {
-                Collection<Instruction> instrControlDependencies = controlDependencies.get(instruction.getIndex());
+            if (!currentFrame.interestingInstructions.isEmpty() || currentFrame.throwsException) {
+                Set<Instruction> instrControlDependencies = controlDependencies.get(instruction.getIndex());
                 if (instrControlDependencies == null) {
                     computeControlDependencies(instruction.getMethod(), controlDependencies);
                     instrControlDependencies = controlDependencies.get(instruction.getIndex());
+                    assert instrControlDependencies != null;
                 }
                 // get all interesting instructions, that are dependent on the current one
-                final Set<Instruction> dependantInterestingInstructions = intersect(instrControlDependencies,
+                Set<Instruction> dependantInterestingInstructions = intersect(instrControlDependencies,
                         currentFrame.interestingInstructions);
+                if (currentFrame.throwsException) {
+                    for (int i = instance.getStackDepth()-2; i >= 0; --i) {
+                        final ExecutionFrame f = frames.get(i);
+                        if (f.atCacheBlockStart != null) {
+                            if (f.interestingInstructions.contains(f.atCacheBlockStart)) {
+                                if (dependantInterestingInstructions.isEmpty())
+                                    dependantInterestingInstructions = Collections.singleton((Instruction)f.atCacheBlockStart);
+                                else
+                                    dependantInterestingInstructions.add(f.atCacheBlockStart);
+                            }
+                            break;
+                        }
+                    }
+                }
                 if (!dependantInterestingInstructions.isEmpty()) {
-                    dynamicSlice.add(instruction);
+                    if (instruction.getType() != Type.LABEL)
+                        dynamicSlice.add(instruction);
                     currentFrame.interestingInstructions.removeAll(dependantInterestingInstructions);
                     currentFrame.interestingInstructions.add(instruction);
                     interestingVariables.addAll(dynInfo.getUsedVariables());
@@ -234,27 +259,32 @@ public class Slicer implements Opcodes {
                 }
             }
 
+            if (dynInfo.isCatchBlock())
+                currentFrame.atCacheBlockStart = (LabelMarker) instruction;
+            else if (currentFrame.atCacheBlockStart != null)
+                currentFrame.atCacheBlockStart = null;
+
         }
 
         return dynamicSlice;
     }
 
-    private void computeControlDependencies(final ReadMethod method, final IntegerMap<Collection<Instruction>> controlDependencies) {
-        final Map<Instruction, Collection<Instruction>> deps = ControlFlowAnalyser.getInstance().getInvControlDependencies(method);
-        for (final Entry<Instruction, Collection<Instruction>> entry: deps.entrySet()) {
+    private void computeControlDependencies(final ReadMethod method, final IntegerMap<Set<Instruction>> controlDependencies) {
+        final Map<Instruction, Set<Instruction>> deps = ControlFlowAnalyser.getInstance().getInvControlDependencies(method);
+        for (final Entry<Instruction, Set<Instruction>> entry: deps.entrySet()) {
             final int index = entry.getKey().getIndex();
             assert !controlDependencies.containsKey(index);
             controlDependencies.put(index, entry.getValue());
         }
     }
 
-    private static <T> Set<T> intersect(final Collection<T> set1,
-            final Collection<T> set2) {
+    private static <T> Set<T> intersect(final Set<T> set1,
+            final Set<T> set2) {
         if (set1.size() == 0 || set2.size() == 0)
             return Collections.emptySet();
 
-        Collection<T> smallerSet;
-        Collection<T> biggerSet;
+        Set<T> smallerSet;
+        Set<T> biggerSet;
         if (set1.size() < set2.size()) {
             smallerSet = set1;
             biggerSet = set2;
@@ -297,6 +327,10 @@ public class Slicer implements Opcodes {
         case JUMP:
             return simulateJumpInsn((JumpInstruction)inst.getInstruction(), executionFrame);
         case LABEL:
+            if (((LabelMarker)inst.getInstruction()).isCatchBlock()) {
+                executionFrame.operandStack.decrementAndGet();
+                return VariableUsages.CATCHBLOCK;
+            }
             return VariableUsages.EMPTY;
         case LDC:
             vars = Collections.emptySet();
@@ -318,7 +352,7 @@ public class Slicer implements Opcodes {
         case NEWARRAY:
             return stackManipulation(executionFrame, 1, 1);
         case SIMPLE:
-            return simulateSimpleInsn(inst, executionFrame, inst.getStackDepth() < 2 ? null : allFrames.get(inst.getStackDepth()-2));
+            return simulateSimpleInsn(inst, executionFrame, allFrames);
         case TYPE:
             return simulateTypeInsn((TypeInstruction)inst.getInstruction(), executionFrame);
         case VAR:
@@ -376,52 +410,23 @@ public class Slicer implements Opcodes {
             ArrayElement arrayElem = new ArrayElement(inst.getArrayId(), inst.getArrayIndex());
             return new SimpleVariableUsage(Arrays.asList(frame.getStackEntry(stackDepth-1), frame.getStackEntry(stackDepth),
                     arrayElem), frame.getStackEntry(stackDepth-1));
-            /*
-            Collection<Variable> varColl = Collections.singleton((Variable)arrayElem);
-            Map<Variable, Collection<Variable>> definition = Collections.singletonMap((Variable)frame.getStackEntry(stackDepth-1),
-                    varColl);
-            return new ComplexVariableUsage(Arrays.asList(frame.getStackEntry(stackDepth-1), frame.getStackEntry(stackDepth),
-                    arrayElem), definition);
-            */
         case LALOAD: case DALOAD:
             stackDepth = frame.operandStack.get();
             arrayElem = new ArrayElement(inst.getArrayId(), inst.getArrayIndex());
             return new SimpleVariableUsage(Arrays.asList(frame.getStackEntry(stackDepth-2), frame.getStackEntry(stackDepth-1),
                     arrayElem), Arrays.asList((Variable)frame.getStackEntry(stackDepth-2), frame.getStackEntry(stackDepth-1)));
-            /*
-            varColl = Collections.singleton((Variable)arrayElem);
-            definition = new HashMap<Variable, Collection<Variable>>();
-            definition.put(frame.getStackEntry(stackDepth-2), varColl);
-            definition.put(frame.getStackEntry(stackDepth-1), varColl);
-            return new ComplexVariableUsage(Arrays.asList(frame.getStackEntry(stackDepth-2), frame.getStackEntry(stackDepth-1),
-                    arrayElem), definition);
-            */
         case IASTORE: case FASTORE: case AASTORE: case BASTORE: case CASTORE: case SASTORE:
             stackDepth = frame.operandStack.getAndAdd(3);
             arrayElem = new ArrayElement(inst.getArrayId(), inst.getArrayIndex());
             return new SimpleVariableUsage(Arrays.asList((Variable)frame.getStackEntry(stackDepth),
                     frame.getStackEntry(stackDepth+1), frame.getStackEntry(stackDepth+2)),
                     arrayElem);
-            /*
-            varColl = Collections.singleton((Variable)frame.getStackEntry(stackDepth+2));
-            Map<Variable, Collection<Variable>> definition = Collections.singletonMap((Variable)arrayElem, varColl);
-            return new ComplexVariableUsage(Arrays.asList((Variable)frame.getStackEntry(stackDepth),
-                    frame.getStackEntry(stackDepth+1), frame.getStackEntry(stackDepth+2)),
-                    definition);
-            */
         case LASTORE: case DASTORE:
             stackDepth = frame.operandStack.getAndAdd(4);
             arrayElem = new ArrayElement(inst.getArrayId(), inst.getArrayIndex());
             return new SimpleVariableUsage(Arrays.asList((Variable)frame.getStackEntry(stackDepth),
                     frame.getStackEntry(stackDepth+1), frame.getStackEntry(stackDepth+2), frame.getStackEntry(stackDepth+3)),
                     arrayElem);
-            /*
-            varColl = Arrays.asList((Variable)frame.getStackEntry(stackDepth+2), frame.getStackEntry(stackDepth+3));
-            definition = Collections.singletonMap((Variable)arrayElem, varColl);
-            return new ComplexVariableUsage(Arrays.asList((Variable)frame.getStackEntry(stackDepth),
-                    frame.getStackEntry(stackDepth+1), frame.getStackEntry(stackDepth+2), frame.getStackEntry(stackDepth+3)),
-                    definition);
-            */
         default:
             assert false;
             return null;
@@ -528,7 +533,8 @@ public class Slicer implements Opcodes {
         }
     }
 
-    private VariableUsages simulateSimpleInsn(final Instance inst, final ExecutionFrame frame, final ExecutionFrame lowerFrame) {
+    private VariableUsages simulateSimpleInsn(final Instance inst, final ExecutionFrame frame,
+            final Stack<ExecutionFrame> allFrames) {
         switch (inst.getOpcode()) {
         case DUP:
             int stackHeight = frame.operandStack.decrementAndGet();
@@ -568,11 +574,17 @@ public class Slicer implements Opcodes {
                             frame.getStackEntry(stackHeight), frame.getStackEntry(stackHeight+1)));
 
         case IRETURN: case FRETURN: case ARETURN:
+            if (frame.throwsException)
+                frame.throwsException = false;
+            ExecutionFrame lowerFrame = inst.getStackDepth() < 2 ? null : allFrames.get(inst.getStackDepth()-2);
             return new SimpleVariableUsage(frame.getStackEntry(frame.operandStack.getAndIncrement()),
                     lowerFrame == null ? VariableUsages.EMPTY_VARIABLE_SET :
                         Collections.singleton((Variable)lowerFrame.getStackEntry(lowerFrame.operandStack.decrementAndGet())));
         case DRETURN: case LRETURN:
+            if (frame.throwsException)
+                frame.throwsException = false;
             final int thisFrameStackHeight = frame.operandStack.getAndAdd(2);
+            lowerFrame = inst.getStackDepth() < 2 ? null : allFrames.get(inst.getStackDepth()-2);
             final int lowerFrameStackHeight = lowerFrame.operandStack.addAndGet(-2);
             return new SimpleVariableUsage(Arrays.asList((Variable)frame.getStackEntry(thisFrameStackHeight),
                         frame.getStackEntry(thisFrameStackHeight+1)),
@@ -581,6 +593,8 @@ public class Slicer implements Opcodes {
 
         case NOP:
         case RETURN:
+            if (frame.throwsException)
+                frame.throwsException = false;
             return VariableUsages.EMPTY;
 
         case ACONST_NULL: case ICONST_M1: case ICONST_0: case ICONST_1: case ICONST_2: case ICONST_3:
@@ -591,6 +605,19 @@ public class Slicer implements Opcodes {
             return stackManipulation(frame, 0, 2);
 
         case ATHROW:
+            // first search the frame where the exception is catched
+            ExecutionFrame catchingFrame = null;
+            for (int i = inst.getStackDepth()-2; i >= 0; --i) {
+                final ExecutionFrame f = allFrames.get(i);
+                if (f.atCacheBlockStart != null) {
+                    catchingFrame = f;
+                    break;
+                }
+            }
+            return new SimpleVariableUsage(frame.getStackEntry(frame.operandStack.getAndIncrement()),
+                    catchingFrame == null ? VariableUsages.EMPTY_VARIABLE_SET :
+                        Collections.singleton((Variable)catchingFrame.getStackEntry(catchingFrame.operandStack.get())));
+
         case MONITORENTER: case MONITOREXIT:
         case POP:
             return stackManipulation(frame, 1, 0);

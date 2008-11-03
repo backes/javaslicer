@@ -7,10 +7,16 @@ public class SimpleVariableUsage implements VariableUsages {
 
     private final Collection<Variable> usedVariables;
     private final Collection<Variable> definedVariables;
+    private final boolean isCatchBlock;
 
     public SimpleVariableUsage(final Collection<Variable> usedVariables, final Collection<Variable> definedVariables) {
+        this(usedVariables, definedVariables, false);
+    }
+
+    public SimpleVariableUsage(final Collection<Variable> usedVariables, final Collection<Variable> definedVariables, final boolean isCatchBlock) {
         this.usedVariables = usedVariables;
         this.definedVariables = definedVariables;
+        this.isCatchBlock = isCatchBlock;
     }
 
     public SimpleVariableUsage(final Variable usedVariable, final Variable definedVariable) {
@@ -31,6 +37,10 @@ public class SimpleVariableUsage implements VariableUsages {
 
     public Collection<Variable> getDefinedVariables() {
         return this.definedVariables;
+    }
+
+    public boolean isCatchBlock() {
+        return this.isCatchBlock;
     }
 
     @Override

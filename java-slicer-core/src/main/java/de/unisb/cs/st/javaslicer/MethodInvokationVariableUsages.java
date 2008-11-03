@@ -75,4 +75,9 @@ public class MethodInvokationVariableUsages implements VariableUsages {
             : getUsedVariables();
     }
 
+    @Override
+    public boolean isCatchBlock() {
+        return false;
+    }
+
 }
