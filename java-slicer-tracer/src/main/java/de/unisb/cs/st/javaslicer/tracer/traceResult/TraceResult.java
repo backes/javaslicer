@@ -139,7 +139,9 @@ public class TraceResult {
         Collections.sort(threadTraces, new Comparator<ThreadTraceResult>() {
             @Override
             public int compare(final ThreadTraceResult o1, final ThreadTraceResult o2) {
-                return o1.getThreadId() < o2.getThreadId() ? -1 : o1.getThreadId() > o2.getThreadId() ? 1 : 0;
+                final long id1 = o1.getThreadId();
+                final long id2 = o2.getThreadId();
+                return id1 < id2 ? -1 : id1 == id2 ? 0 : 1;
             }
         });
 

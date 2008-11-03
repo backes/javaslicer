@@ -231,7 +231,7 @@ public class TracingThreadTracer implements ThreadTracer {
     private final Tracer tracer;
     private volatile int paused = 0;
 
-    protected static int MAX_CACHED_BLOCKS = 5;
+    protected static final int MAX_CACHED_BLOCKS = 5;
 
     private static int CACHE_SIZE = 1<<18;
     private int[] intSeqNr = new int[CACHE_SIZE];

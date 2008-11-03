@@ -788,7 +788,17 @@ public class TracingMethodInstrumenter implements Opcodes {
             final int seq = this.tracer.newIntegerTraceSequence();
             final boolean isAdditionalLabel = label == null;
             final int labelNr = isAdditionalLabel ? this.nextAdditionalLabelNr-- : this.nextLabelNr++;
-            final LabelMarker lm = new LabelMarker(this.readMethod, seq, this.currentLine, isAdditionalLabel, labelNr);
+            boolean isCatchBlock = false;
+            if (!isAdditionalLabel) {
+                for (final Object tcbObj: this.methodNode.tryCatchBlocks) {
+                    if (((TryCatchBlockNode)tcbObj).handler == label) {
+                        isCatchBlock = true;
+                        break;
+                    }
+                }
+            }
+            final LabelMarker lm = new LabelMarker(this.readMethod, seq, this.currentLine, isAdditionalLabel,
+                    isCatchBlock, labelNr);
             if (!isAdditionalLabel)
                 this.labels.put(label, lm);
 
