@@ -164,10 +164,6 @@ public class TracingThreadTracer implements ThreadTracer {
 
         public void addJob(final WriteOutJob job) {
             try {
-                /*
-                System.out.println(Thread.currentThread().getName() + " queue length:  " +
-                        this.jobs.size());
-                */
                 this.jobs.put(job);
                 adjustPriority();
             } catch (final InterruptedException e) {
@@ -336,8 +332,6 @@ public class TracingThreadTracer implements ThreadTracer {
         if (this.writeOutThread.ready.getCount() == 0)
             return;
 
-        final long startTime = System.nanoTime();
-
         pauseTracing();
 
         if (this.intSeqIndex != 0)
@@ -351,9 +345,6 @@ public class TracingThreadTracer implements ThreadTracer {
         } catch (final InterruptedException e) {
             this.tracer.error(e);
         }
-
-        final long endTime = System.nanoTime();
-        System.out.format("Finishing %s took %.3f seconds%n", this.threadName, 1e-9*(endTime - startTime));
     }
 
     public void writeOut(final DataOutputStream out) throws IOException {

@@ -946,8 +946,6 @@ public class MultiplexedFileWriter {
             if (this.autoFlush)
                 this.autoFlushThread.interrupt();
 
-            System.out.println("Starting compaction...");
-            long startTime = System.nanoTime();
             int newBlockCount = this.nextBlockAddr.get();
             final int numFreeBlocks = this.freeBlocks.size();
             if (numFreeBlocks > 0 && (this.blockSize & 15) == 0) {
@@ -998,18 +996,12 @@ public class MultiplexedFileWriter {
                     pos[depth] += 16;
                 }
             }
-            long endTime = System.nanoTime();
-            System.out.format("Compaction took %.3f seconds%n", 1e-9*(endTime - startTime));
 
-            System.out.println("Forcing mappings out...");
-            startTime = System.nanoTime();
-            int runs = 0;
             // erase references to mapped file regions
             synchronized (this.fileMappingsLock) {
                 // bug 4938372 requires us to force writing out all changes in the mappings
                 while (true) {
                     try {
-                        ++runs;
                         flush0(null);
                         break;
                     } catch (final IOException e) {
@@ -1021,12 +1013,7 @@ public class MultiplexedFileWriter {
                 }
                 this.fileMappings = null;
             }
-            endTime = System.nanoTime();
-            System.out.format("Forcing took %.3f seconds, %d runs%n", 1e-9*(endTime - startTime), runs);
 
-            System.out.println("Truncating file...");
-            startTime = System.nanoTime();
-            runs=0;
             // and (possibly) truncate the file
             // WARNING: this is a really bad hack!
             // there is a severe bug (4724038) in jdk that files whose content is still mapped
@@ -1035,7 +1022,6 @@ public class MultiplexedFileWriter {
             LinkedList<byte[]> memoryConsumingList = new LinkedList<byte[]>();
             while (true) {
                 try {
-                    ++runs;
                     System.gc();
                     this.fileChannel.truncate(headerSize+(long)newBlockCount*this.blockSize);
                     // if there was no exception, then break this loop
@@ -1049,8 +1035,6 @@ public class MultiplexedFileWriter {
                 }
             }
             memoryConsumingList = null;
-            endTime = System.nanoTime();
-            System.out.format("Truncation took %.3f seconds, %d runs%n", 1e-9*(endTime - startTime), runs);
 
             // write some meta information to the file to make it valid
             final ByteBuffer header = ByteBuffer.allocate(headerSize);
@@ -1062,12 +1046,8 @@ public class MultiplexedFileWriter {
             header.position(0);
             this.fileChannel.write(header, 0);
 
-            System.out.println("Closing file...");
-            startTime = System.nanoTime();
             this.fileChannel.close();
             this.file.close();
-            endTime = System.nanoTime();
-            System.out.format("Closing took %.3f seconds%n", 1e-9*(endTime - startTime));
             checkException();
         }
     }
