@@ -1,7 +1,17 @@
 #!/bin/bash
 
 KAFFE_DIR=${KAFFE_DIR:-/usr/local/kaffe}
-SUN_DIR=${SUN_DIR:-/usr/lib/jvm/java-6-sun}
+if [[ -n "$SUN_DIR" && -e $SUN_DIR ]]; then
+  true # everything ok
+elif [[ -e /usr/lib/jvm/java-6-sun ]]; then
+  SUN_DIR=/usr/lib/jvm/java-6-sun
+elif [[ -e /usr/lib/jvm/jdk1.6.0 ]]; then
+  SUN_DIR=/usr/lib/jvm/jdk1.6.0
+else
+  echo "No java 6 directory found."
+  exit 1
+fi
+
 MEMORY="2000m"
 RUNS=5
 
