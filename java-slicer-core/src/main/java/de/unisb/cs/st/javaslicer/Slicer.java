@@ -215,6 +215,7 @@ public class Slicer implements Opcodes {
 
             if (slicingCriterion.matches(instance)) {
                 interestingVariables.addAll(slicingCriterion.getInterestingVariables(currentFrame));
+                currentFrame.interestingInstructions.addAll(slicingCriterion.getInterestingInstructions(currentFrame));
             }
 
             if (!currentFrame.interestingInstructions.isEmpty() || currentFrame.throwsException) {

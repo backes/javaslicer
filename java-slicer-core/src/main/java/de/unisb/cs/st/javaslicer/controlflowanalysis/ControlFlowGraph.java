@@ -21,8 +21,8 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.Abstrac
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.JumpInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.LookupSwitchInstruction;
-import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.SimpleInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.TableSwitchInstruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.VarInstruction;
 import de.unisb.cs.st.javaslicer.util.UniqueQueue;
 
 public class ControlFlowGraph {
@@ -243,7 +243,7 @@ public class ControlFlowGraph {
             break;
         case VAR:
             if (opcode == Opcodes.RET) {
-                final List<JumpInstruction> callingInstructions = getJsrInstructions(method, (SimpleInstruction) instruction);
+                final List<JumpInstruction> callingInstructions = getJsrInstructions(method, (VarInstruction) instruction);
                 final AbstractInstruction[] successors = new AbstractInstruction[callingInstructions.size()];
                 int i = 0;
                 for (final JumpInstruction instr: callingInstructions)
@@ -264,7 +264,7 @@ public class ControlFlowGraph {
     /**
      * Returns all <code>jsr</code> instructions that may end up in the given <code>ret</code> instructions.
      */
-    private static List<JumpInstruction> getJsrInstructions(final ReadMethod method, final SimpleInstruction retInstruction) {
+    private static List<JumpInstruction> getJsrInstructions(final ReadMethod method, final VarInstruction retInstruction) {
         assert retInstruction.getOpcode() == Opcodes.RET;
         final List<JumpInstruction> list = new ArrayList<JumpInstruction>();
         for (final AbstractInstruction instr: method.getInstructions()) {

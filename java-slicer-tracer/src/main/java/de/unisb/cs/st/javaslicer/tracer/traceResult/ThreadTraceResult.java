@@ -27,7 +27,7 @@ import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;
 
 public class ThreadTraceResult {
 
-    public static final boolean WRITE_ITERATION_DEBUG_FILE = true; // TODO
+    public static final boolean WRITE_ITERATION_DEBUG_FILE = false;
 
     private final long threadId;
     private final String threadName;

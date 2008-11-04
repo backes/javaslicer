@@ -12,8 +12,8 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 public class ExceptionsTest2 extends AbstractSlicingTest {
 
     @Test
-    public void test25() throws IllegalParameterException, IOException, URISyntaxException {
-        final List<Instruction> slice = getSlice("/traces/exceptions2", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:25");
+    public void test24() throws IllegalParameterException, IOException, URISyntaxException {
+        final List<Instruction> slice = getSlice("/traces/exceptions2", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:24");
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:17 ACONST_NULL",
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:17 ASTORE 1",

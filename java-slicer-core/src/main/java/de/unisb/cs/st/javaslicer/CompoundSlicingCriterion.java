@@ -30,6 +30,15 @@ public class CompoundSlicingCriterion implements SlicingCriterion {
         }
 
         @Override
+        public Collection<Instruction> getInterestingInstructions(final ExecutionFrame currentFrame) {
+            final Set<Instruction> interestingInstructions = new HashSet<Instruction>();
+            for (final SlicingCriterion.Instance crit: this.instances) {
+                interestingInstructions.addAll(crit.getInterestingInstructions(currentFrame));
+            }
+            return interestingInstructions;
+        }
+
+        @Override
         public boolean matches(final Instruction.Instance instructionInstance) {
             for (final SlicingCriterion.Instance crit: this.instances) {
                 if (crit.matches(instructionInstance))

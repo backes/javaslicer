@@ -60,6 +60,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
         private long seenOccurences = 0;
         private boolean[] beingInRun = new boolean[1];
         private int stackDepth = 0;
+        private Instruction lastMatch = null;
 
         @Override
         public Collection<Variable> getInterestingVariables(final ExecutionFrame execFrame) {
@@ -68,6 +69,13 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
                 varList.add(var.instantiate(execFrame));
 
             return varList;
+        }
+
+        @Override
+        public Collection<Instruction> getInterestingInstructions(final ExecutionFrame currentFrame) {
+            if (this.lastMatch == null)
+                return Collections.emptySet();
+            return Collections.singleton(this.lastMatch);
         }
 
         @Override
@@ -85,16 +93,22 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
                     this.seenOccurences == SimpleSlicingCriterion.this.occurence)
                 || instructionInstance.getMethod() != SimpleSlicingCriterion.this.method
                 || instructionInstance.getLineNumber() != SimpleSlicingCriterion.this.lineNumber) {
-                if (this.beingInRun[instructionInstance.getStackDepth()-1])
+                if (this.beingInRun[instructionInstance.getStackDepth()-1]) {
                     this.beingInRun[instructionInstance.getStackDepth()-1] = false;
+                    this.lastMatch = null;
+                }
                 return false;
             }
 
             if (this.beingInRun[instructionInstance.getStackDepth()-1])
                 return false;
-            this.beingInRun[instructionInstance.getStackDepth()-1] = SimpleSlicingCriterion.this.occurence == null ||
-                ++this.seenOccurences == SimpleSlicingCriterion.this.occurence;
-            return this.beingInRun[instructionInstance.getStackDepth()-1];
+            if (SimpleSlicingCriterion.this.occurence == null ||
+                ++this.seenOccurences == SimpleSlicingCriterion.this.occurence) {
+                this.beingInRun[instructionInstance.getStackDepth()-1] = true;
+                this.lastMatch = instructionInstance.getInstruction();
+                return true;
+            }
+            return false;
         }
 
         @Override

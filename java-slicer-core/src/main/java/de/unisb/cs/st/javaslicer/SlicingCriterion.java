@@ -12,6 +12,8 @@ public interface SlicingCriterion {
 
         Collection<Variable> getInterestingVariables(ExecutionFrame execFrame);
 
+        Collection<Instruction> getInterestingInstructions(ExecutionFrame currentFrame);
+
     }
 
     Instance getInstance();
