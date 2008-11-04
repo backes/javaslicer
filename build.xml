@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+
+<project name="Slicer-complete" default="jars" basedir=".">
+	<description>All components of the Java Bytecode Slicer</description>
+
+	<target name="jars">
+		<echo message="Building tracing component" />
+		<ant dir="java-slicer-tracer" />
+		<echo message="Building slicer core" />
+		<ant dir="java-slicer-core" />
+	</target>
+
+</project>
