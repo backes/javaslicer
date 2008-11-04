@@ -228,6 +228,9 @@ public class Slicer implements Opcodes {
                 Set<Instruction> dependantInterestingInstructions = intersect(instrControlDependencies,
                         currentFrame.interestingInstructions);
                 if (currentFrame.throwsException) {
+                    currentFrame.throwsException = false;
+                    // in this case, we have an additional control dependency from the catching to
+                    // the throwing instruction
                     for (int i = instance.getStackDepth()-2; i >= 0; --i) {
                         final ExecutionFrame f = frames.get(i);
                         if (f.atCacheBlockStart != null) {

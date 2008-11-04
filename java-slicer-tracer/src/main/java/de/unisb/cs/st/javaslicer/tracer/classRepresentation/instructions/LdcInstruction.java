@@ -109,6 +109,10 @@ public class LdcInstruction extends AbstractInstruction {
 
     @Override
     public String toString() {
+        if (this.constant instanceof String) {
+            final String s = (String) this.constant;
+            return new StringBuilder(6+s.length()).append("LDC \"").append(s).append('"').toString();
+        }
         return "LDC " + this.constant;
     }
 
