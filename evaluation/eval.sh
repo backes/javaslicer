@@ -61,8 +61,8 @@ for (( i = 0; i < ${#cases[@]}; ++i )); do
     # my slicer:
   
     echo "## Slice computation using my slicer:"
-    javafiles=()
-    find . -name "*.java" | while read file; do javafiles[${#javafiles[@]}]=$file; done
+    javafiles=`find . -name "*.java"`
+    javafiles=( $javafiles )
     if [[ ${#javafiles[@]} -gt 0 ]]; then
       echo Compiling ${#javafiles[@]} source files...
       $SUN_DIR/bin/javac ${javafiles[@]}
@@ -124,7 +124,7 @@ for (( i = 0; i < ${#cases[@]}; ++i )); do
       egrep -v '^@@' diff
       echo
       echo ENTER to continue
-      read
+      read unused
     fi
   
     cd $dir
