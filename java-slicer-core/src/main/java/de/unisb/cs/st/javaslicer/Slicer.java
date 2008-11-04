@@ -342,7 +342,7 @@ public class Slicer implements Opcodes {
                 return new SimpleVariableUsage(vars, Arrays.asList((Variable)executionFrame.getStackEntry(stackHeight),
                         executionFrame.getStackEntry(stackHeight+1)));
             }
-            return new SimpleVariableUsage(vars, executionFrame.getStackEntry(executionFrame.operandStack.getAndDecrement()));
+            return new SimpleVariableUsage(vars, executionFrame.getStackEntry(executionFrame.operandStack.decrementAndGet()));
         case LOOKUPSWITCH:
         case TABLESWITCH:
             return new SimpleVariableUsage(executionFrame.getStackEntry(executionFrame.operandStack.getAndIncrement()),
