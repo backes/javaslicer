@@ -59,22 +59,30 @@ for (( i = 0; i < ${#cases[@]}; ++i )); do
     # my slicer:
   
     echo "## Slice computation using my slicer:"
-    echo Compiling...
-    find . -name "*.java" | xargs $SUN_DIR/bin/javac
+    javafiles=()
+    find . -name "*.java" | while read file; do javafiles[${#javafiles[@]}]=$file; done
+    if [[ ${#javafiles[@]} -gt 0 ]]; then
+      echo Compiling ${#javafiles[@]} source files...
+      $SUN_DIR/bin/javac ${javafiles[@]}
+    fi
+
     criterion=`cat my_criterion`
   
     starttime=`date +'%s*1000+%N/1000000' | sed 's/+0*/+/'`
   
     echo Running program and tracing...
-    $SUN_DIR/bin/java -Xmx$MEMORY -javaagent:$dir/tracer.jar=logfile:trace.log `cat commandline`
+    $SUN_DIR/bin/java -Xmx$MEMORY -javaagent:$dir/tracer.jar=logfile:trace.log `./commandline $dir`
   
     echo Computing slice...
+    (
     $SUN_DIR/bin/java -Xmx$MEMORY -jar $dir/slicer.jar trace.log 1 $criterion |
       tee myslicer_out |
-      sed -nr 's/^([^ :]+\.)?([^ :.]+)\.([^ :.]+):([0-9]+) .*$/\2.java \4/ p' |
+      sed -nr 's/^([^ :]+\.)?([^ :.]+)\.([^ :.]+):([0-9]+) .*$/\2.java \4/ p'
+    # always add the slicing criterion into the slice, because jslice does the same:
+    sed -nr 's/^([^ :]+\.)?([^ :.]+)\.([^ :.]+):([0-9]+)/\2.java \4/ p' my_criterion
+    ) |
       sort |
       uniq >unified_mine
-    #java -noclassgc -slicing -foreclipse criteria jslice_result de.unisb.cs.st.javaslicer.tracedCode.Simple1 1
   
     endtime=`date +'%s*1000+%N/1000000' | sed 's/+0*/+/'`
     millis=$(( ($endtime) - ($starttime) ))
@@ -86,13 +94,17 @@ for (( i = 0; i < ${#cases[@]}; ++i )); do
     # JSlice
   
     echo "## Slice computation using JSlice:"
-    echo Compiling...
-    find . -name "*.java" | xargs $KAFFE_DIR/bin/javac
+    javafiles=()
+    find . -name "*.java" | while read file; do javafiles[${#javafiles[@]}]=$file; done
+    if [[ ${#javafiles[@]} -gt 0 ]]; then
+      echo Compiling ${#javafiles[@]} source files...
+      $KAFFE_DIR/bin/javac ${javafiles[@]}
+    fi
   
     starttime=`date +'%s*1000+%N/1000000' | sed 's/+0*/+/'`
   
     echo Running program and computing slice...
-    $KAFFE_DIR/bin/java -mx $MEMORY -noclassgc -slicing -foreclipse jslice_criterion jslice_result `cat commandline`
+    $KAFFE_DIR/bin/java -mx $MEMORY -noclassgc -slicing -foreclipse jslice_criterion jslice_result `./commandline $dir`
     
     cat jslice_result |
       awk '/.java$/ { file=$0; getline; printf "%s %s\n", file, $0; }' |
