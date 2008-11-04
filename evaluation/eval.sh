@@ -7,6 +7,8 @@ elif [[ -e /usr/lib/jvm/java-6-sun ]]; then
   SUN_DIR=/usr/lib/jvm/java-6-sun
 elif [[ -e /usr/lib/jvm/jdk1.6.0 ]]; then
   SUN_DIR=/usr/lib/jvm/jdk1.6.0
+elif [[ -e /opt/sun-jdk-1.6.0.10 ]]; then
+  SUN_DIR=/opt/sun-jdk-1.6.0.10
 else
   echo "No java 6 directory found."
   exit 1
