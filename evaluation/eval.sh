@@ -61,8 +61,7 @@ for (( i = 0; i < ${#cases[@]}; ++i )); do
     # my slicer:
   
     echo "## Slice computation using my slicer:"
-    javafiles=`find . -name "*.java"`
-    javafiles=( $javafiles )
+    javafiles=( `find . -name "*.java"` )
     if [[ ${#javafiles[@]} -gt 0 ]]; then
       echo Compiling ${#javafiles[@]} source files...
       $SUN_DIR/bin/javac ${javafiles[@]}
@@ -96,8 +95,11 @@ for (( i = 0; i < ${#cases[@]}; ++i )); do
     # JSlice
   
     echo "## Slice computation using JSlice:"
-    javafiles=()
-    find . -name "*.java" | while read file; do javafiles[${#javafiles[@]}]=$file; done
+    classfiles=( `find . -name "*.class"` )
+    if [[ ${#classfiles[@]} -gt 0 ]]; then
+      rm ${classfiles[@]}
+    fi
+    javafiles=( `find . -name "*.java"` )
     if [[ ${#javafiles[@]} -gt 0 ]]; then
       echo Compiling ${#javafiles[@]} source files...
       $KAFFE_DIR/bin/javac ${javafiles[@]}
@@ -123,6 +125,9 @@ for (( i = 0; i < ${#cases[@]}; ++i )); do
       echo "There is a diff in the slices:"
       egrep -v '^@@' diff
       echo
+      echo ENTER to continue
+      read unused
+    else
       echo ENTER to continue
       read unused
     fi

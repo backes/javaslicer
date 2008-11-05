@@ -25,7 +25,7 @@ public class Exception1 {
         } catch (final NullPointerException e) {
             c = 3;
         }
-        a[0] = c;
+        ++c;
     }
 
     private static int useArrays(final int[] a, final int[] b) {
