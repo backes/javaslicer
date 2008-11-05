@@ -17,8 +17,8 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.LocalVariable;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Type;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.AbstractInstruction;
+import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.IIncInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.VarInstruction;
 
 public class SimpleSlicingCriterion implements SlicingCriterion {
@@ -190,16 +190,17 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
     private static Collection<CriterionVariable> getUsedVariables(final ReadMethod method, final Integer lineNumber) {
         final Set<Integer> usedLocalVariables = new TreeSet<Integer>();
         for (final Instruction instr: method.getInstructions()) {
-            if ((lineNumber == null || instr.getLineNumber() == lineNumber) &&
-                    instr.getType() == Type.VAR) {
-                final VarInstruction vInstr = (VarInstruction) instr;
-                switch (vInstr.getOpcode()) {
+            if (lineNumber == null || instr.getLineNumber() == lineNumber) {
+                switch (instr.getOpcode()) {
                 case Opcodes.ILOAD:
                 case Opcodes.LLOAD:
                 case Opcodes.FLOAD:
                 case Opcodes.DLOAD:
                 case Opcodes.ALOAD:
-                    usedLocalVariables.add(vInstr.getLocalVarIndex());
+                    usedLocalVariables.add(((VarInstruction) instr).getLocalVarIndex());
+                    break;
+                case Opcodes.IINC:
+                    usedLocalVariables.add(((IIncInstruction)instr).getLocalVarIndex());
                     break;
                 }
             }
