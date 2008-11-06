@@ -62,6 +62,10 @@ public class SequiturTraceSequenceFactory implements TraceSequenceFactory {
             if (this.intSequences == null)
                 return;
             for (final SequiturIntegerTraceSequence intSeq: this.intSequences)
+                intSeq.ensureInvariants();
+            for (final SequiturLongTraceSequence longSeq: this.longSequences)
+                longSeq.ensureInvariants();
+            for (final SequiturIntegerTraceSequence intSeq: this.intSequences)
                 intSeq.finish();
             for (final SequiturLongTraceSequence longSeq: this.longSequences)
                 longSeq.finish();

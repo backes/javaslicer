@@ -2,11 +2,14 @@ package de.unisb.cs.st.javaslicer.tracer.util.sequitur.output;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
 import java.util.TreeSet;
+
+import de.unisb.cs.st.javaslicer.tracer.util.Pair;
 
 // package-private
 class Rule<T> {
@@ -53,7 +56,7 @@ class Rule<T> {
 
         @Override
         public void writeOut(final ObjectOutputStream objOut, final Grammar<T> grammar, final ObjectWriter<? super T> objectWriter,
-                final LinkedList<Rule<T>> queue) {
+                final Queue<Rule<T>> queue) {
             assert false;
         }
     }
@@ -101,7 +104,7 @@ class Rule<T> {
     }
 
     public void writeOut(final ObjectOutputStream objOut, final Grammar<T> grammar,
-            final ObjectWriter<? super T> objectWriter, final LinkedList<Rule<T>> ruleQueue)
+            final ObjectWriter<? super T> objectWriter, final Queue<Rule<T>> ruleQueue)
                 throws IOException {
         if (ruleQueue.isEmpty()) {
             for (Symbol<T> s = this.dummy.next; s != this.dummy; s = s.next) {
@@ -182,6 +185,72 @@ class Rule<T> {
         }
 
         return rules;
+    }
+
+    protected void ensureInvariants(final Grammar<T> grammar) {
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            final Queue<Rule<T>> queue = new ArrayDeque<Rule<T>>();
+            final Set<Rule<T>> ready = new HashSet<Rule<T>>();
+            queue.add(this);
+            ready.add(this);
+
+            outer:
+            while (!queue.isEmpty()) {
+                final Rule<T> rule = queue.poll();
+                if (rule.getUseCount() == 0)
+                    continue;
+                for (Symbol<T> s = rule.dummy.next; s != rule.dummy; s = s.next) {
+                    if (s instanceof NonTerminal<?>) {
+                        final Rule<T> r2 = ((NonTerminal<T>)s).getRule();
+                        if (r2.dummy.next.next == r2.dummy || r2.getUseCount() == 1) {
+                            s.remove();
+                            if (!(s.prev instanceof Dummy<?>))
+                                grammar.removeDigram(s.prev);
+                            if (!(s.next instanceof Dummy<?>))
+                                grammar.removeDigram(s);
+                            final Pair<Symbol<T>, Symbol<T>> cloned = cloneRule(r2);
+                            Symbol.linkTogether(s.prev, cloned.getFirst());
+                            Symbol.linkTogether(cloned.getSecond(), s.next);
+                            if (!grammar.checkDigram(s.prev))
+                                grammar.checkDigram(s);
+                            queue.add(rule);
+                            changed = true;
+                            continue outer;
+                        } else if (ready.add(r2)) {
+                            queue.add(r2);
+                        }
+                    }
+                }
+            }
+        }
+        while (this.dummy.next.next == this.dummy && (this.dummy.next instanceof NonTerminal<?>)) {
+            final NonTerminal<T> s = (NonTerminal<T>) this.dummy.next;
+            s.remove();
+            if (!(s.prev instanceof Dummy<?>))
+                grammar.removeDigram(s.prev);
+            if (!(s.next instanceof Dummy<?>))
+                grammar.removeDigram(s);
+            final Rule<T> rule = s.getRule();
+            final Pair<Symbol<T>, Symbol<T>> cloned = cloneRule(rule);
+            Symbol.linkTogether(s.prev, cloned.getFirst());
+            Symbol.linkTogether(cloned.getSecond(), s.next);
+            if (!grammar.checkDigram(s.prev))
+                grammar.checkDigram(s);
+        }
+
+    }
+
+    private static <T> Pair<Symbol<T>, Symbol<T>> cloneRule(final Rule<T> rule) {
+        final Symbol<T> firstSym = rule.dummy.next.clone();
+        Symbol<T> lastSym = firstSym;
+        while (lastSym.next != rule.dummy) {
+            final Symbol<T> new2 = lastSym.next.clone();
+            Symbol.linkTogether(lastSym, new2);
+            lastSym = new2;
+        }
+        return new Pair<Symbol<T>, Symbol<T>>(firstSym, lastSym);
     }
 
 }

@@ -65,4 +65,8 @@ public class OutputSequence<T> {
         return sb.toString();
     }
 
+    public void ensureInvariants() {
+        this.firstRule.ensureInvariants(this.grammar);
+    }
+
 }

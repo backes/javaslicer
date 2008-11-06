@@ -2,7 +2,7 @@ package de.unisb.cs.st.javaslicer.tracer.util.sequitur.output;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.util.LinkedList;
+import java.util.Queue;
 
 import de.unisb.cs.st.javaslicer.tracer.util.sequitur.output.Rule.Dummy;
 
@@ -15,6 +15,10 @@ abstract class Symbol<T> implements Cloneable {
 
     protected Symbol(final int count) {
         this.count = count;
+    }
+
+    public int getCount() {
+        return this.count;
     }
 
     /**
@@ -114,7 +118,7 @@ abstract class Symbol<T> implements Cloneable {
     }
 
     public abstract void writeOut(final ObjectOutputStream objOut, Grammar<T> grammar,
-            ObjectWriter<? super T> objectWriter, LinkedList<Rule<T>> queue)
+            ObjectWriter<? super T> objectWriter, Queue<Rule<T>> queue)
         throws IOException;
 
 }

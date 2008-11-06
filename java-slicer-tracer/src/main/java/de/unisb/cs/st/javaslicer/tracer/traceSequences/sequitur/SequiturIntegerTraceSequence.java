@@ -49,4 +49,9 @@ public class SequiturIntegerTraceSequence implements IntegerTraceSequence {
     public boolean useMultiThreading() {
         return false;
     }
+
+    public void ensureInvariants() {
+        if (!this.ready)
+            this.sequiturSeq.ensureInvariants();
+    }
 }

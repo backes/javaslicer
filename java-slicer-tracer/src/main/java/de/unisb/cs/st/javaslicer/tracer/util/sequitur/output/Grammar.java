@@ -9,6 +9,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.TreeMap;
 import java.util.Map.Entry;
 
@@ -77,6 +78,7 @@ class Grammar<T> {
             if (((NonTerminal<T>)oldDigram).count != 0)
                 ((NonTerminal<T>) oldDigram).checkSubstRule(this);
 
+            /*
             if (newDigram.prev == newDigram.next) {
                 assert newDigram.next instanceof Dummy<?>;
                 final Rule<T> otherRule = ((Dummy<T>)newDigram.next).getRule();
@@ -120,6 +122,7 @@ class Grammar<T> {
                 checkDigram(newDigram.prev);
                 checkDigram(newDigram.next);
             }
+            */
             checkDigram(newDigram);
             checkDigram(oldDigram);
         } else if (oldDigram.prev == oldDigram.next.next
@@ -163,15 +166,14 @@ class Grammar<T> {
         return getRuleNr(rule, null);
     }
 
-    protected long getRuleNr(final Rule<T> rule, final LinkedList<Rule<T>> queue) {
+    protected long getRuleNr(final Rule<T> rule, final Queue<Rule<T>> queue) {
         Long nr = this.ruleNumbers.get(rule);
         if (nr == null) {
             if (queue != null)
                 queue.add(rule);
             nr = this.nextRuleNumber++;
             // this rule must not be removed!!
-            if (rule.getUseCount() != -1)
-                rule.incUseCount();
+            rule.incUseCount();
             try {
                 this.ruleNumbers.put(rule, nr);
             } catch (final IllegalStateException e) {
@@ -187,7 +189,7 @@ class Grammar<T> {
 
     public void writeOut(final ObjectOutputStream objOut, final ObjectWriter<? super T> objectWriter)
             throws IOException {
-        final LinkedList<Rule<T>> ruleQueue = new LinkedList<Rule<T>>();
+        final Queue<Rule<T>> ruleQueue = new LinkedList<Rule<T>>();
         // first, fill in already written rules
         if (TreeMap.class.equals(this.ruleNumbers.getClass())) {
             // on a TreeMap, we cannot rely on the size, because it is
@@ -234,6 +236,8 @@ class Grammar<T> {
         for (final OutputSequence<T> seq: this.usingSequences) {
             getRuleNr(seq.firstRule, ruleQueue);
         }
+        for (final Rule<T> rule: ruleQueue)
+            rule.ensureInvariants(this);
 
         if (ruleQueue.isEmpty()) {
             // write out a dummy entry
@@ -275,7 +279,9 @@ class Grammar<T> {
     // TODO remove
     @Override
     public String toString() {
-        return this.digrams.toString() + this.usingSequences.toString();
+        return this.digrams.toString() +
+            System.getProperty("line.separator") +
+            this.usingSequences.toString();
     }
 
 }

@@ -2,7 +2,7 @@ package de.unisb.cs.st.javaslicer.tracer.util.sequitur.output;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.util.LinkedList;
+import java.util.Queue;
 
 import de.unisb.cs.st.javaslicer.tracer.util.sequitur.output.Rule.Dummy;
 
@@ -96,10 +96,6 @@ class NonTerminal<T> extends Symbol<T> {
         return false;
     }
 
-    public int getCount() {
-        return this.count;
-    }
-
     @Override
     public int getHeader() {
         assert this.count >= 1;
@@ -108,7 +104,7 @@ class NonTerminal<T> extends Symbol<T> {
 
     @Override
     public void writeOut(final ObjectOutputStream objOut, final Grammar<T> grammar,
-            final ObjectWriter<? super T> objectWriter, final LinkedList<Rule<T>> queue) throws IOException {
+            final ObjectWriter<? super T> objectWriter, final Queue<Rule<T>> queue) throws IOException {
         assert this.count >= 1;
         if (this.count != 1) {
             DataOutput.writeInt(objOut, this.count);
