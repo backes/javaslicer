@@ -2,47 +2,59 @@ package de.unisb.cs.st.javaslicer.tracer.traceSequences.sequitur;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicLong;
 
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.LongTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
 import de.unisb.cs.st.javaslicer.tracer.util.sequitur.output.OutputSequence;
-import de.unisb.cs.st.javaslicer.tracer.util.sequitur.output.SharedOutputGrammar;
 
 public class SequiturLongTraceSequence implements LongTraceSequence {
 
     private boolean ready = false;
 
-    private long startRuleNumber;
+    private long sequenceOffset;
+
+    private long[] values = new long[10];
+    private int count = 0;
 
     private long lastValue = 0;
 
     private final OutputSequence<Long> sequiturSeq;
+    private final AtomicLong sequiturSeqLength;
 
-    public SequiturLongTraceSequence(final SharedOutputGrammar<Long> grammar) {
-        this.sequiturSeq = new OutputSequence<Long>(grammar);
+    public SequiturLongTraceSequence(final OutputSequence<Long> outputSequence, final AtomicLong outputSeqLength) {
+        this.sequiturSeq = outputSequence;
+        this.sequiturSeqLength = outputSeqLength;
     }
 
     public void trace(final long value) {
         assert !this.ready: "Trace cannot be extended any more";
 
-        final long write = value - this.lastValue;
+        if (this.count == this.values.length)
+            this.values = Arrays.copyOf(this.values, this.values.length*3/2);
+        this.values[this.count++] = value - this.lastValue;
         this.lastValue = value;
-
-        this.sequiturSeq.append(write);
     }
 
     public void writeOut(final DataOutputStream out) throws IOException {
         finish();
 
-        OptimizedDataOutputStream.writeLong0(2*this.startRuleNumber, out);
+        OptimizedDataOutputStream.writeLong0(this.sequenceOffset, out);
+        OptimizedDataOutputStream.writeInt0(this.count, out);
     }
 
     public void finish() {
         if (this.ready)
             return;
         this.ready = true;
-        this.sequiturSeq.append(this.lastValue);
-        this.startRuleNumber = this.sequiturSeq.getStartRuleNumber();
+        synchronized (this.sequiturSeq) {
+            for (int i = 0; i < this.count; ++i)
+                this.sequiturSeq.append(this.values[i]);
+            this.values = null;
+            this.sequiturSeq.append(this.lastValue);
+            this.sequenceOffset = this.sequiturSeqLength.getAndAdd(this.count+1);
+        }
     }
 
     @Override
@@ -50,8 +62,4 @@ public class SequiturLongTraceSequence implements LongTraceSequence {
         return false;
     }
 
-    public void ensureInvariants() {
-        if (!this.ready)
-            this.sequiturSeq.ensureInvariants();
-    }
 }

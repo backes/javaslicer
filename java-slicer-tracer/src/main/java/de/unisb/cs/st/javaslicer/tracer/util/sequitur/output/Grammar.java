@@ -72,15 +72,14 @@ class Grammar<T> {
             oldDigram.next.remove();
             rule.append(next, this);
 
-            // TODO check if rule is of length 1
-            if (((NonTerminal<T>)newDigram).count != 0)
-                ((NonTerminal<T>) newDigram).checkSubstRule(this);
-            if (((NonTerminal<T>)oldDigram).count != 0)
-                ((NonTerminal<T>) oldDigram).checkSubstRule(this);
+            if (((NonTerminal<T>)newDigram).count != 0 &&
+                    ((NonTerminal<T>) newDigram).checkSubstRule(this))
+                return;
+            if (((NonTerminal<T>)oldDigram).count != 0 &&
+                    ((NonTerminal<T>) oldDigram).checkSubstRule(this))
+                return;
 
-            /*
-            if (newDigram.prev == newDigram.next) {
-                assert newDigram.next instanceof Dummy<?>;
+            if (newDigram.prev == newDigram.next && ((Dummy<?>)newDigram.next).getRule().mayBeReused()) {
                 final Rule<T> otherRule = ((Dummy<T>)newDigram.next).getRule();
                 // rule is expanded inside the otherRule, since otherRule consisted of only this one nonterminal
                 if (!(oldDigram.prev instanceof Dummy<?>))
@@ -94,7 +93,7 @@ class Grammar<T> {
                 oldDigram.next.insertBefore(new NonTerminal<T>(otherRule));
                 checkDigram(oldDigram.prev);
                 checkDigram(oldDigram.next);
-            } else if (oldDigram.prev == oldDigram.next) {
+            } else if (oldDigram.prev == oldDigram.next && ((Dummy<?>)oldDigram.next).getRule().mayBeReused()) {
                 assert oldDigram.next instanceof Dummy<?>;
                 final Rule<T> otherRule = ((Dummy<T>)oldDigram.next).getRule();
                 // rule is expanded inside the otherRule, since otherRule consisted of only this one nonterminal
@@ -121,10 +120,10 @@ class Grammar<T> {
                 newDigram.next.insertBefore(new NonTerminal<T>(otherRule));
                 checkDigram(newDigram.prev);
                 checkDigram(newDigram.next);
+            } else {
+                checkDigram(newDigram);
+                checkDigram(oldDigram);
             }
-            */
-            checkDigram(newDigram);
-            checkDigram(oldDigram);
         } else if (oldDigram.prev == oldDigram.next.next
                 && (rule = ((Dummy<T>)oldDigram.prev).getRule()).mayBeReused()) {
             newDigram.substituteDigram(rule, this);

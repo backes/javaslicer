@@ -56,20 +56,22 @@ class NonTerminal<T> extends Symbol<T> {
         }
     }
 
-    public void checkSubstRule(final Grammar<T> grammar) {
+    public boolean checkSubstRule(final Grammar<T> grammar) {
         assert this.count >= 1;
-        if (this.rule.dummy.next.next == this.rule.dummy) {
-            if (!(this.prev instanceof Dummy<?>))
-                grammar.removeDigram(this.prev);
-            if (!(this.next instanceof Dummy<?>))
-                grammar.removeDigram(this);
-            final Symbol<T> newSymbol = this.rule.dummy.next.clone();
-            newSymbol.count *= this.count;
-            remove();
-            this.next.insertBefore(newSymbol);
-            if (!grammar.checkDigram(this.prev))
-                grammar.checkDigram(this);
-        }
+        if (this.rule.dummy.next.next != this.rule.dummy)
+            return false;
+
+        if (!(this.prev instanceof Dummy<?>))
+            grammar.removeDigram(this.prev);
+        if (!(this.next instanceof Dummy<?>))
+            grammar.removeDigram(this);
+        final Symbol<T> newSymbol = this.rule.dummy.next.clone();
+        newSymbol.count *= this.count;
+        remove();
+        this.next.insertBefore(newSymbol);
+        if (!grammar.checkDigram(this.prev))
+            grammar.checkDigram(this);
+        return true;
     }
 
     @Override

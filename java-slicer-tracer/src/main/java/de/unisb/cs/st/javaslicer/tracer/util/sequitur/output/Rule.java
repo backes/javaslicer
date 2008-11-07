@@ -85,6 +85,9 @@ class Rule<T> {
         grammar.checkDigram(newSymbol.prev);
     }
 
+    /**
+     * Returns <code>true</code> if this rule is not the first rule of a compressed sequence.
+     */
     public boolean mayBeReused() {
         return this.useCount >= 0;
     }
@@ -204,13 +207,15 @@ class Rule<T> {
                 for (Symbol<T> s = rule.dummy.next; s != rule.dummy; s = s.next) {
                     if (s instanceof NonTerminal<?>) {
                         final Rule<T> r2 = ((NonTerminal<T>)s).getRule();
-                        if (r2.dummy.next.next == r2.dummy || r2.getUseCount() == 1) {
-                            s.remove();
+                        if (r2.dummy.next.next == r2.dummy || (r2.getUseCount() == 1 && s.getCount() == 1)) {
                             if (!(s.prev instanceof Dummy<?>))
                                 grammar.removeDigram(s.prev);
                             if (!(s.next instanceof Dummy<?>))
                                 grammar.removeDigram(s);
+                            s.remove();
                             final Pair<Symbol<T>, Symbol<T>> cloned = cloneRule(r2);
+                            if (s.getCount() > 1)
+                                cloned.getFirst().count *= s.getCount();
                             Symbol.linkTogether(s.prev, cloned.getFirst());
                             Symbol.linkTogether(cloned.getSecond(), s.next);
                             if (!grammar.checkDigram(s.prev))
@@ -225,7 +230,7 @@ class Rule<T> {
                 }
             }
         }
-        while (this.dummy.next.next == this.dummy && (this.dummy.next instanceof NonTerminal<?>)) {
+        while (this.dummy.next.next == this.dummy && (this.dummy.next instanceof NonTerminal<?>) && this.dummy.next.count == 1) {
             final NonTerminal<T> s = (NonTerminal<T>) this.dummy.next;
             s.remove();
             if (!(s.prev instanceof Dummy<?>))
