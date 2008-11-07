@@ -9,6 +9,8 @@ public class OutputSequence<T> {
     private final Grammar<T> grammar;
     protected final Rule<T> firstRule;
     private final ObjectWriter<? super T> objectWriter;
+    private T lastValue = null;
+    private int lastValueCount = 0;
 
     public OutputSequence() {
         this(new Rule<T>(false), new Grammar<T>(), null);
@@ -31,7 +33,20 @@ public class OutputSequence<T> {
     }
 
     public void append(final T obj) {
-        this.firstRule.append(new Terminal<T>(obj), this.grammar);
+        if (this.lastValueCount == 0) {
+            this.lastValue = obj;
+            this.lastValueCount = 1;
+        } else if (this.lastValue.equals(obj)) {
+            if (++this.lastValueCount == Integer.MAX_VALUE) {
+                this.firstRule.append(new Terminal<T>(this.lastValue, this.lastValueCount), this.grammar);
+                this.lastValue = null;
+                this.lastValueCount = 0;
+            }
+        } else {
+            this.firstRule.append(new Terminal<T>(this.lastValue, this.lastValueCount), this.grammar);
+            this.lastValue = obj;
+            this.lastValueCount = 1;
+        }
     }
 
     public long getStartRuleNumber() {
@@ -67,6 +82,14 @@ public class OutputSequence<T> {
 
     public void ensureInvariants() {
         this.firstRule.ensureInvariants(this.grammar);
+    }
+
+    public void finish() {
+        if (this.lastValueCount > 0) {
+            this.firstRule.append(new Terminal<T>(this.lastValue, this.lastValueCount), this.grammar);
+            this.lastValue = null;
+            this.lastValueCount = 0;
+        }
     }
 
 }

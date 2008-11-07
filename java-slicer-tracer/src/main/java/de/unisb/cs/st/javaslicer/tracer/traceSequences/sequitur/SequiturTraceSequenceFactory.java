@@ -70,6 +70,8 @@ public class SequiturTraceSequenceFactory implements TraceSequenceFactory {
                 longSeq.finish();
             this.intSequences = null;
             this.longSequences = null;
+            this.intSequence.finish();
+            this.longSequence.finish();
         }
 
         @Override

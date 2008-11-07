@@ -12,7 +12,11 @@ class Terminal<T> extends Symbol<T> {
     protected final T value;
 
     public Terminal(final T value) {
-        super(1);
+        this(value, 1);
+    }
+
+    public Terminal(final T value, final int count) {
+        super(count);
         this.value = value;
     }
 
