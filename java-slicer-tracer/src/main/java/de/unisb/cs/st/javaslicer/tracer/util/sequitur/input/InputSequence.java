@@ -48,12 +48,13 @@ public class InputSequence<T> implements Iterable<T> {
                         this.rulePos = Arrays.copyOf(this.rulePos, 2*i);
                         this.count = Arrays.copyOf(this.count, 2*i);
                     }
-                    this.rulePos[i] = ruleSymLength - 1;
-                    this.count[i++] = sym.count - 1;
                     if (sym instanceof Terminal<?>) {
-                        ++this.rulePos[i-1];
+                        // move behind the last symbol:
+                        this.rulePos[i] = ruleSymLength;
                         break;
                     }
+                    this.rulePos[i] = ruleSymLength - 1;
+                    this.count[i++] = sym.count - 1;
                     rule = ((NonTerminal<T>)sym).getRule();
                 }
             } else {
@@ -65,8 +66,9 @@ public class InputSequence<T> implements Iterable<T> {
                 while (true) {
                     this.ruleStack.add(rule);
                     int ruleOffset = 0;
-                    while (after + rule.symbols.get(ruleOffset).getLength(false) <= position) {
-                        after += rule.symbols.get(ruleOffset).getLength(false);
+                    long newLength;
+                    while (after + (newLength = rule.symbols.get(ruleOffset).getLength(false)) <= position) {
+                        after += newLength;
                         ++ruleOffset;
                     }
                     if (this.rulePos.length == i) {
@@ -121,17 +123,18 @@ public class InputSequence<T> implements Iterable<T> {
                     break;
                 }
                 if (this.rulePos[depth] != ruleSymbols.size()-1) {
-                    ++this.rulePos[depth];
-                    sym = ruleSymbols.get(this.rulePos[depth]);
+                    sym = ruleSymbols.get(++this.rulePos[depth]);
+                    this.count[depth] = 0;
                     break;
                 }
-                this.ruleStack.remove(depth);
                 if (depth == 0) {
                     assert this.pos == this.seqLength - 1;
                     ++this.rulePos[0];
+                    this.count[0] = 0;
                     ++this.pos;
                     return value;
                 }
+                this.ruleStack.remove(depth);
                 ruleSymbols = this.ruleStack.get(--depth).symbols;
                 sym = ruleSymbols.get(this.rulePos[depth]);
             }

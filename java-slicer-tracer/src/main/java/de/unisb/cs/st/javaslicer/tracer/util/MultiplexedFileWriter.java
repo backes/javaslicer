@@ -712,7 +712,7 @@ public class MultiplexedFileWriter {
      * @param useMemoryMapping whether or not to use memory mapping (java.nio package)
      * @param byteOrder the byte order to use to write out block addresses (only used internally)
      *
-     * @throws IOException
+     * @throws IOException if an I/O error occurs (e.g. FileNotFoundException)
      */
     public MultiplexedFileWriter(final File filename, final int blockSize,
             final boolean useMemoryMapping, final ByteOrder byteOrder, final boolean autoFlush)

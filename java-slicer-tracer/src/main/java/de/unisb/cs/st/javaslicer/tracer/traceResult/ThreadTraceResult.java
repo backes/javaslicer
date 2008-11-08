@@ -33,7 +33,7 @@ public class ThreadTraceResult {
     private final String threadName;
     protected final IntegerMap<ConstantTraceSequence> sequences;
     protected final int lastInstructionIndex;
-    private final int lastStackDepth;
+    protected final int lastStackDepth;
 
     private final TraceResult traceResult;
 
@@ -94,7 +94,6 @@ public class ThreadTraceResult {
         private int additionalInstructionCount = 0;
         private final PrintWriter debugFileWriter;
 
-        @SuppressWarnings("synthetic-access")
         public BackwardInstructionIterator() throws TracerException {
             this.integerSequenceBackwardIterators = new IntegerMap<Iterator<Integer>>();
             this.longSequenceBackwardIterators = new IntegerMap<Iterator<Long>>();

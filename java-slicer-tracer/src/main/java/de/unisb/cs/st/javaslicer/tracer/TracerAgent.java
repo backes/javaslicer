@@ -1,6 +1,7 @@
 package de.unisb.cs.st.javaslicer.tracer;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.instrument.Instrumentation;
 
@@ -106,7 +107,11 @@ public class TracerAgent {
             if (seqFac == null)
                 seqFac = new UncompressedTraceSequenceFactory();
 
-            Tracer.newInstance(logFile, debug, check, seqFac, inst);
+            try {
+                Tracer.newInstance(logFile, debug, check, seqFac, inst);
+            } catch (final FileNotFoundException e) {
+                System.err.println("ERROR: cannot create trace file: " + e.getMessage());
+            }
             final Tracer tracer = Tracer.getInstance();
             try {
                 tracer.add(inst, true);
