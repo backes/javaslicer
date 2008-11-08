@@ -81,6 +81,7 @@ public class SequiturTraceSequenceFactory implements TraceSequenceFactory {
             final ObjectOutputStream objOut = new ObjectOutputStream(out);
             this.intSequence.writeOut(objOut, true);
             this.longSequence.writeOut(objOut, true);
+            objOut.flush();
         }
 
     }

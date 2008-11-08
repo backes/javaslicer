@@ -40,7 +40,7 @@ public class SequiturLongTraceSequence implements LongTraceSequence {
     public void writeOut(final DataOutputStream out) throws IOException {
         finish();
 
-        OptimizedDataOutputStream.writeLong0(this.sequenceOffset, out);
+        OptimizedDataOutputStream.writeLong0(2*this.sequenceOffset+1, out);
         OptimizedDataOutputStream.writeInt0(this.count, out);
     }
 

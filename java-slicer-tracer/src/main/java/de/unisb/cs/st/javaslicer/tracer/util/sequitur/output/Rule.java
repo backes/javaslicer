@@ -109,25 +109,17 @@ class Rule<T> {
     public void writeOut(final ObjectOutputStream objOut, final Grammar<T> grammar,
             final ObjectWriter<? super T> objectWriter, final Queue<Rule<T>> ruleQueue)
                 throws IOException {
-        if (ruleQueue.isEmpty()) {
-            for (Symbol<T> s = this.dummy.next; s != this.dummy; s = s.next) {
-                if (s instanceof NonTerminal<?>)
-                    grammar.getRuleNr(((NonTerminal<T>)s).getRule(), ruleQueue);
-            }
-        }
-
         int header = 0;
         long written;
         Symbol<T> next = this.dummy.next;
         for (written = 0; written < 3 && next != this.dummy; ++written, next = next.next)
             header |= (next.getHeader() << (4 - 2 * written));
         assert (written >= 2 && written <= 3) || (written >= 0 && this.useCount == -1);
-        if (next == this.dummy && !ruleQueue.isEmpty()) {
+        if (next == this.dummy && (this.useCount != -1 || written == 2 || written == 3)) {
             header |= written == 2 ? (2 << 6) : (3 << 6);
             objOut.write(header);
         } else {
-            if (!ruleQueue.isEmpty())
-                header |= 1 << 6;
+            header |= 1 << 6;
             objOut.write(header);
 
             DataOutput.writeInt(objOut, length());

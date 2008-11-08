@@ -7,8 +7,8 @@ import java.io.ObjectInputStream;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;
 import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
+import de.unisb.cs.st.javaslicer.tracer.util.sequitur.input.InputSequence;
 import de.unisb.cs.st.javaslicer.tracer.util.sequitur.input.ObjectReader;
-import de.unisb.cs.st.javaslicer.tracer.util.sequitur.input.SharedInputGrammar;
 
 public class SequiturThreadTraces extends ConstantThreadTraces {
 
@@ -25,22 +25,23 @@ public class SequiturThreadTraces extends ConstantThreadTraces {
         }
     };
 
-    private final SharedInputGrammar<Integer> intGrammar;
-    private final SharedInputGrammar<Long> longGrammar;
+    private final InputSequence<Integer> intSequence;
+    private final InputSequence<Long> longSequence;
 
     public SequiturThreadTraces(final DataInputStream in) throws IOException, ClassNotFoundException {
         super(TraceSequence.FORMAT_SEQUITUR);
         final ObjectInputStream objIn = new ObjectInputStream(in);
-        this.intGrammar = SharedInputGrammar.readFrom(objIn, INT_READER);
-        this.longGrammar = SharedInputGrammar.readFrom(objIn, LONG_READER);
+        this.intSequence = InputSequence.readFrom(objIn, INT_READER);
+        this.longSequence = InputSequence.readFrom(objIn, LONG_READER);
     }
 
     @Override
     public ConstantTraceSequence readSequence(final DataInputStream in, final MultiplexedFileReader file) throws IOException {
-        final long startRuleNumber = OptimizedDataInputStream.readLong0(in);
-        return (startRuleNumber & 1) != 0
-            ? new ConstantSequiturLongTraceSequence(startRuleNumber/2, this.longGrammar)
-            : new ConstantSequiturIntegerTraceSequence(startRuleNumber/2, this.intGrammar);
+        final long sequenceOffset = OptimizedDataInputStream.readLong0(in);
+        final int count = OptimizedDataInputStream.readInt0(in);
+        return (sequenceOffset & 1) != 0
+            ? new ConstantSequiturLongTraceSequence(sequenceOffset/2, count, this.longSequence)
+            : new ConstantSequiturIntegerTraceSequence(sequenceOffset/2, count, this.intSequence);
     }
 
 }

@@ -26,6 +26,7 @@ public class ConstantThreadTraces {
             try {
                 return new SequiturThreadTraces(in);
             } catch (final ClassNotFoundException e) {
+                // this exception can occur in the ObjectInputStream that the sequences are read from
                 throw new IOException(e);
             }
         case TraceSequence.FORMAT_UNCOMPRESSED:

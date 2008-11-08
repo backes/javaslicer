@@ -238,19 +238,14 @@ class Grammar<T> {
         for (final Rule<T> rule: ruleQueue)
             rule.ensureInvariants(this);
 
-        if (ruleQueue.isEmpty()) {
-            // write out a dummy entry
-            objOut.write(0); // header: marked as being last
-            objOut.write(0); // this rule contains 0 symbols
-        } else {
-            long ruleNr = 0;
-            while (!ruleQueue.isEmpty()) {
-                final Rule<T> rule = ruleQueue.poll();
-                assert getRuleNr(rule) == ruleNr;
-                ++ruleNr;
-                rule.writeOut(objOut, this, objectWriter, ruleQueue);
-            }
+        long ruleNr = 0;
+        while (!ruleQueue.isEmpty()) {
+            final Rule<T> rule = ruleQueue.poll();
+            assert getRuleNr(rule) == ruleNr;
+            ++ruleNr;
+            rule.writeOut(objOut, this, objectWriter, ruleQueue);
         }
+        objOut.write(0); // mark end of rules
     }
 
     @SuppressWarnings("unchecked")

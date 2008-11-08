@@ -40,7 +40,7 @@ public class SequiturIntegerTraceSequence implements IntegerTraceSequence {
     public void writeOut(final DataOutputStream out) throws IOException {
         finish();
 
-        OptimizedDataOutputStream.writeLong0(this.sequenceOffset, out);
+        OptimizedDataOutputStream.writeLong0(2*this.sequenceOffset, out);
         OptimizedDataOutputStream.writeInt0(this.count, out);
     }
 

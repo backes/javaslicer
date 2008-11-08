@@ -17,6 +17,7 @@ class Grammar<T> {
     public static <T> Grammar<T> readFrom(final ObjectInputStream objIn, final ObjectReader<? extends T> objectReader,
             final Class<? extends T> checkInstance) throws IOException, ClassNotFoundException {
         final LongArrayList<Rule<T>> rules = Rule.readAll(objIn, objectReader, checkInstance);
+        assert rules.size() > 0;
         final Grammar<T> grammar = new Grammar<T>(rules);
         for (final Rule<T> rule: rules)
             rule.substituteRealRules(grammar);

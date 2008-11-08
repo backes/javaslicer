@@ -42,7 +42,7 @@ public class ThreadInstrumenter extends TracingClassInstrumenter {
         insnIt.add(new MethodInsnNode(INVOKESTATIC, Type.getInternalName(Tracer.class),
                 "getInstance", "()L" + Type.getInternalName(Tracer.class) + ";"));
         insnIt.add(new MethodInsnNode(INVOKEVIRTUAL, Type.getInternalName(Tracer.class),
-                "threadExists", "()V"));
+                "threadExits", "()V"));
         insnIt.add(l0);
     }
 

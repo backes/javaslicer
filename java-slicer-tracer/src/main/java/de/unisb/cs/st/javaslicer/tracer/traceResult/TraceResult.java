@@ -269,13 +269,10 @@ public class TraceResult {
 
             final BackwardInstructionIterator it2 = (BackwardInstructionIterator) it;
 
-            System.out.println();
-            System.out.println("No instructions: " + it2.getNoInstructions()
-                    + " (+ " + it2.getNoAdditionalInstructions() + " additional = "
-                    + (it2.getNoInstructions() + it2.getNoAdditionalInstructions())
-                    + " total instructions)");
+            System.out.format("%nNo instructions: %d  (+ %d additional = %d total instructions)%nReady%n",
+                    it2.getNoInstructions(), it2.getNoAdditionalInstructions(),
+                    it2.getNoInstructions() + it2.getNoAdditionalInstructions());
 
-            System.out.println("Ready");
         } catch (final TracerException e) {
             System.err.println("Error while tracing: " + e.getMessage());
             System.exit(-1);

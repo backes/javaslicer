@@ -83,7 +83,6 @@ class Rule<T> {
         return sb.toString();
     }
 
-    @SuppressWarnings("fallthrough")
     public static <T> LongArrayList<Rule<T>> readAll(final ObjectInputStream objIn,
             final ObjectReader<? extends T> objectReader,
             final Class<? extends T> checkInstance) throws IOException, ClassNotFoundException {
@@ -93,15 +92,11 @@ class Rule<T> {
         while (true) {
             int header = objIn.read();
             int length;
-            boolean ready = false;
             switch (header >> 6) {
             case 0:
-                ready = true;
-                // fall through
+                break readRules;
             case 1:
                 length = DataInput.readInt(objIn);
-                if (length == 0)
-                    break readRules;
                 break;
             case 2:
                 length = 2;
@@ -124,7 +119,7 @@ class Rule<T> {
                 objIn.readFully(headerBuf);
                 headerInputStream = new MyByteArrayInputStream(headerBuf);
             }
-            final List<Symbol<T>> symbols = new ArrayList<Symbol<T>>(additionalHeaderBytes*4+3);
+            final List<Symbol<T>> symbols = new ArrayList<Symbol<T>>(length);
             int pos = 3;
             while (length-- != 0) {
                 if (pos-- == 0) {
@@ -143,17 +138,16 @@ class Rule<T> {
                     symbols.add(Terminal.readFrom(objIn, false, objectReader, checkInstance));
                     break;
                 case 3:
-                    symbols.add(Terminal.readFrom(objIn, false, objectReader, checkInstance));
+                    symbols.add(Terminal.readFrom(objIn, true, objectReader, checkInstance));
                     break;
                 default:
                     throw new InternalError();
                 }
             }
             rules.add(new Rule<T>(symbols));
-            if (ready)
-                break;
         }
 
+        rules.trimToSize();
         return rules;
     }
 

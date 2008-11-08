@@ -54,12 +54,14 @@ public class OutputSequence<T> {
     }
 
     public void writeOut(final ObjectOutputStream objOut, final boolean includeGrammar) throws IOException {
+        finish();
         if (includeGrammar)
             writeOutGrammar(objOut);
         DataOutput.writeLong(objOut, getStartRuleNumber());
     }
 
     public void writeOutGrammar(final ObjectOutputStream objOut) throws IOException {
+        finish();
         this.grammar.writeOut(objOut, this.objectWriter);
     }
 
