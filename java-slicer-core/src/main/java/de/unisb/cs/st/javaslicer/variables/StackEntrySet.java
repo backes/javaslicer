@@ -1,8 +1,10 @@
-package de.unisb.cs.st.javaslicer;
+package de.unisb.cs.st.javaslicer.variables;
 
 import java.util.AbstractSet;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+
+import de.unisb.cs.st.javaslicer.ExecutionFrame;
 
 public class StackEntrySet extends AbstractSet<Variable> {
 

@@ -1,7 +1,11 @@
-package de.unisb.cs.st.javaslicer;
+package de.unisb.cs.st.javaslicer.variableUsages;
 
 import java.util.Collection;
 import java.util.Collections;
+
+import de.unisb.cs.st.javaslicer.ExecutionFrame;
+import de.unisb.cs.st.javaslicer.variables.StackEntrySet;
+import de.unisb.cs.st.javaslicer.variables.Variable;
 
 public class StackManipulation implements VariableUsages {
 

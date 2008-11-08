@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.Stack;
 import java.util.Map.Entry;
 
 import org.objectweb.asm.Opcodes;
@@ -36,6 +35,15 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.VarInst
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
+import de.unisb.cs.st.javaslicer.util.ArrayStack;
+import de.unisb.cs.st.javaslicer.variableUsages.MethodInvokationVariableUsages;
+import de.unisb.cs.st.javaslicer.variableUsages.SimpleVariableUsage;
+import de.unisb.cs.st.javaslicer.variableUsages.StackManipulation;
+import de.unisb.cs.st.javaslicer.variableUsages.VariableUsages;
+import de.unisb.cs.st.javaslicer.variables.ArrayElement;
+import de.unisb.cs.st.javaslicer.variables.ObjectField;
+import de.unisb.cs.st.javaslicer.variables.StackEntrySet;
+import de.unisb.cs.st.javaslicer.variables.Variable;
 
 public class Slicer implements Opcodes {
 
@@ -120,7 +128,8 @@ public class Slicer implements Opcodes {
                     insn.getLineNumber(),
                     insn.toString());
         }
-        System.out.format((Locale)null, "%nComputation took %.2f seconds.%n", 1e-9*(endTime-startTime));
+        System.out.format((Locale)null, "%nSlice consists of %d bytecode instructions.%n", sliceList.size());
+        System.out.format((Locale)null, "Computation took %.2f seconds.%n", 1e-9*(endTime-startTime));
     }
 
     private static void usage() {
@@ -166,50 +175,65 @@ public class Slicer implements Opcodes {
 
         final IntegerMap<Set<Instruction>> controlDependencies = new IntegerMap<Set<Instruction>>();
 
-        final Stack<ExecutionFrame> frames = new Stack<ExecutionFrame>();
-        frames.push(new ExecutionFrame());
+        final ArrayStack<ExecutionFrame> frames = new ArrayStack<ExecutionFrame>();
 
         final Set<Variable> interestingVariables = new HashSet<Variable>();
         final Set<Instruction> dynamicSlice = new HashSet<Instruction>();
 
+        // TODO remove (for debugging)
+        long nr = 0;
+        ExecutionFrame currentFrame = new ExecutionFrame();
+        frames.push(currentFrame);
         while (backwardInsnItr.hasNext()) {
+            ++nr;
             final Instance instance = backwardInsnItr.next();
             final Instruction instruction = instance.getInstruction();
 
             ExecutionFrame removedFrame = null;
             boolean removedFrameIsInteresting = false;
-            while (frames.size() > instance.getStackDepth()) {
-                assert frames.size() == instance.getStackDepth()+1;
-                removedFrame = frames.pop();
-                if (!removedFrame.interestingInstructions.isEmpty()) {
-                    // ok, we have a control dependency since the method was called by (or for) this instruction
-                    removedFrameIsInteresting = true;
+            final int stackDepth = instance.getStackDepth();
+            assert stackDepth >= 0;
+
+            if (frames.size() != stackDepth) {
+                if (frames.size() > stackDepth) {
+                    assert frames.size() == stackDepth+1;
+                    removedFrame = frames.pop();
+                    if (!removedFrame.interestingInstructions.isEmpty()) {
+                        // ok, we have a control dependency since the method was called by (or for) this instruction
+                        removedFrameIsInteresting = true;
+                    }
+                } else {
+                    ExecutionFrame topFrame = null;
+                    while (frames.size() < stackDepth) {
+                        if (topFrame == null && frames.size() > 0)
+                            topFrame = frames.peek();
+                        final ExecutionFrame newFrame = new ExecutionFrame();
+                        if (topFrame != null && topFrame.atCacheBlockStart != null)
+                            newFrame.throwsException = true;
+                        frames.push(newFrame);
+                    }
+                }
+                currentFrame = frames.peek();
+            }
+
+            // it is possible that we see successive instructions of different methods,
+            // e.g. when called from native code
+            if (currentFrame.method != instruction.getMethod()) {
+                if (currentFrame.method == null) {
+                    currentFrame.method = instruction.getMethod();
+                } else {
+                    currentFrame = new ExecutionFrame();
+                    currentFrame.method = instruction.getMethod();
+                    frames.set(stackDepth-1, currentFrame);
                 }
             }
 
-            ExecutionFrame topFrame = null;
-            while (frames.size() < instance.getStackDepth()) {
-                if (topFrame == null && frames.size() > 0)
-                    topFrame = frames.peek();
-                final ExecutionFrame newFrame = new ExecutionFrame();
-                if (topFrame != null && topFrame.atCacheBlockStart != null)
-                    newFrame.throwsException = true;
-                frames.push(newFrame);
-            }
-            ExecutionFrame currentFrame = frames.get(instance.getStackDepth()-1);
-            if (currentFrame.method == null) {
-                currentFrame.method = instruction.getMethod();
-            } else if (instance.getStackDepth() == 1 && currentFrame.method != instance.getMethod()) {
-                currentFrame = new ExecutionFrame();
-                currentFrame.method = instruction.getMethod();
-                frames.set(instance.getStackDepth()-1, currentFrame);
-            }
-            assert currentFrame.method == instance.getMethod();
-
-            final VariableUsages dynInfo = simulateInstruction(instance, currentFrame, removedFrame, frames);
+            final VariableUsages dynInfo = simulateInstruction(instance, currentFrame,
+                    removedFrame, frames);
 
             if (removedFrameIsInteresting) {
-                dynamicSlice.add(instruction); // TODO check if this is the instr. that called the method
+                // checking if this is the instr. that called the method is impossible
+                dynamicSlice.add(instruction);
                 currentFrame.interestingInstructions.add(instruction);
             }
 
@@ -232,7 +256,7 @@ public class Slicer implements Opcodes {
                     currentFrame.throwsException = false;
                     // in this case, we have an additional control dependency from the catching to
                     // the throwing instruction
-                    for (int i = instance.getStackDepth()-2; i >= 0; --i) {
+                    for (int i = stackDepth-2; i >= 0; --i) {
                         final ExecutionFrame f = frames.get(i);
                         if (f.atCacheBlockStart != null) {
                             if (f.interestingInstructions.contains(f.atCacheBlockStart)) {
@@ -314,7 +338,8 @@ public class Slicer implements Opcodes {
     }
 
     private VariableUsages simulateInstruction(final Instance inst,
-            final ExecutionFrame executionFrame, final ExecutionFrame removedFrame, final Stack<ExecutionFrame> allFrames) {
+            final ExecutionFrame executionFrame, final ExecutionFrame removedFrame,
+            final ArrayStack<ExecutionFrame> allFrames) {
         final Variable var;
         Collection<Variable> vars;
         switch (inst.getType()) {
@@ -534,7 +559,7 @@ public class Slicer implements Opcodes {
     }
 
     private VariableUsages simulateSimpleInsn(final Instance inst, final ExecutionFrame frame,
-            final Stack<ExecutionFrame> allFrames) {
+            final ArrayStack<ExecutionFrame> allFrames) {
         switch (inst.getOpcode()) {
         case DUP:
             int stackHeight = frame.operandStack.decrementAndGet();

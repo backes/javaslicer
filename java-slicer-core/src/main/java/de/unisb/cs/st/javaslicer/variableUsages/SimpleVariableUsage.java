@@ -1,7 +1,9 @@
-package de.unisb.cs.st.javaslicer;
+package de.unisb.cs.st.javaslicer.variableUsages;
 
 import java.util.Collection;
 import java.util.Collections;
+
+import de.unisb.cs.st.javaslicer.variables.Variable;
 
 public class SimpleVariableUsage implements VariableUsages {
 
@@ -39,6 +41,7 @@ public class SimpleVariableUsage implements VariableUsages {
         return this.definedVariables;
     }
 
+    @Override
     public boolean isCatchBlock() {
         return this.isCatchBlock;
     }

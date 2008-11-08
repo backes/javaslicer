@@ -1,8 +1,10 @@
-package de.unisb.cs.st.javaslicer;
+package de.unisb.cs.st.javaslicer.variableUsages;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
+
+import de.unisb.cs.st.javaslicer.variables.Variable;
 
 public interface VariableUsages {
 

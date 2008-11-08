@@ -20,6 +20,7 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.IIncInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.VarInstruction;
+import de.unisb.cs.st.javaslicer.variables.Variable;
 
 public class SimpleSlicingCriterion implements SlicingCriterion {
 
@@ -80,31 +81,32 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
 
         @Override
         public boolean matches(final Instruction.Instance instructionInstance) {
-            if (this.stackDepth != instructionInstance.getStackDepth()) {
-                if (instructionInstance.getStackDepth() > this.beingInRun.length) {
-                    this.beingInRun = Arrays.copyOf(this.beingInRun, Math.max(2*this.beingInRun.length, instructionInstance.getStackDepth()));
+            int instrStackDepth = instructionInstance.getStackDepth();
+            if (this.stackDepth != instrStackDepth) {
+                if (instrStackDepth > this.beingInRun.length) {
+                    this.beingInRun = Arrays.copyOf(this.beingInRun, Math.max(2*this.beingInRun.length, instrStackDepth));
                 }
-                while (this.stackDepth < instructionInstance.getStackDepth()) {
+                while (this.stackDepth < instrStackDepth) {
                     this.beingInRun[this.stackDepth++] = false;
                 }
-                this.stackDepth = instructionInstance.getStackDepth();
+                this.stackDepth = instrStackDepth;
             }
             if ((SimpleSlicingCriterion.this.occurence != null &&
                     this.seenOccurences == SimpleSlicingCriterion.this.occurence)
                 || instructionInstance.getMethod() != SimpleSlicingCriterion.this.method
                 || instructionInstance.getLineNumber() != SimpleSlicingCriterion.this.lineNumber) {
-                if (this.beingInRun[instructionInstance.getStackDepth()-1]) {
-                    this.beingInRun[instructionInstance.getStackDepth()-1] = false;
+                if (this.beingInRun[instrStackDepth-1]) {
+                    this.beingInRun[instrStackDepth-1] = false;
                     this.lastMatch = null;
                 }
                 return false;
             }
 
-            if (this.beingInRun[instructionInstance.getStackDepth()-1])
+            if (this.beingInRun[instrStackDepth-1])
                 return false;
             if (SimpleSlicingCriterion.this.occurence == null ||
                 ++this.seenOccurences == SimpleSlicingCriterion.this.occurence) {
-                this.beingInRun[instructionInstance.getStackDepth()-1] = true;
+                this.beingInRun[instrStackDepth-1] = true;
                 this.lastMatch = instructionInstance.getInstruction();
                 return true;
             }

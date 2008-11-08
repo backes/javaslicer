@@ -1,25 +1,19 @@
-package de.unisb.cs.st.javaslicer;
+package de.unisb.cs.st.javaslicer.variableUsages;
 
 import java.util.Collection;
 import java.util.Map;
+
+import de.unisb.cs.st.javaslicer.variables.Variable;
 
 public class ComplexVariableUsage implements VariableUsages {
 
     private final Collection<Variable> allUsedVariables;
     private final Map<Variable, Collection<Variable>> definedVariablesAndDependancies;
-    private final boolean isCatchBlock;
 
     public ComplexVariableUsage(final Collection<Variable> allUsedVariables,
             final Map<Variable, Collection<Variable>> definedVariablesAndDependancies) {
-        this(allUsedVariables, definedVariablesAndDependancies, false);
-    }
-
-    public ComplexVariableUsage(final Collection<Variable> allUsedVariables,
-            final Map<Variable, Collection<Variable>> definedVariablesAndDependancies,
-            final boolean isCatchBlock) {
         this.allUsedVariables = allUsedVariables;
         this.definedVariablesAndDependancies = definedVariablesAndDependancies;
-        this.isCatchBlock = isCatchBlock;
         assert allSubsets(definedVariablesAndDependancies.values(), allUsedVariables);
     }
 
@@ -48,7 +42,7 @@ public class ComplexVariableUsage implements VariableUsages {
 
     @Override
     public boolean isCatchBlock() {
-        return this.isCatchBlock;
+        return false;
     }
 
 }

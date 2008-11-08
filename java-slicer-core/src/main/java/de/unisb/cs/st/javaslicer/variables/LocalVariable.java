@@ -1,4 +1,6 @@
-package de.unisb.cs.st.javaslicer;
+package de.unisb.cs.st.javaslicer.variables;
+
+import de.unisb.cs.st.javaslicer.ExecutionFrame;
 
 public class LocalVariable implements Variable {
 

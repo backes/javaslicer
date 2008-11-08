@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer;
+package de.unisb.cs.st.javaslicer.variables;
 
 public class ObjectField implements Variable {
 

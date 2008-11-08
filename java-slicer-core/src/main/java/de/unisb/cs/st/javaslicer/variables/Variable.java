@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer;
+package de.unisb.cs.st.javaslicer.variables;
 
 /**
  * A variable is a place where information can be stored during dynamic slicing.
