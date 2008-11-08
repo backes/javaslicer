@@ -123,10 +123,11 @@ public class ThreadTraceResult {
         }
 
         public boolean hasNext() {
-            final boolean hasNext = this.nextInstruction != null;
-            if (!hasNext && this.debugFileWriter != null)
+            if (this.nextInstruction != null)
+                return true;
+            if (WRITE_ITERATION_DEBUG_FILE)
                 this.debugFileWriter.close();
-            return hasNext;
+            return false;
         }
 
         public Instance next() throws TracerException {

@@ -206,6 +206,7 @@ public class TraceResult {
                 threadToTrace = Long.valueOf(args[1]);
             } catch (final NumberFormatException e) {
                 System.err.println("Second parameter indicates the thread id to trace. Must be an integer.");
+                System.exit(-1);
             }
         }
 

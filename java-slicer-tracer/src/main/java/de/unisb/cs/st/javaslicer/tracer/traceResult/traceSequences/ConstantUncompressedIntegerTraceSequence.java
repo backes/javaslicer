@@ -7,7 +7,6 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences.ConstantTraceSequence.ConstantIntegerTraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.util.EmptyIterator;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;
 import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader.MultiplexInputStream;
 
@@ -22,12 +21,8 @@ public class ConstantUncompressedIntegerTraceSequence implements ConstantInteger
     }
 
     @Override
-    public Iterator<Integer> backwardIterator() {
-        try {
-            return new BackwardIterator();
-        } catch (final IOException e) {
-            return new EmptyIterator<Integer>();
-        }
+    public Iterator<Integer> backwardIterator() throws IOException {
+        return new BackwardIterator(this.file, this.streamIndex, 8*1024);
     }
 
     public static ConstantUncompressedIntegerTraceSequence readFrom(final DataInput in, final MultiplexedFileReader file)
@@ -38,40 +33,68 @@ public class ConstantUncompressedIntegerTraceSequence implements ConstantInteger
         return new ConstantUncompressedIntegerTraceSequence(file, streamIndex);
     }
 
-    public class BackwardIterator implements Iterator<Integer> {
+    private static class BackwardIterator implements Iterator<Integer> {
 
-        private final MultiplexInputStream iStream;
+        private long offset;
+        private final int[] buf;
+        private int bufPos;
+        private final MultiplexInputStream inputStream;
         private final DataInputStream dataIn;
-        private long nextPos;
 
-        public BackwardIterator() throws IOException {
-            this.iStream = ConstantUncompressedIntegerTraceSequence.this.file.getInputStream(ConstantUncompressedIntegerTraceSequence.this.streamIndex);
-            this.dataIn = new DataInputStream(this.iStream);
-            this.nextPos = this.iStream.getDataLength()-4;
-            if ((this.nextPos & 3) != 0)
-                throw new IOException("corrupted data (illegal stream length)");
-        }
+        public BackwardIterator(final MultiplexedFileReader file, final int streamIndex, final int bufSize) throws IOException {
+            this.inputStream = file.getInputStream(streamIndex);
+            final long numInts = this.inputStream.getDataLength()/4;
+            if (numInts * 4 != this.inputStream.getDataLength())
+                throw new IOException("Stream's length not dividable by 4");
 
-        public boolean hasNext() {
-            return this.nextPos >= 0;
-        }
-
-        public Integer next() {
-            if (this.nextPos < 0)
-                throw new NoSuchElementException();
-            try {
-                this.iStream.seek(this.nextPos);
-                this.nextPos -= 4;
-                return this.dataIn.readInt();
-            } catch (final IOException e) {
-                throw new NoSuchElementException();
+            long startInt = (numInts - 1) / bufSize * bufSize;
+            this.offset = startInt * 4;
+            this.inputStream.seek(this.offset);
+            this.dataIn = new DataInputStream(this.inputStream);
+            this.buf = new int[startInt == 0 ? (int)numInts : bufSize];
+            this.bufPos = (int) (numInts - startInt - 1);
+            for (int i = 0; startInt < numInts; ++startInt) {
+                this.buf[i++] = this.dataIn.readInt();
             }
         }
 
+        @Override
+        public boolean hasNext() {
+            try {
+                if (this.bufPos >= 0)
+                    return true;
+                if (this.offset == 0)
+                    return false;
+                this.offset -= this.buf.length*4;
+                this.inputStream.seek(this.offset);
+                for (int i = 0; i < this.buf.length; ++i) {
+                    this.buf[i] = this.dataIn.readInt();
+                }
+                this.bufPos = this.buf.length - 1;
+                return true;
+            } catch (final IOException e) {
+                close();
+                return false;
+            }
+        }
+
+        @Override
+        public Integer next() {
+            if (!hasNext())
+                throw new NoSuchElementException();
+            return this.buf[this.bufPos--];
+        }
+
+        @Override
         public void remove() {
             throw new UnsupportedOperationException();
         }
 
+        public void close() {
+            this.bufPos = -1;
+            this.offset = 0;
+            this.inputStream.close();
+        }
     }
 
 }
