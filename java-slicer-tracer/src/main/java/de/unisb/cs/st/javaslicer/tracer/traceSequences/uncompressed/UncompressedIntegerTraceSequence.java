@@ -22,12 +22,14 @@ public class UncompressedIntegerTraceSequence implements IntegerTraceSequence {
         this.streamIndex = out.getId();
     }
 
+    @Override
     public void trace(final int value) throws IOException {
         assert !this.ready: "Trace cannot be extended any more";
 
         this.dataOut.writeInt(value);
     }
 
+    @Override
     public void writeOut(final DataOutputStream out) throws IOException {
         finish();
 
@@ -35,6 +37,7 @@ public class UncompressedIntegerTraceSequence implements IntegerTraceSequence {
         out.writeInt(this.streamIndex);
     }
 
+    @Override
     public void finish() throws IOException {
         if (this.ready)
             return;

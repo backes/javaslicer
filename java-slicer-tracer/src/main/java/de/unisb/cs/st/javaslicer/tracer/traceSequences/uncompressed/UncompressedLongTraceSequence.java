@@ -22,23 +22,22 @@ public class UncompressedLongTraceSequence implements LongTraceSequence {
         this.streamIndex = out.getId();
     }
 
+    @Override
     public void trace(final long value) throws IOException {
         assert !this.ready: "Trace cannot be extended any more";
 
         this.dataOut.writeLong(value);
     }
 
+    @Override
     public void writeOut(final DataOutputStream out) throws IOException {
         finish();
 
-        out.writeByte(getFormat() | TYPE_LONG);
+        out.writeByte(TYPE_LONG);
         out.writeInt(this.streamIndex);
     }
 
-    protected byte getFormat() {
-        return FORMAT_UNCOMPRESSED;
-    }
-
+    @Override
     public void finish() throws IOException {
         if (this.ready)
             return;

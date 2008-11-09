@@ -120,6 +120,7 @@ public class GZipLongTraceSequence implements LongTraceSequence {
         }
     }
 
+    @Override
     public void writeOut(final DataOutputStream out) throws IOException {
         finish();
 

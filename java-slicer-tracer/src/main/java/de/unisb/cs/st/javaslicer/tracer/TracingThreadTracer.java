@@ -329,10 +329,10 @@ public class TracingThreadTracer implements ThreadTracer {
     }
 
     public synchronized void finish() {
+        pauseTracing();
+
         if (this.writeOutThread.ready.getCount() == 0)
             return;
-
-        pauseTracing();
 
         if (this.intSeqIndex != 0)
             this.writeOutThread.addJob(new WriteOutJob(this.intSeqNr, this.intSeqVal, null, this.intSeqIndex));

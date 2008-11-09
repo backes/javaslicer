@@ -120,6 +120,7 @@ public class GZipIntegerTraceSequence implements IntegerTraceSequence {
         }
     }
 
+    @Override
     public void writeOut(final DataOutputStream out) throws IOException {
         finish();
 

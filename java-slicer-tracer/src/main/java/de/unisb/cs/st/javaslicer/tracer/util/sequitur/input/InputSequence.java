@@ -16,7 +16,7 @@ public class InputSequence<T> implements Iterable<T> {
 
         private long pos;
         private final long seqLength;
-        private final List<Rule<T>> ruleStack = new ArrayList<Rule<T>>();
+        private final List<Rule<T>> ruleStack = new ArrayList<Rule<T>>(2);
         private int[] rulePos;
         private int[] count;
 
@@ -32,7 +32,7 @@ public class InputSequence<T> implements Iterable<T> {
                         break;
                     rule = ((NonTerminal<T>)sym).getRule();
                 }
-                final int depth = Math.max(Integer.highestOneBit(this.ruleStack.size()-1)*2, 1);
+                final int depth = Math.max(Integer.highestOneBit(this.ruleStack.size()-1)*2, 2);
                 this.rulePos = new int[depth];
                 this.count = new int[depth];
             } else if (position == firstRule.getLength()) {

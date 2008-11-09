@@ -37,6 +37,7 @@ public class SequiturIntegerTraceSequence implements IntegerTraceSequence {
         this.lastValue = value;
     }
 
+    @Override
     public void writeOut(final DataOutputStream out) throws IOException {
         finish();
 
@@ -44,6 +45,7 @@ public class SequiturIntegerTraceSequence implements IntegerTraceSequence {
         OptimizedDataOutputStream.writeInt0(this.count, out);
     }
 
+    @Override
     public void finish() {
         if (this.ready)
             return;

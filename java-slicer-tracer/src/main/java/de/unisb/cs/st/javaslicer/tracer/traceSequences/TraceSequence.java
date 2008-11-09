@@ -27,6 +27,12 @@ public interface TraceSequence {
 
     void finish() throws IOException;
 
+    /**
+     * Determines whether the individual sequences are {@link #finish()}ed
+     * in parallel.
+     *
+     * @return <code>true</code> iff the sequences should be finished in parallel
+     */
     boolean useMultiThreading();
 
 }

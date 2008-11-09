@@ -36,7 +36,7 @@ public class OutputSequence<T> {
         if (this.lastValueCount == 0) {
             this.lastValue = obj;
             this.lastValueCount = 1;
-        } else if (this.lastValue.equals(obj)) {
+        } else if (this.lastValue == null ? obj == null : this.lastValue.equals(obj)) {
             if (++this.lastValueCount == Integer.MAX_VALUE) {
                 this.firstRule.append(new Terminal<T>(this.lastValue, this.lastValueCount), this.grammar);
                 this.lastValue = null;

@@ -70,7 +70,7 @@ class Terminal<T> extends Symbol<T> {
             return false;
         final Terminal<?> other = (Terminal<?>) obj;
         return this.count == other.count
-            && this.value == null ? other.value == null : this.value.equals(other.value);
+            && (this.value == null ? other.value == null : this.value.equals(other.value));
     }
 
     @Override
