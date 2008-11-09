@@ -7,6 +7,7 @@ import java.util.NoSuchElementException;
 
 import de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences.ConstantTraceSequence.ConstantLongTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.util.ReverseLongArrayIterator;
+import de.unisb.cs.st.javaslicer.tracer.util.SingletonIterator;
 import de.unisb.cs.st.javaslicer.tracer.util.sequitur.input.InputSequence;
 
 public class ConstantSequiturLongTraceSequence implements ConstantLongTraceSequence {
@@ -63,6 +64,8 @@ public class ConstantSequiturLongTraceSequence implements ConstantLongTraceSeque
     @Override
     public Iterator<Long> backwardIterator() throws IOException {
         if (this.count <= 10) {
+            if (this.count == 1)
+                return new SingletonIterator<Long>(this.sequence.iterator(this.offset).next());
             final long[] values = new long[this.count];
             final ListIterator<Long> it = this.sequence.iterator(this.offset);
             int last = 0;
