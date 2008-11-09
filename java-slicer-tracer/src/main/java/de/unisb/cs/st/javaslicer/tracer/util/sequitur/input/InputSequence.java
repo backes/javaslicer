@@ -10,6 +10,8 @@ import java.util.ListIterator;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import de.unisb.cs.st.javaslicer.tracer.util.LongHolder;
+
 public class InputSequence<T> implements Iterable<T> {
 
     public static class Itr<T> implements ListIterator<T> {
@@ -65,12 +67,9 @@ public class InputSequence<T> implements Iterable<T> {
                 int i = 0;
                 while (true) {
                     this.ruleStack.add(rule);
-                    int ruleOffset = 0;
-                    long newLength;
-                    while (after + (newLength = rule.symbols.get(ruleOffset).getLength(false)) <= position) {
-                        after += newLength;
-                        ++ruleOffset;
-                    }
+                    final LongHolder afterHolder = new LongHolder(0);
+                    final int ruleOffset = position == after ? 0 : rule.findOffset(position - after, afterHolder);
+                    after += afterHolder.longValue();
                     if (this.rulePos.length == i) {
                         this.rulePos = Arrays.copyOf(this.rulePos, 2*i);
                         this.count = Arrays.copyOf(this.count, 2*i);

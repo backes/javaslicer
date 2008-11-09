@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import de.unisb.cs.st.javaslicer.tracer.util.LongArrayList;
+import de.unisb.cs.st.javaslicer.tracer.util.LongHolder;
 import de.unisb.cs.st.javaslicer.tracer.util.MyByteArrayInputStream;
 
 // package-private
@@ -19,6 +20,7 @@ class Rule<T> {
 
     protected final List<Symbol<T>> symbols;
     private long length;
+    private long[] positionAfter = null;
 
     protected Rule(final List<Symbol<T>> symbols) {
         this.symbols = symbols;
@@ -149,6 +151,63 @@ class Rule<T> {
 
         rules.trimToSize();
         return rules;
+    }
+
+    /**
+     * Returns the maximum offset (= index of a symbol in this rule), s.t. the number of
+     * symbols before this offset is smaller or equal to the given position.
+     *
+     * @param position the position to determine the offset for
+     * @param positionHolder an object where the position of the symbol at the returned
+     *                    offset is stored (may be <code>null</code>)
+     * @return the maximum offset whose position is smaller or equal to the given position
+     */
+    public int findOffset(final long position, final LongHolder positionHolder) {
+        if (this.symbols.size() < 10) {
+            // simply search for the position from the beginning
+            int offset = 0;
+            long after = 0;
+            long newLength;
+            while (after + (newLength = this.symbols.get(offset).getLength(false)) <= position) {
+                after += newLength;
+                ++offset;
+            }
+            if (positionHolder != null)
+                positionHolder.set(after);
+            return offset;
+        }
+
+        // initialize the position cache if necessary
+        if (this.positionAfter == null) {
+            this.positionAfter = new long[this.symbols.size()-1];
+            long after = 0;
+            for (int i = 0; i < this.symbols.size()-1; ++i) {
+                this.positionAfter[i] = after += this.symbols.get(i).getLength(false);
+            }
+        }
+
+        if (this.symbols.size() == 0 || this.positionAfter[0] > position) {
+            if (positionHolder != null)
+                positionHolder.set(0);
+            return 0;
+        }
+
+        // now do a binary search
+        int left = 0;
+        int right = this.symbols.size()-1;
+        int mid;
+
+        while ((mid = (left + right) / 2) != left) {
+            final long midVal = this.positionAfter[mid];
+            if (midVal <= position)
+                left = mid;
+            else
+                right = mid;
+        }
+
+        if (positionHolder != null)
+            positionHolder.set(this.positionAfter[left]);
+        return left+1;
     }
 
 }
