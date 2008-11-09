@@ -548,7 +548,8 @@ public class TracingMethodInstrumenter implements Opcodes {
             break;
 
         case GETFIELD:
-            if (!insn.name.startsWith("this$")) { // TODO can we lift this?
+            // do not trace assignments or usages of "this$..." and "val$..." fields
+            if (!insn.name.contains("$")) { // TODO can we lift this?
                 // top item on stack is the object reference: duplicate it
                 // (add instruction *before* the current one
                 this.instructionIterator.previous();
@@ -560,7 +561,8 @@ public class TracingMethodInstrumenter implements Opcodes {
             break;
 
         case PUTFIELD:
-            if (!insn.name.startsWith("this$")) {
+            // do not trace assignments or usages of "this$..." and "val$..." fields
+            if (!insn.name.contains("$")) { // TODO can we lift this?
                 // the second item on the stack is the object reference
                 // (add instruction *before* the current one
                 this.instructionIterator.previous();
