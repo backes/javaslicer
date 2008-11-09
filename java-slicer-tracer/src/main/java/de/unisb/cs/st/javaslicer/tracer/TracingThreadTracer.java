@@ -241,7 +241,7 @@ public class TracingThreadTracer implements ThreadTracer {
 
     private volatile int stackSize = 0;
 
-    protected static PrintWriter debugFile;
+    protected static final PrintWriter debugFile;
     static {
         if (DEBUG_TRACE_FILE) {
             try {
@@ -255,6 +255,8 @@ public class TracingThreadTracer implements ThreadTracer {
             } catch (final IOException e) {
                 e.printStackTrace();
             }
+        } else {
+            debugFile = null;
         }
     }
 

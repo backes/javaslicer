@@ -13,6 +13,7 @@ import java.util.Queue;
 import java.util.TreeMap;
 import java.util.Map.Entry;
 
+import de.unisb.cs.st.javaslicer.tracer.util.LongArrayList;
 import de.unisb.cs.st.javaslicer.tracer.util.sequitur.output.Rule.Dummy;
 
 // package-private
@@ -190,41 +191,22 @@ class Grammar<T> {
             throws IOException {
         final Queue<Rule<T>> ruleQueue = new LinkedList<Rule<T>>();
         // first, fill in already written rules
+        // take core of the order!
         if (TreeMap.class.equals(this.ruleNumbers.getClass())) {
             // on a TreeMap, we cannot rely on the size, because it is
             // stored in an int
-            Rule<T>[][][] ruleArrs = newRuleArray(1, 1, 1<<20);
+            final LongArrayList<Rule<T>> rules = new LongArrayList<Rule<T>>();
             long numRules = 0;
-            final int low20mask = 0xfffff;
             for (final Entry<Rule<T>, Long> e: this.ruleNumbers.entrySet()) {
                 ++numRules;
-                final int pos1 = (int) (e.getValue() >>> 40);
-                final int pos2 = (int) (e.getValue() >>> 20) & low20mask;
-                final int pos3 = e.getValue().intValue() & low20mask;
-                if (pos1 >= ruleArrs.length)
-                    ruleArrs = Arrays.copyOf(ruleArrs,
-                            Math.min(1<<24, Math.max(pos1+1, ruleArrs.length*5/4+1)));
-                if (ruleArrs[pos1] == null)
-                    ruleArrs[pos1] = newRuleArray(pos2+1, -1);
-                if (pos2 >= ruleArrs[pos1].length)
-                    ruleArrs[pos1] = Arrays.copyOf(ruleArrs[pos1],
-                            Math.min(1<<20, Math.max(pos2+1, ruleArrs[pos1].length*5/4+1)));
-                if (ruleArrs[pos1][pos2] == null)
-                    ruleArrs[pos1][pos2] = newRuleArray(1<<20);
-                assert ruleArrs[pos1][pos2][pos3] == null;
-                ruleArrs[pos1][pos2][pos3] = e.getKey();
+                rules.ensureCapacity(e.getValue());
+                while (rules.longSize() <= e.getValue())
+                    rules.add(null);
+                assert rules.get(e.getValue()) == null;
+                rules.set(e.getValue(), e.getKey());
             }
-            final int p1 = 0, p2 = 0;
-            for (long l = 0; l < numRules; ) {
-                if (numRules - l < 1<<20) {
-                    for (int i = 0; l < numRules; ++l, ++i) {
-                        ruleQueue.add(ruleArrs[p1][p2][i]);
-                    }
-                } else {
-                    ruleQueue.addAll(Arrays.asList(ruleArrs[p1][p2]));
-                    l += 1<<20;
-                }
-            }
+            assert numRules == rules.size();
+            ruleQueue.addAll(rules);
         } else if (this.ruleNumbers.size() > 0) {
             final Rule<T>[] ruleArr = newRuleArray(this.ruleNumbers.size());
             for (final Entry<Rule<T>, Long> e: this.ruleNumbers.entrySet())
@@ -249,21 +231,8 @@ class Grammar<T> {
     }
 
     @SuppressWarnings("unchecked")
-    private Rule<T>[][][] newRuleArray(final int dim1, final int dim2, final int dim3) {
-        return (Rule<T>[][][]) (
-                dim2 == -1 ? new Rule<?>[dim1][][]
-              : dim3 == -1 ? new Rule<?>[dim1][dim2][]
-              : new Rule<?>[dim1][dim2][dim3]);
-    }
-    @SuppressWarnings("unchecked")
-    private Rule<T>[][] newRuleArray(final int dim1, final int dim2) {
-        return (Rule<T>[][]) (
-                dim2 == -1 ? new Rule<?>[dim1][]
-              : new Rule<?>[dim1][dim2]);
-    }
-    @SuppressWarnings("unchecked")
-    private Rule<T>[] newRuleArray(final int dim1) {
-        return (Rule<T>[]) new Rule<?>[dim1];
+    private Rule<T>[] newRuleArray(final int dim) {
+        return (Rule<T>[]) new Rule<?>[dim];
     }
 
     protected void newSequence(final OutputSequence<T> seq) {

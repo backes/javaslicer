@@ -408,7 +408,7 @@ public class LongArrayList<T> extends AbstractList<T> implements RandomAccess, C
     public T set(final long index, final T element) {
         rangeCheck(index);
 
-        final int pos1 = (int) (index >>> 34);
+        final int pos1 = (int) (index >> 34);
         final int pos2 = ((int)index) & lowerArrayMask;
         final T oldValue = (T) this.elements[pos1][pos2];
         this.elements[pos1][pos2] = element;
@@ -553,7 +553,7 @@ public class LongArrayList<T> extends AbstractList<T> implements RandomAccess, C
     public T remove(final long index) {
         rangeCheck(index);
 
-        final int pos1 = (int) (index >>> 34);
+        final int pos1 = (int) (index >> 34);
         final int pos2 = ((int)index) & lowerArrayMask;
         final T oldElement = (T) this.elements[pos1][pos2];
         moveBackward(index, 1); // increments modCount

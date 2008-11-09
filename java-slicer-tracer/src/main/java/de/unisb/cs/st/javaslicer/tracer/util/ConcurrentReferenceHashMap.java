@@ -224,7 +224,7 @@ public class ConcurrentReferenceHashMap<K, V> extends AbstractMap<K, V>
     private transient Set<Map.Entry<K, V>> entrySet;
     private transient Collection<V> values;
 
-    private final ListenerList<RemoveStaleListener<? super V>> removeStaleListeners
+    private transient final ListenerList<RemoveStaleListener<? super V>> removeStaleListeners
         = new ListenerList<RemoveStaleListener<? super V>>();
 
     /* ---------------- Small Utilities -------------- */

@@ -248,7 +248,7 @@ public class SimpleArrayList<E> implements List<E> {
      */
     @SuppressWarnings("unchecked")
     public E get(final int index) {
-        RangeCheck(index);
+        rangeCheck(index);
 
         return (E) this.elementData[index];
     }
@@ -266,7 +266,7 @@ public class SimpleArrayList<E> implements List<E> {
      */
     @SuppressWarnings("unchecked")
     public E set(final int index, final E element) {
-        RangeCheck(index);
+        rangeCheck(index);
 
         final E oldValue = (E) this.elementData[index];
         this.elementData[index] = element;
@@ -319,7 +319,7 @@ public class SimpleArrayList<E> implements List<E> {
      */
     @SuppressWarnings("unchecked")
     public E remove(final int index) {
-        RangeCheck(index);
+        rangeCheck(index);
 
         this.modCount++;
         final E oldValue = (E) this.elementData[index];
@@ -444,7 +444,7 @@ public class SimpleArrayList<E> implements List<E> {
      * check if the index is negative: It is always used immediately prior to an array access, which throws an
      * ArrayIndexOutOfBoundsException if index is negative.
      */
-    private void RangeCheck(final int index) {
+    private void rangeCheck(final int index) {
         if (index >= this.size)
             throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + this.size);
     }
