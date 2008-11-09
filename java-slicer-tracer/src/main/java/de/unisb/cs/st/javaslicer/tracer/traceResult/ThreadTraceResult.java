@@ -200,7 +200,10 @@ public class ThreadTraceResult {
             Iterator<Integer> it = this.integerSequenceBackwardIterators.get(seqIndex);
             if (it == null) {
                 try {
-                    it = ((ConstantIntegerTraceSequence)ThreadTraceResult.this.sequences.get(seqIndex)).backwardIterator();
+                    final ConstantIntegerTraceSequence seq = (ConstantIntegerTraceSequence)ThreadTraceResult.this.sequences.get(seqIndex);
+                    if (seq == null)
+                        throw new TracerException("corrupted data (illegal sequence number)");
+                    it = seq.backwardIterator();
                 } catch (final IOException e) {
                     throw new TracerException(e);
                 }

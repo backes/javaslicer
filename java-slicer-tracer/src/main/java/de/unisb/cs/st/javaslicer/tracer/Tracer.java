@@ -22,6 +22,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -153,6 +154,7 @@ public class Tracer implements ClassFileTransformer {
 
     private final File filename;
     private final MultiplexedFileWriter file;
+    private final ConcurrentLinkedQueue<ReadClass> readClasses = new ConcurrentLinkedQueue<ReadClass>();
     private final StringCacheOutput readClassesStringCache = new StringCacheOutput();
     private final DataOutputStream readClassesOutputStream;
     private final DataOutputStream threadTracersOutputStream;
@@ -335,6 +337,7 @@ public class Tracer implements ClassFileTransformer {
     }
 
     private final Object transformationLock = new Object();
+
     public byte[] transform(final ClassLoader loader, final String className,
             final Class<?> classBeingRedefined, final ProtectionDomain protectionDomain,
             final byte[] classfileBuffer) {
@@ -371,7 +374,7 @@ public class Tracer implements ClassFileTransformer {
         }
    }
 
-    private byte[] transform0(final String className, final byte[] classfileBuffer) throws IOException {
+    private byte[] transform0(final String className, final byte[] classfileBuffer) {
         final String javaClassName = Type.getObjectType(className).getClassName();
 
         if (javaClassName.startsWith(Tracer.class.getPackage().getName()))
@@ -452,7 +455,10 @@ public class Tracer implements ClassFileTransformer {
             readClass.setInstructionNumberEnd(AbstractInstruction.getNextIndex());
 
             // now we can write the class out
-            readClass.writeOut(this.readClassesOutputStream, this.readClassesStringCache);
+            // NOTE: we do not write it out immediately, because this sometimes leads
+            // to circular dependencies!
+            //readClass.writeOut(this.readClassesOutputStream, this.readClassesStringCache);
+            this.readClasses.add(readClass);
 
         }}
 
@@ -704,6 +710,10 @@ public class Tracer implements ClassFileTransformer {
                 writeOutIfNecessary(t);
             }
             this.threadTracersOutputStream.close();
+
+            ReadClass rc;
+            while ((rc = this.readClasses.poll()) != null)
+                rc.writeOut(this.readClassesOutputStream, this.readClassesStringCache);
             this.readClassesOutputStream.close();
             this.file.close();
         }

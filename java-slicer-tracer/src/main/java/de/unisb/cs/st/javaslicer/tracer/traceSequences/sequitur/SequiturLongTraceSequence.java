@@ -54,9 +54,12 @@ public class SequiturLongTraceSequence implements LongTraceSequence {
             for (int i = 0; i < this.count; ++i)
                 this.sequiturSeq.append(this.values[i]);
             this.values = null;
-            if (this.count > 10)
+            if (this.count > 10) {
                 this.sequiturSeq.append(this.lastValue);
-            this.sequenceOffset = this.sequiturSeqLength.getAndAdd(this.count+1);
+                this.sequenceOffset = this.sequiturSeqLength.getAndAdd(this.count+1);
+            } else {
+                this.sequenceOffset = this.sequiturSeqLength.getAndAdd(this.count);
+            }
         }
     }
 
