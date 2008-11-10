@@ -52,7 +52,7 @@ public class TracerAgent {
                 final String key = parts[0];
                 final String value = parts.length < 2 ? null : parts[1];
 
-                if ("logfile".equalsIgnoreCase(key)) {
+                if ("logfile".equalsIgnoreCase(key) || "tracefile".equalsIgnoreCase(key)) {
                     if (value == null) {
                         System.err.println("ERROR: expecting value for \"logfile\" argument");
                         System.exit(1);

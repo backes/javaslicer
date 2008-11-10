@@ -180,12 +180,9 @@ public class Slicer implements Opcodes {
         final Set<Variable> interestingVariables = new HashSet<Variable>();
         final Set<Instruction> dynamicSlice = new HashSet<Instruction>();
 
-        // TODO remove (for debugging)
-        long nr = 0;
         ExecutionFrame currentFrame = new ExecutionFrame();
         frames.push(currentFrame);
         while (backwardInsnItr.hasNext()) {
-            ++nr;
             final Instance instance = backwardInsnItr.next();
             final Instruction instruction = instance.getInstruction();
 
