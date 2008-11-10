@@ -6,6 +6,8 @@ elif [[ -e /usr/lib/jvm/java-6-sun ]]; then
   SUN_DIR=/usr/lib/jvm/java-6-sun
 elif [[ -e /usr/lib/jvm/jdk1.6.0 ]]; then
   SUN_DIR=/usr/lib/jvm/jdk1.6.0
+elif [[ -e /opt/sun-jdk-1.6.0.07 ]]; then
+  SUN_DIR=/opt/sun-jdk-1.6.0.07
 elif [[ -e /opt/sun-jdk-1.6.0.10 ]]; then
   SUN_DIR=/opt/sun-jdk-1.6.0.10
 else
@@ -13,9 +15,9 @@ else
   exit 1
 fi
 
-MEMORY="5g"
+MEMORY="7g"
 
-runs=1
+runs=10
 size=small
 
 rm trace.log
@@ -29,7 +31,7 @@ resultfile="result_"$resultfilenr
 printf '"run","testcase","normal msec","nocomp msec","nocomp MB","gzip msec","gzip MB","seq msec","seq MB"\n' >>$resultfile
 
 
-for run in 1 2 3 4 5; do
+for run in `seq $runs`; do
   for testcase in antlr bloat chart eclipse fop hsqldb jython luindex lusearch pmd xalan; do
     echo doing test $testcase
     printf '%d,"%s"' $run $testcase >>$resultfile
