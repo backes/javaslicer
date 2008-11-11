@@ -209,7 +209,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
         }
         if (usedLocalVariables.isEmpty())
             return Collections.emptySet();
-        final List<CriterionVariable> vars = new ArrayList<CriterionVariable>();
+        final List<CriterionVariable> vars = new ArrayList<CriterionVariable>(usedLocalVariables.size());
         for (final Integer i: usedLocalVariables)
             vars.add(new LocalVariableCriterion(method, i));
         return vars;
@@ -238,6 +238,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
         left = 0;
         right = methods.size();
 
+        // search for the *highest* method with that name!
         while ((mid = (left + right) / 2) != left) {
             final ReadMethod midVal = methods.get(mid);
             if (midVal.getName().compareTo(methodName) <= 0)
@@ -248,7 +249,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
 
         final ReadMethod foundMethod = methods.get(mid);
         if (foundMethod.getName().equals(methodName)) {
-            for (final ReadMethod m = methods.get(mid); mid < methods.size() && m.getName().equals(methodName); ++mid) {
+            for (ReadMethod m = methods.get(mid); mid >= 0 && (m=methods.get(mid)).getName().equals(methodName); --mid) {
                 for (final AbstractInstruction instr: m.getInstructions()) {
                     if (instr.getLineNumber() == lineNumber)
                         return m;
