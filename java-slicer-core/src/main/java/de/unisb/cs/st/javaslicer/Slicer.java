@@ -183,13 +183,10 @@ public class Slicer implements Opcodes {
 
         ExecutionFrame currentFrame = new ExecutionFrame();
         frames.push(currentFrame);
-        long nr = 0;
+
         while (backwardInsnItr.hasNext()) {
             final Instance instance = backwardInsnItr.next();
             final Instruction instruction = instance.getInstruction();
-
-            if (++nr % 10000000 == 0)
-                System.err.println(nr);
 
             ExecutionFrame removedFrame = null;
             boolean removedFrameIsInteresting = false;
