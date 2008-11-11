@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
-import java.util.Map.Entry;
 
 import org.objectweb.asm.Opcodes;
 
@@ -30,11 +29,15 @@ public class ControlFlowGraph {
     public static abstract class InstrNode {
 
         private final Instruction instruction;
+        protected final Set<InstrNode> surelyReached = new HashSet<InstrNode>();
+        protected final Set<InstrNode> reachable = new HashSet<InstrNode>();
 
         public InstrNode(final Instruction instr, final Map<Instruction, InstrNode> instructionNodes) {
             assert !instructionNodes.containsKey(instr);
             instructionNodes.put(instr, this);
             this.instruction = instr;
+            this.surelyReached.add(this);
+            this.reachable.add(this);
         }
 
         /**
@@ -44,43 +47,6 @@ public class ControlFlowGraph {
 
         public abstract Collection<InstrNode> getSuccessors();
 
-        /**
-         * Returns a map containing all nodes that are reachable from this one.
-         *
-         * If the assigned value is <code>true</code>, then the instruction is always
-         * executed, otherwise it is only executed under certain conditions.
-         */
-        public Map<InstrNode, Boolean> getAvailableNodes() {
-            return getAvailableNodes(new HashSet<InstrNode>());
-        }
-
-        private Map<InstrNode, Boolean> getAvailableNodes(final Set<InstrNode> seenNodes) {
-            if (!seenNodes.add(this))
-                return new HashMap<InstrNode, Boolean>();
-            final Collection<InstrNode> successors = getSuccessors();
-            final Map<InstrNode, Boolean> availableNodes;
-            if (successors.size() == 1) {
-                availableNodes = successors.iterator().next().getAvailableNodes(seenNodes);
-            } else {
-                final Map<InstrNode, Integer> succAvailableNodes = new HashMap<InstrNode, Integer>();
-                for (final InstrNode succ: successors) {
-                    for (final Entry<InstrNode, Boolean> entry: succ.getAvailableNodes(new HashSet<InstrNode>(seenNodes)).entrySet()) {
-                        final Integer old = succAvailableNodes.get(entry.getKey());
-                        int oldInt = old == null ? 0 : old.intValue();
-                        if (entry.getValue() == Boolean.TRUE)
-                            ++oldInt;
-                        succAvailableNodes.put(entry.getKey(), oldInt);
-                    }
-                }
-                availableNodes = new HashMap<InstrNode, Boolean>();
-                for (final Entry<InstrNode, Integer> entry: succAvailableNodes.entrySet()) {
-                    availableNodes.put(entry.getKey(), entry.getValue() == successors.size());
-                }
-            }
-            availableNodes.put(this, true);
-            return availableNodes;
-        }
-
         public Instruction getInstruction() {
             return this.instruction;
         }
@@ -88,6 +54,14 @@ public class ControlFlowGraph {
         @Override
         public String toString() {
             return this.instruction.toString();
+        }
+
+        public Set<InstrNode> getSurelyReached() {
+            return this.surelyReached;
+        }
+
+        public Set<InstrNode> getReachableNodes() {
+            return this.reachable;
         }
 
     }
@@ -285,6 +259,33 @@ public class ControlFlowGraph {
         }
 
         return list;
+    }
+
+    public void computeReachable() {
+        boolean stable = false;
+        int nr = 0;
+        while (!stable) {
+            ++nr;
+            stable = true;
+            for (final InstrNode node: this.instructionNodes.values()) {
+                final Iterator<InstrNode> succIt = node.getSuccessors().iterator();
+                final Set<InstrNode> surelyReached = new HashSet<InstrNode>();
+                if (succIt.hasNext()) {
+                    final InstrNode succ = succIt.next();
+                    surelyReached.addAll(succ.surelyReached);
+                    if (node.reachable.addAll(succ.reachable))
+                        stable = false;
+                }
+                while (succIt.hasNext()) {
+                    final InstrNode succ = succIt.next();
+                    surelyReached.retainAll(succ.surelyReached);
+                    if (node.reachable.addAll(succ.reachable))
+                        stable = false;
+                }
+                if (node.surelyReached.addAll(surelyReached))
+                    stable = false;
+            }
+        }
     }
 
 }

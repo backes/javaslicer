@@ -54,6 +54,7 @@ public class Slicer implements Opcodes {
     }
 
     public static void main(final String[] args) {
+
         if (args.length < 2 || args.length > 3) {
             usage();
             System.exit(-1);
@@ -182,9 +183,13 @@ public class Slicer implements Opcodes {
 
         ExecutionFrame currentFrame = new ExecutionFrame();
         frames.push(currentFrame);
+        long nr = 0;
         while (backwardInsnItr.hasNext()) {
             final Instance instance = backwardInsnItr.next();
             final Instruction instruction = instance.getInstruction();
+
+            if (++nr % 10000000 == 0)
+                System.err.println(nr);
 
             ExecutionFrame removedFrame = null;
             boolean removedFrameIsInteresting = false;

@@ -81,7 +81,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
 
         @Override
         public boolean matches(final Instruction.Instance instructionInstance) {
-            int instrStackDepth = instructionInstance.getStackDepth();
+            final int instrStackDepth = instructionInstance.getStackDepth();
             if (this.stackDepth != instrStackDepth) {
                 if (instrStackDepth > this.beingInRun.length) {
                     this.beingInRun = Arrays.copyOf(this.beingInRun, Math.max(2*this.beingInRun.length, instrStackDepth));
@@ -152,7 +152,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
     }
 
     private static final Pattern slicingCriterionPattern = Pattern.compile(
-            "([^:{}]+)\\.([^:{}]+?)(?::(\\d+))?(?:\\((\\d+)\\))?(?::\\{(.*?)\\})?");
+            "([^:{}]+)\\.([^:{}]+?)(?::(-?\\d+))?(?:\\((\\d+)\\))?(?::\\{(.*?)\\})?");
 
     public static SlicingCriterion parse(final String string, final List<ReadClass> readClasses) throws IllegalParameterException {
         final Matcher matcher = slicingCriterionPattern.matcher(string);
