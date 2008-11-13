@@ -122,7 +122,7 @@ class Rule<T> {
             header |= 1 << 6;
             objOut.write(header);
 
-            DataOutput.writeInt(objOut, length());
+            DataOutput.writeInt(objOut, numSymbols());
 
             int pos = 4;
             int b = 0;
@@ -143,7 +143,7 @@ class Rule<T> {
         }
     }
 
-    private int length() throws IOException {
+    private int numSymbols() throws IOException {
         int length = 0;
         for (Symbol<T> s = this.dummy.next; s != this.dummy; s = s.next)
             if (length++ == 1<<30)

@@ -26,17 +26,19 @@ public class InputSequence<T> implements Iterable<T> {
             this.pos = position;
             this.seqLength = firstRule.getLength();
             if (position == 0) {
-                Rule<T> rule = firstRule;
-                while (true) {
-                    this.ruleStack.add(rule);
-                    final Symbol<T> sym = rule.symbols.get(0);
-                    if (sym instanceof Terminal<?>)
-                        break;
-                    rule = ((NonTerminal<T>)sym).getRule();
+                if (this.seqLength > 0) {
+                    Rule<T> rule = firstRule;
+                    while (true) {
+                        this.ruleStack.add(rule);
+                        final Symbol<T> sym = rule.symbols.get(0);
+                        if (sym instanceof Terminal<?>)
+                            break;
+                        rule = ((NonTerminal<T>)sym).getRule();
+                    }
+                    final int depth = Math.max(Integer.highestOneBit(this.ruleStack.size()-1)*2, 2);
+                    this.rulePos = new int[depth];
+                    this.count = new int[depth];
                 }
-                final int depth = Math.max(Integer.highestOneBit(this.ruleStack.size()-1)*2, 2);
-                this.rulePos = new int[depth];
-                this.count = new int[depth];
             } else if (position == firstRule.getLength()) {
                 Rule<T> rule = firstRule;
                 this.rulePos = new int[2];
