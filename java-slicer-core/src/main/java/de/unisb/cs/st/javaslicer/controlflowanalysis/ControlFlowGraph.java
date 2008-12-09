@@ -5,12 +5,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import java.util.Set;
 
 import org.objectweb.asm.Opcodes;
 
@@ -24,24 +21,32 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.TableSw
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.VarInstruction;
 import de.unisb.cs.st.javaslicer.util.UniqueQueue;
 
+/**
+ * A representation of the <b>control flow graph (CFG)</b> for one method.
+ *
+ * @author Clemens Hammacher
+ */
 public class ControlFlowGraph {
 
+    /**
+     * Representation of one node in the CFG.
+     *
+     * @author Clemens Hammacher
+     */
     public static abstract class InstrNode {
 
         private final Instruction instruction;
-        protected final Set<InstrNode> surelyReached = new HashSet<InstrNode>();
-        protected final Set<InstrNode> reachable = new HashSet<InstrNode>();
 
-        public InstrNode(final Instruction instr, final Map<Instruction, InstrNode> instructionNodes) {
-            assert !instructionNodes.containsKey(instr);
-            instructionNodes.put(instr, this);
+        public InstrNode(final Instruction instr, final ControlFlowGraph cfg) {
+            assert instr != null;
+            assert !cfg.instructionNodes.containsKey(instr);
+            cfg.instructionNodes.put(instr, this);
             this.instruction = instr;
-            this.surelyReached.add(this);
-            this.reachable.add(this);
         }
 
         /**
          * Returns the number of outgoing edges from this node.
+         * @return the out degree of the node
          */
         public abstract int getOutDeg();
 
@@ -52,145 +57,98 @@ public class ControlFlowGraph {
         }
 
         @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + this.instruction.hashCode();
+            return result;
+        }
+
+        @Override
+        public boolean equals(final Object obj) {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            final InstrNode other = (InstrNode) obj;
+            if (this.instruction == null) {
+                if (other.instruction != null)
+                    return false;
+            } else if (!this.instruction.equals(other.instruction))
+                return false;
+            return true;
+        }
+
+        @Override
         public String toString() {
             return this.instruction.toString();
         }
 
-        public Set<InstrNode> getSurelyReached() {
-            return this.surelyReached;
-        }
+    }
 
-        public Set<InstrNode> getReachableNodes() {
-            return this.reachable;
-        }
+    public interface NodeFactory {
+
+        InstrNode createNode(ControlFlowGraph cfg, Instruction instruction, Collection<Instruction> successors);
 
     }
 
-    private static class LeafNode extends InstrNode {
 
-        public LeafNode(final Instruction instr, final Map<Instruction, InstrNode> instructionNodes) {
-            super(instr, instructionNodes);
+    protected final Map<Instruction, InstrNode> instructionNodes;
+
+    /**
+     * Computes the <b>control flow graph</b> for one method.
+     *
+     * @param method the method for which the CFG is computed
+     * @param nodeFactory the factory that creates the nodes of the CFG
+     */
+    public ControlFlowGraph(final ReadMethod method, final NodeFactory nodeFactory) {
+        this.instructionNodes = new HashMap<Instruction, InstrNode>();
+        for (final Instruction instr: method.getInstructions()) {
+            getInstrNode(instr, method, nodeFactory);
         }
-
-        @Override
-        public int getOutDeg() {
-            return 0;
-        }
-
-        @Override
-        public Collection<InstrNode> getSuccessors() {
-            return Collections.emptySet();
-        }
-
     }
 
-    private static class SimpleInstrNode extends InstrNode {
-
-        private final InstrNode successor;
-
-        public SimpleInstrNode(final AbstractInstruction instruction, final Map<Instruction, InstrNode> instructionNodes,
-                final AbstractInstruction successor, final ReadMethod method) {
-            super(instruction, instructionNodes);
-            this.successor = getInstrNode(successor, instructionNodes, method);
-        }
-
-        @Override
-        public int getOutDeg() {
-            return 1;
-        }
-
-        @Override
-        public Collection<InstrNode> getSuccessors() {
-            return Collections.singleton(this.successor);
-        }
-
-    }
-
-    private static class BranchingInstrNode extends InstrNode {
-
-        private final InstrNode[] successors;
-
-        public BranchingInstrNode(final AbstractInstruction instruction, final Map<Instruction, InstrNode> instructionNodes,
-                final Collection<AbstractInstruction> successors, final ReadMethod method) {
-            super(instruction, instructionNodes);
-            this.successors = new InstrNode[successors.size()];
-            int i = 0;
-            for (final AbstractInstruction succ: successors)
-                this.successors[i++] = getInstrNode(succ, instructionNodes, method);
-        }
-
-        @Override
-        public int getOutDeg() {
-            return this.successors.length;
-        }
-
-        @Override
-        public Collection<InstrNode> getSuccessors() {
-            return Arrays.asList(this.successors);
-        }
-
-    }
-
-    private final Map<Instruction, InstrNode> instructionNodes;
-
-    public ControlFlowGraph(final Map<Instruction, InstrNode> instructionNodes) {
-        this.instructionNodes = instructionNodes;
-    }
-
+    /**
+     * Return the node of the CFG associated to the given {@link Instruction}.
+     * If the instruction is not contained in the method that this CFG corresponds
+     * to, then <code>null</code> is returned.
+     *
+     * @param instr the {@link Instruction} for which the node is requested
+     * @return the node corresponding to the given {@link Instruction}, or
+     *         <code>null</code> if the instruction is not contained in the method of this CFG
+     */
     public InstrNode getNode(final Instruction instr) {
         return this.instructionNodes.get(instr);
     }
 
-    public static ControlFlowGraph create(final ReadMethod method) {
-        final Iterator<AbstractInstruction> instrIt = method.getInstructions().iterator();
-        if (!instrIt.hasNext())
-            return null;
-
-        final Map<Instruction, InstrNode> instructionNodes = new HashMap<Instruction, InstrNode>();
-        while (instrIt.hasNext()) {
-            getInstrNode(instrIt.next(), instructionNodes, method);
-        }
-
-        return new ControlFlowGraph(instructionNodes);
-    }
-
-    protected static InstrNode getInstrNode(final AbstractInstruction instruction,
-            final Map<Instruction, InstrNode> instructionNodes, final ReadMethod method) {
+    protected InstrNode getInstrNode(final Instruction instruction,
+            final ReadMethod method, final NodeFactory nodeFactory) {
         assert instruction != null;
-        final InstrNode node = instructionNodes.get(instruction);
+        final InstrNode node = this.instructionNodes.get(instruction);
         if (node != null)
             return node;
 
-        final Collection<AbstractInstruction> successors = getSuccessors(instruction, method);
+        final Collection<Instruction> successors = getSuccessors(instruction, method);
 
-        if (successors == null || successors.isEmpty()) {
-            assert successors != null || instruction == method.getMethodLeaveLabel();
-            return new LeafNode(instruction, instructionNodes);
-        }
-        if (successors.size() == 1)
-            return new SimpleInstrNode(instruction, instructionNodes, successors.iterator().next(), method);
-        if (successors.size() == 2) {
-            final Iterator<AbstractInstruction> it = successors.iterator();
-            return new BranchingInstrNode(instruction, instructionNodes, Arrays.asList(it.next(), it.next()), method);
-        }
-
-        return new BranchingInstrNode(instruction, instructionNodes, successors, method);
+        return nodeFactory.createNode(this, instruction, successors);
     }
 
-    private static Collection<AbstractInstruction> getSuccessors(final AbstractInstruction instruction, final ReadMethod method) {
+    private static Collection<Instruction> getSuccessors(final Instruction instruction, final ReadMethod method) {
         final int opcode = instruction.getOpcode();
         switch (instruction.getType()) {
         case JUMP:
             // GOTO and JSR are not conditional
             if (opcode == Opcodes.GOTO || opcode == Opcodes.JSR) {
-                return Collections.singleton((AbstractInstruction)((JumpInstruction)instruction).getLabel());
+                return Collections.singleton((Instruction)((JumpInstruction)instruction).getLabel());
             }
             return Arrays.asList(((JumpInstruction)instruction).getLabel(),
                     instruction.getNext());
         case LOOKUPSWITCH:
         {
             final LookupSwitchInstruction lsi = (LookupSwitchInstruction) instruction;
-            final AbstractInstruction[] successors = new AbstractInstruction[lsi.getHandlers().size()+1];
+            final Instruction[] successors = new AbstractInstruction[lsi.getHandlers().size()+1];
             successors[0] = lsi.getDefaultHandler();
             int i = 1;
             for (final LabelMarker lm: lsi.getHandlers().values())
@@ -200,7 +158,7 @@ public class ControlFlowGraph {
         case TABLESWITCH:
         {
             final TableSwitchInstruction tsi = (TableSwitchInstruction) instruction;
-            final AbstractInstruction[] successors = new AbstractInstruction[tsi.getHandlers().length+1];
+            final Instruction[] successors = new AbstractInstruction[tsi.getHandlers().length+1];
             successors[0] = tsi.getDefaultHandler();
             System.arraycopy(tsi.getHandlers(), 0, successors, 1, tsi.getHandlers().length);
             return Arrays.asList(successors);
@@ -218,7 +176,7 @@ public class ControlFlowGraph {
         case VAR:
             if (opcode == Opcodes.RET) {
                 final List<JumpInstruction> callingInstructions = getJsrInstructions(method, (VarInstruction) instruction);
-                final AbstractInstruction[] successors = new AbstractInstruction[callingInstructions.size()];
+                final Instruction[] successors = new AbstractInstruction[callingInstructions.size()];
                 int i = 0;
                 for (final JumpInstruction instr: callingInstructions)
                     successors[i++] = instr.getNext();
@@ -243,7 +201,7 @@ public class ControlFlowGraph {
         final List<JumpInstruction> list = new ArrayList<JumpInstruction>();
         for (final AbstractInstruction instr: method.getInstructions()) {
             if (instr.getOpcode() == Opcodes.JSR) {
-                final Queue<AbstractInstruction> queue = new UniqueQueue<AbstractInstruction>();
+                final Queue<Instruction> queue = new UniqueQueue<Instruction>();
                 queue.add(((JumpInstruction)instr).getLabel());
                 while (!queue.isEmpty()) {
                     final Instruction instr2 = queue.poll();
@@ -259,33 +217,6 @@ public class ControlFlowGraph {
         }
 
         return list;
-    }
-
-    public void computeReachable() {
-        boolean stable = false;
-        int nr = 0;
-        while (!stable) {
-            ++nr;
-            stable = true;
-            for (final InstrNode node: this.instructionNodes.values()) {
-                final Iterator<InstrNode> succIt = node.getSuccessors().iterator();
-                final Set<InstrNode> surelyReached = new HashSet<InstrNode>();
-                if (succIt.hasNext()) {
-                    final InstrNode succ = succIt.next();
-                    surelyReached.addAll(succ.surelyReached);
-                    if (node.reachable.addAll(succ.reachable))
-                        stable = false;
-                }
-                while (succIt.hasNext()) {
-                    final InstrNode succ = succIt.next();
-                    surelyReached.retainAll(succ.surelyReached);
-                    if (node.reachable.addAll(succ.reachable))
-                        stable = false;
-                }
-                if (node.surelyReached.addAll(surelyReached))
-                    stable = false;
-            }
-        }
     }
 
 }

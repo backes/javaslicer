@@ -4,11 +4,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowGraph.InstrNode;
+import de.unisb.cs.st.javaslicer.controlflowanalysis.ReachabilityNodeFactory.ReachNode;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Type;
@@ -27,23 +29,26 @@ public class ControlFlowAnalyser {
     }
 
     /**
+     * Computes the (inverted) control dependencies for one method.
      *
-     * @param method
+     * @param method the method for which the dependencies are computed
      * @return a map that contains for every instruction all instructions that are dependent on this one
      */
     public Map<Instruction, Set<Instruction>> getInvControlDependencies(final ReadMethod method) {
         final Map<Instruction, Set<Instruction>> invControlDeps = new HashMap<Instruction, Set<Instruction>>();
         final Set<Instruction> emptyInsnSet = Collections.emptySet();
-        final ControlFlowGraph graph = ControlFlowGraph.create(method);
-        graph.computeReachable();
+        final ControlFlowGraph graph = new ControlFlowGraph(method, ReachabilityNodeFactory.getInstance());
+        computeReachableNodes(graph);
         for (final Instruction insn: method.getInstructions()) {
             final InstrNode node = graph.getNode(insn);
+            final ReachNode reachNode = (ReachabilityNodeFactory.ReachNode)node;
             if (insn.getType() == Type.LABEL) {
                 final LabelMarker label = (LabelMarker) insn;
                 if (label.isCatchBlock()) {
-                    final Set<InstrNode> executedIfException = node.getSurelyReached();
-                    final Set<InstrNode> availableWithoutException = graph.getNode(
-                            method.getInstructions().iterator().next()).getReachableNodes();
+                    final Set<InstrNode> executedIfException = reachNode.getSurelyReached();
+                    final InstrNode node2 = graph.getNode(
+                            method.getInstructions().iterator().next());
+                    final Set<InstrNode> availableWithoutException = ((ReachNode)node2).getReachable();
                     final Set<Instruction> deps = new HashSet<Instruction>();
                     for (final InstrNode succ: executedIfException) {
                         if (!availableWithoutException.contains(succ) && succ.getInstruction() != insn)
@@ -57,7 +62,8 @@ public class ControlFlowAnalyser {
                 final List<Set<InstrNode>> succAvailableNodes = new ArrayList<Set<InstrNode>>(node.getOutDeg());
                 final Set<InstrNode> allInstrNodes = new HashSet<InstrNode>();
                 for (final InstrNode succ: node.getSuccessors()) {
-                    final Set<InstrNode> availableNodes = succ.getSurelyReached();
+                    final ReachNode reachSucc = (ReachNode) succ;
+                    final Set<InstrNode> availableNodes = reachSucc.getSurelyReached();
                     succAvailableNodes.add(availableNodes);
                     allInstrNodes.addAll(availableNodes);
                 }
@@ -73,6 +79,30 @@ public class ControlFlowAnalyser {
             }
         }
         return invControlDeps;
+    }
+
+    private void computeReachableNodes(final ControlFlowGraph cfg) {
+        boolean stable = false;
+        while (!stable) {
+            stable = true;
+            for (final InstrNode node: cfg.instructionNodes.values()) {
+                final ReachNode reachNode = (ReachNode) node;
+                final Set<InstrNode> reachable = reachNode.getReachable();
+                final Iterator<InstrNode> succIt = node.getSuccessors().iterator();
+                final Set<InstrNode> surelyReached = new HashSet<InstrNode>();
+                if (succIt.hasNext()) {
+                    final ReachNode succ = (ReachNode) succIt.next();
+                    surelyReached.addAll(succ.getSurelyReached());
+                    stable &= !reachable.addAll(succ.getReachable());
+                }
+                while (succIt.hasNext()) {
+                    final ReachNode succ = (ReachNode) succIt.next();
+                    surelyReached.retainAll(succ.getSurelyReached());
+                    stable &= !reachable.addAll(succ.getReachable());
+                }
+                stable &= !reachNode.getSurelyReached().addAll(surelyReached);
+            }
+        }
     }
 
 }

@@ -377,6 +377,7 @@
 
     <!-- See: http://wiki.st.cs.uni-sb.de/wiki/Maven_Archiva -->
     <distributionManagement>
+        <!--
         <repository>
             <id>internal-releases</id>
             <name>internal artifacts released by the chair</name>
@@ -392,6 +393,17 @@
             <name>Chair's Projects Website</name>
             <url>file:///tmp/maven-sites/java-slicer</url>
         </site>
+        -->
+        <repository>
+          <id>hammacher-releases</id>
+          <name>Releases on hammacher.name</name>
+          <url>http://hammacher.name:8081/nexus/content/repositories/releases</url>
+        </repository>
+        <snapshotRepository>
+          <id>hammacher-snapshots</id>
+          <name>Snapshots on hammacher.name</name>
+          <url>http://hammacher.name:8081/nexus/content/repositories/snapshots</url>
+        </snapshotRepository>
     </distributionManagement>
 
 </project>
