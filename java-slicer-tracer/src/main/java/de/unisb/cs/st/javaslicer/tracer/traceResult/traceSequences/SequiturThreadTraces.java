@@ -4,11 +4,11 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 
+import de.hammacher.util.MultiplexedFileReader;
+import de.hammacher.util.OptimizedDataInputStream;
+import de.unisb.cs.st.javaslicer.tracer.sequitur.input.InputSequence;
+import de.unisb.cs.st.javaslicer.tracer.sequitur.input.ObjectReader;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;
-import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
-import de.unisb.cs.st.javaslicer.tracer.util.sequitur.input.InputSequence;
-import de.unisb.cs.st.javaslicer.tracer.util.sequitur.input.ObjectReader;
 
 public class SequiturThreadTraces extends ConstantThreadTraces {
 

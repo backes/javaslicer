@@ -5,9 +5,9 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
+import de.hammacher.util.OptimizedDataOutputStream;
+import de.unisb.cs.st.javaslicer.tracer.sequitur.output.OutputSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.IntegerTraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
-import de.unisb.cs.st.javaslicer.tracer.util.sequitur.output.OutputSequence;
 
 public class SequiturIntegerTraceSequence implements IntegerTraceSequence {
 

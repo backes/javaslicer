@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
+import de.hammacher.util.OptimizedDataInputStream;
 
 public class StringCacheInput {
 

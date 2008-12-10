@@ -3,10 +3,10 @@ package de.unisb.cs.st.javaslicer;
 import java.util.HashSet;
 import java.util.Set;
 
+import de.hammacher.util.IntHolder;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.LabelMarker;
-import de.unisb.cs.st.javaslicer.tracer.util.IntHolder;
 import de.unisb.cs.st.javaslicer.variables.LocalVariable;
 import de.unisb.cs.st.javaslicer.variables.StackEntry;
 

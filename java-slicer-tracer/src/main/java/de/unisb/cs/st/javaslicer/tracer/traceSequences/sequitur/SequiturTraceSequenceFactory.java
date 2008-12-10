@@ -7,14 +7,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
+import de.hammacher.util.OptimizedDataOutputStream;
 import de.unisb.cs.st.javaslicer.tracer.ThreadTracer;
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
+import de.unisb.cs.st.javaslicer.tracer.sequitur.output.ObjectWriter;
+import de.unisb.cs.st.javaslicer.tracer.sequitur.output.OutputSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.Type;
-import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
-import de.unisb.cs.st.javaslicer.tracer.util.sequitur.output.ObjectWriter;
-import de.unisb.cs.st.javaslicer.tracer.util.sequitur.output.OutputSequence;
 
 public class SequiturTraceSequenceFactory implements TraceSequenceFactory {
 

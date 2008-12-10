@@ -10,11 +10,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Queue;
 
+import de.hammacher.util.IntegerMap;
+import de.hammacher.util.OptimizedDataInputStream;
+import de.hammacher.util.OptimizedDataOutputStream;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.LabelMarker;
-import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
-import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
-import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
 
 public class ReadMethod implements Comparable<ReadMethod> {
 

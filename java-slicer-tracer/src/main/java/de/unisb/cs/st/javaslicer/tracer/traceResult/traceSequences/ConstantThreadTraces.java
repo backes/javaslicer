@@ -3,8 +3,8 @@ package de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences;
 import java.io.DataInputStream;
 import java.io.IOException;
 
+import de.hammacher.util.MultiplexedFileReader;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;
 
 public class ConstantThreadTraces {
 

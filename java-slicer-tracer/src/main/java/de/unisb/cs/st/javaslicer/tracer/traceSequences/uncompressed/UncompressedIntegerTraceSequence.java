@@ -3,10 +3,10 @@ package de.unisb.cs.st.javaslicer.tracer.traceSequences.uncompressed;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import de.hammacher.util.MyDataOutputStream;
+import de.hammacher.util.MultiplexedFileWriter.MultiplexOutputStream;
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.IntegerTraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.util.MyDataOutputStream;
-import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter.MultiplexOutputStream;
 
 public class UncompressedIntegerTraceSequence implements IntegerTraceSequence {
 

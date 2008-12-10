@@ -21,6 +21,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import de.hammacher.util.IntegerMap;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.Identifiable;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectIdentifier;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
@@ -28,7 +29,6 @@ import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.IntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.LongTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.Type;
-import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
 
 public class TracingThreadTracer implements ThreadTracer {
 

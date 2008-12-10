@@ -11,13 +11,13 @@ import java.util.Map.Entry;
 
 import org.objectweb.asm.Opcodes;
 
+import de.hammacher.util.IntegerMap;
+import de.hammacher.util.OptimizedDataInputStream;
+import de.hammacher.util.OptimizedDataOutputStream;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheInput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheOutput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
-import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
-import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
-import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
 
 /**
  * Class representing a LOOKUPSWITCH instruction.

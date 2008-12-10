@@ -6,9 +6,9 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+import de.hammacher.util.MultiplexedFileReader;
+import de.hammacher.util.MultiplexedFileReader.MultiplexInputStream;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences.ConstantTraceSequence.ConstantIntegerTraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;
-import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader.MultiplexInputStream;
 
 public class ConstantUncompressedIntegerTraceSequence implements ConstantIntegerTraceSequence {
 
@@ -23,6 +23,11 @@ public class ConstantUncompressedIntegerTraceSequence implements ConstantInteger
     @Override
     public Iterator<Integer> backwardIterator() throws IOException {
         return new BackwardIterator(this.file, this.streamIndex, 8*1024);
+    }
+
+    @Override
+    public Iterator<Integer> iterator() throws IOException {
+        return new ForwardIterator(this.file, this.streamIndex);
     }
 
     public static ConstantUncompressedIntegerTraceSequence readFrom(final DataInput in, final MultiplexedFileReader file)
@@ -94,6 +99,42 @@ public class ConstantUncompressedIntegerTraceSequence implements ConstantInteger
             this.bufPos = -1;
             this.offset = 0;
             this.inputStream.close();
+        }
+    }
+
+    private static class ForwardIterator implements Iterator<Integer> {
+
+        private final MultiplexInputStream inputStream;
+        private final DataInputStream dataIn;
+
+        public ForwardIterator(final MultiplexedFileReader file, final int streamIndex) throws IOException {
+            this.inputStream = file.getInputStream(streamIndex);
+            this.dataIn = new DataInputStream(this.inputStream);
+        }
+
+        @Override
+        public boolean hasNext() {
+            try {
+                return this.inputStream.isEOF();
+            } catch (final IOException e) {
+                return false;
+            }
+        }
+
+        @Override
+        public Integer next() {
+            if (!hasNext())
+                throw new NoSuchElementException();
+            try {
+                return this.dataIn.readInt();
+            } catch (final IOException e) {
+                throw new NoSuchElementException(e.toString());
+            }
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException();
         }
     }
 

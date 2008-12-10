@@ -5,10 +5,11 @@ import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
 
+import de.hammacher.util.IntArrayIterator;
+import de.hammacher.util.ReverseIntArrayIterator;
+import de.hammacher.util.SingletonIterator;
+import de.unisb.cs.st.javaslicer.tracer.sequitur.input.InputSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences.ConstantTraceSequence.ConstantIntegerTraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.util.ReverseIntArrayIterator;
-import de.unisb.cs.st.javaslicer.tracer.util.SingletonIterator;
-import de.unisb.cs.st.javaslicer.tracer.util.sequitur.input.InputSequence;
 
 public class ConstantSequiturIntegerTraceSequence implements ConstantIntegerTraceSequence {
 
@@ -50,6 +51,41 @@ public class ConstantSequiturIntegerTraceSequence implements ConstantIntegerTrac
 
     }
 
+    private static class ForwardIterator implements Iterator<Integer> {
+
+        private final ListIterator<Integer> it;
+        private int lastValue;
+        private int count;
+
+        public ForwardIterator(final ListIterator<Integer> it, final int count) throws IOException {
+            if (count < 0)
+                throw new IOException("Illegal sequitur sequence (count < 0)");
+            this.count = count;
+            this.it = it;
+            this.lastValue = 0;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return this.count != 0 && this.it.hasNext();
+        }
+
+        @Override
+        public Integer next() {
+            if (this.count == 0)
+                throw new NoSuchElementException();
+            this.lastValue += this.it.next();
+            --this.count;
+            return this.lastValue;
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
+
+    }
+
     private final long offset;
     private final int count;
     private final InputSequence<Integer> sequence;
@@ -75,6 +111,22 @@ public class ConstantSequiturIntegerTraceSequence implements ConstantIntegerTrac
             return new ReverseIntArrayIterator(values);
         }
         return new BackwardIterator(this.sequence.iterator(this.offset+this.count+1), this.count);
+    }
+
+    @Override
+    public Iterator<Integer> iterator() throws IOException {
+        if (this.count <= 10) {
+            if (this.count == 1)
+                return new SingletonIterator<Integer>(this.sequence.iterator(this.offset).next());
+            final int[] values = new int[this.count];
+            final ListIterator<Integer> it = this.sequence.iterator(this.offset);
+            int last = 0;
+            for (int i = 0; i < this.count; ++i) {
+                values[i] = last += it.next();
+            }
+            return new IntArrayIterator(values);
+        }
+        return new ForwardIterator(this.sequence.iterator(), this.count);
     }
 
 }

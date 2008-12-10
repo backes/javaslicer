@@ -43,6 +43,12 @@ import org.objectweb.asm.tree.analysis.Frame;
 import org.objectweb.asm.util.CheckClassAdapter;
 import org.objectweb.asm.util.TraceMethodVisitor;
 
+import de.hammacher.util.ConcurrentReferenceHashMap;
+import de.hammacher.util.MultiplexedFileWriter;
+import de.hammacher.util.SimpleArrayList;
+import de.hammacher.util.ConcurrentReferenceHashMap.Option;
+import de.hammacher.util.ConcurrentReferenceHashMap.ReferenceType;
+import de.hammacher.util.MultiplexedFileWriter.MultiplexOutputStream;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheOutput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.AbstractInstruction;
@@ -57,12 +63,6 @@ import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectIdentifier;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
-import de.unisb.cs.st.javaslicer.tracer.util.ConcurrentReferenceHashMap;
-import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter;
-import de.unisb.cs.st.javaslicer.tracer.util.SimpleArrayList;
-import de.unisb.cs.st.javaslicer.tracer.util.ConcurrentReferenceHashMap.Option;
-import de.unisb.cs.st.javaslicer.tracer.util.ConcurrentReferenceHashMap.ReferenceType;
-import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter.MultiplexOutputStream;
 
 public class Tracer implements ClassFileTransformer {
 
@@ -378,6 +378,8 @@ public class Tracer implements ClassFileTransformer {
         final String javaClassName = Type.getObjectType(className).getClassName();
 
         if (javaClassName.startsWith(Tracer.class.getPackage().getName()))
+            return null;
+        if (javaClassName.startsWith("de.hammacher."))
             return null;
 
         //////////////////////////////////////////////////////////////////

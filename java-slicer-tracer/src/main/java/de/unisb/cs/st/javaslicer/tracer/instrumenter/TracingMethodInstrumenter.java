@@ -37,6 +37,8 @@ import org.objectweb.asm.tree.TryCatchBlockNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
+import de.hammacher.util.IntegerMap;
+import de.hammacher.util.Pair;
 import de.unisb.cs.st.javaslicer.tracer.ThreadTracer;
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
 import de.unisb.cs.st.javaslicer.tracer.TracingThreadTracer;
@@ -59,8 +61,6 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.SimpleI
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.TableSwitchInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.TypeInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.VarInstruction;
-import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
-import de.unisb.cs.st.javaslicer.tracer.util.Pair;
 
 public class TracingMethodInstrumenter implements Opcodes {
 

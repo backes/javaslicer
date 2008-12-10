@@ -1,11 +1,11 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
 
 import java.io.DataOutputStream;
-import java.io.EOFException;
 import java.io.IOException;
 
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
-import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
+import de.unisb.cs.st.javaslicer.tracer.traceResult.BackwardInstructionIterator;
+import de.unisb.cs.st.javaslicer.tracer.traceResult.ForwardInstructionIterator;
 
 /**
  * An abstract class that wraps around another instruction and delegates all calles to this
@@ -39,8 +39,14 @@ public abstract class InstructionWrapper implements Instruction {
         return this.wrappedInstruction.getMethod();
     }
 
-    public Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException, EOFException {
-        return this.wrappedInstruction.getNextInstance(backwardInstructionIterator);
+    public Instance getBackwardInstance(final BackwardInstructionIterator backwardInstructionIterator, final int stackDepth)
+            throws TracerException {
+        return this.wrappedInstruction.getBackwardInstance(backwardInstructionIterator, stackDepth);
+    }
+
+    public Instance getForwardInstance(final ForwardInstructionIterator forwardInstructionIterator, final int stackDepth)
+            throws TracerException {
+        return this.wrappedInstruction.getForwardInstance(forwardInstructionIterator, stackDepth);
     }
 
     public int getOpcode() {

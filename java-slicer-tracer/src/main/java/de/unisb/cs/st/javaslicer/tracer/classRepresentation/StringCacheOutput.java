@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
+import de.hammacher.util.OptimizedDataOutputStream;
 
 public class StringCacheOutput {
 

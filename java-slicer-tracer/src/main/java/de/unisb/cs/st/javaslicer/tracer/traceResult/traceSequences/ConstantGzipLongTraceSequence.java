@@ -8,11 +8,11 @@ import java.io.PushbackInputStream;
 import java.util.Iterator;
 import java.util.zip.GZIPInputStream;
 
+import de.hammacher.util.EmptyIterator;
+import de.hammacher.util.MultiplexedFileReader;
+import de.hammacher.util.OptimizedDataInputStream;
+import de.hammacher.util.MultiplexedFileReader.MultiplexInputStream;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.traceSequences.ConstantTraceSequence.ConstantLongTraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.util.EmptyIterator;
-import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader;
-import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
-import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileReader.MultiplexInputStream;
 
 public class ConstantGzipLongTraceSequence implements ConstantLongTraceSequence {
 
@@ -34,6 +34,12 @@ public class ConstantGzipLongTraceSequence implements ConstantLongTraceSequence 
         } catch (final IOException e) {
             return new EmptyIterator<Long>();
         }
+    }
+
+    @Override
+    public Iterator<Long> iterator() throws IOException {
+    	// TODO Auto-generated method stub
+    	throw new UnsupportedOperationException();
     }
 
     public static ConstantGzipLongTraceSequence readFrom(final DataInput in, final MultiplexedFileReader file,

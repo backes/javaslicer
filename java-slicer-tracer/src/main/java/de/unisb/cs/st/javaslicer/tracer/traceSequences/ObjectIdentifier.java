@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import de.unisb.cs.st.javaslicer.tracer.util.ConcurrentReferenceHashMap;
+import de.hammacher.util.ConcurrentReferenceHashMap;
 
 public class ObjectIdentifier {
 

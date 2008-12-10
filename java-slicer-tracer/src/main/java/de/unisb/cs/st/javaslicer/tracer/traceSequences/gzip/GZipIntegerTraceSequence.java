@@ -9,14 +9,14 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.zip.GZIPOutputStream;
 
+import de.hammacher.util.MyByteArrayInputStream;
+import de.hammacher.util.MyDataInputStream;
+import de.hammacher.util.MyDataOutputStream;
+import de.hammacher.util.OptimizedDataOutputStream;
+import de.hammacher.util.MultiplexedFileWriter.MultiplexOutputStream;
+import de.hammacher.util.MultiplexedFileWriter.MultiplexOutputStream.Reader;
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.IntegerTraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.util.MyByteArrayInputStream;
-import de.unisb.cs.st.javaslicer.tracer.util.MyDataInputStream;
-import de.unisb.cs.st.javaslicer.tracer.util.MyDataOutputStream;
-import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
-import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter.MultiplexOutputStream;
-import de.unisb.cs.st.javaslicer.tracer.util.MultiplexedFileWriter.MultiplexOutputStream.Reader;
 
 public class GZipIntegerTraceSequence implements IntegerTraceSequence {
 

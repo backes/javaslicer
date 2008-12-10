@@ -16,6 +16,7 @@ import java.util.Map.Entry;
 
 import org.objectweb.asm.Opcodes;
 
+import de.hammacher.util.IntegerMap;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadClass;
@@ -33,8 +34,7 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.MultiAN
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.TypeInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.VarInstruction;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
-import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult.ThreadId;
-import de.unisb.cs.st.javaslicer.tracer.util.IntegerMap;
+import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.util.ArrayStack;
 import de.unisb.cs.st.javaslicer.variableUsages.MethodInvokationVariableUsages;
 import de.unisb.cs.st.javaslicer.variableUsages.SimpleVariableUsage;

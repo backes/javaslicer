@@ -6,14 +6,15 @@ import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
+import de.hammacher.util.OptimizedDataInputStream;
+import de.hammacher.util.OptimizedDataOutputStream;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheInput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheOutput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
-import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
-import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
-import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
+import de.unisb.cs.st.javaslicer.tracer.traceResult.BackwardInstructionIterator;
+import de.unisb.cs.st.javaslicer.tracer.traceResult.ForwardInstructionIterator;
 
 
 /**
@@ -89,11 +90,19 @@ public class FieldInstruction extends AbstractInstruction {
     }
 
     @Override
-    public Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException {
+    public Instance getBackwardInstance(final BackwardInstructionIterator backwardInstructionIterator, final int stackDepth) throws TracerException {
         final long objectId = this.objectTraceSeqIndex == -1 ? -1 :
             backwardInstructionIterator.getNextLong(this.objectTraceSeqIndex);
         return new Instance(this, backwardInstructionIterator.getNextInstructionOccurenceNumber(getIndex()),
-                backwardInstructionIterator.getStackDepth(), objectId);
+                stackDepth, objectId);
+    }
+
+    @Override
+    public Instance getForwardInstance(final ForwardInstructionIterator forwardInstructionIterator, final int stackDepth) throws TracerException {
+        final long objectId = this.objectTraceSeqIndex == -1 ? -1 :
+            forwardInstructionIterator.getNextLong(this.objectTraceSeqIndex);
+        return new Instance(this, forwardInstructionIterator.getNextInstructionOccurenceNumber(getIndex()),
+                stackDepth, objectId);
     }
 
     @Override

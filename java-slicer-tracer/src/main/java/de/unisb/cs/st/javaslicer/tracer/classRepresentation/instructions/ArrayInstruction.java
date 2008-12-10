@@ -6,14 +6,14 @@ import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
+import de.hammacher.util.OptimizedDataInputStream;
+import de.hammacher.util.OptimizedDataOutputStream;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheInput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.StringCacheOutput;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod.MethodReadInformation;
-import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
-import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
-import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataInputStream;
-import de.unisb.cs.st.javaslicer.tracer.util.OptimizedDataOutputStream;
+import de.unisb.cs.st.javaslicer.tracer.traceResult.BackwardInstructionIterator;
+import de.unisb.cs.st.javaslicer.tracer.traceResult.ForwardInstructionIterator;
 
 /**
  * Class representing an array load or array store (*ALOAD / *ASTORE) instruction.
@@ -42,11 +42,21 @@ public class ArrayInstruction extends AbstractInstruction {
     }
 
     @Override
-    public Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException {
+    public Instance getBackwardInstance(
+            final BackwardInstructionIterator backwardInstructionIterator, final int stackDepth) {
         final long arrayId = backwardInstructionIterator.getNextLong(this.arrayTraceSeqIndex);
         final int index = backwardInstructionIterator.getNextInteger(this.indexTraceSeqIndex);
         return new Instance(this, backwardInstructionIterator.getNextInstructionOccurenceNumber(getIndex()),
-                backwardInstructionIterator.getStackDepth(), arrayId, index);
+                stackDepth, arrayId, index);
+    }
+
+    @Override
+    public Instance getForwardInstance(
+            final ForwardInstructionIterator forwardInstructionIterator, final int stackDepth) {
+        final long arrayId = forwardInstructionIterator.getNextLong(this.arrayTraceSeqIndex);
+        final int index = forwardInstructionIterator.getNextInteger(this.indexTraceSeqIndex);
+        return new Instance(this, forwardInstructionIterator.getNextInstructionOccurenceNumber(getIndex()),
+                stackDepth, arrayId, index);
     }
 
     @Override

@@ -1,7 +1,6 @@
 package de.unisb.cs.st.javaslicer.tracer.classRepresentation;
 
 import java.io.DataOutputStream;
-import java.io.EOFException;
 import java.io.IOException;
 
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.ArrayInstruction;
@@ -20,7 +19,8 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.TableSw
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.TypeInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.VarInstruction;
 import de.unisb.cs.st.javaslicer.tracer.exceptions.TracerException;
-import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.BackwardInstructionIterator;
+import de.unisb.cs.st.javaslicer.tracer.traceResult.BackwardInstructionIterator;
+import de.unisb.cs.st.javaslicer.tracer.traceResult.ForwardInstructionIterator;
 
 /**
  * Interface for all instructions that are stored in a {@link ReadMethod}.
@@ -117,7 +117,9 @@ public interface Instruction extends Comparable<Instruction> {
 
     int getBackwardInstructionIndex(final BackwardInstructionIterator backwardInstructionIterator);
 
-    Instance getNextInstance(final BackwardInstructionIterator backwardInstructionIterator) throws TracerException, EOFException;
+    // for internal use only!
+    Instance getBackwardInstance(final BackwardInstructionIterator backwardInstructionIterator, int stackDepth) throws TracerException;
+    Instance getForwardInstance(final ForwardInstructionIterator forwardInstructionIterator, int stackDepth) throws TracerException;
 
     void writeOut(final DataOutputStream out, StringCacheOutput stringCache) throws IOException;
 

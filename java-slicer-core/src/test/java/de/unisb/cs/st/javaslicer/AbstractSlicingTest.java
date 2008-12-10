@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
 import junit.framework.Assert;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult;
-import de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult.ThreadId;
+import de.unisb.cs.st.javaslicer.tracer.traceResult.ThreadTraceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.util.Diff;
 import de.unisb.cs.st.javaslicer.util.DiffPrint;
 import de.unisb.cs.st.javaslicer.util.Diff.change;
