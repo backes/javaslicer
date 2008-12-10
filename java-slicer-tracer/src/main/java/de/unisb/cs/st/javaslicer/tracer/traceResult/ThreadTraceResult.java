@@ -118,7 +118,7 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
     }
 
     private ForwardIterationInformation getForwardInformation() {
-        final int numJumps = 0;
+        int numJumps = 0;
         long instrCount = 0;
         long[] jumpInstrNrs = new long[16];
         int[] jumpTargets = new int[16];
@@ -133,7 +133,7 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
             final Instance instr = backwardIt.next();
             final int index = instr.getIndex();
             occurrences.increment(index);
-            if (index != lastIndex-1 && instrCount > 0) {
+            if (index != lastIndex-1 && instrCount > 1) {
                 if (numJumps == jumpInstrNrs.length) {
                     jumpInstrNrs = Arrays.copyOf(jumpInstrNrs, 2*numJumps);
                     jumpTargets = Arrays.copyOf(jumpTargets, 2*numJumps);
@@ -144,6 +144,7 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
                 // TODO can the stack depth change by more than 256??
                 final int newStackDepth = instr.getStackDepth();
                 stackDepthChange[numJumps] = (byte) (newStackDepth - curStackDepth);
+                ++numJumps;
                 curStackDepth = newStackDepth;
             }
             lastIndex = index;

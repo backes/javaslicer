@@ -111,6 +111,16 @@ public class TraceResult {
         return res == null ? null : res.getBackwardIterator();
     }
 
+    public Iterator<Instance> getForwardIterator(final ThreadId threadId) {
+        final ThreadTraceResult res = findThreadTraceResult(threadId);
+        return res == null ? null : res.getForwardIterator();
+    }
+
+    public Iterator<Instance> getForwardIterator(final long javaThreadId) {
+        final ThreadTraceResult res = findThreadTraceResult(javaThreadId);
+        return res == null ? null : res.getForwardIterator();
+    }
+
     private ThreadTraceResult findThreadTraceResult(final long javaThreadId) {
         // binary search
         int left = 0;
@@ -245,7 +255,7 @@ public class TraceResult {
         try {
             System.out.println();
             System.out.println("The backward trace:");
-            final Iterator<Instance> it = tr.getBackwardIterator(tracing.getThreadId());
+            final Iterator<Instance> it = tr.getBackwardIterator(tracing);
             long nr = 0;
             final String format = "%8d: %-100s -> %3d %7d %s%n";
             System.out.format("%8s  %-100s    %3s %7s %s%n",

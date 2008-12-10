@@ -53,17 +53,23 @@ public class ForwardInstructionIterator implements Iterator<Instance> {
             throw new NoSuchElementException();
         --this.instrNr;
 
-        final Instruction instr = this.threadTraceResult.findInstruction(this.nextIndex);
-        final Instance inst = instr.getForwardInstance(this, this.stackDepth);
+        while (true) {
+	        final Instruction instr = this.threadTraceResult.findInstruction(this.nextIndex);
+	        final Instance inst = instr.getForwardInstance(this, this.stackDepth);
+	        if (inst == null) {
+	        	--this.nextIndex;
+	        	continue;
+	        }
 
-        if (this.nextJumpNr != 0 && this.instrNr == this.jumpInstrNrs[this.nextJumpNr]) {
-            this.nextIndex = this.jumpTargets[this.nextJumpNr];
-            this.stackDepth += this.stackDepthChanges[this.nextJumpNr--];
-        } else {
-            --this.nextIndex;
+	        if (this.nextJumpNr != -1 && this.instrNr == this.jumpInstrNrs[this.nextJumpNr]) {
+	            this.nextIndex = this.jumpTargets[this.nextJumpNr];
+	            this.stackDepth += this.stackDepthChanges[this.nextJumpNr--];
+	        } else {
+	            --this.nextIndex;
+	        }
+
+	        return inst;
         }
-
-        return inst;
     }
 
     @Override
