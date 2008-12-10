@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.zip.GZIPInputStream;
 
 import de.hammacher.util.MultiplexedFileReader;
@@ -101,24 +102,68 @@ public class TraceResult {
         return traceResult;
     }
 
+    /**
+     * Returns an iterator that iterates backwards through the execution trace.
+     *
+     * This iteration is very cheap since no information has to be cached (in
+     * contrast to the Iterator returned by {@link #getIterator(ThreadId)}.
+     * The trace is generated while reading in the trace file.
+     *
+     * @param threadId the identifier of the thread whose execution trace
+     *                 iterator is requested
+     * @return an iterator that iterates backwards through the execution trace
+     */
     public Iterator<Instance> getBackwardIterator(final ThreadId threadId) {
         final ThreadTraceResult res = findThreadTraceResult(threadId);
         return res == null ? null : res.getBackwardIterator();
     }
 
+    /**
+     * Returns an iterator that iterates backwards through the execution trace.
+     *
+     * This iteration is very cheap since no information has to be cached (in
+     * contrast to the Iterator returned by {@link #getIterator(long)}.
+     * The trace is generated while reading in the trace file.
+     *
+     * @param javaThreadId the java thread id of the thread whose execution trace
+     *                     iterator is requested
+     * @return an iterator that iterates backwards through the execution trace
+     */
     public Iterator<Instance> getBackwardIterator(final long javaThreadId) {
         final ThreadTraceResult res = findThreadTraceResult(javaThreadId);
         return res == null ? null : res.getBackwardIterator();
     }
 
-    public Iterator<Instance> getForwardIterator(final ThreadId threadId) {
+    /**
+     * Returns an iterator that is able to iterate in any direction through the execution trace.
+     *
+     * This iteration is usually much more expensive (especially with respect to memory
+     * consumption) than the Iterator returned by {@link #getBackwardIterator(ThreadId)}.
+     * So whenever you just need to iterate backwards, you should use that backward iterator.
+     *
+     * @param threadId the identifier of the thread whose execution trace
+     *                 iterator is requested
+     * @return an iterator that is able to iterate in any direction through the execution trace
+     */
+    public ListIterator<Instance> getIterator(final ThreadId threadId) {
         final ThreadTraceResult res = findThreadTraceResult(threadId);
-        return res == null ? null : res.getForwardIterator();
+        return res == null ? null : res.getIterator();
     }
 
-    public Iterator<Instance> getForwardIterator(final long javaThreadId) {
+    /**
+     * Returns an iterator that is able to iterate in any direction through the execution trace.
+     *
+     * This iteration is usually much more expensive (especially with respect to memory
+     * consumption) than the Iterator returned by {@link #getBackwardIterator(long)}.
+     * So whenever you just need to iterate backwards, you should use that backward iterator.
+     *
+     * @param javaThreadId the java thread id of the thread whose execution trace
+     *                     iterator is requested
+     * @return an iterator that is able to iterate in any direction through the execution trace
+     */
+    public ListIterator<Instance> getIterator(final long javaThreadId) {
         final ThreadTraceResult res = findThreadTraceResult(javaThreadId);
-        return res == null ? null : res.getForwardIterator();
+        return res == null ? null : res.getIterator();
     }
 
     private ThreadTraceResult findThreadTraceResult(final long javaThreadId) {
@@ -277,7 +322,8 @@ public class TraceResult {
                     it2.getNoInstructions() + it2.getNoAdditionalInstructions());
 
         } catch (final TracerException e) {
-            System.err.println("Error while tracing: " + e.getMessage());
+            System.err.print("Error while tracing: ");
+            e.printStackTrace(System.err);
             System.exit(-1);
         }
     }

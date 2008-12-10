@@ -51,36 +51,73 @@ public class ConstantSequiturLongTraceSequence implements ConstantLongTraceSeque
 
     }
 
-    private static class ForwardIterator implements Iterator<Long> {
+    private static class ForwardIterator implements ListIterator<Long> {
 
         private final ListIterator<Long> it;
         private long lastValue;
-        private int count;
+        private final int count;
+        private int pos;
 
         public ForwardIterator(final ListIterator<Long> it, final int count) throws IOException {
             if (count < 0)
                 throw new IOException("Illegal sequitur sequence (count < 0)");
             this.count = count;
+            this.pos = 0;
             this.it = it;
             this.lastValue = 0;
         }
 
         @Override
         public boolean hasNext() {
-            return this.count != 0 && this.it.hasNext();
+            return this.pos != this.count && this.it.hasNext();
         }
 
         @Override
         public Long next() {
-            if (this.count == 0)
+            if (!hasNext())
                 throw new NoSuchElementException();
             this.lastValue += this.it.next();
-            --this.count;
+            ++this.pos;
             return this.lastValue;
         }
 
         @Override
         public void remove() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void add(final Long e) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean hasPrevious() {
+            return this.pos != 0 && this.it.hasPrevious();
+        }
+
+        @Override
+        public int nextIndex() {
+            return this.pos;
+        }
+
+        @Override
+        public Long previous() {
+            if (!hasPrevious())
+                throw new NoSuchElementException();
+            final long ret = this.lastValue;
+            this.lastValue -= this.it.previous();
+            --this.pos;
+            return ret;
+        }
+
+        @Override
+        public int previousIndex() {
+            return this.pos - 1;
+        }
+
+        @Override
+        public void set(final Long e) {
             throw new UnsupportedOperationException();
         }
 
@@ -114,7 +151,7 @@ public class ConstantSequiturLongTraceSequence implements ConstantLongTraceSeque
     }
 
     @Override
-    public Iterator<Long> iterator() throws IOException {
+    public ListIterator<Long> iterator() throws IOException {
         if (this.count <= 10) {
             if (this.count == 1)
                 return new SingletonIterator<Long>(this.sequence.iterator(this.offset).next());
@@ -126,7 +163,7 @@ public class ConstantSequiturLongTraceSequence implements ConstantLongTraceSeque
             }
             return new LongArrayIterator(values);
         }
-        return new ForwardIterator(this.sequence.iterator(), this.count);
+        return new ForwardIterator(this.sequence.iterator(this.offset), this.count);
     }
 
 }

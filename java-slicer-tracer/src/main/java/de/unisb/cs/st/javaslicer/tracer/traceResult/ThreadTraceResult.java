@@ -5,9 +5,9 @@ import java.io.IOException;
 import java.lang.ref.SoftReference;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.ListIterator;
 
 import de.hammacher.util.IntegerMap;
-import de.hammacher.util.IntegerToLongMap;
 import de.hammacher.util.MultiplexedFileReader;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction.Instance;
@@ -101,11 +101,29 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
         return new ThreadTraceResult(threadId, name, sequences, lastInstructionIndex, traceResult, lastStackDepth);
     }
 
+    /**
+     * Returns an iterator that iterates backwards through the execution trace.
+     *
+     * This iteration is very cheap since no information has to be cached (in
+     * contrast to the Iterator returned by {@link #getIterator()}.
+     * The trace is generated while reading in the trace file.
+     *
+     * @return an iterator that iterates backwards through the execution trace
+     */
     public Iterator<Instance> getBackwardIterator() {
         return new BackwardInstructionIterator(this);
     }
 
-    public Iterator<Instance> getForwardIterator() {
+    /**
+     * Returns an iterator that is able to iterate in any direction through the execution trace.
+     *
+     * This iteration is usually much more expensive (especially with respect to memory
+     * consumption) than the Iterator returned by {@link #getBackwardIterator()}.
+     * So whenever you just need to iterate backwards, you should use that backward iterator.
+     *
+     * @return an iterator that is able to iterate in any direction through the execution trace
+     */
+    public ListIterator<Instance> getIterator() {
         ForwardIterationInformation forwInfo;
         synchronized (this.forwardIterationInfoLock) {
             forwInfo = this.forwardIterationInformation.get();
@@ -121,42 +139,40 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
         int numJumps = 0;
         long instrCount = 0;
         long[] jumpInstrNrs = new long[16];
-        int[] jumpTargets = new int[16];
+        int[] jumps = new int[16];
         byte[] stackDepthChange = new byte[16];
-        final IntegerToLongMap occurrences = new IntegerToLongMap();
 
         final Iterator<Instance> backwardIt = getBackwardIterator();
         int lastIndex = 0;
-        int curStackDepth = 0;
+        int curStackDepth = 1;
         while (backwardIt.hasNext()) {
-            ++instrCount;
             final Instance instr = backwardIt.next();
             final int index = instr.getIndex();
-            occurrences.increment(index);
             if (index != lastIndex-1 && instrCount > 1) {
                 if (numJumps == jumpInstrNrs.length) {
                     jumpInstrNrs = Arrays.copyOf(jumpInstrNrs, 2*numJumps);
-                    jumpTargets = Arrays.copyOf(jumpTargets, 2*numJumps);
+                    jumps = Arrays.copyOf(jumps, 2*numJumps);
                     stackDepthChange = Arrays.copyOf(stackDepthChange, 2*numJumps);
                 }
                 jumpInstrNrs[numJumps] = instrCount;
-                jumpTargets[numJumps] = lastIndex;
+                jumps[numJumps] = lastIndex - index;
                 // TODO can the stack depth change by more than 256??
                 final int newStackDepth = instr.getStackDepth();
-                stackDepthChange[numJumps] = (byte) (newStackDepth - curStackDepth);
+                stackDepthChange[numJumps] = (byte) (curStackDepth - newStackDepth);
                 ++numJumps;
                 curStackDepth = newStackDepth;
             }
             lastIndex = index;
+            ++instrCount;
         }
 
         if (numJumps != jumpInstrNrs.length) {
             jumpInstrNrs = Arrays.copyOf(jumpInstrNrs, numJumps);
-            jumpTargets = Arrays.copyOf(jumpTargets, numJumps);
+            jumps = Arrays.copyOf(jumps, numJumps);
             stackDepthChange = Arrays.copyOf(stackDepthChange, numJumps);
         }
 
-        return new ForwardIterationInformation(instrCount, lastIndex, jumpInstrNrs, jumpTargets, stackDepthChange, occurrences);
+        return new ForwardIterationInformation(instrCount, lastIndex, jumpInstrNrs, jumps, stackDepthChange);
     }
 
     public Instruction findInstruction(final int instructionIndex) {

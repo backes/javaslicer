@@ -4,6 +4,7 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.ListIterator;
 import java.util.NoSuchElementException;
 
 import de.hammacher.util.MultiplexedFileReader;
@@ -26,7 +27,7 @@ public class ConstantUncompressedLongTraceSequence implements ConstantLongTraceS
     }
 
     @Override
-    public Iterator<Long> iterator() throws IOException {
+    public ListIterator<Long> iterator() throws IOException {
         return new ForwardIterator(this.file, this.streamIndex);
     }
 
@@ -102,7 +103,7 @@ public class ConstantUncompressedLongTraceSequence implements ConstantLongTraceS
         }
     }
 
-    private static class ForwardIterator implements Iterator<Long> {
+    private static class ForwardIterator implements ListIterator<Long> {
 
         private final MultiplexInputStream inputStream;
         private final DataInputStream dataIn;
@@ -115,7 +116,7 @@ public class ConstantUncompressedLongTraceSequence implements ConstantLongTraceS
         @Override
         public boolean hasNext() {
             try {
-                return this.inputStream.isEOF();
+                return !this.inputStream.isEOF();
             } catch (final IOException e) {
                 return false;
             }
@@ -134,6 +135,46 @@ public class ConstantUncompressedLongTraceSequence implements ConstantLongTraceS
 
         @Override
         public void remove() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void add(final Long e) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean hasPrevious() {
+            return this.inputStream.getPosition() != 0;
+        }
+
+        @Override
+        public int nextIndex() {
+            return (int) Math.min(Integer.MAX_VALUE, this.inputStream.getPosition() / 8);
+        }
+
+        @Override
+        public Long previous() {
+            if (!hasPrevious())
+                throw new NoSuchElementException();
+            try {
+                final long seekPos = this.inputStream.getPosition()-8;
+                this.inputStream.seek(seekPos);
+                final long ret = this.dataIn.readLong();
+                this.inputStream.seek(seekPos);
+                return ret;
+            } catch (final IOException e) {
+                throw new NoSuchElementException(e.toString());
+            }
+        }
+
+        @Override
+        public int previousIndex() {
+            return (int) Math.min(Integer.MAX_VALUE, (this.inputStream.getPosition() / 8)-1);
+        }
+
+        @Override
+        public void set(final Long e) {
             throw new UnsupportedOperationException();
         }
     }

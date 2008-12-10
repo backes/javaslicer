@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PushbackInputStream;
 import java.util.Iterator;
+import java.util.ListIterator;
 import java.util.zip.GZIPInputStream;
 
 import de.hammacher.util.EmptyIterator;
@@ -37,7 +38,7 @@ public class ConstantGzipLongTraceSequence implements ConstantLongTraceSequence 
     }
 
     @Override
-    public Iterator<Long> iterator() throws IOException {
+    public ListIterator<Long> iterator() {
     	// TODO Auto-generated method stub
     	throw new UnsupportedOperationException();
     }
