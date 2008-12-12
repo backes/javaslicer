@@ -4,7 +4,7 @@ import java.util.AbstractList;
 import java.util.Collection;
 import java.util.Collections;
 
-import de.unisb.cs.st.javaslicer.ExecutionFrame;
+import de.unisb.cs.st.javaslicer.dependencyAnalysis.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.variables.LocalVariable;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 

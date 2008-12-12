@@ -4,7 +4,7 @@ import java.util.AbstractSet;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import de.unisb.cs.st.javaslicer.ExecutionFrame;
+import de.unisb.cs.st.javaslicer.dependencyAnalysis.ExecutionFrame;
 
 public class StackEntrySet extends AbstractSet<Variable> {
 

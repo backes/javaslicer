@@ -130,8 +130,8 @@ public class TraceResult {
      * @return an iterator that iterates backwards through the execution trace
      */
     public Iterator<Instance> getBackwardIterator(final long javaThreadId) {
-        final ThreadTraceResult res = findThreadTraceResult(javaThreadId);
-        return res == null ? null : res.getBackwardIterator();
+    	final ThreadId id = getThreadId(javaThreadId);
+    	return id == null ? null : getBackwardIterator(id);
     }
 
     /**
@@ -162,26 +162,8 @@ public class TraceResult {
      * @return an iterator that is able to iterate in any direction through the execution trace
      */
     public ListIterator<Instance> getIterator(final long javaThreadId) {
-        final ThreadTraceResult res = findThreadTraceResult(javaThreadId);
-        return res == null ? null : res.getIterator();
-    }
-
-    private ThreadTraceResult findThreadTraceResult(final long javaThreadId) {
-        // binary search
-        int left = 0;
-        int right = this.threadTraces.size();
-        int mid;
-
-        while ((mid = (left + right) / 2) != left) {
-            final ThreadTraceResult midVal = this.threadTraces.get(mid);
-            if (midVal.getJavaThreadId() <= javaThreadId)
-                left = mid;
-            else
-                right = mid;
-        }
-
-        final ThreadTraceResult found = this.threadTraces.get(mid);
-        return found.getJavaThreadId() == javaThreadId ? found : null;
+    	final ThreadId id = getThreadId(javaThreadId);
+    	return id == null ? null : getIterator(id);
     }
 
     private ThreadTraceResult findThreadTraceResult(final ThreadId threadId) {
@@ -198,13 +180,8 @@ public class TraceResult {
                 right = mid;
         }
 
-        while (mid >= 0) {
-            final ThreadTraceResult found = this.threadTraces.get(mid);
-            if (found.getId().compareTo(threadId) < 0)
-                return null;
-            return found;
-        }
-        return null;
+        final ThreadTraceResult found = this.threadTraces.get(mid);
+        return found.getId().compareTo(threadId) == 0 ? found : null;
     }
 
     /**
@@ -278,12 +255,12 @@ public class TraceResult {
         ThreadId tracing = null;
         for (final ThreadId t: threads) {
             if (threadToTrace == null) {
-                if ("main".equals(t.getThreadName()) && (tracing == null || t.getThreadId() < tracing.getThreadId()))
+                if ("main".equals(t.getThreadName()) && (tracing == null || t.getJavaThreadId() < tracing.getJavaThreadId()))
                     tracing = t;
-            } else if (t.getThreadId() == threadToTrace.longValue()) {
+            } else if (t.getJavaThreadId() == threadToTrace.longValue()) {
                 tracing = t;
             }
-            System.out.format("%15d: %s%n", t.getThreadId(), t.getThreadName());
+            System.out.format("%15d: %s%n", t.getJavaThreadId(), t.getThreadName());
         }
         System.out.println();
 
@@ -295,7 +272,7 @@ public class TraceResult {
         }
 
         System.out.println(threadToTrace == null ? "Selected:" : "You selected:");
-        System.out.format("%15d: %s%n", tracing.getThreadId(), tracing.getThreadName());
+        System.out.format("%15d: %s%n", tracing.getJavaThreadId(), tracing.getThreadName());
 
         try {
             System.out.println();
@@ -327,5 +304,23 @@ public class TraceResult {
             System.exit(-1);
         }
     }
+
+	public ThreadId getThreadId(final long javaThreadId) {
+        // binary search
+        int left = 0;
+        int right = this.threadTraces.size();
+        int mid;
+
+        while ((mid = (left + right) / 2) != left) {
+            final ThreadTraceResult midVal = this.threadTraces.get(mid);
+            if (midVal.getJavaThreadId() <= javaThreadId)
+                left = mid;
+            else
+                right = mid;
+        }
+
+        final ThreadId found = this.threadTraces.get(mid).getId();
+        return found.getJavaThreadId() == javaThreadId ? found : null;
+	}
 
 }

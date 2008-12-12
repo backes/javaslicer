@@ -11,6 +11,7 @@ import java.util.Queue;
 
 import org.objectweb.asm.Opcodes;
 
+import de.hammacher.util.UniqueQueue;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.AbstractInstruction;
@@ -19,7 +20,6 @@ import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.LabelMa
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.LookupSwitchInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.TableSwitchInstruction;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.instructions.VarInstruction;
-import de.unisb.cs.st.javaslicer.util.UniqueQueue;
 
 /**
  * A representation of the <b>control flow graph (CFG)</b> for one method.

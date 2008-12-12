@@ -77,15 +77,15 @@ public abstract class AbstractSlicingTest {
 
         final SlicingCriterion sc = Slicer.readSlicingCriteria(criterion, trace.getReadClasses());
 
-        long threadId = -1;
+        ThreadId threadId = null;
         for (final ThreadId t: trace.getThreads()) {
             if (thread.equals(t.getThreadName())) {
-                    threadId = t.getThreadId();
+                    threadId = t;
                     break;
             }
         }
 
-        assertTrue("Thread not found", threadId != -1);
+        assertTrue("Thread not found", threadId != null);
 
         final Set<Instruction> slice = new Slicer(trace).getDynamicSlice(threadId, sc.getInstance());
 

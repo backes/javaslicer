@@ -2,6 +2,7 @@ package de.unisb.cs.st.javaslicer;
 
 import java.util.Collection;
 
+import de.unisb.cs.st.javaslicer.dependencyAnalysis.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.tracer.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 

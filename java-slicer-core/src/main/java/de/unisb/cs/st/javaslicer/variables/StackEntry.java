@@ -1,6 +1,6 @@
 package de.unisb.cs.st.javaslicer.variables;
 
-import de.unisb.cs.st.javaslicer.ExecutionFrame;
+import de.unisb.cs.st.javaslicer.dependencyAnalysis.ExecutionFrame;
 
 public class StackEntry implements Variable {
 
