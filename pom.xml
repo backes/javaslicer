@@ -9,7 +9,7 @@
     <name>Java-Slicer</name>
     <description>A tool for dynamic slicing on Java bytecode.</description>
 
-    <version>0.1-SNAPSHOT</version>
+    <version>0.5-SNAPSHOT</version>
     <packaging>pom</packaging>
     <url>http://www.st.cs.uni-sb.de/</url>
     <inceptionYear>2008</inceptionYear>
