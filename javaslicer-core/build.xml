@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+
+<project name="Slicer" default="jar_and_clean" basedir=".">
+	<description>Java Bytecode Slicer</description>
+
+	<!-- global properties for this build -->
+	<property name="src" value="src/main/java" />
+	<property name="build" value="antbuild" />
+	<property name="jarfile" value="slicer.jar" />
+	<property name="manifest" value="src/main/resources/META-INF/MANIFEST.MF" />
+	<property name="debug" value="true" />
+	
+	<!-- this property should be set on the commandline -->
+	<property name="M2_REPO" value="${user.home}/.m2/repository" />
+
+	<filelist dir="${M2_REPO}" id="libraries">
+		<file name="junit/junit/4.4/junit-4.4.jar" />
+		<file name="asm/asm-all/3.1/asm-all-3.1.jar" />
+		<file name="de/hammacher/utilities/1.1/utilities-1.1.jar" />
+		<file name="de/unisb/cs/st/sequitur/0.5-SNAPSHOT/sequitur-0.5-SNAPSHOT.jar" />
+		<file name="de/unisb/cs/st/javaslicer-traceReader/0.5-SNAPSHOT/javaslicer-traceReader-0.5-SNAPSHOT.jar" />
+		<file name="de/unisb/cs/st/javaslicer-common/0.5-SNAPSHOT/javaslicer-common-0.5-SNAPSHOT.jar" />
+	</filelist>
+
+	<path id="classpath">
+		<filelist refid="libraries" />
+	</path>
+
+	<target name="clean">
+		<delete failonerror="false" includeemptydirs="true">
+			<fileset dir="${build}" />
+		</delete>
+	</target>
+
+	<target name="init">
+		<mkdir dir="${build}" />
+	</target>
+
+	<target name="compile" depends="init">
+		<javac srcdir="${src}" destdir="${build}" classpathref="classpath"
+			source="1.6" target="1.6" debug="${debug}" />
+	</target>
+
+	<target name="jar" depends="compile">
+		<jar destfile="${jarfile}" manifest="${manifest}">
+			<fileset dir="${build}" />
+			<!--zipfileset src="${M2_REPO}/junit/junit/4.4/junit-4.4.jar" /-->
+			<zipfileset src="${M2_REPO}/asm/asm-all/3.1/asm-all-3.1.jar" />
+			<zipfileset src="${M2_REPO}/de/hammacher/utilities/1.1/utilities-1.1.jar" />
+			<zipfileset src="${M2_REPO}/de/unisb/cs/st/sequitur/0.5-SNAPSHOT/sequitur-0.5-SNAPSHOT.jar" />
+			<zipfileset src="${M2_REPO}/de/unisb/cs/st/javaslicer-traceReader/0.5-SNAPSHOT/javaslicer-traceReader-0.5-SNAPSHOT.jar" />
+			<zipfileset src="${M2_REPO}/de/unisb/cs/st/javaslicer-common/0.5-SNAPSHOT/javaslicer-common-0.5-SNAPSHOT.jar" />
+		</jar>
+	</target>
+	
+	<target name="jar_and_clean" depends="jar">
+		<antcall target="clean" />
+	</target>
+
+</project>

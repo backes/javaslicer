@@ -5,8 +5,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>de.unisb.cs.st</groupId>
-    <artifactId>java-slicer</artifactId>
-    <name>Java-Slicer</name>
+    <artifactId>javaslicer</artifactId>
+    <name>Parent of all JAVASLICER components</name>
     <description>A tool for dynamic slicing on Java bytecode.</description>
 
     <version>0.5-SNAPSHOT</version>
@@ -100,9 +100,9 @@
     </ciManagement>
 
     <scm>
-        <connection>scm:svn:https://svn.st.cs.uni-sb.de/svn/st/projects/java-slicer/trunk/java-slicer</connection>
-        <developerConnection>scm:svn:https://svn.st.cs.uni-sb.de/svn/st/projects/java-slicer/trunk/java-slicer</developerConnection>
-        <url>https://svn.st.cs.uni-sb.de/svn/st/projects/java-slicer/trunk/java-slicer</url>
+        <connection>scm:svn:https://svn.st.cs.uni-sb.de/svn/st/projects/java-slicer/trunk/javaslicer</connection>
+        <developerConnection>scm:svn:https://svn.st.cs.uni-sb.de/svn/st/projects/java-slicer/trunk/javaslicer</developerConnection>
+        <url>https://svn.st.cs.uni-sb.de/svn/st/projects/java-slicer/trunk/javaslicer</url>
     </scm>
 
     <organization>
@@ -111,20 +111,32 @@
     </organization>
 
     <modules>
-        <module>java-slicer-core</module>
-        <module>java-slicer-tracer</module>
+        <module>javaslicer-core</module>
+        <module>javaslicer-common</module>
+        <module>javaslicer-tracer</module>
+        <module>javaslicer-traceReader</module>
     </modules>
 
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>de.unisb.cs.st</groupId>
-                <artifactId>java-slicer-tracer</artifactId>
+                <artifactId>javaslicer-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>de.unisb.cs.st</groupId>
-                <artifactId>java-slicer-core</artifactId>
+                <artifactId>javaslicer-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>de.unisb.cs.st</groupId>
+                <artifactId>javaslicer-tracer</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>de.unisb.cs.st</groupId>
+                <artifactId>javaslicer-traceReader</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>
@@ -189,15 +201,15 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
+                    <source>1.5</source>
+                    <target>1.5</target>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
-                    <source>1.6</source>
+                    <source>1.5</source>
                 </configuration>
             </plugin>
             <plugin>
@@ -301,7 +313,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
-                    <source>1.6</source>
+                    <source>1.5</source>
                     <show>public</show>
                     <minmemory>128m</minmemory>
                     <maxmemory>512m</maxmemory>
@@ -340,7 +352,7 @@
                     <!-- We want individual PMD reports for each project. -->
                     <aggregate>false</aggregate>
                     <linkXref>true</linkXref>
-                    <targetJdk>1.6</targetJdk>
+                    <targetJdk>1.5</targetJdk>
                 </configuration>
             </plugin>
             <!-- Taglist Maven Plugin - http://mojo.codehaus.org/taglist-maven-plugin/ -->
@@ -385,7 +397,7 @@
         <site>
             <id>chair-public-website</id>
             <name>Chair's Projects Website</name>
-            <url>file:///tmp/maven-sites/java-slicer</url>
+            <url>file:///tmp/maven-sites/javaslicer</url>
         </site>
         -->
         <repository>

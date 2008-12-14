@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <parent>
+        <groupId>de.unisb.cs.st</groupId>
+        <artifactId>javaslicer</artifactId>
+        <version>0.5-SNAPSHOT</version>
+    </parent>
+
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>javaslicer-traceReader</artifactId>
+    <name>Component for reading in a trace file</name>
+    <description></description>
+    <packaging>jar</packaging>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.1</version>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Main-Class>de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult</Main-Class>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>de.unisb.cs.st</groupId>
+            <artifactId>javaslicer-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>de.unisb.cs.st</groupId>
+            <artifactId>sequitur</artifactId>
+            <version>[0.1-SNAPSHOT,)</version>
+        </dependency>
+    </dependencies>
+</project>
+

@@ -1,0 +1,6 @@
+Manifest-Version: 1.0
+Can-Retransform-Classes: true
+Premain-Class: de.unisb.cs.st.javaslicer.tracer.TracerAgent
+Boot-Class-Path: ./tracer.jar
+Main-Class: de.unisb.cs.st.javaslicer.tracer.traceResult.TraceResult
+
