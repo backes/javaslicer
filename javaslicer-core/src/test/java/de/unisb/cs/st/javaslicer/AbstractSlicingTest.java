@@ -14,12 +14,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import junit.framework.Assert;
+import de.hammacher.util.Diff;
+import de.hammacher.util.DiffPrint;
+import de.hammacher.util.Diff.change;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
-import de.unisb.cs.st.javaslicer.traceResult.ThreadTraceResult.ThreadId;
-import de.unisb.cs.st.javaslicer.util.Diff;
-import de.unisb.cs.st.javaslicer.util.DiffPrint;
-import de.unisb.cs.st.javaslicer.util.Diff.change;
 
 public abstract class AbstractSlicingTest {
 

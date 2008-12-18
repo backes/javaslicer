@@ -40,9 +40,9 @@ public class Simulator {
         Collection<Variable> vars;
         switch (inst.getType()) {
         case ARRAY:
-            return simulateArrayInstruction((ArrayInstruction.Instance)inst, executionFrame);
+            return simulateArrayInstruction((ArrayInstruction.ArrayInstrInstance)inst, executionFrame);
         case FIELD:
-            return simulateFieldInstruction((FieldInstruction.Instance)inst, executionFrame);
+            return simulateFieldInstruction((FieldInstruction.FieldInstrInstance)inst, executionFrame);
         case IINC:
             var = executionFrame.getLocalVariable(((IIncInstruction)inst.getInstruction()).getLocalVarIndex());
             vars = Collections.singleton(var);
@@ -129,7 +129,7 @@ public class Simulator {
         }
     }
 
-    private VariableUsages simulateArrayInstruction(final ArrayInstruction.Instance inst, final ExecutionFrame frame) {
+    private VariableUsages simulateArrayInstruction(final ArrayInstruction.ArrayInstrInstance inst, final ExecutionFrame frame) {
         switch (inst.getOpcode()) {
         case IALOAD: case FALOAD: case AALOAD: case BALOAD: case CALOAD: case SALOAD:
             int stackDepth = frame.operandStack.getAndIncrement();
@@ -177,7 +177,7 @@ public class Simulator {
                 paramCount, 0, executionFrame, removedFrame);
     }
 
-    private VariableUsages simulateFieldInstruction(final FieldInstruction.Instance instance, final ExecutionFrame frame) {
+    private VariableUsages simulateFieldInstruction(final FieldInstruction.FieldInstrInstance instance, final ExecutionFrame frame) {
         int stackDepth;
         final FieldInstruction instruction = (FieldInstruction) instance.getInstruction();
         switch (instruction.getOpcode()) {

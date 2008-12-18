@@ -21,12 +21,11 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Type;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.dependencyAnalysis.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.instructionSimulation.Simulator;
+import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
-import de.unisb.cs.st.javaslicer.traceResult.ThreadTraceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.variableUsages.VariableUsages;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
@@ -183,7 +182,7 @@ public class Slicer implements Opcodes {
                 if (frames.size() > stackDepth) {
                     assert frames.size() == stackDepth+1;
                     removedFrame = frames.pop();
-                    if (!removedFrame.interestingInstructions.isEmpty()) {
+                    if (!removedFrame.interestingInstances.isEmpty()) {
                         // ok, we have a control dependency since the method was called by (or for) this instruction
                         removedFrameIsInteresting = true;
                     }
@@ -244,11 +243,11 @@ public class Slicer implements Opcodes {
                     for (int i = stackDepth-2; i >= 0; --i) {
                         final ExecutionFrame f = frames.get(i);
                         if (f.atCacheBlockStart != null) {
-                            if (f.interestingInstructions.contains(f.atCacheBlockStart)) {
+                            if (f.interestingInstructions.contains(f.atCacheBlockStart.getInstruction())) {
                                 if (dependantInterestingInstructions.isEmpty())
-                                    dependantInterestingInstructions = Collections.singleton((Instruction)f.atCacheBlockStart);
+                                    dependantInterestingInstructions = Collections.singleton(f.atCacheBlockStart.getInstruction());
                                 else
-                                    dependantInterestingInstructions.add(f.atCacheBlockStart);
+                                    dependantInterestingInstructions.add(f.atCacheBlockStart.getInstruction());
                             }
                             break;
                         }
@@ -275,7 +274,7 @@ public class Slicer implements Opcodes {
             }
 
             if (dynInfo.isCatchBlock())
-                currentFrame.atCacheBlockStart = (LabelMarker) instruction;
+                currentFrame.atCacheBlockStart = instance;
             else if (currentFrame.atCacheBlockStart != null)
                 currentFrame.atCacheBlockStart = null;
 

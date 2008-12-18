@@ -1,6 +1,5 @@
 package de.unisb.cs.st.javaslicer.dependencyAnalysis;
 
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
@@ -11,10 +10,10 @@ public interface DependencyVisitor {
 		WRITE_AFTER_READ,
 	}
 
-	void visitDataDependency(Instruction from, Instruction to,
+	void visitDataDependency(Instance from, Instance to,
 			Variable var, DataDependencyType type);
 
-	void visitControlDependency(Instruction from, Instruction to);
+	void visitControlDependency(Instance from, Instance to);
 
 	void visitInstructionExecution(Instance instance);
 

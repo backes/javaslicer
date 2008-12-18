@@ -70,6 +70,10 @@ public class ReadClass implements Comparable<ReadClass> {
         this.source = source;
     }
 
+    public String getSource() {
+        return this.source;
+    }
+
     public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
         stringCache.writeString(this.internalClassName, out);
         OptimizedDataOutputStream.writeInt0(this.instructionNumberStart, out);

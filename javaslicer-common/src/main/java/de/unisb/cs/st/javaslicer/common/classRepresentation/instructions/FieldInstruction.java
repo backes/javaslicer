@@ -23,11 +23,11 @@ import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
  */
 public class FieldInstruction extends AbstractInstruction {
 
-    public static class Instance extends AbstractInstance {
+    public static class FieldInstrInstance extends AbstractInstance {
 
         private final long objectId;
 
-        public Instance(final FieldInstruction fieldInstr, final long occurenceNumber, final int stackDepth, final long objectId) {
+        public FieldInstrInstance(final FieldInstruction fieldInstr, final long occurenceNumber, final int stackDepth, final long objectId) {
             super(fieldInstr, occurenceNumber, stackDepth);
             this.objectId = objectId;
         }
@@ -88,18 +88,18 @@ public class FieldInstruction extends AbstractInstruction {
     }
 
     @Override
-    public Instance getBackwardInstance(final TraceIterationInformationProvider infoProv, final int stackDepth) throws TracerException {
+    public FieldInstrInstance getBackwardInstance(final TraceIterationInformationProvider infoProv, final int stackDepth) throws TracerException {
         final long objectId = this.objectTraceSeqIndex == -1 ? -1 :
             infoProv.getNextLong(this.objectTraceSeqIndex);
-        return new Instance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()),
+        return new FieldInstrInstance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()),
                 stackDepth, objectId);
     }
 
     @Override
-    public Instance getForwardInstance(final TraceIterationInformationProvider infoProv, final int stackDepth) throws TracerException {
+    public FieldInstrInstance getForwardInstance(final TraceIterationInformationProvider infoProv, final int stackDepth) throws TracerException {
         final long objectId = this.objectTraceSeqIndex == -1 ? -1 :
             infoProv.getNextLong(this.objectTraceSeqIndex);
-        return new Instance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()),
+        return new FieldInstrInstance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()),
                 stackDepth, objectId);
     }
 

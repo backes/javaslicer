@@ -33,27 +33,67 @@ public class ControlFlowGraph {
      *
      * @author Clemens Hammacher
      */
-    public static abstract class InstrNode {
+	public interface InstrNode {
 
+		/**
+		 * Returns the number of outgoing edges from this node.
+		 * @return the out degree of the node
+		 */
+		int getOutDeg();
+
+		/**
+		 * Returns the number of incoming edges of this node.
+		 * @return the in degree of the node
+		 */
+		int getInDeg();
+
+		Collection<InstrNode> getSuccessors();
+		Collection<InstrNode> getPredecessors();
+
+		Instruction getInstruction();
+
+		/**
+		 * For internal use only
+		 */
+		void addPredecessor(InstrNode predecessor);
+
+	}
+
+	/**
+	 * Basic implementation of the interface {@link InstrNode}.
+	 *
+	 * @author Clemens Hammacher
+	 */
+    public static abstract class AbstractInstrNode implements InstrNode {
+
+    	private final List<InstrNode> predecessors = new ArrayList<InstrNode>(1);
         private final Instruction instruction;
 
-        public InstrNode(final Instruction instr, final ControlFlowGraph cfg) {
+        public AbstractInstrNode(final Instruction instr, final ControlFlowGraph cfg) {
             assert instr != null;
             assert !cfg.instructionNodes.containsKey(instr);
             cfg.instructionNodes.put(instr, this);
             this.instruction = instr;
         }
 
-        /**
-         * Returns the number of outgoing edges from this node.
-         * @return the out degree of the node
-         */
         public abstract int getOutDeg();
 
         public abstract Collection<InstrNode> getSuccessors();
 
+        public Collection<InstrNode> getPredecessors() {
+            return this.predecessors;
+        }
+
+        public int getInDeg() {
+            return this.predecessors.size();
+        }
+
         public Instruction getInstruction() {
             return this.instruction;
+        }
+
+        public void addPredecessor(InstrNode predecessor) {
+            this.predecessors.add(predecessor);
         }
 
         @Override
@@ -72,11 +112,8 @@ public class ControlFlowGraph {
                 return false;
             if (getClass() != obj.getClass())
                 return false;
-            final InstrNode other = (InstrNode) obj;
-            if (this.instruction == null) {
-                if (other.instruction != null)
-                    return false;
-            } else if (!this.instruction.equals(other.instruction))
+            final AbstractInstrNode other = (AbstractInstrNode) obj;
+            if (!this.instruction.equals(other.instruction))
                 return false;
             return true;
         }
@@ -90,12 +127,22 @@ public class ControlFlowGraph {
 
     public interface NodeFactory {
 
-        InstrNode createNode(ControlFlowGraph cfg, Instruction instruction, Collection<Instruction> successors);
+        AbstractInstrNode createNode(ControlFlowGraph cfg, Instruction instruction, Collection<Instruction> successors);
 
     }
 
 
-    protected final Map<Instruction, InstrNode> instructionNodes;
+    protected final Map<Instruction, AbstractInstrNode> instructionNodes;
+
+    /**
+     * Computes the <b>control flow graph</b> for one method, using the usual
+     * {@link SimpleNodeFactory}.
+     *
+     * @param method the method for which the CFG is computed
+     */
+    public ControlFlowGraph(final ReadMethod method) {
+    	this(method, SimpleNodeFactory.getInstance());
+    }
 
     /**
      * Computes the <b>control flow graph</b> for one method.
@@ -104,7 +151,7 @@ public class ControlFlowGraph {
      * @param nodeFactory the factory that creates the nodes of the CFG
      */
     public ControlFlowGraph(final ReadMethod method, final NodeFactory nodeFactory) {
-        this.instructionNodes = new HashMap<Instruction, InstrNode>();
+        this.instructionNodes = new HashMap<Instruction, AbstractInstrNode>();
         for (final Instruction instr: method.getInstructions()) {
             getInstrNode(instr, method, nodeFactory);
         }
@@ -123,10 +170,10 @@ public class ControlFlowGraph {
         return this.instructionNodes.get(instr);
     }
 
-    protected InstrNode getInstrNode(final Instruction instruction,
+    protected AbstractInstrNode getInstrNode(final Instruction instruction,
             final ReadMethod method, final NodeFactory nodeFactory) {
         assert instruction != null;
-        final InstrNode node = this.instructionNodes.get(instruction);
+        final AbstractInstrNode node = this.instructionNodes.get(instruction);
         if (node != null)
             return node;
 

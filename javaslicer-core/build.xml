@@ -38,7 +38,7 @@
 
 	<target name="compile" depends="init">
 		<javac srcdir="${src}" destdir="${build}" classpathref="classpath"
-			source="1.6" target="1.6" debug="${debug}" />
+			source="1.5" target="1.5" debug="${debug}" />
 	</target>
 
 	<target name="jar" depends="compile">

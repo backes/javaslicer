@@ -2,7 +2,6 @@ package de.unisb.cs.st.javaslicer.dependencyAnalysis;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -16,12 +15,11 @@ import de.hammacher.util.IntegerMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.dependencyAnalysis.DependencyVisitor.DataDependencyType;
 import de.unisb.cs.st.javaslicer.instructionSimulation.Simulator;
+import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
-import de.unisb.cs.st.javaslicer.traceResult.ThreadTraceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.variableUsages.VariableUsages;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
@@ -46,7 +44,7 @@ public class DependencyExtractor {
         this.trace = trace;
     }
 
-    public boolean registerVisitor(final DependencyVisitor visitor, final EnumSet<VisitorCapabilities> capabilities) {
+    public boolean registerVisitor(final DependencyVisitor visitor, final VisitorCapabilities... capabilities) {
     	boolean change = false;
     	for (final VisitorCapabilities cap: capabilities) {
     		switch (cap) {
@@ -181,8 +179,8 @@ public class DependencyExtractor {
 	                assert instrControlDependencies != null;
 	            }
 	            // get all interesting instructions, that are dependent on the current one
-	            Set<Instruction> dependantInterestingInstructions = intersect(instrControlDependencies,
-	                    currentFrame.interestingInstructions);
+	            Set<Instance> dependantInterestingInstances = getInstanceIntersection(instrControlDependencies,
+	                    currentFrame.interestingInstances);
 	            if (currentFrame.throwsException) {
 	                currentFrame.throwsException = false;
 	                // in this case, we have an additional control dependency from the catching to
@@ -190,25 +188,25 @@ public class DependencyExtractor {
 	                for (int i = stackDepth-2; i >= 0; --i) {
 	                    final ExecutionFrame f = frames.get(i);
 	                    if (f.atCacheBlockStart != null) {
-	                        if (f.interestingInstructions.contains(f.atCacheBlockStart)) {
-	                            if (dependantInterestingInstructions.isEmpty())
-	                                dependantInterestingInstructions = Collections.singleton((Instruction)f.atCacheBlockStart);
+	                        if (f.interestingInstances.contains(f.atCacheBlockStart)) {
+	                            if (dependantInterestingInstances.isEmpty())
+	                                dependantInterestingInstances = Collections.singleton(f.atCacheBlockStart);
 	                            else
-	                                dependantInterestingInstructions.add(f.atCacheBlockStart);
+	                                dependantInterestingInstances.add(f.atCacheBlockStart);
 	                        }
 	                        break;
 	                    }
 	                }
 	            }
-	            if (!dependantInterestingInstructions.isEmpty()) {
-	            	for (final Instruction depend: dependantInterestingInstructions) {
+	            if (!dependantInterestingInstances.isEmpty()) {
+	            	for (final Instance depend: dependantInterestingInstances) {
 	            		for (final DependencyVisitor vis: this.controlDependencyVisitors) {
-	            			vis.visitControlDependency(depend, instruction);
+	            			vis.visitControlDependency(depend, instance);
 	            		}
 	            	}
-	                currentFrame.interestingInstructions.removeAll(dependantInterestingInstructions);
+	                currentFrame.interestingInstances.removeAll(dependantInterestingInstances);
 	            }
-                currentFrame.interestingInstructions.add(instruction);
+                currentFrame.interestingInstances.add(instance);
             }
 
             if (!dynInfo.getDefinedVariables().isEmpty()) {
@@ -264,11 +262,28 @@ public class DependencyExtractor {
             }
 
             if (dynInfo.isCatchBlock())
-                currentFrame.atCacheBlockStart = (LabelMarker) instruction;
+                currentFrame.atCacheBlockStart = instance;
             else if (currentFrame.atCacheBlockStart != null)
                 currentFrame.atCacheBlockStart = null;
 
         }
+    }
+
+    private Set<Instance> getInstanceIntersection(
+            Set<Instruction> instructions,
+            Set<Instance> instances) {
+        if (instructions.isEmpty() || instances.isEmpty())
+            return Collections.emptySet();
+
+        // TODO make more efficient
+
+        Set<Instance> intersectInstances = new HashSet<Instance>();
+        for (Instance inst: instances) {
+            if (instructions.contains(inst.getInstruction()))
+                intersectInstances.add(inst);
+        }
+
+        return intersectInstances;
     }
 
     private void computeControlDependencies(final ReadMethod method, final IntegerMap<Set<Instruction>> controlDependencies) {
@@ -278,35 +293,6 @@ public class DependencyExtractor {
             assert !controlDependencies.containsKey(index);
             controlDependencies.put(index, entry.getValue());
         }
-    }
-
-    private static <T> Set<T> intersect(final Set<T> set1,
-            final Set<T> set2) {
-        if (set1.size() == 0 || set2.size() == 0)
-            return Collections.emptySet();
-
-        Set<T> smallerSet;
-        Set<T> biggerSet;
-        if (set1.size() < set2.size()) {
-            smallerSet = set1;
-            biggerSet = set2;
-        } else {
-            smallerSet = set2;
-            biggerSet = set1;
-        }
-
-        Set<T> intersection = null;
-        for (final T obj: smallerSet) {
-            if (biggerSet.contains(obj)) {
-                if (intersection == null)
-                    intersection = new HashSet<T>();
-                intersection.add(obj);
-            }
-        }
-
-        if (intersection == null)
-            return Collections.emptySet();
-        return intersection;
     }
 
 }

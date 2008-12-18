@@ -41,20 +41,20 @@ public class ArrayInstruction extends AbstractInstruction {
     }
 
     @Override
-    public Instance getBackwardInstance(
+    public ArrayInstrInstance getBackwardInstance(
             final TraceIterationInformationProvider infoProv, final int stackDepth) {
         final long arrayId = infoProv.getNextLong(this.arrayTraceSeqIndex);
         final int index = infoProv.getNextInteger(this.indexTraceSeqIndex);
-        return new Instance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()),
+        return new ArrayInstrInstance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()),
                 stackDepth, arrayId, index);
     }
 
     @Override
-    public Instance getForwardInstance(
+    public ArrayInstrInstance getForwardInstance(
             final TraceIterationInformationProvider infoProv, final int stackDepth) {
         final long arrayId = infoProv.getNextLong(this.arrayTraceSeqIndex);
         final int index = infoProv.getNextInteger(this.indexTraceSeqIndex);
-        return new Instance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()),
+        return new ArrayInstrInstance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()),
                 stackDepth, arrayId, index);
     }
 
@@ -121,12 +121,12 @@ public class ArrayInstruction extends AbstractInstruction {
         }
     }
 
-    public static class Instance extends AbstractInstance {
+    public static class ArrayInstrInstance extends AbstractInstance {
 
         private final long arrayId;
         private final int arrayIndex;
 
-        public Instance(final ArrayInstruction arrayInstr, final long occurenceNumber, final int stackDepth,
+        public ArrayInstrInstance(final ArrayInstruction arrayInstr, final long occurenceNumber, final int stackDepth,
                 final long arrayId, final int arrayIndex) {
             super(arrayInstr, occurenceNumber, stackDepth);
             this.arrayId = arrayId;

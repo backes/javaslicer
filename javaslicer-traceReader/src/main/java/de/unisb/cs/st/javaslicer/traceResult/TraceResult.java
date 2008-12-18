@@ -22,7 +22,6 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
-import de.unisb.cs.st.javaslicer.traceResult.ThreadTraceResult.ThreadId;
 
 public class TraceResult {
 
@@ -31,7 +30,7 @@ public class TraceResult {
 
     private final Instruction[] instructions;
 
-    public TraceResult(final List<ReadClass> readClasses, final List<ThreadTraceResult> threadTraces) throws IOException {
+    private TraceResult(final List<ReadClass> readClasses, final List<ThreadTraceResult> threadTraces) throws IOException {
         this.readClasses = readClasses;
         this.threadTraces = threadTraces;
         this.instructions = getInstructionArray(readClasses);

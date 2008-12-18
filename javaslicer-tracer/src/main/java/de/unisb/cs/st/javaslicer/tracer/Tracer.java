@@ -603,6 +603,8 @@ public class Tracer implements ClassFileTransformer {
 
     public ThreadTracer getThreadTracer() {
         final Thread currentThread = Thread.currentThread();
+        // exclude all (internal) untraced threads, as well as the
+        // MultiplexedFileWriter autoflush thread
         if (currentThread instanceof UntracedThread)
             return NullThreadTracer.instance;
         ThreadTracer tracer = this.threadTracers.get(currentThread);
@@ -618,8 +620,11 @@ public class Tracer implements ClassFileTransformer {
                 return NullThreadTracer.instance;
             assert this.threadTracerBeingCreated == null;
             this.threadTracerBeingCreated = currentThread;
-            newTracer = this.tracingReady ? NullThreadTracer.instance
-                    : new TracingThreadTracer(currentThread,
+            if (this.tracingReady ||
+                    currentThread.getClass().getPackage().equals(MultiplexedFileWriter.class.getPackage()))
+                newTracer = NullThreadTracer.instance;
+            else
+                newTracer = new TracingThreadTracer(currentThread,
                             this.traceSequenceTypes, this);
             try {
                 // we have to pause it, because put uses classes in the java api

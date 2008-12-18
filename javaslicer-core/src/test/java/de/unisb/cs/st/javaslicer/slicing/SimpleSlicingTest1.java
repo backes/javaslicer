@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer;
+package de.unisb.cs.st.javaslicer.slicing;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -6,6 +6,8 @@ import java.util.List;
 
 import org.junit.Test;
 
+import de.unisb.cs.st.javaslicer.AbstractSlicingTest;
+import de.unisb.cs.st.javaslicer.IllegalParameterException;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 
 

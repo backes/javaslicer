@@ -3,13 +3,15 @@ package de.unisb.cs.st.javaslicer.controlflowanalysis;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Set;
 
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowGraph.AbstractInstrNode;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowGraph.InstrNode;
 
 public class SimpleNodeFactory implements ControlFlowGraph.NodeFactory {
 
-    protected static class LeafNode extends InstrNode {
+    protected static class LeafNode extends AbstractInstrNode {
 
         public LeafNode(final Instruction instr, final ControlFlowGraph cfg) {
             super(instr, cfg);
@@ -27,7 +29,7 @@ public class SimpleNodeFactory implements ControlFlowGraph.NodeFactory {
 
     }
 
-    protected static class SimpleInstrNode extends InstrNode {
+    protected static class SimpleInstrNode extends AbstractInstrNode {
 
         private final InstrNode successor;
 
@@ -36,6 +38,7 @@ public class SimpleNodeFactory implements ControlFlowGraph.NodeFactory {
                 final SimpleNodeFactory factory) {
             super(instruction, cfg);
             this.successor = cfg.getInstrNode(successor, instruction.getMethod(), factory);
+            this.successor.addPredecessor(this);
         }
 
         @Override
@@ -45,12 +48,13 @@ public class SimpleNodeFactory implements ControlFlowGraph.NodeFactory {
 
         @Override
         public Collection<InstrNode> getSuccessors() {
-            return Collections.singleton(this.successor);
+            Set<InstrNode> succColl = Collections.singleton(this.successor);
+            return succColl;
         }
 
     }
 
-    protected static class BranchingInstrNode extends InstrNode {
+    protected static class BranchingInstrNode extends AbstractInstrNode {
 
         private final InstrNode[] successors;
 
@@ -86,7 +90,7 @@ public class SimpleNodeFactory implements ControlFlowGraph.NodeFactory {
         return instance;
     }
 
-    public InstrNode createNode(final ControlFlowGraph cfg, final Instruction instruction, final Collection<Instruction> successors) {
+    public AbstractInstrNode createNode(final ControlFlowGraph cfg, final Instruction instruction, final Collection<Instruction> successors) {
         assert instruction != null;
 
         if (successors == null || successors.isEmpty())

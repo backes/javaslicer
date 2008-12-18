@@ -5,19 +5,19 @@ import java.util.HashSet;
 import java.util.Set;
 
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
-import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowGraph.InstrNode;
+import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowGraph.AbstractInstrNode;
 
 public class ReachabilityNodeFactory extends SimpleNodeFactory {
 
     protected static interface ReachNode {
-        Set<InstrNode> getSurelyReached();
-        Set<InstrNode> getReachable();
+        Set<AbstractInstrNode> getSurelyReached();
+        Set<AbstractInstrNode> getReachable();
     }
 
     private static class ReachLeafNode extends LeafNode implements ReachNode {
 
-        private final Set<InstrNode> surelyReached = new HashSet<InstrNode>();
-        private final Set<InstrNode> reachable = new HashSet<InstrNode>();
+        private final Set<AbstractInstrNode> surelyReached = new HashSet<AbstractInstrNode>();
+        private final Set<AbstractInstrNode> reachable = new HashSet<AbstractInstrNode>();
 
         public ReachLeafNode(final Instruction instr, final ControlFlowGraph cfg) {
             super(instr, cfg);
@@ -25,11 +25,11 @@ public class ReachabilityNodeFactory extends SimpleNodeFactory {
             this.reachable.add(this);
         }
 
-        public Set<InstrNode> getSurelyReached() {
+        public Set<AbstractInstrNode> getSurelyReached() {
             return this.surelyReached;
         }
 
-        public Set<InstrNode> getReachable() {
+        public Set<AbstractInstrNode> getReachable() {
             return this.reachable;
         }
 
@@ -37,8 +37,8 @@ public class ReachabilityNodeFactory extends SimpleNodeFactory {
 
     private static class ReachSimpleInstrNode extends SimpleInstrNode implements ReachNode {
 
-        private final Set<InstrNode> surelyReached = new HashSet<InstrNode>();
-        private final Set<InstrNode> reachable = new HashSet<InstrNode>();
+        private final Set<AbstractInstrNode> surelyReached = new HashSet<AbstractInstrNode>();
+        private final Set<AbstractInstrNode> reachable = new HashSet<AbstractInstrNode>();
 
         public ReachSimpleInstrNode(final Instruction instruction,
                 final ControlFlowGraph cfg, final Instruction successor,
@@ -48,11 +48,11 @@ public class ReachabilityNodeFactory extends SimpleNodeFactory {
             this.reachable.add(this);
         }
 
-        public Set<InstrNode> getSurelyReached() {
+        public Set<AbstractInstrNode> getSurelyReached() {
             return this.surelyReached;
         }
 
-        public Set<InstrNode> getReachable() {
+        public Set<AbstractInstrNode> getReachable() {
             return this.reachable;
         }
 
@@ -60,8 +60,8 @@ public class ReachabilityNodeFactory extends SimpleNodeFactory {
 
     private static class ReachBranchingInstrNode extends BranchingInstrNode implements ReachNode {
 
-        private final Set<InstrNode> surelyReached = new HashSet<InstrNode>();
-        private final Set<InstrNode> reachable = new HashSet<InstrNode>();
+        private final Set<AbstractInstrNode> surelyReached = new HashSet<AbstractInstrNode>();
+        private final Set<AbstractInstrNode> reachable = new HashSet<AbstractInstrNode>();
 
         public ReachBranchingInstrNode(final Instruction instruction,
                 final ControlFlowGraph cfg, final Collection<Instruction> successors,
@@ -71,11 +71,11 @@ public class ReachabilityNodeFactory extends SimpleNodeFactory {
             this.reachable.add(this);
         }
 
-        public Set<InstrNode> getSurelyReached() {
+        public Set<AbstractInstrNode> getSurelyReached() {
             return this.surelyReached;
         }
 
-        public Set<InstrNode> getReachable() {
+        public Set<AbstractInstrNode> getReachable() {
             return this.reachable;
         }
 
@@ -92,7 +92,7 @@ public class ReachabilityNodeFactory extends SimpleNodeFactory {
     }
 
     @Override
-    public InstrNode createNode(final ControlFlowGraph cfg, final Instruction instruction, final Collection<Instruction> successors) {
+    public AbstractInstrNode createNode(final ControlFlowGraph cfg, final Instruction instruction, final Collection<Instruction> successors) {
         assert instruction != null;
 
         if (successors == null || successors.isEmpty())
