@@ -100,9 +100,9 @@
     </ciManagement>
 
     <scm>
-        <connection>scm:svn:https://svn.st.cs.uni-sb.de/svn/st/projects/java-slicer/trunk/javaslicer</connection>
-        <developerConnection>scm:svn:https://svn.st.cs.uni-sb.de/svn/st/projects/java-slicer/trunk/javaslicer</developerConnection>
-        <url>https://svn.st.cs.uni-sb.de/svn/st/projects/java-slicer/trunk/javaslicer</url>
+        <connection>scm:svn:https://svn.st.cs.uni-sb.de/svn/st/projects/java-slicer/trunk/java-slicer</connection>
+        <developerConnection>scm:svn:https://svn.st.cs.uni-sb.de/svn/st/projects/java-slicer/trunk/java-slicer</developerConnection>
+        <url>https://svn.st.cs.uni-sb.de/svn/st/projects/java-slicer/trunk/java-slicer</url>
     </scm>
 
     <organization>
@@ -158,7 +158,7 @@
         <dependency>
             <groupId>de.hammacher</groupId>
             <artifactId>utilities</artifactId>
-            <version>[1.0,)</version>
+            <version>1.1</version>
         </dependency>
     </dependencies>
 
@@ -410,6 +410,11 @@
           <name>Snapshots on Clemens Hammachers Nexus server</name>
           <url>http://hammacher.name:8081/nexus/content/repositories/snapshots</url>
         </snapshotRepository>
+        <site>
+            <id>local-tmp</id>
+            <name>Local tmp directory</name>
+            <url>file:///tmp/javaslicer-site</url>
+        </site>
     </distributionManagement>
 
 </project>

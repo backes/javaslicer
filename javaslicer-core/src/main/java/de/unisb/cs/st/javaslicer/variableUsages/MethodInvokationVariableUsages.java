@@ -71,7 +71,7 @@ public class MethodInvokationVariableUsages implements VariableUsages {
     }
 
     public Collection<Variable> getUsedVariables(final Variable definedVariable) {
-        assert definedVariable instanceof LocalVariable;
+        assert this.returnedSize > 0 || definedVariable instanceof LocalVariable;
         return this.returnedSize == 0 ? Collections.singleton(
                 (Variable)this.execFrame.getStackEntry(this.stackOffset + ((LocalVariable)definedVariable).getVarIndex()))
             : getUsedVariables();
