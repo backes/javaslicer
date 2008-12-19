@@ -17,7 +17,7 @@ import de.hammacher.util.Diff.change;
 import de.unisb.cs.st.javaslicer.AbstractDependenciesTest.Dependency.Type;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
 import de.unisb.cs.st.javaslicer.dependencyAnalysis.DependencyExtractor;
-import de.unisb.cs.st.javaslicer.dependencyAnalysis.DependencyVisitor;
+import de.unisb.cs.st.javaslicer.dependencyAnalysis.DependencyVisitorAdapter;
 import de.unisb.cs.st.javaslicer.dependencyAnalysis.DependencyExtractor.VisitorCapabilities;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
@@ -82,7 +82,7 @@ public abstract class AbstractDependenciesTest {
     }
 
 
-    public static class StringArrDepVisitor implements DependencyVisitor {
+    public static class StringArrDepVisitor extends DependencyVisitorAdapter {
 
         private final Set<Dependency> dependencies;
         private final InstructionFilter instrFilter;
@@ -92,10 +92,7 @@ public abstract class AbstractDependenciesTest {
             this.dependencies = dependencies;
         }
 
-        public void visitControlDependency(Instance from, Instance to) {
-            // ignore
-        }
-
+        @Override
         public void visitDataDependency(Instance from, Instance to,
                 Variable var, DataDependencyType type) {
             if (var instanceof StackEntry)
@@ -109,10 +106,6 @@ public abstract class AbstractDependenciesTest {
                 + ":" + to.getLineNumber();
             Type depType = type == DataDependencyType.READ_AFTER_WRITE ? Dependency.Type.RAW : Dependency.Type.WAR;
             this.dependencies.add(new Dependency(fromStr, toStr, depType));
-        }
-
-        public void visitInstructionExecution(Instance instance) {
-            // ignore
         }
 
     }

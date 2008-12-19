@@ -17,4 +17,7 @@ public interface DependencyVisitor {
 
 	void visitInstructionExecution(Instance instance);
 
+    void visitPendingReadAfterWriteDependency(Instance to, Variable var);
+
+    void visitPendingControlDependency(Instance to);
 }

@@ -30,7 +30,9 @@ public class DependencyExtractor {
 		DATA_DEPENDENCIES_READ_AFTER_WRITE,
 		DATA_DEPENDENCIES_WRITE_AFTER_READ,
 		CONTROL_DEPENDENCIES,
-		INSTRUCTION_EXECUTIONS,
+        INSTRUCTION_EXECUTIONS,
+        PENDING_CONTROL_DEPENDENCIES,
+        PENDING_DATA_DEPENDENCIES_READ_AFTER_WRITE,
 	}
 
     private final TraceResult trace;
@@ -39,6 +41,8 @@ public class DependencyExtractor {
 	private ArrayList<DependencyVisitor> dataDependencyVisitorsWriteAfterRead = null;
 	private ArrayList<DependencyVisitor> controlDependencyVisitors = null;
 	private ArrayList<DependencyVisitor> instructionVisitors = null;
+    private ArrayList<DependencyVisitor> pendingDataDependencyVisitorsReadAfterWrite = null;
+    private ArrayList<DependencyVisitor> pendingControlDependencyVisitors = null;
 
     public DependencyExtractor(final TraceResult trace) {
         this.trace = trace;
@@ -77,6 +81,16 @@ public class DependencyExtractor {
     				this.instructionVisitors = new ArrayList<DependencyVisitor>();
     			change |= this.instructionVisitors.add(visitor);
     			break;
+            case PENDING_CONTROL_DEPENDENCIES:
+                if (this.pendingControlDependencyVisitors == null)
+                    this.pendingControlDependencyVisitors = new ArrayList<DependencyVisitor>();
+                change |= this.pendingControlDependencyVisitors.add(visitor);
+                break;
+            case PENDING_DATA_DEPENDENCIES_READ_AFTER_WRITE:
+                if (this.pendingDataDependencyVisitorsReadAfterWrite == null)
+                    this.pendingDataDependencyVisitorsReadAfterWrite = new ArrayList<DependencyVisitor>();
+                change |= this.pendingDataDependencyVisitorsReadAfterWrite.add(visitor);
+                break;
     		}
     	}
     	return change;
@@ -104,15 +118,43 @@ public class DependencyExtractor {
     		if (this.instructionVisitors.isEmpty())
     			this.instructionVisitors = null;
     	}
+        if (this.pendingControlDependencyVisitors.remove(visitor)) {
+            change = true;
+            if (this.pendingControlDependencyVisitors.isEmpty())
+                this.pendingControlDependencyVisitors = null;
+        }
+        if (this.pendingDataDependencyVisitorsReadAfterWrite.remove(visitor)) {
+            change = true;
+            if (this.pendingDataDependencyVisitorsReadAfterWrite.isEmpty())
+                this.pendingDataDependencyVisitorsReadAfterWrite = null;
+        }
     	return change;
     }
 
+    /**
+     * Go backwards through the execution trace of the given threadId and extract
+     * all dependencies. {@link DependencyVisitor}s should have been added before
+     * by calling {@link #registerVisitor(DependencyVisitor, VisitorCapabilities...)}.
+     *
+     * If you know the exact {@link ThreadId} of the thread to process, you should
+     * use {@link #processBackwardTrace(ThreadId)} instead, since a java thread id
+     * does not have to be unique.
+     *
+     * @param javaThreadId identifies the thread whose trace should be analyzed
+     */
     public void processBackwardTrace(final long javaThreadId) {
     	final ThreadId id = this.trace.getThreadId(javaThreadId);
     	if (id != null)
     		processBackwardTrace(id);
     }
 
+    /**
+     * Go backwards through the execution trace of the given threadId and extract
+     * all dependencies. {@link DependencyVisitor}s should have been added before
+     * by calling {@link #registerVisitor(DependencyVisitor, VisitorCapabilities...)}.
+     *
+     * @param threadId identifies the thread whose trace should be analyzed
+     */
     public void processBackwardTrace(final ThreadId threadId) {
         final Iterator<Instance> backwardInsnItr = this.trace.getBackwardIterator(threadId);
 
@@ -123,7 +165,9 @@ public class DependencyExtractor {
         ExecutionFrame currentFrame = new ExecutionFrame();
         frames.push(currentFrame);
 
+        // the lastWriter is needed for WAR data dependencies
         final Map<Variable, Instance> lastWriter = new HashMap<Variable, Instance>();
+        // lastReaders are needed for RAW data dependencies
         final Map<Variable, List<Instance>> lastReaders = new HashMap<Variable, List<Instance>>();
 
         while (backwardInsnItr.hasNext()) {
@@ -171,6 +215,8 @@ public class DependencyExtractor {
             	for (final DependencyVisitor vis: this.instructionVisitors)
             		vis.visitInstructionExecution(instance);
 
+            // the computation of control dependencies only has to be performed
+            // if there are any controlDependencyVisitors
             if (this.controlDependencyVisitors != null) {
 	            Set<Instruction> instrControlDependencies = controlDependencies.get(instruction.getIndex());
 	            if (instrControlDependencies == null) {
@@ -207,30 +253,40 @@ public class DependencyExtractor {
 	                currentFrame.interestingInstances.removeAll(dependantInterestingInstances);
 	            }
                 currentFrame.interestingInstances.add(instance);
+                if (this.pendingControlDependencyVisitors != null)
+                    for (DependencyVisitor vis: this.pendingControlDependencyVisitors)
+                        vis.visitPendingControlDependency(instance);
+            }
+            if (this.pendingControlDependencyVisitors != null) {
+                currentFrame.interestingInstances.add(instance);
+                for (DependencyVisitor vis: this.pendingControlDependencyVisitors)
+                    vis.visitPendingControlDependency(instance);
             }
 
             if (!dynInfo.getDefinedVariables().isEmpty()) {
+                // if we have RAW visitors, we need to analyse the lastReaders
 	            if (this.dataDependencyVisitorsReadAfterWrite != null) {
 	                for (final Variable definedVariable: dynInfo.getDefinedVariables()) {
 	                	final List<Instance> readers = lastReaders.get(definedVariable);
+	                	lastReaders.remove(definedVariable);
 	                	if (readers != null)
 		                	for (final Instance reader: readers) {
 		                		for (final DependencyVisitor vis: this.dataDependencyVisitorsReadAfterWrite)
 		                			vis.visitDataDependency(reader, instance, definedVariable, DataDependencyType.READ_AFTER_WRITE);
 		                	}
-	                	lastReaders.remove(definedVariable);
 	                	if (this.dataDependencyVisitorsWriteAfterRead != null)
 	                		lastWriter.put(definedVariable, instance);
 	                }
+                // otherwise, if there are WAR visitors, we only update the lastWriter
 	            } else if (this.dataDependencyVisitorsWriteAfterRead != null) {
 	                for (final Variable definedVariable: dynInfo.getDefinedVariables()) {
-	                	lastReaders.remove(definedVariable);
 	                	lastWriter.put(definedVariable, instance);
 	                }
 	            }
             }
 
             if (!dynInfo.getUsedVariables().isEmpty()) {
+                // if we have WAR visitors, we inform them about a new dependency
 	            if (this.dataDependencyVisitorsWriteAfterRead != null) {
 	            	for (final Variable usedVariable: dynInfo.getUsedVariables()) {
 	            		final Instance lastWriterInst = lastWriter.get(usedVariable);
@@ -240,6 +296,7 @@ public class DependencyExtractor {
 	            				vis.visitDataDependency(lastWriterInst, instance, usedVariable, DataDependencyType.WRITE_AFTER_READ);
 	            		}
 
+	            		// for RAW visitors, update the lastReaders
 	            		if (this.dataDependencyVisitorsReadAfterWrite != null) {
 		            		List<Instance> readers = lastReaders.get(usedVariable);
 		            		if (readers == null) {
@@ -248,7 +305,11 @@ public class DependencyExtractor {
 		            		}
 		            		readers.add(instance);
 	            		}
+	            		if (this.pendingDataDependencyVisitorsReadAfterWrite != null)
+	            		    for (DependencyVisitor vis: this.pendingDataDependencyVisitorsReadAfterWrite)
+	            		        vis.visitPendingReadAfterWriteDependency(instance, usedVariable);
 	                }
+                // for RAW visitors, update the lastReaders
 	            } else if (this.dataDependencyVisitorsReadAfterWrite != null) {
 	            	for (final Variable usedVariable: dynInfo.getUsedVariables()) {
 	            		List<Instance> readers = lastReaders.get(usedVariable);
@@ -257,7 +318,14 @@ public class DependencyExtractor {
 	            			lastReaders.put(usedVariable, readers);
 	            		}
 	            		readers.add(instance);
+                        if (this.pendingDataDependencyVisitorsReadAfterWrite != null)
+                            for (DependencyVisitor vis: this.pendingDataDependencyVisitorsReadAfterWrite)
+                                vis.visitPendingReadAfterWriteDependency(instance, usedVariable);
 	                }
+	            } else if (this.pendingDataDependencyVisitorsReadAfterWrite != null) {
+	                   for (final Variable usedVariable: dynInfo.getUsedVariables())
+                            for (DependencyVisitor vis: this.pendingDataDependencyVisitorsReadAfterWrite)
+                                vis.visitPendingReadAfterWriteDependency(instance, usedVariable);
 	            }
             }
 
