@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer.tracer.instrumenter;
+package de.unisb.cs.st.javaslicer.tracer.instrumentation;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;

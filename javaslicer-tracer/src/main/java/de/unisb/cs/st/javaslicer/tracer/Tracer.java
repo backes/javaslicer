@@ -4,21 +4,16 @@ import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.nio.ByteOrder;
-import java.security.ProtectionDomain;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
@@ -26,22 +21,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.GZIPOutputStream;
-
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.TryCatchBlockNode;
-import org.objectweb.asm.tree.analysis.Analyzer;
-import org.objectweb.asm.tree.analysis.AnalyzerException;
-import org.objectweb.asm.tree.analysis.BasicVerifier;
-import org.objectweb.asm.tree.analysis.Frame;
-import org.objectweb.asm.util.CheckClassAdapter;
-import org.objectweb.asm.util.TraceMethodVisitor;
 
 import de.hammacher.util.ConcurrentReferenceHashMap;
 import de.hammacher.util.MultiplexedFileWriter;
@@ -52,89 +32,18 @@ import de.hammacher.util.ConcurrentReferenceHashMap.ReferenceType;
 import de.hammacher.util.MultiplexedFileWriter.MultiplexOutputStream;
 import de.unisb.cs.st.javaslicer.common.TraceSequenceTypes;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
-import de.unisb.cs.st.javaslicer.tracer.instrumenter.IdentifiableInstrumenter;
-import de.unisb.cs.st.javaslicer.tracer.instrumenter.JSRInliner;
-import de.unisb.cs.st.javaslicer.tracer.instrumenter.PauseTracingInstrumenter;
-import de.unisb.cs.st.javaslicer.tracer.instrumenter.ThreadInstrumenter;
-import de.unisb.cs.st.javaslicer.tracer.instrumenter.TracingClassInstrumenter;
-import de.unisb.cs.st.javaslicer.tracer.instrumenter.TracingMethodInstrumenter;
+import de.unisb.cs.st.javaslicer.tracer.instrumentation.TracingMethodInstrumenter;
+import de.unisb.cs.st.javaslicer.tracer.instrumentation.Transformer;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectIdentifier;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
 
-public class Tracer implements ClassFileTransformer {
-
-    /**
-     * The asm {@link ClassWriter} has an "error" (maybe feature) in the
-     * method {@link #getCommonSuperClass(String, String)}, because it
-     * only uses the classloader of the current class, not the system
-     * class loader.
-     *
-     * @author Clemens Hammacher
-     */
-    private static final class FixedClassWriter extends ClassWriter {
-        protected FixedClassWriter(final int flags) {
-            super(flags);
-        }
-
-        @Override
-        protected String getCommonSuperClass(final String type1, final String type2)
-        {
-            Class<?> c, d;
-            try {
-                c = Class.forName(type1.replace('/', '.'));
-            } catch (final ClassNotFoundException e) {
-                try {
-                    c = ClassLoader.getSystemClassLoader().loadClass(type1.replace('/', '.'));
-                } catch (final ClassNotFoundException e1) {
-                    throw new RuntimeException(e1);
-                }
-            }
-            try {
-                d = Class.forName(type2.replace('/', '.'));
-            } catch (final ClassNotFoundException e) {
-                try {
-                    d = ClassLoader.getSystemClassLoader().loadClass(type2.replace('/', '.'));
-                } catch (final ClassNotFoundException e1) {
-                    throw new RuntimeException(e1);
-                }
-            }
-            if (c.isAssignableFrom(d)) {
-                return type1;
-            }
-            if (d.isAssignableFrom(c)) {
-                return type2;
-            }
-            if (c.isInterface() || d.isInterface()) {
-                return "java/lang/Object";
-            }
-            do {
-                c = c.getSuperclass();
-            } while (!c.isAssignableFrom(d));
-            return c.getName().replace('.', '/');
-        }
-    }
-
-    private static final long serialVersionUID = 3853368930402145734L;
+public class Tracer {
 
     private static Tracer instance = null;
 
     public final boolean debug;
     public final boolean check;
-
-    private final String[] pauseTracingClasses = new String[] {
-            "java.lang.ClassLoader",
-            "sun.instrument.InstrumentationImpl"
-    };
-    // there are classes needed while retransforming.
-    // these must be loaded a-priori, otherwise circular dependencies may occur
-    private final String[] classesToPreload = {
-            "java.io.IOException",
-            "java.io.EOFException",
-            NullThreadTracer.class.getName(),
-    };
-
 
     protected final TraceSequenceFactory seqFactory;
 
@@ -159,6 +68,14 @@ public class Tracer implements ClassFileTransformer {
 
     private Set<String> notRedefinedClasses;
 
+    // there are classes needed while retransforming.
+    // these must be loaded a-priori, otherwise circular dependencies may occur
+    private final String[] classesToPreload = {
+            "java.io.IOException",
+            "java.io.EOFException",
+            NullThreadTracer.class.getName(),
+    };
+
     private final ConcurrentMap<ThreadTracer, CountDownLatch> writtenThreadTracers =
         new ConcurrentReferenceHashMap<ThreadTracer, CountDownLatch>(
             32, .75f, 16, ReferenceType.WEAK, ReferenceType.STRONG,
@@ -169,13 +86,9 @@ public class Tracer implements ClassFileTransformer {
 
     private final AtomicInteger errorCount = new AtomicInteger(0);
 
-    private static final boolean COMPUTE_FRAMES = false;
     private String lastErrorString;
 
-    private final Instrumentation instrumentation;
-
-    private final AtomicLong totalTransformationTime = new AtomicLong(0);
-    private final AtomicInteger totalTransformedClasses = new AtomicInteger(0);
+    private final Transformer transformer;
 
 
     private Tracer(final File filename, final boolean debug, final boolean check,
@@ -183,7 +96,7 @@ public class Tracer implements ClassFileTransformer {
         this.debug = debug;
         this.check = check;
         this.seqFactory = seqFac;
-        this.instrumentation = instrumentation;
+        this.transformer = new Transformer(this, instrumentation, this.readClasses);
         this.file = new MultiplexedFileWriter(filename, 512, MultiplexedFileWriter.is64bitVM,
                 ByteOrder.nativeOrder(), seqFac.shouldAutoFlushFile());
         this.file.setReuseStreamIds(true);
@@ -278,7 +191,7 @@ public class Tracer implements ClassFileTransformer {
         for (final Class<?> class1: inst.getAllLoadedClasses())
             this.notRedefinedClasses.add(class1.getName());
 
-        inst.addTransformer(this, true);
+        inst.addTransformer(this.transformer, true);
 
         if (retransformClasses) {
             final ArrayList<Class<?>> classesToRetransform = new ArrayList<Class<?>>();
@@ -333,258 +246,8 @@ public class Tracer implements ClassFileTransformer {
         }
     }
 
-    private final Object transformationLock = new Object();
-
-    public byte[] transform(final ClassLoader loader, final String className,
-            final Class<?> classBeingRedefined, final ProtectionDomain protectionDomain,
-            final byte[] classfileBuffer) {
-
-        final long startTime = System.nanoTime();
-
-        ThreadTracer tt = null;
-        boolean paused = false;
-        try {
-            if (this.tracingReady)
-                return null;
-
-            // disable tracing for the thread tracer of this thread
-            tt = getThreadTracer();
-            tt.pauseTracing();
-            paused = true;
-
-            final String javaClassName = Type.getObjectType(className).getClassName();
-            if (isExcluded(javaClassName))
-                return null;
-            return transform0(className, javaClassName, classfileBuffer);
-        } catch (final Throwable t) {
-            System.err.println("Error transforming class " + className + ":");
-            t.printStackTrace(System.err);
-            return null;
-        } finally {
-            if (this.debug) {
-                // first build the string, then print it. otherwise the output may be interrupted
-                // when new classes need to be loaded to format the output
-                final long nanoSecs = System.nanoTime() - startTime;
-                this.totalTransformationTime.addAndGet(nanoSecs);
-                this.totalTransformedClasses.incrementAndGet();
-                final String text = String.format((Locale)null, "Transforming %s took %.2f msec.%n",
-                        className, 1e-6*nanoSecs);
-                System.out.print(text);
-            }
-            if (paused && tt != null)
-                tt.unpauseTracing();
-        }
-   }
-
-    private boolean isExcluded(final String javaClassName) {
-        if (javaClassName.startsWith("de.unisb.cs.st.javaslicer."))
-            return true;
-        if (javaClassName.startsWith("de.hammacher.util."))
-            return true;
-        if (javaClassName.startsWith("de.unisb.cs.st.sequitur"))
-            return true;
-
-        //////////////////////////////////////////////////////////////////
-        // NOTE: these will be cleaned up when the system runs stable
-        //////////////////////////////////////////////////////////////////
-
-        if (javaClassName.equals("java.lang.System"))
-            return true;
-        /*
-        if (javaClassName.equals("java.lang.VerifyError")
-                || javaClassName.equals("java.lang.ClassCircularityError")
-                || javaClassName.equals("java.lang.LinkageError")
-                || javaClassName.equals("java.lang.Error")
-                || javaClassName.equals("java.lang.Throwable"))
-            return null;
-        */
-
-        if (javaClassName.startsWith("java.util.Collections"))
-            return true;
-
-        if (javaClassName.startsWith("java.lang.Thread")
-                && !"java.lang.Thread".equals(javaClassName))
-            return true;
-        // because of Thread.getName()
-        if (javaClassName.equals("java.lang.String"))
-            return true;
-        if (javaClassName.equals("java.util.Arrays"))
-            return true;
-        if (javaClassName.equals("java.lang.Math"))
-            return true;
-
-        // Object
-        if (javaClassName.equals("java.lang.Object"))
-            return true;
-        // references
-        if (javaClassName.startsWith("java.lang.ref."))
-            return true;
-
-        return false;
-    }
-
-    private byte[] transform0(final String className, final String javaClassName, final byte[] classfileBuffer) {
-        final ClassReader reader = new ClassReader(classfileBuffer);
-
-        final ClassNode classNode = new ClassNode();
-        reader.accept(classNode, 0);
-        final ClassWriter writer;
-
-        // we have to synchronize on System.out first.
-        // otherwise it may lead to a deadlock if a thread calls removeStale() on ConcurrentReferenceHashMap
-        // while he holds the lock for System.out, but another thread is inside the transformation step and
-        // waits for the lock of System.out
-        synchronized (System.out) { synchronized (this.transformationLock) {
-
-            // register that class for later reconstruction of the trace
-            final ReadClass readClass = new ReadClass(className, AbstractInstruction.getNextIndex(), classNode.access);
-
-            //final boolean computeFrames = COMPUTE_FRAMES || Arrays.asList(this.pauseTracingClasses).contains(Type.getObjectType(className).getClassName());
-            final boolean computeFrames = COMPUTE_FRAMES;
-
-            writer = new FixedClassWriter(computeFrames ? ClassWriter.COMPUTE_FRAMES : ClassWriter.COMPUTE_MAXS);
-
-            final ClassVisitor output = this.check ? new CheckClassAdapter(writer) : writer;
-
-            if (Arrays.asList(this.pauseTracingClasses).contains(javaClassName)
-                    || className.startsWith("java/security/")) {
-                new PauseTracingInstrumenter(readClass, this).transform(classNode);
-            } else {
-                if ("java/lang/Thread".equals(className))
-                    new ThreadInstrumenter(readClass, this).transform(classNode);
-                else
-                    new TracingClassInstrumenter(readClass, this).transform(classNode);
-            }
-
-            new IdentifiableInstrumenter(readClass, this).transform(classNode);
-
-            classNode.accept(computeFrames ? new JSRInliner(output) : output);
-
-            readClass.setInstructionNumberEnd(AbstractInstruction.getNextIndex());
-
-            // now we can write the class out
-            // NOTE: we do not write it out immediately, because this sometimes leads
-            // to circular dependencies!
-            //readClass.writeOut(this.readClassesOutputStream, this.readClassesStringCache);
-            this.readClasses.add(readClass);
-
-        }}
-
-        final byte[] newClassfileBuffer = writer.toByteArray();
-
-        if (this.check) {
-            checkClass(newClassfileBuffer, className);
-        }
-
-        //printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
-        /*
-        if (className.equals("java/lang/ClassLoader"))
-            printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
-        if (className.equals("java/util/zip/ZipFile"))
-            printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
-        if (className.endsWith("line/Main"))
-            printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
-        */
-
-        return newClassfileBuffer;
-    }
-
     public int getNextSequenceIndex() {
         return this.traceSequenceTypes.size();
-    }
-
-    private boolean checkClass(final byte[] newClassfileBuffer, final String classname) {
-        final ClassNode cn = new ClassNode();
-        final ClassReader cr = new ClassReader(newClassfileBuffer);
-        //cr.accept(new CheckClassAdapter(cn), ClassReader.SKIP_DEBUG);
-        cr.accept(new CheckClassAdapter(cn), 0);
-
-        for (final Object methodObj : cn.methods) {
-            final MethodNode method = (MethodNode) methodObj;
-            final Analyzer a = new Analyzer(new BasicVerifier());
-            //final Analyzer a = new Analyzer(new SimpleVerifier());
-            try {
-                a.analyze(cn.name, method);
-            } catch (final AnalyzerException e) {
-                System.err.println("Error in method " + classname + "." + method.name
-                        + method.desc + ":");
-                e.printStackTrace(System.err);
-                printMethod(a, System.err, method);
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private void printMethod(final Analyzer a, final PrintStream out, final MethodNode method) {
-        final Frame[] frames = a.getFrames();
-
-        final TraceMethodVisitor mv = new TraceMethodVisitor();
-
-        out.println(method.name + method.desc);
-        for (int j = 0; j < method.instructions.size(); ++j) {
-            method.instructions.get(j).accept(mv);
-
-            final StringBuffer s = new StringBuffer();
-            final Frame f = frames[j];
-            if (f == null) {
-                s.append('?');
-            } else {
-                for (int k = 0; k < f.getLocals(); ++k) {
-                    s.append(getShortName(f.getLocal(k).toString())).append(' ');
-                }
-                s.append(" : ");
-                for (int k = 0; k < f.getStackSize(); ++k) {
-                    s.append(getShortName(f.getStack(k).toString())).append(' ');
-                }
-            }
-            while (s.length() < method.maxStack + method.maxLocals + 1) {
-                s.append(' ');
-            }
-            out.print(Integer.toString(j + 100000).substring(1));
-            out.print(" " + s + " : " + mv.text.get(j));
-        }
-        for (int j = 0; j < method.tryCatchBlocks.size(); ++j) {
-            ((TryCatchBlockNode) method.tryCatchBlocks.get(j)).accept(mv);
-            out.print(" " + mv.text.get(method.instructions.size()+j));
-        }
-        out.println(" MAXSTACK " + method.maxStack);
-        out.println(" MAXLOCALS " + method.maxLocals);
-        out.println();
-    }
-
-    @SuppressWarnings("unused")
-    private void printClass(final byte[] classfileBuffer, final String classname) {
-        /*
-        final TraceClassVisitor v = new TraceClassVisitor(new PrintWriter(System.out));
-        new ClassReader(classfileBuffer).accept(v, ClassReader.SKIP_DEBUG);
-        */
-        final ClassNode cn = new ClassNode();
-        final ClassReader cr = new ClassReader(classfileBuffer);
-        //cr.accept(new CheckClassAdapter(cn), ClassReader.SKIP_DEBUG);
-        cr.accept(new CheckClassAdapter(cn), 0);
-
-        for (final Object methodObj : cn.methods) {
-            final MethodNode method = (MethodNode) methodObj;
-            final Analyzer a = new Analyzer(new BasicVerifier());
-            //final Analyzer a = new Analyzer(new SimpleVerifier());
-            try {
-                a.analyze(cn.name, method);
-            } catch (final AnalyzerException e) {
-                System.err.println("// error in method " + classname + "." + method.name
-                        + method.desc + ":" + e);
-            }
-            printMethod(a, System.err, method);
-        }
-    }
-
-    private static String getShortName(final String name) {
-        final int n = name.lastIndexOf('/');
-        int k = name.length();
-        if (name.charAt(k - 1) == ';') {
-            k--;
-        }
-        return n == -1 ? name : name.substring(n + 1, k);
     }
 
     public int newIntegerTraceSequence() {
@@ -601,6 +264,14 @@ public class Tracer implements ClassFileTransformer {
         return nextIndex;
     }
 
+    /**
+     * Returns the {@link ThreadTracer} associated with the current (calling) thread.
+     *
+     * If no {@link ThreadTracer} exists so far, a new one is created, or a
+     * {@link NullThreadTracer} is returned if the Thread implements {@link UntracedThread}.
+     *
+     * @return the {@link ThreadTracer} associated with the current (calling) thread
+     */
     public ThreadTracer getThreadTracer() {
         final Thread currentThread = Thread.currentThread();
         // exclude all (internal) untraced threads
@@ -700,12 +371,7 @@ public class Tracer implements ClassFileTransformer {
             if (this.tracingReady)
                 return;
             this.tracingReady = true;
-            this.instrumentation.removeTransformer(this);
-            if (this.debug) {
-                TracingMethodInstrumenter.printStats(System.out);
-                System.out.format((Locale)null, "Transforming %d classes took %.3f seconds in total.%n",
-                        this.totalTransformedClasses.get(), 1e-9*this.totalTransformationTime.get());
-            }
+            this.transformer.finish();
             final List<TracingThreadTracer> allThreadTracers = new ArrayList<TracingThreadTracer>();
             synchronized (this.threadTracers) {
                 for (final Entry<Thread, ThreadTracer> e: this.threadTracers.entrySet()) {
