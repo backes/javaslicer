@@ -37,8 +37,8 @@ public class ConstantGzipLongTraceSequence implements ConstantLongTraceSequence 
     }
 
     public ListIterator<Long> iterator() {
-    	// TODO Auto-generated method stub
-    	throw new UnsupportedOperationException();
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException();
     }
 
     public static ConstantGzipLongTraceSequence readFrom(final DataInput in, final MultiplexedFileReader file,

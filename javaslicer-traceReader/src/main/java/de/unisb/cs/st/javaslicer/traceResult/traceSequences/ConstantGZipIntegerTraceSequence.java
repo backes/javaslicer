@@ -37,8 +37,8 @@ public class ConstantGZipIntegerTraceSequence implements ConstantIntegerTraceSeq
     }
 
     public ListIterator<Integer> iterator() {
-    	// TODO Auto-generated method stub
-    	throw new UnsupportedOperationException();
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException();
     }
 
     public static ConstantGZipIntegerTraceSequence readFrom(final DataInput in, final MultiplexedFileReader file,

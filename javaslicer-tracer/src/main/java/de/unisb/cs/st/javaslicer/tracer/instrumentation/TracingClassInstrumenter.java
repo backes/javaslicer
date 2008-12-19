@@ -16,16 +16,16 @@ public class TracingClassInstrumenter implements Opcodes {
     private final Tracer tracer;
     private final ReadClass readClass;
 
-	public TracingClassInstrumenter(final ReadClass readClass, final Tracer tracer) {
-	    this(readClass, tracer, true);
-	}
+    public TracingClassInstrumenter(final ReadClass readClass, final Tracer tracer) {
+        this(readClass, tracer, true);
+    }
 
     protected TracingClassInstrumenter(final ReadClass readClass, final Tracer tracer,
             final boolean printDebug) {
         if (tracer.debug && printDebug)
             System.out.println("instrumenting " + readClass.getName());
-	    this.tracer = tracer;
-	    this.readClass = readClass;
+        this.tracer = tracer;
+        this.readClass = readClass;
     }
 
     @SuppressWarnings("unchecked")
@@ -38,7 +38,7 @@ public class TracingClassInstrumenter implements Opcodes {
         this.readClass.ready();
     }
 
-	protected void transformMethod(final ClassNode classNode, final MethodNode method, final ListIterator<MethodNode> methodIt) {
+    protected void transformMethod(final ClassNode classNode, final MethodNode method, final ListIterator<MethodNode> methodIt) {
         final ReadMethod readMethod = new ReadMethod(this.readClass, method.access,
                 method.name, method.desc, AbstractInstruction.getNextIndex());
         this.readClass.addMethod(readMethod);

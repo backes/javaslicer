@@ -33,40 +33,40 @@ public class ControlFlowGraph {
      *
      * @author Clemens Hammacher
      */
-	public interface InstrNode {
+    public interface InstrNode {
 
-		/**
-		 * Returns the number of outgoing edges from this node.
-		 * @return the out degree of the node
-		 */
-		int getOutDeg();
+        /**
+         * Returns the number of outgoing edges from this node.
+         * @return the out degree of the node
+         */
+        int getOutDeg();
 
-		/**
-		 * Returns the number of incoming edges of this node.
-		 * @return the in degree of the node
-		 */
-		int getInDeg();
+        /**
+         * Returns the number of incoming edges of this node.
+         * @return the in degree of the node
+         */
+        int getInDeg();
 
-		Collection<InstrNode> getSuccessors();
-		Collection<InstrNode> getPredecessors();
+        Collection<InstrNode> getSuccessors();
+        Collection<InstrNode> getPredecessors();
 
-		Instruction getInstruction();
+        Instruction getInstruction();
 
-		/**
-		 * For internal use only
-		 */
-		void addPredecessor(InstrNode predecessor);
+        /**
+         * For internal use only
+         */
+        void addPredecessor(InstrNode predecessor);
 
-	}
+    }
 
-	/**
-	 * Basic implementation of the interface {@link InstrNode}.
-	 *
-	 * @author Clemens Hammacher
-	 */
+    /**
+     * Basic implementation of the interface {@link InstrNode}.
+     *
+     * @author Clemens Hammacher
+     */
     public static abstract class AbstractInstrNode implements InstrNode {
 
-    	private final List<InstrNode> predecessors = new ArrayList<InstrNode>(1);
+        private final List<InstrNode> predecessors = new ArrayList<InstrNode>(1);
         private final Instruction instruction;
 
         public AbstractInstrNode(final Instruction instr, final ControlFlowGraph cfg) {
@@ -141,7 +141,7 @@ public class ControlFlowGraph {
      * @param method the method for which the CFG is computed
      */
     public ControlFlowGraph(final ReadMethod method) {
-    	this(method, SimpleNodeFactory.getInstance());
+        this(method, SimpleNodeFactory.getInstance());
     }
 
     /**

@@ -129,8 +129,8 @@ public class TraceResult {
      * @return an iterator that iterates backwards through the execution trace
      */
     public Iterator<Instance> getBackwardIterator(final long javaThreadId) {
-    	final ThreadId id = getThreadId(javaThreadId);
-    	return id == null ? null : getBackwardIterator(id);
+        final ThreadId id = getThreadId(javaThreadId);
+        return id == null ? null : getBackwardIterator(id);
     }
 
     /**
@@ -161,8 +161,8 @@ public class TraceResult {
      * @return an iterator that is able to iterate in any direction through the execution trace
      */
     public ListIterator<Instance> getIterator(final long javaThreadId) {
-    	final ThreadId id = getThreadId(javaThreadId);
-    	return id == null ? null : getIterator(id);
+        final ThreadId id = getThreadId(javaThreadId);
+        return id == null ? null : getIterator(id);
     }
 
     private ThreadTraceResult findThreadTraceResult(final ThreadId threadId) {
@@ -304,7 +304,7 @@ public class TraceResult {
         }
     }
 
-	public ThreadId getThreadId(final long javaThreadId) {
+    public ThreadId getThreadId(final long javaThreadId) {
         // binary search
         int left = 0;
         int right = this.threadTraces.size();
@@ -320,6 +320,6 @@ public class TraceResult {
 
         final ThreadId found = this.threadTraces.get(mid).getId();
         return found.getJavaThreadId() == javaThreadId ? found : null;
-	}
+    }
 
 }

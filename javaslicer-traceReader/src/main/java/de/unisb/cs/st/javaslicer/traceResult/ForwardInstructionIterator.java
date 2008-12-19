@@ -57,21 +57,21 @@ public class ForwardInstructionIterator implements ListIterator<Instance>, Trace
 
         this.backwards=false;
         while (true) {
-	        final Instruction instr = this.threadTraceResult.findInstruction(this.nextIndex);
-	        final Instance inst = instr.getForwardInstance(this, this.stackDepth);
-	        if (inst == null) {
-	        	++this.nextIndex;
-	        	continue;
-	        }
+            final Instruction instr = this.threadTraceResult.findInstruction(this.nextIndex);
+            final Instance inst = instr.getForwardInstance(this, this.stackDepth);
+            if (inst == null) {
+                ++this.nextIndex;
+                continue;
+            }
 
-	        if (this.nextJumpNr != -1 && this.backwardInstrNr == this.jumpInstrNrs[this.nextJumpNr]) {
-	            this.nextIndex += this.jumps[this.nextJumpNr];
-	            this.stackDepth += this.stackDepthChanges[this.nextJumpNr--];
-	        } else {
-	            ++this.nextIndex;
-	        }
+            if (this.nextJumpNr != -1 && this.backwardInstrNr == this.jumpInstrNrs[this.nextJumpNr]) {
+                this.nextIndex += this.jumps[this.nextJumpNr];
+                this.stackDepth += this.stackDepthChanges[this.nextJumpNr--];
+            } else {
+                ++this.nextIndex;
+            }
 
-	        return inst;
+            return inst;
         }
     }
 

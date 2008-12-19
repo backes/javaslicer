@@ -112,9 +112,9 @@ public abstract class AbstractDependenciesTest {
 
     protected static interface InstructionFilter {
 
-		boolean filterInstance(Instance inst);
+        boolean filterInstance(Instance inst);
 
-	}
+    }
 
     protected void compareDependencies(Dependency[] expectedDependencies,
             String traceFilename, String threadName, InstructionFilter instrFilter) throws IOException, URISyntaxException {

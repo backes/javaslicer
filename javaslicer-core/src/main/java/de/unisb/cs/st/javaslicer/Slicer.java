@@ -32,7 +32,7 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
 public class Slicer implements Opcodes {
 
     private final TraceResult trace;
-	private final Simulator simulator = new Simulator();
+    private final Simulator simulator = new Simulator();
 
     public Slicer(final TraceResult trace) {
         this.trace = trace;
