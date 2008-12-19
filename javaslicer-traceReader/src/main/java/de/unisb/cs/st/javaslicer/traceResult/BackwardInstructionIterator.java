@@ -41,8 +41,8 @@ public class BackwardInstructionIterator implements Iterator<Instance>, TraceIte
         this.integerSequenceBackwardIterators = new IntegerMap<Iterator<Integer>>();
         this.longSequenceBackwardIterators = new IntegerMap<Iterator<Long>>();
         this.instructionNextOccurenceNumber = new IntegerToLongMap();
-        PrintWriter debugFileWriterTmp = null;
         if (WRITE_ITERATION_DEBUG_FILE) {
+            PrintWriter debugFileWriterTmp = null;
             try {
                 debugFileWriterTmp = new PrintWriter(new FileOutputStream(new File("iteration_debug.log")));
                 Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -54,8 +54,9 @@ public class BackwardInstructionIterator implements Iterator<Instance>, TraceIte
             } catch (final FileNotFoundException e) {
                 e.printStackTrace();
             }
-        }
-        this.debugFileWriter = debugFileWriterTmp;
+            this.debugFileWriter = debugFileWriterTmp;
+        } else
+            this.debugFileWriter = null;
         this.stackDepth = this.threadTraceResult.lastStackDepth;
         this.nextInstruction = getNextInstruction(this.threadTraceResult.lastInstructionIndex);
     }

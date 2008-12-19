@@ -64,7 +64,7 @@ import de.unisb.cs.st.javaslicer.tracer.TracingThreadTracer;
 
 public class TracingMethodInstrumenter implements Opcodes {
 
-    public class FixedInstructionIterator implements ListIterator<AbstractInsnNode> {
+    public static class FixedInstructionIterator implements ListIterator<AbstractInsnNode> {
 
         private final InsnList insnList;
         private ListIterator<AbstractInsnNode> iterator;

@@ -58,7 +58,7 @@ public class Slicer implements Opcodes {
             // ignore
         }
 
-        TraceResult trace = null;
+        TraceResult trace;
         try {
             trace = TraceResult.readFrom(traceFile);
         } catch (final IOException e) {

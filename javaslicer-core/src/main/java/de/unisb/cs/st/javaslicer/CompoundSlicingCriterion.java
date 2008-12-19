@@ -13,12 +13,12 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
 
 public class CompoundSlicingCriterion implements SlicingCriterion {
 
-    public class Instance implements SlicingCriterion.Instance {
+    public static class Instance implements SlicingCriterion.Instance {
 
         private final List<SlicingCriterion.Instance> instances;
-        public Instance() {
-            this.instances = new ArrayList<SlicingCriterion.Instance>(CompoundSlicingCriterion.this.criteria.size());
-            for (final SlicingCriterion crit: CompoundSlicingCriterion.this.criteria)
+        public Instance(CompoundSlicingCriterion compCrit) {
+            this.instances = new ArrayList<SlicingCriterion.Instance>(compCrit.criteria.size());
+            for (final SlicingCriterion crit: compCrit.criteria)
                 this.instances.add(crit.getInstance());
         }
 
@@ -55,7 +55,7 @@ public class CompoundSlicingCriterion implements SlicingCriterion {
     }
 
     public SlicingCriterion.Instance getInstance() {
-        return new Instance();
+        return new Instance(this);
     }
 
     @Override

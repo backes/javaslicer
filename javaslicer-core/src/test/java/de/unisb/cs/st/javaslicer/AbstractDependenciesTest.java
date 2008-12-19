@@ -18,7 +18,7 @@ import de.unisb.cs.st.javaslicer.AbstractDependenciesTest.Dependency.Type;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
 import de.unisb.cs.st.javaslicer.dependencyAnalysis.DependencyExtractor;
 import de.unisb.cs.st.javaslicer.dependencyAnalysis.DependencyVisitorAdapter;
-import de.unisb.cs.st.javaslicer.dependencyAnalysis.DependencyExtractor.VisitorCapabilities;
+import de.unisb.cs.st.javaslicer.dependencyAnalysis.VisitorCapabilities;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.variables.StackEntry;

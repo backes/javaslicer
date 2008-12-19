@@ -92,7 +92,7 @@ public class Simulator {
     private VariableUsages simulateTypeInsn(final TypeInstruction instruction, final ExecutionFrame frame) {
         switch (instruction.getOpcode()) {
         case Opcodes.NEW:
-            return stackManipulation(frame, 0, 1);
+            // fall-through
         case Opcodes.ANEWARRAY:
             return stackManipulation(frame, 1, 1);
         case Opcodes.CHECKCAST:
@@ -306,10 +306,11 @@ public class Simulator {
                 frame.throwsException = false;
             final int thisFrameStackHeight = frame.operandStack.getAndAdd(2);
             lowerFrame = inst.getStackDepth() < 2 ? null : allFrames.get(inst.getStackDepth()-2);
-            final int lowerFrameStackHeight = lowerFrame.operandStack.addAndGet(-2);
+            final int lowerFrameStackHeight = lowerFrame == null ? 0 : lowerFrame.operandStack.addAndGet(-2);
             return new SimpleVariableUsage(Arrays.asList((Variable)frame.getStackEntry(thisFrameStackHeight),
                         frame.getStackEntry(thisFrameStackHeight+1)),
-                    Arrays.asList((Variable)lowerFrame.getStackEntry(lowerFrameStackHeight),
+                    lowerFrame == null ? VariableUsages.EMPTY_VARIABLE_SET :
+                        Arrays.asList((Variable)lowerFrame.getStackEntry(lowerFrameStackHeight),
                             lowerFrame.getStackEntry(lowerFrameStackHeight+1)));
 
         case NOP:

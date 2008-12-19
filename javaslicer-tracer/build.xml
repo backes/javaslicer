@@ -50,6 +50,8 @@
 			<zipfileset src="${M2_REPO}/de/hammacher/utilities/1.1/utilities-1.1.jar" />
 			<zipfileset src="${M2_REPO}/de/unisb/cs/st/sequitur/0.5-SNAPSHOT/sequitur-0.5-SNAPSHOT.jar" />
 			<zipfileset src="${M2_REPO}/de/unisb/cs/st/javaslicer-common/0.5-SNAPSHOT/javaslicer-common-0.5-SNAPSHOT.jar" />
+			<!-- also include the traceReader in the jar file -->
+			<zipfileset src="${M2_REPO}/de/unisb/cs/st/javaslicer-traceReader/0.5-SNAPSHOT/javaslicer-traceReader-0.5-SNAPSHOT.jar" />
 		</jar>
 	</target>
 	

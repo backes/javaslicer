@@ -12,7 +12,7 @@ import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.LongTraceSe
 
 public class NullTraceSequenceFactory implements TraceSequenceFactory, TraceSequenceFactory.PerThread {
 
-    public class NullTraceSequence implements IntegerTraceSequence, LongTraceSequence {
+    public static class NullTraceSequence implements IntegerTraceSequence, LongTraceSequence {
 
         @Override
         public void finish() {

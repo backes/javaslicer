@@ -88,7 +88,7 @@ public class Transformer implements ClassFileTransformer {
             "sun.instrument.InstrumentationImpl"
     };
 
-    private Set<String> notRedefinedClasses;
+    private final Set<String> notRedefinedClasses;
 
     private static final boolean COMPUTE_FRAMES = false;
     private final Object transformationLock = new Object();
@@ -100,10 +100,11 @@ public class Transformer implements ClassFileTransformer {
     private final Tracer tracer;
     private final ConcurrentLinkedQueue<ReadClass> readClasses;
 
-    public Transformer(Tracer tracer, Instrumentation instrumentation, ConcurrentLinkedQueue<ReadClass> readClasses) {
+    public Transformer(Tracer tracer, Instrumentation instrumentation, ConcurrentLinkedQueue<ReadClass> readClasses, Set<String> notRedefinedClasses) {
         this.tracer = tracer;
         this.instrumentation = instrumentation;
         this.readClasses = readClasses;
+        this.notRedefinedClasses = notRedefinedClasses;
     }
 
     public byte[] transform(final ClassLoader loader, final String className,

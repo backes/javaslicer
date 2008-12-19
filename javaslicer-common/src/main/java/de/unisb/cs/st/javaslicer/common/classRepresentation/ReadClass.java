@@ -118,4 +118,25 @@ public class ReadClass implements Comparable<ReadClass> {
         return this.className.compareTo(o.className);
     }
 
+    @Override
+    public int hashCode() {
+        return this.className.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        ReadClass other = (ReadClass) obj;
+        if (this.instructionNumberStart != other.instructionNumberStart)
+            return false;
+        if (!this.className.equals(other.className))
+            return false;
+        return true;
+    }
+
 }

@@ -176,12 +176,31 @@ public abstract class AbstractInstruction implements Instruction {
     }
 
     public int compareTo(final Instruction o) {
+        // we want so sort by class, line number, and index. NOT by method.
         int cmp = getMethod().getReadClass().compareTo(o.getMethod().getReadClass());
         if (cmp != 0)
             return cmp;
         cmp = getLineNumber() - o.getLineNumber();
         return cmp != 0 ? cmp : getIndex() - o.getIndex();
     }
+
+    @Override
+    public int hashCode() {
+        return this.index;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        AbstractInstruction other = (AbstractInstruction) obj;
+        return this.index == other.index;
+    }
+
 
     public static class AbstractInstance extends InstructionWrapper
             implements Instance {

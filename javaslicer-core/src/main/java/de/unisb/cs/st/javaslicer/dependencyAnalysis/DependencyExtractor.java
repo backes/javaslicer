@@ -25,16 +25,6 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
 
 public class DependencyExtractor {
 
-    public static enum VisitorCapabilities {
-        DATA_DEPENDENCIES_ALL,
-        DATA_DEPENDENCIES_READ_AFTER_WRITE,
-        DATA_DEPENDENCIES_WRITE_AFTER_READ,
-        CONTROL_DEPENDENCIES,
-        INSTRUCTION_EXECUTIONS,
-        PENDING_CONTROL_DEPENDENCIES,
-        PENDING_DATA_DEPENDENCIES_READ_AFTER_WRITE,
-    }
-
     private final TraceResult trace;
     private final Simulator simulator = new Simulator();
     private ArrayList<DependencyVisitor> dataDependencyVisitorsReadAfterWrite = null;

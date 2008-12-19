@@ -225,4 +225,34 @@ public class ReadMethod implements Comparable<ReadMethod> {
         return this.desc.compareTo(o.desc);
     }
 
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + this.desc.hashCode();
+        result = prime * result + this.name.hashCode();
+        result = prime * result + this.readClass.hashCode();
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        ReadMethod other = (ReadMethod) obj;
+        if (this.instructionNumberStart != other.instructionNumberStart)
+            return false;
+        if (!this.name.equals(other.name))
+            return false;
+        if (!this.desc.equals(other.desc))
+            return false;
+        if (!this.readClass.equals(other.readClass))
+            return false;
+        return true;
+    }
+
 }

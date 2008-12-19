@@ -25,6 +25,25 @@ import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 
 public class TraceResult {
 
+    private final static class ThreadIdList extends AbstractList<ThreadId> {
+
+        private final List<ThreadTraceResult> wrappedThreadTraces;
+
+        public ThreadIdList(List<ThreadTraceResult> threadTraces) {
+            this.wrappedThreadTraces = threadTraces;
+        }
+
+        @Override
+        public ThreadId get(final int index) {
+            return this.wrappedThreadTraces.get(index).getId();
+        }
+
+        @Override
+        public int size() {
+            return this.wrappedThreadTraces.size();
+        }
+    }
+
     private final List<ReadClass> readClasses;
     private final List<ThreadTraceResult> threadTraces;
 
@@ -190,22 +209,7 @@ public class TraceResult {
      * @return the sorted list of {@link ThreadId}s.
      */
     public List<ThreadId> getThreads() {
-        final List<ThreadTraceResult> tmp = this.threadTraces;
-        return new AbstractList<ThreadId>() {
-
-            private final List<ThreadTraceResult> wrappedThreadTraces = tmp;
-
-            @Override
-            public ThreadId get(final int index) {
-                return this.wrappedThreadTraces.get(index).getId();
-            }
-
-            @Override
-            public int size() {
-                return this.wrappedThreadTraces.size();
-            }
-
-        };
+        return new ThreadIdList(this.threadTraces);
     }
 
     public List<ReadClass> getReadClasses() {

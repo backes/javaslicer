@@ -247,7 +247,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
 
         final ReadMethod foundMethod = methods.get(mid);
         if (foundMethod.getName().equals(methodName)) {
-            for (ReadMethod m = methods.get(mid); mid >= 0 && (m=methods.get(mid)).getName().equals(methodName); --mid) {
+            for (ReadMethod m; mid >= 0 && (m=methods.get(mid)).getName().equals(methodName); --mid) {
                 for (final AbstractInstruction instr: m.getInstructions()) {
                     if (instr.getLineNumber() == lineNumber)
                         return m;

@@ -49,7 +49,7 @@ public class GZipLongTraceSequence implements LongTraceSequence {
                     return true;
                 if (this.offset == 0)
                     return false;
-                this.offset -= this.buf.length*8;
+                this.offset -= (long)this.buf.length*8;
                 this.mplexReader.seek(this.offset);
                 for (int i = 0; i < this.buf.length; ++i) {
                     this.buf[i] = this.dataIn.readLong();

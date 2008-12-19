@@ -66,7 +66,7 @@ public class Tracer {
     private final DataOutputStream readClassesOutputStream;
     private final DataOutputStream threadTracersOutputStream;
 
-    private Set<String> notRedefinedClasses;
+    private final Set<String> notRedefinedClasses = new HashSet<String>();
 
     // there are classes needed while retransforming.
     // these must be loaded a-priori, otherwise circular dependencies may occur
@@ -96,7 +96,7 @@ public class Tracer {
         this.debug = debug;
         this.check = check;
         this.seqFactory = seqFac;
-        this.transformer = new Transformer(this, instrumentation, this.readClasses);
+        this.transformer = new Transformer(this, instrumentation, this.readClasses, this.notRedefinedClasses);
         this.file = new MultiplexedFileWriter(filename, 512, MultiplexedFileWriter.is64bitVM,
                 ByteOrder.nativeOrder(), seqFac.shouldAutoFlushFile());
         this.file.setReuseStreamIds(true);
@@ -185,7 +185,6 @@ public class Tracer {
         // call a method in ObjectIdentifier to ensure that the class is initialized
         ObjectIdentifier.instance.getObjectId(this);
 
-        this.notRedefinedClasses = new HashSet<String>();
         for (final Class<?> class1: additionalClassesToRetransform)
             this.notRedefinedClasses.add(class1.getName());
         for (final Class<?> class1: inst.getAllLoadedClasses())
