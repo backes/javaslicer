@@ -28,7 +28,7 @@ import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
  */
 public interface Instruction extends Comparable<Instruction> {
 
-    public interface Instance extends Instruction {
+    public interface Instance {
 
         Instruction getInstruction();
 

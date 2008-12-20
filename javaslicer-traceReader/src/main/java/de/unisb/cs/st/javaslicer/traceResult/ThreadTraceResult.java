@@ -111,7 +111,7 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
         int curStackDepth = 1;
         while (backwardIt.hasNext()) {
             final Instance instr = backwardIt.next();
-            final int index = instr.getIndex();
+            final int index = instr.getInstruction().getIndex();
             if (index != lastIndex-1 && instrCount > 1) {
                 if (numJumps == jumpInstrNrs.length) {
                     long[] newJumpInstrNrs = new long[2*numJumps];

@@ -100,10 +100,10 @@ public abstract class AbstractDependenciesTest {
             if (!this.instrFilter.filterInstance(from) || !this.instrFilter.filterInstance(to))
                 return;
 
-            String fromStr = from.getMethod().getReadClass().getSource()
-                + ":" + from.getLineNumber();
-            String toStr = to.getMethod().getReadClass().getSource()
-                + ":" + to.getLineNumber();
+            String fromStr = from.getInstruction().getMethod().getReadClass().getSource()
+                + ":" + from.getInstruction().getLineNumber();
+            String toStr = to.getInstruction().getMethod().getReadClass().getSource()
+                + ":" + to.getInstruction().getLineNumber();
             Type depType = type == DataDependencyType.READ_AFTER_WRITE ? Dependency.Type.RAW : Dependency.Type.WAR;
             this.dependencies.add(new Dependency(fromStr, toStr, depType));
         }

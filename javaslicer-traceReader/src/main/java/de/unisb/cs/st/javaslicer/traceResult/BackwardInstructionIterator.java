@@ -73,7 +73,7 @@ public class BackwardInstructionIterator implements Iterator<Instance>, TraceIte
         if (this.nextInstruction == null)
             throw new NoSuchElementException();
         final Instance old = this.nextInstruction;
-        this.nextInstruction = getNextInstruction(this.nextInstruction.getBackwardInstructionIndex(this));
+        this.nextInstruction = getNextInstruction(this.nextInstruction.getInstruction().getBackwardInstructionIndex(this));
         return old;
     }
 

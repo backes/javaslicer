@@ -14,7 +14,7 @@ public class SimpleTest3 extends AbstractDependenciesTest {
     protected static class Simple3Filter implements InstructionFilter {
 
         public boolean filterInstance(Instance inst) {
-            return inst.getMethod().getReadClass().getName().endsWith("Simple3");
+            return inst.getInstruction().getMethod().getReadClass().getName().endsWith("Simple3");
         }
 
     }

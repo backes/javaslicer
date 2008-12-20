@@ -287,10 +287,10 @@ public class TraceResult {
                     "Nr", "Location", "Dep", "OccNr", "Instruction");
             while (it.hasNext()) {
                 final Instance inst = it.next();
-                final ReadMethod method = inst.getMethod();
+                final ReadMethod method = inst.getInstruction().getMethod();
                 final ReadClass class0 = method.getReadClass();
                 System.out.format(format, nr++, class0.getName()+"."
-                        +method.getName()+":"+inst.getLineNumber(),
+                        +method.getName()+":"+inst.getInstruction().getLineNumber(),
                         inst.getStackDepth(),
                         inst.getOccurenceNumber(), inst.toString());
             }

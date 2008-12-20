@@ -91,8 +91,8 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
             }
             if ((SimpleSlicingCriterion.this.occurence != null &&
                     this.seenOccurences == SimpleSlicingCriterion.this.occurence)
-                || instructionInstance.getMethod() != SimpleSlicingCriterion.this.method
-                || instructionInstance.getLineNumber() != SimpleSlicingCriterion.this.lineNumber) {
+                || instructionInstance.getInstruction().getMethod() != SimpleSlicingCriterion.this.method
+                || instructionInstance.getInstruction().getLineNumber() != SimpleSlicingCriterion.this.lineNumber) {
                 if (this.beingInRun[instrStackDepth-1]) {
                     this.beingInRun[instrStackDepth-1] = false;
                     this.lastMatch = null;

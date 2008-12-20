@@ -38,7 +38,7 @@ public class Simulator {
             final ArrayStack<ExecutionFrame> allFrames) {
         final Variable var;
         Collection<Variable> vars;
-        switch (inst.getType()) {
+        switch (inst.getInstruction().getType()) {
         case ARRAY:
             return simulateArrayInstruction((ArrayInstruction.ArrayInstrInstance)inst, executionFrame);
         case FIELD:
@@ -256,7 +256,7 @@ public class Simulator {
 
     private VariableUsages simulateSimpleInsn(final Instance inst, final ExecutionFrame frame,
             final ArrayStack<ExecutionFrame> allFrames) {
-        switch (inst.getOpcode()) {
+        switch (inst.getInstruction().getOpcode()) {
         case DUP:
             int stackHeight = frame.operandStack.decrementAndGet();
             return new SimpleVariableUsage(frame.getStackEntry(stackHeight-1), frame.getStackEntry(stackHeight));

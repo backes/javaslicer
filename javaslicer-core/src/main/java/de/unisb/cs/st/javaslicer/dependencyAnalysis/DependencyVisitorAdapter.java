@@ -9,7 +9,12 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
  *
  * @author Clemens Hammacher
  */
-public class DependencyVisitorAdapter implements DependencyVisitor {
+public abstract class DependencyVisitorAdapter implements DependencyVisitor {
+
+    public void discardPendingDataDependencies(Instance from, Variable var,
+            DataDependencyType type) {
+        // null
+    }
 
     public void visitControlDependency(Instance from, Instance to) {
         // null
@@ -24,11 +29,12 @@ public class DependencyVisitorAdapter implements DependencyVisitor {
         // null
     }
 
-    public void visitPendingControlDependency(Instance to) {
+    public void visitPendingControlDependency(Instance from) {
         // null
     }
 
-    public void visitPendingReadAfterWriteDependency(Instance to, Variable var) {
+    public void visitPendingDataDependency(Instance from, Variable var,
+            DataDependencyType type) {
         // null
     }
 

@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package de.unisb.cs.st.javaslicer.dependencyAnalysis;
 
@@ -10,5 +10,7 @@ public enum VisitorCapabilities {
     CONTROL_DEPENDENCIES,
     INSTRUCTION_EXECUTIONS,
     PENDING_CONTROL_DEPENDENCIES,
+    PENDING_DATA_DEPENDENCIES_ALL,
     PENDING_DATA_DEPENDENCIES_READ_AFTER_WRITE,
+    PENDING_DATA_DEPENDENCIES_WRITE_AFTER_READ,
 }
