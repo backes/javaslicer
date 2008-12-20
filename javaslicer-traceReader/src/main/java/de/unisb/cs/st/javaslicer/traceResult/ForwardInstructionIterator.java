@@ -58,7 +58,7 @@ public class ForwardInstructionIterator implements ListIterator<Instance>, Trace
         this.backwards=false;
         while (true) {
             final Instruction instr = this.threadTraceResult.findInstruction(this.nextIndex);
-            final Instance inst = instr.getForwardInstance(this, this.stackDepth);
+            final Instance inst = instr.getNextInstance(this, this.stackDepth);
             if (inst == null) {
                 ++this.nextIndex;
                 continue;
@@ -90,7 +90,7 @@ public class ForwardInstructionIterator implements ListIterator<Instance>, Trace
         this.backwards=true;
         while (true) {
             final Instruction instr = this.threadTraceResult.findInstruction(this.nextIndex);
-            final Instance inst = instr.getForwardInstance(this, this.stackDepth);
+            final Instance inst = instr.getNextInstance(this, this.stackDepth);
             if (inst == null) {
                 --this.nextIndex;
                 continue;

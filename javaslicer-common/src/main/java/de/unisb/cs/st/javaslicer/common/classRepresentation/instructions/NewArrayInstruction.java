@@ -20,9 +20,34 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodRea
  */
 public class NewArrayInstruction extends AbstractInstruction {
 
-    private final int arrayElemType;
+    public static class NewArrayInstrInstance extends AbstractInstance {
 
-    public NewArrayInstruction(final ReadMethod readMethod, final int lineNumber, final int arrayElemType) {
+        private final int newObjectIdentifier;
+
+        public NewArrayInstrInstance(AbstractInstruction instr,
+                long occurenceNumber, int stackDepth, int newObjId) {
+            super(instr, occurenceNumber, stackDepth);
+            this.newObjectIdentifier = newObjId;
+        }
+
+        public int getNewObjectIdentifier() {
+            return this.newObjectIdentifier;
+        }
+
+        @Override
+        public String toString() {
+            String s = super.toString();
+            return new StringBuilder(s.length() + 10).append(s).append(" [").
+                append(this.newObjectIdentifier).append(']').toString();
+        }
+
+    }
+
+    private final int arrayElemType;
+    private final int newObjectIdentifierSequenceIndex;
+
+    public NewArrayInstruction(final ReadMethod readMethod, final int lineNumber,
+            final int arrayElemType, int newObjIdSeqIndex) {
         super(readMethod, Opcodes.NEWARRAY, lineNumber);
         assert arrayElemType == Opcodes.T_BOOLEAN
             || arrayElemType == Opcodes.T_CHAR
@@ -33,9 +58,11 @@ public class NewArrayInstruction extends AbstractInstruction {
             || arrayElemType == Opcodes.T_INT
             || arrayElemType == Opcodes.T_LONG;
         this.arrayElemType = arrayElemType;
+        this.newObjectIdentifierSequenceIndex = newObjIdSeqIndex;
     }
 
-    private NewArrayInstruction(final ReadMethod readMethod, final int lineNumber, final int arrayElemType, final int index) {
+    private NewArrayInstruction(final ReadMethod readMethod, final int lineNumber,
+            final int arrayElemType, final int index, int newObjIdSeqIndex) {
         super(readMethod, Opcodes.NEWARRAY, lineNumber, index);
         assert arrayElemType == Opcodes.T_BOOLEAN
             || arrayElemType == Opcodes.T_CHAR
@@ -46,6 +73,7 @@ public class NewArrayInstruction extends AbstractInstruction {
             || arrayElemType == Opcodes.T_INT
             || arrayElemType == Opcodes.T_LONG;
         this.arrayElemType = arrayElemType;
+        this.newObjectIdentifierSequenceIndex = newObjIdSeqIndex;
     }
 
     /**
@@ -77,6 +105,7 @@ public class NewArrayInstruction extends AbstractInstruction {
     public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
         super.writeOut(out, stringCache);
         OptimizedDataOutputStream.writeInt0(this.arrayElemType, out);
+        OptimizedDataOutputStream.writeInt0(this.newObjectIdentifierSequenceIndex, out);
     }
 
     public static NewArrayInstruction readFrom(final DataInputStream in, final MethodReadInformation methodInfo,
@@ -84,7 +113,8 @@ public class NewArrayInstruction extends AbstractInstruction {
             @SuppressWarnings("unused") final int opcode,
             final int index, final int lineNumber) throws IOException {
         final int arrayElemType = OptimizedDataInputStream.readInt0(in);
-        return new NewArrayInstruction(methodInfo.getMethod(), lineNumber, arrayElemType, index);
+        int newObjIdSeqIndex = OptimizedDataInputStream.readInt0(in);
+        return new NewArrayInstruction(methodInfo.getMethod(), lineNumber, arrayElemType, index, newObjIdSeqIndex);
     }
 
     @Override

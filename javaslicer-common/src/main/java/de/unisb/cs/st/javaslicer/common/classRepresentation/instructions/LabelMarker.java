@@ -76,15 +76,9 @@ public class LabelMarker extends AbstractInstruction {
     }
 
     @Override
-    public Instance getBackwardInstance(final TraceIterationInformationProvider infoProv, final int stackDepth) throws TracerException {
+    public Instance getNextInstance(final TraceIterationInformationProvider infoProv, final int stackDepth) throws TracerException {
         return this.isAdditionalLabel ? null :
-            super.getBackwardInstance(infoProv, stackDepth);
-    }
-
-    @Override
-    public Instance getForwardInstance(final TraceIterationInformationProvider infoProv, final int stackDepth) throws TracerException {
-        return this.isAdditionalLabel ? null :
-            super.getForwardInstance(infoProv, stackDepth);
+            super.getNextInstance(infoProv, stackDepth);
     }
 
     @Override

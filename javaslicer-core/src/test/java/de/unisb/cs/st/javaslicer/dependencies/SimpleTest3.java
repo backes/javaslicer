@@ -28,7 +28,6 @@ public class SimpleTest3 extends AbstractDependenciesTest {
                 new Dependency("Simple3.java:14", "Simple3.java:13", Type.RAW),
         };
 
-        // TODO
         compareDependencies(expectedDependencies, "/traces/simple3", "main", new Simple3Filter());
     }
 

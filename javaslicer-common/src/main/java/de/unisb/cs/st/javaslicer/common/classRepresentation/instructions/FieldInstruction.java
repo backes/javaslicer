@@ -36,6 +36,13 @@ public class FieldInstruction extends AbstractInstruction {
             return this.objectId;
         }
 
+        @Override
+        public String toString() {
+            String s = super.toString();
+            return new StringBuilder(s.length() + 10).append(s).append(" [").
+                append(this.objectId).append(']').toString();
+        }
+
     }
 
     private final String ownerInternalClassName;
@@ -88,15 +95,7 @@ public class FieldInstruction extends AbstractInstruction {
     }
 
     @Override
-    public FieldInstrInstance getBackwardInstance(final TraceIterationInformationProvider infoProv, final int stackDepth) throws TracerException {
-        final long objectId = this.objectTraceSeqIndex == -1 ? -1 :
-            infoProv.getNextLong(this.objectTraceSeqIndex);
-        return new FieldInstrInstance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()),
-                stackDepth, objectId);
-    }
-
-    @Override
-    public FieldInstrInstance getForwardInstance(final TraceIterationInformationProvider infoProv, final int stackDepth) throws TracerException {
+    public FieldInstrInstance getNextInstance(final TraceIterationInformationProvider infoProv, final int stackDepth) throws TracerException {
         final long objectId = this.objectTraceSeqIndex == -1 ? -1 :
             infoProv.getNextLong(this.objectTraceSeqIndex);
         return new FieldInstrInstance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()),

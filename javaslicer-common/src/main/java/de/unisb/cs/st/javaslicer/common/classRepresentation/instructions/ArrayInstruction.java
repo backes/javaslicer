@@ -21,7 +21,36 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodRea
  */
 public class ArrayInstruction extends AbstractInstruction {
 
-    // when tracing, these two fields are set
+    public static class ArrayInstrInstance extends AbstractInstance {
+
+        private final long arrayId;
+        private final int arrayIndex;
+
+        public ArrayInstrInstance(final ArrayInstruction arrayInstr, final long occurenceNumber, final int stackDepth,
+                final long arrayId, final int arrayIndex) {
+            super(arrayInstr, occurenceNumber, stackDepth);
+            this.arrayId = arrayId;
+            this.arrayIndex = arrayIndex;
+        }
+
+        public long getArrayId() {
+            return this.arrayId;
+        }
+
+        public int getArrayIndex() {
+            return this.arrayIndex;
+        }
+
+        @Override
+        public String toString() {
+            final String type = super.toString();
+            final StringBuilder sb = new StringBuilder(type.length() + 20);
+            sb.append(type).append(" [").append(this.arrayId).append(", ").append(this.arrayIndex).append(']');
+            return sb.toString();
+        }
+
+    }
+
     private final int arrayTraceSeqIndex;
     private final int indexTraceSeqIndex;
 
@@ -41,16 +70,7 @@ public class ArrayInstruction extends AbstractInstruction {
     }
 
     @Override
-    public ArrayInstrInstance getBackwardInstance(
-            final TraceIterationInformationProvider infoProv, final int stackDepth) {
-        final long arrayId = infoProv.getNextLong(this.arrayTraceSeqIndex);
-        final int index = infoProv.getNextInteger(this.indexTraceSeqIndex);
-        return new ArrayInstrInstance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()),
-                stackDepth, arrayId, index);
-    }
-
-    @Override
-    public ArrayInstrInstance getForwardInstance(
+    public ArrayInstrInstance getNextInstance(
             final TraceIterationInformationProvider infoProv, final int stackDepth) {
         final long arrayId = infoProv.getNextLong(this.arrayTraceSeqIndex);
         final int index = infoProv.getNextInteger(this.indexTraceSeqIndex);
@@ -119,36 +139,6 @@ public class ArrayInstruction extends AbstractInstruction {
             assert false;
             return "--ERROR--";
         }
-    }
-
-    public static class ArrayInstrInstance extends AbstractInstance {
-
-        private final long arrayId;
-        private final int arrayIndex;
-
-        public ArrayInstrInstance(final ArrayInstruction arrayInstr, final long occurenceNumber, final int stackDepth,
-                final long arrayId, final int arrayIndex) {
-            super(arrayInstr, occurenceNumber, stackDepth);
-            this.arrayId = arrayId;
-            this.arrayIndex = arrayIndex;
-        }
-
-        public long getArrayId() {
-            return this.arrayId;
-        }
-
-        public int getArrayIndex() {
-            return this.arrayIndex;
-        }
-
-        @Override
-        public String toString() {
-            final String type = super.toString();
-            final StringBuilder sb = new StringBuilder(type.length() + 20);
-            sb.append(type).append(" [").append(this.arrayId).append(", ").append(this.arrayIndex).append(']');
-            return sb.toString();
-        }
-
     }
 
 }

@@ -101,7 +101,7 @@ public class BackwardInstructionIterator implements Iterator<Instance>, TraceIte
                     ++this.stackDepth;
                 }
             }
-            final Instance instance = backwardInstruction.getBackwardInstance(this, this.stackDepth);
+            final Instance instance = backwardInstruction.getNextInstance(this, this.stackDepth);
 
             if (instance == null) {
                 ++this.additionalInstructionCount;

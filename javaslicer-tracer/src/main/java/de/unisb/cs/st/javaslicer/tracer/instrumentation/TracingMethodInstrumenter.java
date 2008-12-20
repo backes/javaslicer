@@ -730,7 +730,15 @@ public class TracingMethodInstrumenter implements Opcodes {
 
     private void transformIntInsn(final IntInsnNode insn) {
         if (insn.getOpcode() == NEWARRAY) {
-            registerInstruction(new NewArrayInstruction(this.readMethod, this.currentLine, insn.operand), InstructionType.UNSAFE);
+            int newObjectIdSeqIndex = this.tracer.newLongTraceSequence();
+            registerInstruction(new NewArrayInstruction(this.readMethod, this.currentLine, insn.operand, newObjectIdSeqIndex), InstructionType.UNSAFE);
+            this.instructionIterator.add(new InsnNode(DUP));
+            this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
+            this.instructionIterator.add(new InsnNode(SWAP));
+            this.instructionIterator.add(getIntConstInsn(newObjectIdSeqIndex));
+            this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
+                Type.getInternalName(ThreadTracer.class), "traceObject",
+                "(Ljava/lang/Object;I)V"));
         } else {
             assert insn.getOpcode() == BIPUSH || insn.getOpcode() == SIPUSH;
             registerInstruction(new IntPush(this.readMethod, insn.getOpcode(), insn.operand, this.currentLine), InstructionType.SAFE);
@@ -753,8 +761,78 @@ public class TracingMethodInstrumenter implements Opcodes {
     }
 
     private void transformMultiANewArrayInsn(final MultiANewArrayInsnNode insn) {
-        registerInstruction(new MultiANewArrayInstruction(this.readMethod, this.currentLine, insn.desc, insn.dims),
+        // create a new int array to hold the dimensions and fill the dimensions in there.
+        // then push the dimensions back onto the stack, call the MULTIANEWARRAY instruction
+        // and afterward, call a method that gets the dimensions array and the newly
+        // created array and traces the object ids.
+        this.instructionIterator.previous();
+        this.instructionIterator.add(getIntConstInsn(insn.dims));
+        this.instructionIterator.add(new IntInsnNode(NEWARRAY, Opcodes.T_INT));
+        // now fill in the dimensions
+        for (int dim = insn.dims-1; dim >= 0; --dim) {
+            this.instructionIterator.add(new InsnNode(DUP_X1));
+            this.instructionIterator.add(new InsnNode(SWAP));
+            this.instructionIterator.add(getIntConstInsn(dim));
+            this.instructionIterator.add(new InsnNode(SWAP));
+            this.instructionIterator.add(new InsnNode(IASTORE));
+        }
+        // duplicate the array reference
+        this.instructionIterator.add(new InsnNode(DUP));
+        // push the dimensions back onto the stack
+        for (int dim = 0; dim < insn.dims; ++dim) {
+            // don't duplicate if this is the last entry
+            if (dim != insn.dims-1)
+                this.instructionIterator.add(new InsnNode(DUP));
+            this.instructionIterator.add(getIntConstInsn(dim));
+            this.instructionIterator.add(new InsnNode(IALOAD));
+            // swap with the reference below us
+            if (dim != insn.dims-1)
+                this.instructionIterator.add(new InsnNode(SWAP));
+        }
+        this.instructionIterator.next();
+        int newObjCountSeqIndex = this.tracer.newIntegerTraceSequence();
+        int newObjIdSeqIndex = this.tracer.newLongTraceSequence();
+        // now call the original MULTIANEWARRAY instruction
+        registerInstruction(new MultiANewArrayInstruction(this.readMethod, this.currentLine, insn.desc, insn.dims, newObjCountSeqIndex, newObjIdSeqIndex),
                 InstructionType.UNSAFE);
+        // and now call a tracing method that gets the dimensions array, the newly
+        // created multi-dimensional array, and the sequence ids
+        this.instructionIterator.add(new InsnNode(DUP_X1));
+        this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
+        this.instructionIterator.add(getIntConstInsn(newObjCountSeqIndex));
+        this.instructionIterator.add(getIntConstInsn(newObjIdSeqIndex));
+        this.instructionIterator.add(new MethodInsnNode(INVOKESTATIC,
+            Type.getInternalName(TracingMethodInstrumenter.class), "traceMultiANewArray",
+            "([I[Ljava/lang/Object;"+Type.getDescriptor(ThreadTracer.class)+"II)V"));
+    }
+
+    public static void traceMultiANewArray(int[] dimensions, Object[] newArray,
+            ThreadTracer threadTracer, int newObjCountSeqIndex, int newObjIdSeqIndex) {
+        int totalCount = 1;
+        int fac = 1;
+        for (int i = 0; i < dimensions.length-1; ++i) {
+            fac *= dimensions[i];
+            totalCount += fac;
+        }
+        threadTracer.traceInt(totalCount, newObjCountSeqIndex);
+        Object[][] queue = new Object[1][];
+        queue[0] = newArray;
+        threadTracer.traceObject(newArray, newObjIdSeqIndex);
+        for (int i = 0; i < dimensions.length-1; ++i) {
+            Object[][] newQueue = i == dimensions.length-2 ? null : new Object[dimensions[i]][];
+            int nqPos = 0;
+            for (Object[] o: queue) {
+                assert o != null;
+                assert o.length == dimensions[i];
+                if (newQueue != null) {
+                    System.arraycopy(o, 0, newQueue, nqPos, dimensions[i]);
+                    nqPos += dimensions[i];
+                }
+                for (int m = 0; m < dimensions[i]; ++m)
+                    threadTracer.traceObject(o[m], newObjIdSeqIndex);
+            }
+            queue = newQueue;
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -767,8 +845,23 @@ public class TracingMethodInstrumenter implements Opcodes {
     }
 
     private void transformTypeInsn(final TypeInsnNode insn) {
-        registerInstruction(new TypeInstruction(this.readMethod, insn.getOpcode(), this.currentLine, insn.desc),
+        // after the NEW or ANEWARRAY instruction, insert code that traces the object identifier
+        // of the newly created object/array
+        if (insn.getOpcode() == NEW || insn.getOpcode() == ANEWARRAY) {
+            int newObjectIdSeqIndex = this.tracer.newLongTraceSequence();
+            registerInstruction(new TypeInstruction(this.readMethod, insn.getOpcode(),
+                this.currentLine, insn.desc, newObjectIdSeqIndex), InstructionType.UNSAFE);
+            this.instructionIterator.add(new InsnNode(DUP));
+            this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
+            this.instructionIterator.add(new InsnNode(SWAP));
+            this.instructionIterator.add(getIntConstInsn(newObjectIdSeqIndex));
+            this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
+                Type.getInternalName(ThreadTracer.class), "traceObject",
+                "(Ljava/lang/Object;I)V"));
+        } else {
+            registerInstruction(new TypeInstruction(this.readMethod, insn.getOpcode(), this.currentLine, insn.desc, 0),
                 InstructionType.UNSAFE);
+        }
     }
 
     private void transformVarInsn(final VarInsnNode insn) {

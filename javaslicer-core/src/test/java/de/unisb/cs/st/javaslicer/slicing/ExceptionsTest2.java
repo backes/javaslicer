@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.List;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import de.unisb.cs.st.javaslicer.AbstractSlicingTest;
@@ -13,6 +14,8 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 
 public class ExceptionsTest2 extends AbstractSlicingTest {
 
+    // TODO include these tests
+    @Ignore
     @Test
     public void test24() throws IllegalParameterException, IOException, URISyntaxException {
         final List<Instruction> slice = getSlice("/traces/exceptions2", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:24");
@@ -50,6 +53,7 @@ public class ExceptionsTest2 extends AbstractSlicingTest {
             });
     }
 
+    @Ignore
     @Test
     public void test27a() throws IllegalParameterException, IOException, URISyntaxException {
         final List<Instruction> slice = getSlice("/traces/exceptions2", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:27:{a}");
@@ -93,6 +97,7 @@ public class ExceptionsTest2 extends AbstractSlicingTest {
             });
     }
 
+    @Ignore
     @Test
     public void test27b() throws IllegalParameterException, IOException, URISyntaxException {
         final List<Instruction> slice = getSlice("/traces/exceptions2", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:27:{b}");
