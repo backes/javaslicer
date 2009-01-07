@@ -210,6 +210,9 @@ public class ReadMethod implements Comparable<ReadMethod> {
         return rm;
     }
 
+    /**
+     * Returns the method name and description.
+     */
     @Override
     public String toString() {
         return this.name + this.desc;

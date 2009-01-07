@@ -21,6 +21,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Type;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.dependencyAnalysis.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.instructionSimulation.Simulator;
@@ -157,7 +158,7 @@ public class Slicer implements Opcodes {
     }
 
     public Set<Instruction> getDynamicSlice(final ThreadId threadId, final SlicingCriterion.Instance slicingCriterion) {
-        final Iterator<Instance> backwardInsnItr = this.trace.getBackwardIterator(threadId);
+        final Iterator<Instance> backwardInsnItr = this.trace.getBackwardIterator(threadId, null);
 
         final IntegerMap<Set<Instruction>> controlDependencies = new IntegerMap<Set<Instruction>>();
 
@@ -187,15 +188,12 @@ public class Slicer implements Opcodes {
                         removedFrameIsInteresting = true;
                     }
                 } else {
-                    ExecutionFrame topFrame = null;
-                    while (frames.size() < stackDepth) {
-                        if (topFrame == null && frames.size() > 0)
-                            topFrame = frames.peek();
-                        final ExecutionFrame newFrame = new ExecutionFrame();
-                        if (topFrame != null && topFrame.atCacheBlockStart != null)
-                            newFrame.throwsException = true;
-                        frames.push(newFrame);
-                    }
+                    assert frames.size() == stackDepth-1;
+                    ExecutionFrame topFrame = frames.size() == 0 ? null : frames.peek();
+                    final ExecutionFrame newFrame = new ExecutionFrame();
+                    if (topFrame != null && topFrame.atCacheBlockStart != null)
+                        newFrame.throwsException = true;
+                    frames.push(newFrame);
                 }
                 currentFrame = frames.peek();
             }
@@ -212,7 +210,7 @@ public class Slicer implements Opcodes {
                 }
             }
 
-            final VariableUsages dynInfo = this.simulator .simulateInstruction(instance, currentFrame,
+            final VariableUsages dynInfo = this.simulator.simulateInstruction(instance, currentFrame,
                     removedFrame, frames);
 
             if (removedFrameIsInteresting) {
@@ -226,7 +224,9 @@ public class Slicer implements Opcodes {
                 currentFrame.interestingInstructions.addAll(slicingCriterion.getInterestingInstructions(currentFrame));
             }
 
-            if (!currentFrame.interestingInstructions.isEmpty() || currentFrame.throwsException) {
+            boolean isExceptionsThrowingInstance = currentFrame.throwsException &&
+                (instruction.getType() != Type.LABEL || !((LabelMarker)instruction).isAdditionalLabel());
+            if (!currentFrame.interestingInstructions.isEmpty() || isExceptionsThrowingInstance) {
                 Set<Instruction> instrControlDependencies = controlDependencies.get(instruction.getIndex());
                 if (instrControlDependencies == null) {
                     computeControlDependencies(instruction.getMethod(), controlDependencies);
@@ -236,7 +236,7 @@ public class Slicer implements Opcodes {
                 // get all interesting instructions, that are dependent on the current one
                 Set<Instruction> dependantInterestingInstructions = intersect(instrControlDependencies,
                         currentFrame.interestingInstructions);
-                if (currentFrame.throwsException) {
+                if (isExceptionsThrowingInstance) {
                     currentFrame.throwsException = false;
                     // in this case, we have an additional control dependency from the catching to
                     // the throwing instruction

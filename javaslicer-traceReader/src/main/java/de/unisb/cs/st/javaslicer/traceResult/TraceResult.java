@@ -129,11 +129,14 @@ public class TraceResult {
      *
      * @param threadId the identifier of the thread whose execution trace
      *                 iterator is requested
+     * @param filter   a filter to ignore certain instruction instances.
+     *                 may be <code>null</code>.
      * @return an iterator that iterates backwards through the execution trace
      */
-    public Iterator<Instance> getBackwardIterator(final ThreadId threadId) {
+    public Iterator<Instance> getBackwardIterator(final ThreadId threadId,
+            final InstanceFilter filter) {
         final ThreadTraceResult res = findThreadTraceResult(threadId);
-        return res == null ? null : res.getBackwardIterator();
+        return res == null ? null : res.getBackwardIterator(filter);
     }
 
     /**
@@ -145,18 +148,21 @@ public class TraceResult {
      *
      * @param javaThreadId the java thread id of the thread whose execution trace
      *                     iterator is requested
+     * @param filter       a filter to ignore certain instruction instances.
+     *                     may be <code>null</code>.
      * @return an iterator that iterates backwards through the execution trace
      */
-    public Iterator<Instance> getBackwardIterator(final long javaThreadId) {
+    public Iterator<Instance> getBackwardIterator(final long javaThreadId,
+            InstanceFilter filter) {
         final ThreadId id = getThreadId(javaThreadId);
-        return id == null ? null : getBackwardIterator(id);
+        return id == null ? null : getBackwardIterator(id, filter);
     }
 
     /**
      * Returns an iterator that is able to iterate in any direction through the execution trace.
      *
      * This iteration is usually much more expensive (especially with respect to memory
-     * consumption) than the Iterator returned by {@link #getBackwardIterator(ThreadId)}.
+     * consumption) than the Iterator returned by {@link #getBackwardIterator(ThreadId, InstanceFilter)}.
      * So whenever you just need to iterate backwards, you should use that backward iterator.
      *
      * @param threadId the identifier of the thread whose execution trace
@@ -172,7 +178,7 @@ public class TraceResult {
      * Returns an iterator that is able to iterate in any direction through the execution trace.
      *
      * This iteration is usually much more expensive (especially with respect to memory
-     * consumption) than the Iterator returned by {@link #getBackwardIterator(long)}.
+     * consumption) than the Iterator returned by {@link #getBackwardIterator(long, InstanceFilter)}.
      * So whenever you just need to iterate backwards, you should use that backward iterator.
      *
      * @param javaThreadId the java thread id of the thread whose execution trace
@@ -280,7 +286,8 @@ public class TraceResult {
         try {
             System.out.println();
             System.out.println("The backward trace:");
-            final Iterator<Instance> it = tr.getBackwardIterator(tracing);
+            final Iterator<Instance> it = tr.getBackwardIterator(tracing,
+                InstanceFilter.AdditionalLabelFilter.instance);
             long nr = 0;
             final String format = "%8d: %-100s -> %3d %7d %s%n";
             System.out.format("%8s  %-100s    %3s %7s %s%n",
@@ -297,9 +304,9 @@ public class TraceResult {
 
             final BackwardInstructionIterator it2 = (BackwardInstructionIterator) it;
 
-            System.out.format("%nNo instructions: %d  (+ %d additional = %d total instructions)%nReady%n",
-                    it2.getNoInstructions(), it2.getNoAdditionalInstructions(),
-                    it2.getNoInstructions() + it2.getNoAdditionalInstructions());
+            System.out.format("%nNumber of instructions: %d  (+ %d additional = %d total instructions)%nReady%n",
+                    it2.getNumInstructions(), it2.getNumFilteredInstructions(),
+                    it2.getNumInstructions() + it2.getNumFilteredInstructions());
 
         } catch (final TracerException e) {
             System.err.print("Error while tracing: ");

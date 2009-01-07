@@ -72,17 +72,19 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
      * contrast to the Iterator returned by {@link #getIterator()}.
      * The trace is generated while reading in the trace file.
      *
+     * @param filter   a filter to ignore certain instruction instances.
+     *                 may be <code>null</code>.
      * @return an iterator that iterates backwards through the execution trace
      */
-    public Iterator<Instance> getBackwardIterator() {
-        return new BackwardInstructionIterator(this);
+    public Iterator<Instance> getBackwardIterator(InstanceFilter filter) {
+        return new BackwardInstructionIterator(this, filter);
     }
 
     /**
      * Returns an iterator that is able to iterate in any direction through the execution trace.
      *
      * This iteration is usually much more expensive (especially with respect to memory
-     * consumption) than the Iterator returned by {@link #getBackwardIterator()}.
+     * consumption) than the Iterator returned by {@link #getBackwardIterator(InstanceFilter)}.
      * So whenever you just need to iterate backwards, you should use that backward iterator.
      *
      * @return an iterator that is able to iterate in any direction through the execution trace
@@ -106,7 +108,7 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
         int[] jumps = new int[16];
         byte[] stackDepthChange = new byte[16];
 
-        final Iterator<Instance> backwardIt = getBackwardIterator();
+        final Iterator<Instance> backwardIt = getBackwardIterator(null);
         int lastIndex = 0;
         int curStackDepth = 1;
         while (backwardIt.hasNext()) {

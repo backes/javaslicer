@@ -1,5 +1,6 @@
 package de.unisb.cs.st.javaslicer.dependencyAnalysis;
 
+import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
@@ -11,7 +12,7 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
  */
 public abstract class DependencyVisitorAdapter implements DependencyVisitor {
 
-    public void discardPendingDataDependencies(Instance from, Variable var,
+    public void discardPendingDataDependency(Instance from, Variable var,
             DataDependencyType type) {
         // null
     }
@@ -35,6 +36,14 @@ public abstract class DependencyVisitorAdapter implements DependencyVisitor {
 
     public void visitPendingDataDependency(Instance from, Variable var,
             DataDependencyType type) {
+        // null
+    }
+
+    public void visitMethodEntry(ReadMethod method) {
+        // null
+    }
+
+    public void visitMethodLeave(ReadMethod method) {
         // null
     }
 

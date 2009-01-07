@@ -25,6 +25,8 @@ public class BackwardInstructionIterator implements Iterator<Instance>, TraceIte
     public static final boolean WRITE_ITERATION_DEBUG_FILE = false;
 
     private final ThreadTraceResult threadTraceResult;
+    private final InstanceFilter filter;
+
     private Instance nextInstruction;
     private final IntegerMap<Iterator<Integer>> integerSequenceBackwardIterators;
     private final IntegerMap<Iterator<Long>> longSequenceBackwardIterators;
@@ -33,10 +35,12 @@ public class BackwardInstructionIterator implements Iterator<Instance>, TraceIte
     private int stackDepth;
 
     private int instructionCount = 0;
-    private int additionalInstructionCount = 0;
+    private int filteredInstructionCount = 0;
     private final PrintWriter debugFileWriter;
 
-    public BackwardInstructionIterator(final ThreadTraceResult threadTraceResult) throws TracerException {
+    public BackwardInstructionIterator(final ThreadTraceResult threadTraceResult, InstanceFilter filter)
+            throws TracerException {
+        this.filter = filter;
         this.threadTraceResult = threadTraceResult;
         this.integerSequenceBackwardIterators = new IntegerMap<Iterator<Integer>>();
         this.longSequenceBackwardIterators = new IntegerMap<Iterator<Long>>();
@@ -89,22 +93,24 @@ public class BackwardInstructionIterator implements Iterator<Instance>, TraceIte
                 return null;
             }
             assert backwardInstruction.getIndex() == index;
+            int stackDepth = this.stackDepth;
             if (backwardInstruction == backwardInstruction.getMethod().getMethodEntryLabel()) {
                 --this.stackDepth;
                 assert this.stackDepth >= 0 : "enter method occured more often than leave method";
             } else if (backwardInstruction == backwardInstruction.getMethod().getMethodLeaveLabel()) {
-                ++this.stackDepth;
+                this.stackDepth = ++stackDepth;
             } else if (backwardInstruction.getType() == Type.SIMPLE) {
                 switch (backwardInstruction.getOpcode()) {
                 case Opcodes.IRETURN: case Opcodes.LRETURN: case Opcodes.FRETURN:
                 case Opcodes.DRETURN: case Opcodes.ARETURN: case Opcodes.RETURN:
-                    ++this.stackDepth;
+                    this.stackDepth = ++stackDepth;
                 }
             }
-            final Instance instance = backwardInstruction.getNextInstance(this, this.stackDepth);
+            final Instance instance = backwardInstruction.getNextInstance(this, stackDepth);
+            assert instance != null;
 
-            if (instance == null) {
-                ++this.additionalInstructionCount;
+            if (this.filter != null && this.filter.filterInstance(instance)) {
+                ++this.filteredInstructionCount;
             } else {
                 ++this.instructionCount;
                 return instance;
@@ -152,12 +158,12 @@ public class BackwardInstructionIterator implements Iterator<Instance>, TraceIte
         return nr - 1;
     }
 
-    public int getNoInstructions() {
+    public int getNumInstructions() {
         return this.instructionCount;
     }
 
-    public int getNoAdditionalInstructions() {
-        return this.additionalInstructionCount;
+    public int getNumFilteredInstructions() {
+        return this.filteredInstructionCount;
     }
 
 }

@@ -11,7 +11,6 @@ import de.hammacher.util.StringCacheOutput;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
-import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 
 
 /**
@@ -73,12 +72,6 @@ public class LabelMarker extends AbstractInstruction {
     @Override
     public int getBackwardInstructionIndex(final TraceIterationInformationProvider infoProv) {
         return infoProv.getNextInteger(this.traceSeqIndex);
-    }
-
-    @Override
-    public Instance getNextInstance(final TraceIterationInformationProvider infoProv, final int stackDepth) throws TracerException {
-        return this.isAdditionalLabel ? null :
-            super.getNextInstance(infoProv, stackDepth);
     }
 
     @Override

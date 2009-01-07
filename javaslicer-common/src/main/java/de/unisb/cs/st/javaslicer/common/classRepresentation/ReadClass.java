@@ -109,6 +109,9 @@ public class ReadClass implements Comparable<ReadClass> {
         return rc;
     }
 
+    /**
+     * Returns the class name (in Java notation, not internal).
+     */
     @Override
     public String toString() {
         return this.className;

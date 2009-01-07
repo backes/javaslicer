@@ -34,6 +34,7 @@ public class DependencyExtractor {
     private ArrayList<DependencyVisitor> pendingDataDependencyVisitorsReadAfterWrite = null;
     private ArrayList<DependencyVisitor> pendingDataDependencyVisitorsWriteAfterRead = null;
     private ArrayList<DependencyVisitor> pendingControlDependencyVisitors = null;
+    private ArrayList<DependencyVisitor> methodEntryLeaveVisitors = null;
 
     public DependencyExtractor(final TraceResult trace) {
         this.trace = trace;
@@ -96,6 +97,11 @@ public class DependencyExtractor {
                     this.pendingDataDependencyVisitorsWriteAfterRead = new ArrayList<DependencyVisitor>();
                 change |= this.pendingDataDependencyVisitorsWriteAfterRead.add(visitor);
                 break;
+            case METHOD_ENTRY_LEAVE:
+                if (this.methodEntryLeaveVisitors == null)
+                    this.methodEntryLeaveVisitors = new ArrayList<DependencyVisitor>();
+                change |= this.methodEntryLeaveVisitors.add(visitor);
+                break;
             }
         }
         return change;
@@ -133,6 +139,11 @@ public class DependencyExtractor {
             if (this.pendingDataDependencyVisitorsReadAfterWrite.isEmpty())
                 this.pendingDataDependencyVisitorsReadAfterWrite = null;
         }
+        if (this.methodEntryLeaveVisitors.remove(visitor)) {
+            change = true;
+            if (this.methodEntryLeaveVisitors.isEmpty())
+                this.methodEntryLeaveVisitors = null;
+        }
         return change;
     }
 
@@ -161,14 +172,14 @@ public class DependencyExtractor {
      * @param threadId identifies the thread whose trace should be analyzed
      */
     public void processBackwardTrace(final ThreadId threadId) {
-        final Iterator<Instance> backwardInsnItr = this.trace.getBackwardIterator(threadId);
+        final Iterator<Instance> backwardInsnItr = this.trace.getBackwardIterator(
+            threadId, null);
 
         final IntegerMap<Set<Instruction>> controlDependencies = new IntegerMap<Set<Instruction>>();
 
         final ArrayStack<ExecutionFrame> frames = new ArrayStack<ExecutionFrame>();
 
-        ExecutionFrame currentFrame = new ExecutionFrame();
-        frames.push(currentFrame);
+        ExecutionFrame currentFrame = null;
 
         // the lastWriter is needed for WAR data dependencies
         final Map<Variable, Instance> lastWriter = new HashMap<Variable, Instance>();
@@ -181,25 +192,34 @@ public class DependencyExtractor {
 
             ExecutionFrame removedFrame = null;
             final int stackDepth = instance.getStackDepth();
-            assert stackDepth >= 0;
+            assert stackDepth > 0;
 
             if (frames.size() != stackDepth) {
                 if (frames.size() > stackDepth) {
                     assert frames.size() == stackDepth+1;
                     removedFrame = frames.pop();
+                    assert removedFrame.method != null;
+                    if (this.methodEntryLeaveVisitors != null)
+                        for (DependencyVisitor vis: this.methodEntryLeaveVisitors)
+                            vis.visitMethodEntry(removedFrame.method);
                 } else {
-                    ExecutionFrame topFrame = null;
-                    while (frames.size() < stackDepth) {
-                        if (topFrame == null && frames.size() > 0)
-                            topFrame = frames.peek();
-                        final ExecutionFrame newFrame = new ExecutionFrame();
-                        if (topFrame != null && topFrame.atCacheBlockStart != null)
-                            newFrame.throwsException = true;
-                        frames.push(newFrame);
+                    assert frames.size() == stackDepth-1;
+                    ExecutionFrame topFrame = frames.size() == 0 ? null : frames.peek();
+                    final ExecutionFrame newFrame = new ExecutionFrame();
+                    newFrame.method = instruction.getMethod();
+                    if (topFrame != null &&
+                            (topFrame.atCacheBlockStart != null || topFrame.throwsException)) {
+                        topFrame.throwsException = false;
+                        newFrame.throwsException = true;
                     }
+                    frames.push(newFrame);
+                    if (this.methodEntryLeaveVisitors != null)
+                        for (DependencyVisitor vis: this.methodEntryLeaveVisitors)
+                            vis.visitMethodLeave(newFrame.method);
                 }
                 currentFrame = frames.peek();
             }
+            assert currentFrame != null;
 
             // it is possible that we see successive instructions of different methods,
             // e.g. when called from native code
@@ -277,7 +297,7 @@ public class DependencyExtractor {
                         lastWriter.put(definedVariable, instance);
                         for (DependencyVisitor vis: this.pendingDataDependencyVisitorsWriteAfterRead) {
                             if (varLastWriter != null)
-                                vis.discardPendingDataDependencies(varLastWriter, definedVariable, DataDependencyType.WRITE_AFTER_READ);
+                                vis.discardPendingDataDependency(varLastWriter, definedVariable, DataDependencyType.WRITE_AFTER_READ);
                             vis.visitPendingDataDependency(instance, definedVariable, DataDependencyType.WRITE_AFTER_READ);
                         }
                     }

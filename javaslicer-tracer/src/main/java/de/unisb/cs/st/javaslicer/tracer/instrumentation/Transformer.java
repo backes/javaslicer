@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
@@ -22,6 +23,7 @@ import org.objectweb.asm.tree.analysis.Analyzer;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
 import org.objectweb.asm.tree.analysis.BasicVerifier;
 import org.objectweb.asm.tree.analysis.Frame;
+import org.objectweb.asm.tree.analysis.SimpleVerifier;
 import org.objectweb.asm.util.CheckClassAdapter;
 import org.objectweb.asm.util.TraceMethodVisitor;
 
@@ -40,7 +42,7 @@ public class Transformer implements ClassFileTransformer {
      *
      * @author Clemens Hammacher
      */
-    private static final class FixedClassWriter extends ClassWriter {
+    public static final class FixedClassWriter extends ClassWriter {
         protected FixedClassWriter(final int flags) {
             super(flags);
         }
@@ -271,8 +273,10 @@ public class Transformer implements ClassFileTransformer {
 
         for (final Object methodObj : cn.methods) {
             final MethodNode method = (MethodNode) methodObj;
-            final Analyzer a = new Analyzer(new BasicVerifier());
-            //final Analyzer a = new Analyzer(new SimpleVerifier());
+            //final Analyzer a = new Analyzer(new BasicVerifier());
+            final Analyzer a = new Analyzer(new SimpleVerifier(
+                Type.getObjectType(cn.name), Type.getObjectType(cn.superName),
+                (cn.access & Opcodes.ACC_INTERFACE) != 0));
             try {
                 a.analyze(cn.name, method);
             } catch (final AnalyzerException e) {
@@ -286,7 +290,7 @@ public class Transformer implements ClassFileTransformer {
         return true;
     }
 
-    private void printMethod(final Analyzer a, final PrintStream out, final MethodNode method) {
+    private static void printMethod(final Analyzer a, final PrintStream out, final MethodNode method) {
         final Frame[] frames = a.getFrames();
 
         final TraceMethodVisitor mv = new TraceMethodVisitor();
@@ -324,7 +328,7 @@ public class Transformer implements ClassFileTransformer {
     }
 
     @SuppressWarnings("unused")
-    private void printClass(final byte[] classfileBuffer, final String classname) {
+    private static void printClass(final byte[] classfileBuffer, final String classname) {
         /*
         final TraceClassVisitor v = new TraceClassVisitor(new PrintWriter(System.out));
         new ClassReader(classfileBuffer).accept(v, ClassReader.SKIP_DEBUG);

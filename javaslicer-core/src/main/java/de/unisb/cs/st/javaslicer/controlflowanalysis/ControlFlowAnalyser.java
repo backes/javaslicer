@@ -56,8 +56,9 @@ public class ControlFlowAnalyser {
                             deps.add(succ.getInstruction());
                     }
                     invControlDeps.put(insn, deps.isEmpty() ? emptyInsnSet : deps);
-                } else
+                } else {
                     invControlDeps.put(insn, emptyInsnSet);
+                }
             } else if (node.getOutDeg() > 1) {
                 assert node.getOutDeg() == node.getSuccessors().size();
                 final List<Set<AbstractInstrNode>> succAvailableNodes = new ArrayList<Set<AbstractInstrNode>>(node.getOutDeg());

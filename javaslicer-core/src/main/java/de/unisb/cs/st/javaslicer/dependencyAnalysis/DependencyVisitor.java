@@ -1,5 +1,6 @@
 package de.unisb.cs.st.javaslicer.dependencyAnalysis;
 
+import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
@@ -12,7 +13,7 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
  */
 public interface DependencyVisitor {
 
-    enum DataDependencyType {
+    public static enum DataDependencyType {
         READ_AFTER_WRITE,
         WRITE_AFTER_READ,
     }
@@ -54,7 +55,7 @@ public interface DependencyVisitor {
      * If the type is {@link DataDependencyType#WRITE_AFTER_READ}, then
      * {@link #visitDataDependency(Instance, Instance, Variable, DataDependencyType)}
      * may get called one or several times, and finally
-     * {@link #discardPendingDataDependencies(Instance, Variable, DataDependencyType)}
+     * {@link #discardPendingDataDependency(Instance, Variable, DataDependencyType)}
      * is called.
      *
      * @param from the instruction that depends on another
@@ -73,13 +74,30 @@ public interface DependencyVisitor {
     void visitPendingControlDependency(Instance from);
 
     /**
-     * Gets called if all data dependencies have been visited for the instruction
-     * instance <code>from</code>.
+     * Gets called if all data dependencies on the specific variable <code>var</code>
+     * have been visited for the instruction instance <code>from</code>.
      *
      * @param from the instruction that depends on another
      * @param var the variable through which the dependency exists
      * @param type the type of the data dependency (read after write / write after read)
      */
-    void discardPendingDataDependencies(Instance from, Variable var, DataDependencyType type);
+    void discardPendingDataDependency(Instance from, Variable var, DataDependencyType type);
+
+    /**
+     * Gets called each time a new method in entered.
+     *
+     * @param method the method that is entered
+     */
+    void visitMethodEntry(ReadMethod method);
+
+    /**
+     * Gets called each time a method is left.
+     *
+     * Because the trace is processed backwards, a {@link #visitMethodEntry(ReadMethod)} is called
+     * later.
+     *
+     * @param method the method that is left
+     */
+    void visitMethodLeave(ReadMethod method);
 
 }
