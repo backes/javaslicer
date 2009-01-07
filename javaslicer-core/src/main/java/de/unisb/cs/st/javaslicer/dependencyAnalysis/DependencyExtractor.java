@@ -206,12 +206,9 @@ public class DependencyExtractor {
                     assert frames.size() == stackDepth-1;
                     ExecutionFrame topFrame = frames.size() == 0 ? null : frames.peek();
                     final ExecutionFrame newFrame = new ExecutionFrame();
-                    newFrame.method = instruction.getMethod();
-                    if (topFrame != null &&
-                            (topFrame.atCacheBlockStart != null || topFrame.throwsException)) {
-                        topFrame.throwsException = false;
+                    if (topFrame != null && topFrame.atCacheBlockStart != null)
                         newFrame.throwsException = true;
-                    }
+                    newFrame.method = instruction.getMethod();
                     frames.push(newFrame);
                     if (this.methodEntryLeaveVisitors != null)
                         for (DependencyVisitor vis: this.methodEntryLeaveVisitors)
@@ -227,8 +224,14 @@ public class DependencyExtractor {
                 if (currentFrame.method == null) {
                     currentFrame.method = instruction.getMethod();
                 } else {
+                    ReadMethod newMethod = instruction.getMethod();
+                    if (this.methodEntryLeaveVisitors != null)
+                        for (DependencyVisitor vis: this.methodEntryLeaveVisitors) {
+                            vis.visitMethodEntry(currentFrame.method);
+                            vis.visitMethodLeave(newMethod);
+                        }
                     currentFrame = new ExecutionFrame();
-                    currentFrame.method = instruction.getMethod();
+                    currentFrame.method = newMethod;
                     frames.set(stackDepth-1, currentFrame);
                 }
             }
