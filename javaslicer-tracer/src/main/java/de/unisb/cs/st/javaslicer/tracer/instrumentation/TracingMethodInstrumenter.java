@@ -261,7 +261,7 @@ public class TracingMethodInstrumenter implements Opcodes {
         final LabelNode l0 = new LabelNode();
         this.instructionIterator.add(l0);
 
-        // then, visit the instructions that where in the method before
+        // then, visit the instructions that were in the method before
         while (this.instructionIterator.hasNext()) {
             final AbstractInsnNode insnNode = this.instructionIterator.next();
             switch (insnNode.getType()) {
@@ -315,6 +315,11 @@ public class TracingMethodInstrumenter implements Opcodes {
                         + " (" + insnNode.getClass().getSimpleName()+")");
             }
             oldInstructions.add(insnNode.clone(labelCopies));
+        }
+
+        // if this method is the Object constructor, add extra code
+        if (this.methodNode.name.equals("<init>") && this.classNode.name.equals("java/lang/Object")) {
+            transformObjectConstructor();
         }
 
         final LabelNode l1 = new LabelNode();
@@ -443,7 +448,7 @@ public class TracingMethodInstrumenter implements Opcodes {
         }
     }
 
-    private void transformMethodInsn(final MethodInsnNode insn) {
+    private void transformMethodInsn(MethodInsnNode insn) {
         registerInstruction(new MethodInvocationInstruction(this.readMethod, insn.getOpcode(), this.currentLine, insn.owner, insn.name, insn.desc), InstructionType.UNSAFE);
 
         if (this.tracer.wasRedefined(Type.getObjectType(insn.owner).getClassName())
@@ -456,7 +461,7 @@ public class TracingMethodInstrumenter implements Opcodes {
             final Type[] newMethodArguments = Arrays.copyOf(oldMethodArguments, oldMethodArguments.length+1);
             newMethodArguments[oldMethodArguments.length] = Type.getType(ThreadTracer.class);
             final String newDesc = Type.getMethodDescriptor(Type.getReturnType(insn.desc), newMethodArguments);
-            this.instructionIterator.set(new MethodInsnNode(insn.getOpcode(), insn.owner, insn.name, newDesc));
+            this.instructionIterator.set(insn = new MethodInsnNode(insn.getOpcode(), insn.owner, insn.name, newDesc));
         }
 
         // if the next instruction is no label, we have to add one after the instruction
@@ -806,8 +811,8 @@ public class TracingMethodInstrumenter implements Opcodes {
             "([I[Ljava/lang/Object;"+Type.getDescriptor(ThreadTracer.class)+"II)V"));
     }
 
-    public static void traceMultiANewArray(int[] dimensions, Object[] newArray,
-            ThreadTracer threadTracer, int newObjCountSeqIndex, int newObjIdSeqIndex) {
+    public static void traceMultiANewArray(final int[] dimensions, final Object[] newArray,
+            final ThreadTracer threadTracer, final int newObjCountSeqIndex, final int newObjIdSeqIndex) {
         int totalCount = 1;
         int fac = 1;
         for (int i = 0; i < dimensions.length-1; ++i) {
@@ -845,9 +850,9 @@ public class TracingMethodInstrumenter implements Opcodes {
     }
 
     private void transformTypeInsn(final TypeInsnNode insn) {
-        // after the NEW or ANEWARRAY instruction, insert code that traces the object identifier
-        // of the newly created object/array
-        if (insn.getOpcode() == NEW || insn.getOpcode() == ANEWARRAY) {
+        if (insn.getOpcode() == ANEWARRAY) {
+            // after the ANEWARRAY instruction, insert code that traces the
+            // object identifier of the newly created object/array
             int newObjectIdSeqIndex = this.tracer.newLongTraceSequence();
             registerInstruction(new TypeInstruction(this.readMethod, insn.getOpcode(),
                 this.currentLine, insn.desc, newObjectIdSeqIndex), InstructionType.UNSAFE);
@@ -858,6 +863,19 @@ public class TracingMethodInstrumenter implements Opcodes {
             this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
                 Type.getInternalName(ThreadTracer.class), "traceObject",
                 "(Ljava/lang/Object;I)V"));
+        } else if (insn.getOpcode() == NEW) {
+            // after a NEW, we store the sequence number in the ThreadTracer object.
+            // when the Object constructor gets called (which is guaranteed), its
+            // id is written to the stored sequence number
+            // (see transformObjectConstructor())
+            int newObjectIdSeqIndex = this.tracer.newLongTraceSequence();
+            registerInstruction(new TypeInstruction(this.readMethod, insn.getOpcode(),
+                this.currentLine, insn.desc, newObjectIdSeqIndex), InstructionType.UNSAFE);
+            this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
+            this.instructionIterator.add(getIntConstInsn(newObjectIdSeqIndex));
+            this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
+                Type.getInternalName(ThreadTracer.class), "objectAllocation",
+                "(I)V"));
         } else {
             registerInstruction(new TypeInstruction(this.readMethod, insn.getOpcode(), this.currentLine, insn.desc, 0),
                 InstructionType.UNSAFE);
@@ -937,6 +955,14 @@ public class TracingMethodInstrumenter implements Opcodes {
         } else {
             TracingMethodInstrumenter.statsLabelsStd++;
         }
+    }
+
+    private void transformObjectConstructor() {
+        this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
+        this.instructionIterator.add(new VarInsnNode(ALOAD, 0));
+        this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
+            Type.getInternalName(ThreadTracer.class), "objectInitialization",
+            "(Ljava/lang/Object;)V"));
     }
 
     private void registerInstruction(final AbstractInstruction instruction, final InstructionType type) {

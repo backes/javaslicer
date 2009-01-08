@@ -37,7 +37,7 @@ public class SimpleNodeFactory implements ControlFlowGraph.NodeFactory {
                 final ControlFlowGraph cfg, final Instruction successor,
                 final SimpleNodeFactory factory) {
             super(instruction, cfg);
-            this.successor = cfg.getInstrNode(successor, instruction.getMethod(), factory);
+            this.successor = cfg.getInstrNode(successor, factory);
             this.successor.addPredecessor(this);
         }
 
@@ -64,8 +64,11 @@ public class SimpleNodeFactory implements ControlFlowGraph.NodeFactory {
             super(instruction, cfg);
             this.successors = new InstrNode[successors.size()];
             int i = 0;
-            for (final Instruction succ: successors)
-                this.successors[i++] = cfg.getInstrNode(succ, instruction.getMethod(), factory);
+            for (final Instruction succ: successors) {
+                InstrNode succNode = cfg.getInstrNode(succ, factory);
+                this.successors[i++] = succNode ;
+                succNode.addPredecessor(this);
+            }
         }
 
         @Override

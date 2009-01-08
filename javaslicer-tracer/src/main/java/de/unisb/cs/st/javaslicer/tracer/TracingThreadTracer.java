@@ -7,6 +7,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -169,8 +170,6 @@ public class TracingThreadTracer implements ThreadTracer {
             } catch (final InterruptedException e) {
                 System.err.println(e);
                 this.tracer.error(e);
-                // and return without unpause:
-                return;
             }
         }
 
@@ -223,6 +222,7 @@ public class TracingThreadTracer implements ThreadTracer {
     private final String threadName;
 
     private volatile int lastInstructionIndex = -1;
+    private final int objectAllocationTraceSequence = 0;
 
     private final Tracer tracer;
     private volatile int paused = 0;
@@ -239,7 +239,9 @@ public class TracingThreadTracer implements ThreadTracer {
 
     private final WriteOutThread writeOutThread;
 
-    private volatile int stackSize = 0;
+    // an array holding the index of one instruction of each method that we are in
+    private int stackSize = 0;
+    private int[] methodStack = new int[16];
 
     protected static final PrintWriter debugFile;
     static {
@@ -279,7 +281,7 @@ public class TracingThreadTracer implements ThreadTracer {
         if (++this.intSeqIndex == CACHE_SIZE) {
             pauseTracing();
             this.writeOutThread.addJob(new WriteOutJob(this.intSeqNr, this.intSeqVal, null, CACHE_SIZE));
-            unpauseTracing();
+            resumeTracing();
             this.intSeqIndex = 0;
             this.intSeqNr = new int[CACHE_SIZE];
             this.intSeqVal = new int[CACHE_SIZE];
@@ -298,7 +300,7 @@ public class TracingThreadTracer implements ThreadTracer {
         } else {
             pauseTracing();
             objId = ObjectIdentifier.instance.getObjectId(obj);
-            unpauseTracing();
+            resumeTracing();
         }
         assert objId != 0;
         this.longSeqNr[this.longSeqIndex] = traceSequenceIndex;
@@ -306,7 +308,7 @@ public class TracingThreadTracer implements ThreadTracer {
         if (++this.longSeqIndex == CACHE_SIZE) {
             pauseTracing();
             this.writeOutThread.addJob(new WriteOutJob(this.longSeqNr, null, this.longSeqVal, CACHE_SIZE));
-            unpauseTracing();
+            resumeTracing();
             this.longSeqIndex = 0;
             this.longSeqNr = new int[CACHE_SIZE];
             this.longSeqVal = new long[CACHE_SIZE];
@@ -324,7 +326,7 @@ public class TracingThreadTracer implements ThreadTracer {
         if (DEBUG_TRACE_FILE && this.threadId == 1) {
             pauseTracing();
             debugFile.println(instructionIndex);
-            unpauseTracing();
+            resumeTracing();
         }
 
         this.lastInstructionIndex = instructionIndex;
@@ -356,15 +358,17 @@ public class TracingThreadTracer implements ThreadTracer {
         this.writeOutThread.writeOut(out);
         out.writeInt(this.lastInstructionIndex);
         out.writeInt(this.stackSize);
+        for (int i = 0; i < this.stackSize; ++i)
+            out.writeInt(this.methodStack[i]);
     }
 
     public synchronized void pauseTracing() {
         ++this.paused;
     }
 
-    public synchronized void unpauseTracing() {
+    public synchronized void resumeTracing() {
         --this.paused;
-        assert this.paused >= 0: "unpaused more than paused";
+        assert this.paused >= 0: "resumed more than paused";
     }
 
     public boolean isPaused() {
@@ -379,12 +383,14 @@ public class TracingThreadTracer implements ThreadTracer {
     public synchronized void enterMethod(final int instructionIndex) {
         if (this.paused > 0)
             return;
-        ++this.stackSize;
+        if (this.stackSize == this.methodStack.length)
+            this.methodStack = Arrays.copyOf(this.methodStack, 2*this.stackSize);
+        this.methodStack[this.stackSize++] = instructionIndex;
 
         if (DEBUG_TRACE_FILE && this.threadId == 1) {
             pauseTracing();
             debugFile.println(instructionIndex);
-            unpauseTracing();
+            resumeTracing();
         }
 
         this.lastInstructionIndex = instructionIndex;
@@ -399,10 +405,33 @@ public class TracingThreadTracer implements ThreadTracer {
         if (DEBUG_TRACE_FILE && this.threadId == 1) {
             pauseTracing();
             debugFile.println(instructionIndex);
-            unpauseTracing();
+            resumeTracing();
         }
 
         this.lastInstructionIndex = instructionIndex;
+    }
+
+    @Override
+    public void objectAllocation(final int traceSequenceNr) {
+        if (this.paused == 0) {
+            // TODO
+            /*
+            assert this.objectAllocationTraceSequence == 0;
+            this.objectAllocationTraceSequence = traceSequenceNr;
+            */
+            traceObject(this, traceSequenceNr);
+        }
+    }
+
+    @Override
+    public void objectInitialization(final Object obj) {
+        /*
+        if (this.paused == 0) {
+            assert this.objectAllocationTraceSequence != 0;
+            traceObject(obj, this.objectAllocationTraceSequence);
+            this.objectAllocationTraceSequence = 0;
+        }
+        */
     }
 
 }

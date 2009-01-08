@@ -9,6 +9,7 @@ import java.util.ListIterator;
 import de.hammacher.util.IntegerMap;
 import de.hammacher.util.MultiplexedFileReader;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantThreadTraces;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence;
@@ -19,6 +20,7 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
     protected final IntegerMap<ConstantTraceSequence> sequences;
     protected final int lastInstructionIndex;
     protected final int lastStackDepth;
+    protected final ReadMethod[] lastStackMethods;
 
     private final TraceResult traceResult;
 
@@ -28,12 +30,13 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
 
     public ThreadTraceResult(final long threadId, final String threadName,
             final IntegerMap<ConstantTraceSequence> sequences, final int lastInstructionIndex,
-            final TraceResult traceResult, final int lastStackDepth) {
+            final TraceResult traceResult, final int lastStackDepth, ReadMethod[] lastStackMethods) {
         this.id = new ThreadId(threadId, threadName);
         this.sequences = sequences;
         this.lastInstructionIndex = lastInstructionIndex;
         this.traceResult = traceResult;
         this.lastStackDepth = lastStackDepth;
+        this.lastStackMethods = lastStackMethods;
     }
 
     public ThreadId getId() {
@@ -62,7 +65,14 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
         }
         final int lastInstructionIndex = in.readInt();
         final int lastStackDepth = in.readInt();
-        return new ThreadTraceResult(threadId, name, sequences, lastInstructionIndex, traceResult, lastStackDepth);
+        ReadMethod[] lastStackMethods = new ReadMethod[lastStackDepth];
+        for (int i = 0; i < lastStackDepth; ++i) {
+            Instruction instr = traceResult.getInstruction(in.readInt());
+            if (instr == null)
+                throw new IOException("corrupted data");
+            lastStackMethods[i] = instr .getMethod();
+        }
+        return new ThreadTraceResult(threadId, name, sequences, lastInstructionIndex, traceResult, lastStackDepth, lastStackMethods);
     }
 
     /**
@@ -74,9 +84,10 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
      *
      * @param filter   a filter to ignore certain instruction instances.
      *                 may be <code>null</code>.
-     * @return an iterator that iterates backwards through the execution trace
+     * @return an iterator that iterates backwards through the execution trace.
+     *         the iterator extends {@link Iterator} over {@link Instance}.
      */
-    public Iterator<Instance> getBackwardIterator(InstanceFilter filter) {
+    public BackwardInstructionIterator getBackwardIterator(InstanceFilter filter) {
         return new BackwardInstructionIterator(this, filter);
     }
 
@@ -87,9 +98,10 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
      * consumption) than the Iterator returned by {@link #getBackwardIterator(InstanceFilter)}.
      * So whenever you just need to iterate backwards, you should use that backward iterator.
      *
-     * @return an iterator that is able to iterate in any direction through the execution trace
+     * @return an iterator that is able to iterate in any direction through the execution trace.
+     *         the iterator extends {@link ListIterator} over {@link Instance}.
      */
-    public ListIterator<Instance> getIterator() {
+    public ForwardInstructionIterator getIterator() {
         ForwardIterationInformation forwInfo;
         synchronized (this.forwardIterationInfoLock) {
             forwInfo = this.forwardIterationInformation.get();

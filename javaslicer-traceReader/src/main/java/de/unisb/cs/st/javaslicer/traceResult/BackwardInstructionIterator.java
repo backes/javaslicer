@@ -5,7 +5,10 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.objectweb.asm.Opcodes;
@@ -13,6 +16,7 @@ import org.objectweb.asm.Opcodes;
 import de.hammacher.util.IntegerMap;
 import de.hammacher.util.IntegerToLongMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Type;
@@ -79,6 +83,10 @@ public class BackwardInstructionIterator implements Iterator<Instance>, TraceIte
         final Instance old = this.nextInstruction;
         this.nextInstruction = getNextInstruction(this.nextInstruction.getInstruction().getBackwardInstructionIndex(this));
         return old;
+    }
+
+    public List<ReadMethod> getInitialStackMethods() {
+        return Collections.unmodifiableList(Arrays.asList(this.threadTraceResult.lastStackMethods));
     }
 
     private Instance getNextInstruction(final int nextIndex) throws TracerException {

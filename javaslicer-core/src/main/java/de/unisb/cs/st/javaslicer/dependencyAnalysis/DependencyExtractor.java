@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,6 +17,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.dependencyAnalysis.DependencyVisitor.DataDependencyType;
 import de.unisb.cs.st.javaslicer.instructionSimulation.Simulator;
+import de.unisb.cs.st.javaslicer.traceResult.BackwardInstructionIterator;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.variableUsages.VariableUsages;
@@ -172,14 +172,22 @@ public class DependencyExtractor {
      * @param threadId identifies the thread whose trace should be analyzed
      */
     public void processBackwardTrace(final ThreadId threadId) {
-        final Iterator<Instance> backwardInsnItr = this.trace.getBackwardIterator(
-            threadId, null);
+        final BackwardInstructionIterator backwardInsnItr =
+            this.trace.getBackwardIterator(threadId, null);
 
         final IntegerMap<Set<Instruction>> controlDependencies = new IntegerMap<Set<Instruction>>();
 
         final ArrayStack<ExecutionFrame> frames = new ArrayStack<ExecutionFrame>();
-
         ExecutionFrame currentFrame = null;
+
+        for (ReadMethod method: backwardInsnItr.getInitialStackMethods()) {
+            currentFrame = new ExecutionFrame();
+            currentFrame.method = method;
+            frames.push(currentFrame);
+            if (this.methodEntryLeaveVisitors != null)
+                for (DependencyVisitor vis: this.methodEntryLeaveVisitors)
+                    vis.visitMethodLeave(method);
+        }
 
         // the lastWriter is needed for WAR data dependencies
         final Map<Variable, Instance> lastWriter = new HashMap<Variable, Instance>();
@@ -203,10 +211,10 @@ public class DependencyExtractor {
                         for (DependencyVisitor vis: this.methodEntryLeaveVisitors)
                             vis.visitMethodEntry(removedFrame.method);
                 } else {
+                    // in all steps, the stackDepth can change by at most 1
                     assert frames.size() == stackDepth-1;
-                    ExecutionFrame topFrame = frames.size() == 0 ? null : frames.peek();
                     final ExecutionFrame newFrame = new ExecutionFrame();
-                    if (topFrame != null && topFrame.atCacheBlockStart != null)
+                    if (frames.size() > 0 && frames.peek().atCacheBlockStart != null)
                         newFrame.throwsException = true;
                     newFrame.method = instruction.getMethod();
                     frames.push(newFrame);

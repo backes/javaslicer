@@ -4,16 +4,12 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.List;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import de.unisb.cs.st.javaslicer.AbstractSlicingTest;
 import de.unisb.cs.st.javaslicer.IllegalParameterException;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 
-
-// TODO include these tests
-@Ignore
 public class ExceptionsTest2 extends AbstractSlicingTest {
 
     @Test

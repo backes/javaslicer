@@ -123,7 +123,7 @@ public class TracerAgent {
             final ThreadTracer tt = tracer.getThreadTracer();
             tt.pauseTracing();
             Runtime.getRuntime().addShutdownHook(new WriteTracefileThread(tracer));
-            tt.unpauseTracing();
+            tt.resumeTracing();
         } catch (final Throwable t) {
             System.err.println("ERROR in premain method:");
             t.printStackTrace(System.err);

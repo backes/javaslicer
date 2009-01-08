@@ -89,7 +89,7 @@ public class PauseTracingInstrumenter implements Opcodes {
                     insnIt.previous();
                     insnIt.add(new VarInsnNode(ALOAD, tracerLocalVarIndex));
                     insnIt.add(new MethodInsnNode(INVOKEINTERFACE,
-                            Type.getInternalName(ThreadTracer.class), "unpauseTracing", "()V"));
+                            Type.getInternalName(ThreadTracer.class), "resumeTracing", "()V"));
                     insnIt.next();
                 }
                 break;
@@ -110,7 +110,7 @@ public class PauseTracingInstrumenter implements Opcodes {
 
         method.instructions.add(new VarInsnNode(ALOAD, tracerLocalVarIndex));
         method.instructions.add(new MethodInsnNode(INVOKEINTERFACE,
-                Type.getInternalName(ThreadTracer.class), "unpauseTracing", "()V"));
+                Type.getInternalName(ThreadTracer.class), "resumeTracing", "()V"));
         method.instructions.add(new InsnNode(ATHROW));
 
         method.tryCatchBlocks.add(new TryCatchBlockNode(l0, l1, l1, null));

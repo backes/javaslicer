@@ -10,6 +10,14 @@ public class ObjectField implements Variable {
         this.fieldName = fieldName;
     }
 
+    public long getObjectId() {
+        return this.objectId;
+    }
+
+    public String getFieldName() {
+        return this.fieldName;
+    }
+
     @Override
     public String toString() {
         return "field["+this.objectId+","+this.fieldName+"]";

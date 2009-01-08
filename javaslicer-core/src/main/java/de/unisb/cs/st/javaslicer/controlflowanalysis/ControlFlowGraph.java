@@ -71,9 +71,9 @@ public class ControlFlowGraph {
 
         public AbstractInstrNode(final Instruction instr, final ControlFlowGraph cfg) {
             assert instr != null;
+            this.instruction = instr;
             assert !cfg.instructionNodes.containsKey(instr);
             cfg.instructionNodes.put(instr, this);
-            this.instruction = instr;
         }
 
         public abstract int getOutDeg();
@@ -153,7 +153,7 @@ public class ControlFlowGraph {
     public ControlFlowGraph(final ReadMethod method, final NodeFactory nodeFactory) {
         this.instructionNodes = new HashMap<Instruction, AbstractInstrNode>();
         for (final Instruction instr: method.getInstructions()) {
-            getInstrNode(instr, method, nodeFactory);
+            getInstrNode(instr, nodeFactory);
         }
     }
 
@@ -171,18 +171,17 @@ public class ControlFlowGraph {
     }
 
     protected AbstractInstrNode getInstrNode(final Instruction instruction,
-            final ReadMethod method, final NodeFactory nodeFactory) {
+            final NodeFactory nodeFactory) {
         assert instruction != null;
         final AbstractInstrNode node = this.instructionNodes.get(instruction);
         if (node != null)
             return node;
 
-        final Collection<Instruction> successors = getSuccessors(instruction, method);
-
+        final Collection<Instruction> successors = getSuccessors(instruction);
         return nodeFactory.createNode(this, instruction, successors);
     }
 
-    private static Collection<Instruction> getSuccessors(final Instruction instruction, final ReadMethod method) {
+    private static Collection<Instruction> getSuccessors(final Instruction instruction) {
         final int opcode = instruction.getOpcode();
         switch (instruction.getType()) {
         case JUMP:
@@ -222,7 +221,7 @@ public class ControlFlowGraph {
             break;
         case VAR:
             if (opcode == Opcodes.RET) {
-                final List<JumpInstruction> callingInstructions = getJsrInstructions(method, (VarInstruction) instruction);
+                final List<JumpInstruction> callingInstructions = getJsrInstructions((VarInstruction) instruction);
                 final Instruction[] successors = new AbstractInstruction[callingInstructions.size()];
                 int i = 0;
                 for (final JumpInstruction instr: callingInstructions)
@@ -231,7 +230,7 @@ public class ControlFlowGraph {
             }
             break;
         case LABEL:
-            if (instruction == method.getMethodLeaveLabel())
+            if (instruction == instruction.getMethod().getMethodLeaveLabel())
                 return null;
             break;
         default:
@@ -243,10 +242,10 @@ public class ControlFlowGraph {
     /**
      * Returns all <code>jsr</code> instructions that may end up in the given <code>ret</code> instructions.
      */
-    private static List<JumpInstruction> getJsrInstructions(final ReadMethod method, final VarInstruction retInstruction) {
+    private static List<JumpInstruction> getJsrInstructions(final VarInstruction retInstruction) {
         assert retInstruction.getOpcode() == Opcodes.RET;
         final List<JumpInstruction> list = new ArrayList<JumpInstruction>();
-        for (final AbstractInstruction instr: method.getInstructions()) {
+        for (final AbstractInstruction instr: retInstruction.getMethod().getInstructions()) {
             if (instr.getOpcode() == Opcodes.JSR) {
                 final Queue<Instruction> queue = new UniqueQueue<Instruction>();
                 queue.add(((JumpInstruction)instr).getLabel());
@@ -258,7 +257,7 @@ public class ControlFlowGraph {
                         }
                         break;
                     }
-                    queue.addAll(getSuccessors(instr, method));
+                    queue.addAll(getSuccessors(instr));
                 }
             }
         }

@@ -89,7 +89,7 @@ public class IdentifiableInstrumenter implements Opcodes {
                 "(Ljava/lang/Object;)J"));
         getIdMethod.instructions.add(new FieldInsnNode(PUTFIELD, classNode.name, ID_FIELD_NAME, "J"));
         getIdMethod.instructions.add(new MethodInsnNode(INVOKEINTERFACE, Type.getInternalName(ThreadTracer.class),
-                "unpauseTracing", "()V"));
+                "resumeTracing", "()V"));
 
         getIdMethod.instructions.add(l2);
         getIdMethod.instructions.add(new VarInsnNode(ALOAD, 0));
@@ -132,7 +132,7 @@ public class IdentifiableInstrumenter implements Opcodes {
                         "(Ljava/lang/Object;)J"));
                 newInsns.add(new FieldInsnNode(PUTFIELD, classNode.name, ID_FIELD_NAME, "J"));
                 newInsns.add(new MethodInsnNode(INVOKEINTERFACE, Type.getInternalName(ThreadTracer.class),
-                        "unpauseTracing", "()V"));
+                        "resumeTracing", "()V"));
                 method.instructions.insert(newInsns);
             }
         }

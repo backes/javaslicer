@@ -36,6 +36,15 @@ public class TypeInstruction extends AbstractInstruction {
         }
 
         @Override
+        public String toString() {
+            String s = super.toString();
+            if (this.newObjectIdentifier == 0)
+                return s;
+            return new StringBuilder(s.length() + 10).append(s).append(" [").
+                append(this.newObjectIdentifier).append(']').toString();
+        }
+
+        @Override
         public int hashCode() {
             final int prime = 31;
             int result = super.hashCode();
@@ -69,7 +78,8 @@ public class TypeInstruction extends AbstractInstruction {
             || opcode == Opcodes.ANEWARRAY
             || opcode == Opcodes.CHECKCAST
             || opcode == Opcodes.INSTANCEOF;
-        assert opcode == Opcodes.CHECKCAST || opcode == Opcodes.INSTANCEOF || newObjIdSeqIndex == 0;
+        assert ((opcode == Opcodes.CHECKCAST || opcode == Opcodes.INSTANCEOF) && newObjIdSeqIndex == 0)
+            || ((opcode == Opcodes.NEW || opcode == Opcodes.ANEWARRAY) && newObjIdSeqIndex != 0);
         this.typeDesc = typeDesc;
         this.newObjectIdentifierSeqIndex = newObjIdSeqIndex;
     }
@@ -80,7 +90,8 @@ public class TypeInstruction extends AbstractInstruction {
             || opcode == Opcodes.ANEWARRAY
             || opcode == Opcodes.CHECKCAST
             || opcode == Opcodes.INSTANCEOF;
-        assert opcode == Opcodes.NEW || opcode == Opcodes.ANEWARRAY || newObjIdSeqIndex == 0;
+        assert ((opcode == Opcodes.CHECKCAST || opcode == Opcodes.INSTANCEOF) && newObjIdSeqIndex == 0)
+            || ((opcode == Opcodes.NEW || opcode == Opcodes.ANEWARRAY) && newObjIdSeqIndex != 0);
         this.typeDesc = typeDesc;
         this.newObjectIdentifierSeqIndex = newObjIdSeqIndex;
     }
@@ -96,8 +107,8 @@ public class TypeInstruction extends AbstractInstruction {
     @Override
     public Instance getNextInstance(TraceIterationInformationProvider infoProv,
             int stackDepth) {
-        long newObjectIdentifier = getOpcode() == Opcodes.NEW || getOpcode() == Opcodes.ANEWARRAY
-            ? infoProv.getNextLong(this.newObjectIdentifierSeqIndex) : 0;
+        long newObjectIdentifier = this.newObjectIdentifierSeqIndex == 0 ? 0
+            : infoProv.getNextLong(this.newObjectIdentifierSeqIndex);
         return new TypeInstrInstance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()), stackDepth, newObjectIdentifier);
     }
 

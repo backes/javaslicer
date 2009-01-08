@@ -11,6 +11,7 @@ import de.hammacher.util.OptimizedDataOutputStream;
 import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
 
 /**
@@ -22,15 +23,15 @@ public class NewArrayInstruction extends AbstractInstruction {
 
     public static class NewArrayInstrInstance extends AbstractInstance {
 
-        private final int newObjectIdentifier;
+        private final long newObjectIdentifier;
 
         public NewArrayInstrInstance(AbstractInstruction instr,
-                long occurenceNumber, int stackDepth, int newObjId) {
+                long occurenceNumber, int stackDepth, long newObjId) {
             super(instr, occurenceNumber, stackDepth);
             this.newObjectIdentifier = newObjId;
         }
 
-        public int getNewObjectIdentifier() {
+        public long getNewObjectIdentifier() {
             return this.newObjectIdentifier;
         }
 
@@ -45,7 +46,7 @@ public class NewArrayInstruction extends AbstractInstruction {
         public int hashCode() {
             final int prime = 31;
             int result = super.hashCode();
-            result = prime * result + this.newObjectIdentifier;
+            result = prime * result + (int)this.newObjectIdentifier;
             return result;
         }
 
@@ -121,6 +122,16 @@ public class NewArrayInstruction extends AbstractInstruction {
 
     public Type getType() {
         return Type.NEWARRAY;
+    }
+
+    @Override
+    public Instance getNextInstance(TraceIterationInformationProvider infoProv,
+            int stackDepth) {
+        final long objectId = this.newObjectIdentifierSequenceIndex == -1 ? -1 :
+            infoProv.getNextLong(this.newObjectIdentifierSequenceIndex);
+        return new NewArrayInstrInstance(this,
+            infoProv.getNextInstructionOccurenceNumber(getIndex()),
+                stackDepth, objectId);
     }
 
     @Override

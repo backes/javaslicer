@@ -131,9 +131,10 @@ public class TraceResult {
      *                 iterator is requested
      * @param filter   a filter to ignore certain instruction instances.
      *                 may be <code>null</code>.
-     * @return an iterator that iterates backwards through the execution trace
+     * @return an iterator that iterates backwards through the execution trace.
+     *         the iterator extends {@link Iterator} over {@link Instance}.
      */
-    public Iterator<Instance> getBackwardIterator(final ThreadId threadId,
+    public BackwardInstructionIterator getBackwardIterator(final ThreadId threadId,
             final InstanceFilter filter) {
         final ThreadTraceResult res = findThreadTraceResult(threadId);
         return res == null ? null : res.getBackwardIterator(filter);
@@ -150,9 +151,10 @@ public class TraceResult {
      *                     iterator is requested
      * @param filter       a filter to ignore certain instruction instances.
      *                     may be <code>null</code>.
-     * @return an iterator that iterates backwards through the execution trace
+     * @return an iterator that iterates backwards through the execution trace.
+     *         the iterator extends {@link Iterator} over {@link Instance}.
      */
-    public Iterator<Instance> getBackwardIterator(final long javaThreadId,
+    public BackwardInstructionIterator getBackwardIterator(final long javaThreadId,
             InstanceFilter filter) {
         final ThreadId id = getThreadId(javaThreadId);
         return id == null ? null : getBackwardIterator(id, filter);
@@ -167,9 +169,10 @@ public class TraceResult {
      *
      * @param threadId the identifier of the thread whose execution trace
      *                 iterator is requested
-     * @return an iterator that is able to iterate in any direction through the execution trace
+     * @return an iterator that is able to iterate in any direction through the execution trace.
+     *         the iterator extends {@link ListIterator} over {@link Instance}.
      */
-    public ListIterator<Instance> getIterator(final ThreadId threadId) {
+    public ForwardInstructionIterator getIterator(final ThreadId threadId) {
         final ThreadTraceResult res = findThreadTraceResult(threadId);
         return res == null ? null : res.getIterator();
     }
@@ -183,9 +186,10 @@ public class TraceResult {
      *
      * @param javaThreadId the java thread id of the thread whose execution trace
      *                     iterator is requested
-     * @return an iterator that is able to iterate in any direction through the execution trace
+     * @return an iterator that is able to iterate in any direction through the execution trace.
+     *         the iterator extends {@link ListIterator} over {@link Instance}.
      */
-    public ListIterator<Instance> getIterator(final long javaThreadId) {
+    public ForwardInstructionIterator getIterator(final long javaThreadId) {
         final ThreadId id = getThreadId(javaThreadId);
         return id == null ? null : getIterator(id);
     }

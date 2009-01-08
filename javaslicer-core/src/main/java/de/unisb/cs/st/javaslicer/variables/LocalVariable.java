@@ -20,6 +20,17 @@ public class LocalVariable implements Variable {
         return this.varIndex;
     }
 
+    public String getVarName() {
+        if (this.frame != null && this.frame.method != null) {
+            for (de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable
+                    var: this.frame.method.getLocalVariables()) {
+                if (var.getIndex() == this.varIndex)
+                    return var.getName();
+            }
+        }
+        return "unknown_var_" + this.varIndex;
+    }
+
     @Override
     public String toString() {
         return "local["+this.frame.hashCode()+","+this.varIndex+"]";

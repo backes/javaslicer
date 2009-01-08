@@ -37,7 +37,7 @@ public class NullThreadTracer implements ThreadTracer {
         // nop
     }
 
-    public void unpauseTracing() {
+    public void resumeTracing() {
         // nop
     }
 
@@ -48,6 +48,16 @@ public class NullThreadTracer implements ThreadTracer {
 
     @Override
     public void leaveMethod(final int instructionIndex) {
+        // nop
+    }
+
+    @Override
+    public void objectAllocation(int nr) {
+        // nop
+    }
+
+    @Override
+    public void objectInitialization(Object obj) {
         // nop
     }
 

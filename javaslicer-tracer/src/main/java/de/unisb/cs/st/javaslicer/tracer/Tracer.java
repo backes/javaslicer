@@ -240,7 +240,7 @@ public class Tracer {
             this.tracingStarted = true;
             if (!this.tracingReady) {
                 for (final ThreadTracer tt: this.threadTracers.values())
-                    tt.unpauseTracing();
+                    tt.resumeTracing();
             }
         }
     }
@@ -306,7 +306,7 @@ public class Tracer {
                 this.threadTracerBeingCreated = null;
                 // recheck tracingReady!
                 if (this.tracingStarted && !this.tracingReady)
-                    newTracer.unpauseTracing();
+                    newTracer.resumeTracing();
             }
         }
         synchronized (this.readyThreadTracers) {
@@ -316,7 +316,7 @@ public class Tracer {
                     for (final TracingThreadTracer t: this.readyThreadTracers)
                         writeOutIfNecessary(t);
                 } finally {
-                    newTracer.unpauseTracing();
+                    newTracer.resumeTracing();
                 }
             }
         }

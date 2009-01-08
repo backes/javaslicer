@@ -102,7 +102,7 @@ public class Transformer implements ClassFileTransformer {
     private final Tracer tracer;
     private final ConcurrentLinkedQueue<ReadClass> readClasses;
 
-    public Transformer(Tracer tracer, Instrumentation instrumentation, ConcurrentLinkedQueue<ReadClass> readClasses, Set<String> notRedefinedClasses) {
+    public Transformer(final Tracer tracer, final Instrumentation instrumentation, final ConcurrentLinkedQueue<ReadClass> readClasses, final Set<String> notRedefinedClasses) {
         this.tracer = tracer;
         this.instrumentation = instrumentation;
         this.readClasses = readClasses;
@@ -146,7 +146,7 @@ public class Transformer implements ClassFileTransformer {
                 System.out.print(text);
             }
             if (paused && tt != null)
-                tt.unpauseTracing();
+                tt.resumeTracing();
         }
    }
 
