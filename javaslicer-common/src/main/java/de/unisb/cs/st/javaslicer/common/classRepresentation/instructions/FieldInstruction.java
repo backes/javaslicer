@@ -43,6 +43,28 @@ public class FieldInstruction extends AbstractInstruction {
                 append(this.objectId).append(']').toString();
         }
 
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = super.hashCode();
+            result = prime * result + (int)this.objectId;
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (!super.equals(obj))
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            FieldInstrInstance other = (FieldInstrInstance) obj;
+            if (this.objectId != other.objectId)
+                return false;
+            return true;
+        }
+
     }
 
     private final String ownerInternalClassName;

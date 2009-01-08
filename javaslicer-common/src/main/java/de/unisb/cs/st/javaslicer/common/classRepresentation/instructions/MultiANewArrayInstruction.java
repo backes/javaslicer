@@ -3,6 +3,7 @@ package de.unisb.cs.st.javaslicer.common.classRepresentation.instructions;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.objectweb.asm.Opcodes;
 
@@ -51,6 +52,30 @@ public class MultiANewArrayInstruction extends AbstractInstruction {
                     return sb.append(", ...]").toString();
             }
             return sb.append(']').toString();
+        }
+
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = super.hashCode();
+            result = prime * result + Arrays.hashCode(this.newObjectIdentifiers);
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (!super.equals(obj))
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            MultiANewArrayInstrInstance other =
+                    (MultiANewArrayInstrInstance) obj;
+            if (!Arrays
+                .equals(this.newObjectIdentifiers, other.newObjectIdentifiers))
+                return false;
+            return true;
         }
 
     }

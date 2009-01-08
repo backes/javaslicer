@@ -49,6 +49,31 @@ public class ArrayInstruction extends AbstractInstruction {
             return sb.toString();
         }
 
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = super.hashCode();
+            result = prime * result + (int) this.arrayId;
+            result = prime * result + this.arrayIndex;
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (!super.equals(obj))
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            ArrayInstrInstance other = (ArrayInstrInstance) obj;
+            if (this.arrayId != other.arrayId)
+                return false;
+            if (this.arrayIndex != other.arrayIndex)
+                return false;
+            return true;
+        }
+
     }
 
     private final int arrayTraceSeqIndex;

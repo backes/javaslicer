@@ -41,6 +41,28 @@ public class NewArrayInstruction extends AbstractInstruction {
                 append(this.newObjectIdentifier).append(']').toString();
         }
 
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = super.hashCode();
+            result = prime * result + this.newObjectIdentifier;
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj)
+                return true;
+            if (!super.equals(obj))
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            NewArrayInstrInstance other = (NewArrayInstrInstance) obj;
+            if (this.newObjectIdentifier != other.newObjectIdentifier)
+                return false;
+            return true;
+        }
+
     }
 
     private final int arrayElemType;
