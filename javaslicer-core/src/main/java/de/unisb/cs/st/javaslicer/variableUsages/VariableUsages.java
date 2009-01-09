@@ -18,6 +18,8 @@ public interface VariableUsages {
 
     public Collection<? extends Variable> getUsedVariables(Variable definedVariable);
 
+    public Collection<Long> getCreatedObjects();
+
     public boolean isCatchBlock();
 
 }

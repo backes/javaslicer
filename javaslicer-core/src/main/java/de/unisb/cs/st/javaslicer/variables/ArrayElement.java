@@ -10,6 +10,14 @@ public class ArrayElement implements Variable {
         this.arrayIndex = arrayIndex;
     }
 
+    public long getArrayId() {
+        return this.arrayId;
+    }
+
+    public int getArrayIndex() {
+        return this.arrayIndex;
+    }
+
     @Override
     public String toString() {
         return "array["+this.arrayId+","+this.arrayIndex+"]";

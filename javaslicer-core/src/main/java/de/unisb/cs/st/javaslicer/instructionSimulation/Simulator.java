@@ -10,6 +10,7 @@ import java.util.Set;
 import org.objectweb.asm.Opcodes;
 
 import de.hammacher.util.ArrayStack;
+import de.hammacher.util.ListUtils;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.ArrayInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.FieldInstruction;
@@ -19,8 +20,9 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMa
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LdcInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.MethodInvocationInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.MultiANewArrayInstruction;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.TypeInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.VarInstruction;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.MultiANewArrayInstruction.MultiANewArrayInstrInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.TypeInstruction.TypeInstrInstance;
 import de.unisb.cs.st.javaslicer.dependencyAnalysis.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.variableUsages.MethodInvokationVariableUsages;
 import de.unisb.cs.st.javaslicer.variableUsages.SimpleVariableUsage;
@@ -74,13 +76,15 @@ public class Simulator {
             return simulateMethodInsn((MethodInvocationInstruction)inst.getInstruction(),
                     executionFrame, removedFrame);
         case MULTIANEWARRAY:
-            return stackManipulation(executionFrame, ((MultiANewArrayInstruction)inst.getInstruction()).getDimension(), 1);
+            return stackManipulation(executionFrame,
+                ((MultiANewArrayInstruction)inst.getInstruction()).getDimension(), 1,
+                ListUtils.longArrayAsList(((MultiANewArrayInstrInstance)inst).getNewObjectIdentifiers()));
         case NEWARRAY:
             return stackManipulation(executionFrame, 1, 1);
         case SIMPLE:
             return simulateSimpleInsn(inst, executionFrame, allFrames);
         case TYPE:
-            return simulateTypeInsn((TypeInstruction)inst.getInstruction(), executionFrame);
+            return simulateTypeInsn((TypeInstrInstance)inst, executionFrame);
         case VAR:
             return simulateVarInstruction((VarInstruction) inst.getInstruction(), executionFrame);
         default:
@@ -89,12 +93,18 @@ public class Simulator {
         }
     }
 
-    private VariableUsages simulateTypeInsn(final TypeInstruction instruction, final ExecutionFrame frame) {
-        switch (instruction.getOpcode()) {
+    private VariableUsages simulateTypeInsn(final TypeInstrInstance inst, final ExecutionFrame frame) {
+        switch (inst.getOpcode()) {
         case Opcodes.NEW:
-            // fall-through
+            return new SimpleVariableUsage(VariableUsages.EMPTY_VARIABLE_SET,
+                Collections.singleton((Variable)frame.getStackEntry(frame.operandStack.decrementAndGet())),
+                Collections.singleton(inst.getNewObjectIdentifier()));
         case Opcodes.ANEWARRAY:
-            return stackManipulation(frame, 1, 1);
+            final int stackSize = frame.operandStack.get()-1;
+            return new SimpleVariableUsage(
+                Collections.singleton((Variable)frame.getStackEntry(stackSize)),
+                Collections.singleton((Variable)frame.getStackEntry(stackSize)),
+                Collections.singleton(inst.getNewObjectIdentifier()));
         case Opcodes.CHECKCAST:
             return new SimpleVariableUsage(frame.getStackEntry(frame.operandStack.get()-1), VariableUsages.EMPTY_VARIABLE_SET);
         case Opcodes.INSTANCEOF:
@@ -379,9 +389,16 @@ public class Simulator {
         }
     }
 
-    private VariableUsages stackManipulation(final ExecutionFrame frame, final int read, final int write) {
+    private VariableUsages stackManipulation(final ExecutionFrame frame, final int read,
+            final int write) {
+        Collection<Long> createdObjects = Collections.emptySet();
+        return stackManipulation(frame, read, write, createdObjects);
+    }
+
+    private VariableUsages stackManipulation(final ExecutionFrame frame, final int read,
+            final int write, Collection<Long> createdObjects) {
         final int oldStackSize = read == write ? frame.operandStack.get() : frame.operandStack.getAndAdd(read - write);
-        return new StackManipulation(frame, read, write, oldStackSize);
+        return new StackManipulation(frame, read, write, oldStackSize, createdObjects);
     }
 
 }

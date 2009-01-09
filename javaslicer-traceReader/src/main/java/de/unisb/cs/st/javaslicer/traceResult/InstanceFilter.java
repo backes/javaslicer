@@ -20,6 +20,9 @@ public interface InstanceFilter {
 
         public static LabelFilter instance = new LabelFilter();
 
+        /**
+         * Returns true if the instance should be filtered out
+         */
         public boolean filterInstance(Instance instance) {
             return instance.getInstruction().getType() == Type.LABEL;
         }

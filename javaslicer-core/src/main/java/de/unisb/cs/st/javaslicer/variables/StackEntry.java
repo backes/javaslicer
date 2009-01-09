@@ -12,6 +12,14 @@ public class StackEntry implements Variable {
         this.index = index;
     }
 
+    public ExecutionFrame getFrame() {
+        return this.frame;
+    }
+
+    public int getIndex() {
+        return this.index;
+    }
+
     @Override
     public String toString() {
         return "stack["+this.frame.hashCode()+","+this.index+"]";

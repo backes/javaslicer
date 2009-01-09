@@ -1,6 +1,7 @@
 package de.unisb.cs.st.javaslicer.variableUsages;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 
 import de.unisb.cs.st.javaslicer.variables.Variable;
@@ -39,6 +40,10 @@ public class ComplexVariableUsage implements VariableUsages {
 
     public boolean isCatchBlock() {
         return false;
+    }
+
+    public Collection<Long> getCreatedObjects() {
+        return Collections.emptySet();
     }
 
 }

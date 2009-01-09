@@ -14,13 +14,15 @@ public class StackManipulation implements VariableUsages {
     private final int write;
     private final int oldStackSize;
     private Collection<Variable> readVars = null;
+    private final Collection<Long> createdObjects;
 
     public StackManipulation(final ExecutionFrame frame, final int read, final int write,
-            final int oldStackSize) {
+            final int oldStackSize, Collection<Long> createdObjects) {
         this.frame = frame;
         this.read = read;
         this.write = write;
         this.oldStackSize = oldStackSize;
+        this.createdObjects = createdObjects;
     }
 
     public Collection<? extends Variable> getDefinedVariables() {
@@ -59,6 +61,10 @@ public class StackManipulation implements VariableUsages {
 
     public boolean isCatchBlock() {
         return false;
+    }
+
+    public Collection<Long> getCreatedObjects() {
+        return this.createdObjects;
     }
 
 }

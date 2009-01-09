@@ -48,9 +48,12 @@ public interface DependencyVisitor {
     /**
      * Gets called if there might be a data dependency that gets visited later.
      *
-     * If the type is {@link DataDependencyType#READ_AFTER_WRITE}, then there definitively
-     * exists such a dependency, and {@link #visitDataDependency(Instance, Instance, Variable, DataDependencyType)}
-     * gets called later.
+     * If the type is {@link DataDependencyType#READ_AFTER_WRITE}, then most probably
+     * {@link #visitDataDependency(Instance, Instance, Variable, DataDependencyType)}
+     * gets called exactly one (may also be that it is not called in some cases), but
+     * definitively, at some later point
+     * {@link #discardPendingDataDependency(Instance, Variable, DataDependencyType)}
+     * is called.
      *
      * If the type is {@link DataDependencyType#WRITE_AFTER_READ}, then
      * {@link #visitDataDependency(Instance, Instance, Variable, DataDependencyType)}

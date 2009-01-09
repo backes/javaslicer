@@ -448,9 +448,10 @@ public class TracingMethodInstrumenter implements Opcodes {
         }
     }
 
-    private void transformMethodInsn(MethodInsnNode insn) {
+    private void transformMethodInsn(final MethodInsnNode insn) {
         registerInstruction(new MethodInvocationInstruction(this.readMethod, insn.getOpcode(), this.currentLine, insn.owner, insn.name, insn.desc), InstructionType.UNSAFE);
 
+        MethodInsnNode thisInsn = insn;
         if (this.tracer.wasRedefined(Type.getObjectType(insn.owner).getClassName())
                 && (insn.owner.equals(this.classNode.name)
                     && isPrivateNotNative(insn.name, insn.desc))) {
@@ -461,11 +462,11 @@ public class TracingMethodInstrumenter implements Opcodes {
             final Type[] newMethodArguments = Arrays.copyOf(oldMethodArguments, oldMethodArguments.length+1);
             newMethodArguments[oldMethodArguments.length] = Type.getType(ThreadTracer.class);
             final String newDesc = Type.getMethodDescriptor(Type.getReturnType(insn.desc), newMethodArguments);
-            this.instructionIterator.set(insn = new MethodInsnNode(insn.getOpcode(), insn.owner, insn.name, newDesc));
+            this.instructionIterator.set(thisInsn = new MethodInsnNode(insn.getOpcode(), insn.owner, insn.name, newDesc));
         }
 
         // if the next instruction is no label, we have to add one after the instruction
-        addLabelIfNecessary(insn);
+        addLabelIfNecessary(thisInsn);
     }
 
     private void addLabelIfNecessary(final AbstractInsnNode insn) {

@@ -1,9 +1,11 @@
 package de.unisb.cs.st.javaslicer.dependencyAnalysis;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -14,6 +16,8 @@ import de.hammacher.util.IntegerMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.ArrayInstruction.ArrayInstrInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.FieldInstruction.FieldInstrInstance;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.dependencyAnalysis.DependencyVisitor.DataDependencyType;
 import de.unisb.cs.st.javaslicer.instructionSimulation.Simulator;
@@ -21,6 +25,10 @@ import de.unisb.cs.st.javaslicer.traceResult.BackwardInstructionIterator;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.variableUsages.VariableUsages;
+import de.unisb.cs.st.javaslicer.variables.ArrayElement;
+import de.unisb.cs.st.javaslicer.variables.LocalVariable;
+import de.unisb.cs.st.javaslicer.variables.ObjectField;
+import de.unisb.cs.st.javaslicer.variables.StackEntry;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
 public class DependencyExtractor {
@@ -172,6 +180,26 @@ public class DependencyExtractor {
      * @param threadId identifies the thread whose trace should be analyzed
      */
     public void processBackwardTrace(final ThreadId threadId) {
+
+        // quickfix until the NEW bytecode knows the object it is creating:
+        // we first traverse the trace and store the first occurence of each object
+        Map<Long, Long> firstUsage = new HashMap<Long, Long>();
+        {
+            BackwardInstructionIterator quickFixBackwardIterator =
+                this.trace.getBackwardIterator(threadId, null);
+
+            long stepNr = 0;
+            while (quickFixBackwardIterator.hasNext()) {
+                Instance inst = quickFixBackwardIterator.next();
+                if (inst instanceof ArrayInstrInstance)
+                    firstUsage.put(((ArrayInstrInstance)inst).getArrayId(), stepNr);
+                else if (inst instanceof FieldInstrInstance)
+                    firstUsage.put(((FieldInstrInstance)inst).getObjectId(), stepNr);
+                ++stepNr;
+            }
+
+        }
+
         final BackwardInstructionIterator backwardInsnItr =
             this.trace.getBackwardIterator(threadId, null);
 
@@ -193,6 +221,17 @@ public class DependencyExtractor {
         final Map<Variable, Instance> lastWriter = new HashMap<Variable, Instance>();
         // lastReaders are needed for RAW data dependencies
         final Map<Variable, List<Instance>> lastReaders = new HashMap<Variable, List<Instance>>();
+
+        // this set contains all objects that have been created during the backwards traversal
+        // of the trace. so these objects cannot have any dependencies any more. from time to time,
+        // corresponding variables are delete from lastWriter and lastReader.
+        final Set<Long> createdObjects = new HashSet<Long>();
+
+        // these variables control when lastReaders and lastWriter are cleaned up based on createdObjects
+        int nextCleanupOfLastWriter = 1<<16;
+        int nextCleanupOfLastReaders = 1<<16;
+
+        long stepNr = 0;
 
         while (backwardInsnItr.hasNext()) {
             final Instance instance = backwardInsnItr.next();
@@ -251,6 +290,19 @@ public class DependencyExtractor {
                 for (final DependencyVisitor vis: this.instructionVisitors)
                     vis.visitInstructionExecution(instance);
 
+            /*
+            // fill createdObjects
+            {
+                Collection<Long> tmp = dynInfo.getCreatedObjects();
+                if (!tmp.isEmpty()) {
+                    if (tmp.size() == 1)
+                        createdObjects.add(tmp.iterator().next());
+                    else
+                        createdObjects.addAll(tmp);
+                }
+            }
+            */
+
             // the computation of control dependencies only has to be performed
             // if there are any controlDependencyVisitors
             if (this.controlDependencyVisitors != null) {
@@ -300,77 +352,83 @@ public class DependencyExtractor {
             }
 
             if (!dynInfo.getDefinedVariables().isEmpty()) {
-                // for each defined variable, we have a pending WAR dependency
-                if (this.pendingDataDependencyVisitorsWriteAfterRead != null) {
+                if (this.dataDependencyVisitorsReadAfterWrite != null
+                        || this.dataDependencyVisitorsWriteAfterRead != null
+                        || this.pendingDataDependencyVisitorsWriteAfterRead != null) {
                     for (final Variable definedVariable: dynInfo.getDefinedVariables()) {
-                        // if the lastWriter is not null, we first discard old pending dependencies
-                        Instance varLastWriter = lastWriter.get(definedVariable);
-                        lastWriter.put(definedVariable, instance);
-                        for (DependencyVisitor vis: this.pendingDataDependencyVisitorsWriteAfterRead) {
-                            if (varLastWriter != null)
-                                vis.discardPendingDataDependency(varLastWriter, definedVariable, DataDependencyType.WRITE_AFTER_READ);
-                            vis.visitPendingDataDependency(instance, definedVariable, DataDependencyType.WRITE_AFTER_READ);
+                        if (this.pendingDataDependencyVisitorsWriteAfterRead != null) {
+                            // for each defined variable, we have a pending WAR dependency
+                            // if the lastWriter is not null, we first discard old pending dependencies
+                            Instance varLastWriter = lastWriter.put(definedVariable, instance);
+                            for (DependencyVisitor vis: this.pendingDataDependencyVisitorsWriteAfterRead) {
+                                if (varLastWriter != null)
+                                    vis.discardPendingDataDependency(varLastWriter, definedVariable, DataDependencyType.WRITE_AFTER_READ);
+                                vis.visitPendingDataDependency(instance, definedVariable, DataDependencyType.WRITE_AFTER_READ);
+                            }
+                        // otherwise, if there are WAR visitors, we only update the lastWriter
+                        } else if (this.dataDependencyVisitorsWriteAfterRead != null) {
+                            lastWriter.put(definedVariable, instance);
+                        }
+                        // if we have RAW visitors, we need to analyse the lastReaders
+                        if (this.dataDependencyVisitorsReadAfterWrite != null
+                                || this.pendingDataDependencyVisitorsReadAfterWrite != null) {
+                            final List<Instance> readers = lastReaders.remove(definedVariable);
+                            if (readers != null)
+                                for (final Instance reader: readers) {
+                                    if (this.dataDependencyVisitorsReadAfterWrite != null)
+                                        for (final DependencyVisitor vis: this.dataDependencyVisitorsReadAfterWrite)
+                                            vis.visitDataDependency(reader, instance, definedVariable, DataDependencyType.READ_AFTER_WRITE);
+                                    if (this.pendingDataDependencyVisitorsReadAfterWrite != null)
+                                        for (DependencyVisitor vis: this.pendingDataDependencyVisitorsReadAfterWrite)
+                                            vis.discardPendingDataDependency(reader, definedVariable, DataDependencyType.READ_AFTER_WRITE);
+                                }
                         }
                     }
-                }
-                // if we have RAW visitors, we need to analyse the lastReaders
-                if (this.dataDependencyVisitorsReadAfterWrite != null) {
-                    for (final Variable definedVariable: dynInfo.getDefinedVariables()) {
-                        final List<Instance> readers = lastReaders.get(definedVariable);
-                        lastReaders.remove(definedVariable);
-                        if (readers != null)
-                            for (final Instance reader: readers) {
-                                for (final DependencyVisitor vis: this.dataDependencyVisitorsReadAfterWrite)
-                                    vis.visitDataDependency(reader, instance, definedVariable, DataDependencyType.READ_AFTER_WRITE);
-                            }
-                        if (this.dataDependencyVisitorsWriteAfterRead != null)
-                            lastWriter.put(definedVariable, instance);
-                    }
-                // otherwise, if there are WAR visitors, we only update the lastWriter
-                } else if (this.dataDependencyVisitorsWriteAfterRead != null) {
-                    for (final Variable definedVariable: dynInfo.getDefinedVariables()) {
-                        lastWriter.put(definedVariable, instance);
+                    if (lastWriter.size() > nextCleanupOfLastWriter) {
+                        cleanUpMaps(lastWriter, lastReaders, createdObjects, firstUsage,
+                            stepNr, frames, false);
+                        nextCleanupOfLastWriter = Math.max(1<<16, 2*lastWriter.size());
+                        nextCleanupOfLastReaders = Math.max(1<<16, 2*lastReaders.size());
                     }
                 }
             }
 
             if (!dynInfo.getUsedVariables().isEmpty()) {
-                // if we have WAR visitors, we inform them about a new dependency
-                if (this.dataDependencyVisitorsWriteAfterRead != null) {
+                if (this.dataDependencyVisitorsWriteAfterRead != null ||
+                        this.dataDependencyVisitorsReadAfterWrite != null) {
                     for (final Variable usedVariable: dynInfo.getUsedVariables()) {
-                        final Instance lastWriterInst = lastWriter.get(usedVariable);
+                        // if we have WAR visitors, we inform them about a new dependency
+                        if (this.dataDependencyVisitorsWriteAfterRead != null) {
+                            final Instance lastWriterInst = lastWriter.get(usedVariable);
 
-                        if (lastWriterInst != null) {
-                            for (final DependencyVisitor vis: this.dataDependencyVisitorsWriteAfterRead)
-                                vis.visitDataDependency(lastWriterInst, instance, usedVariable, DataDependencyType.WRITE_AFTER_READ);
+                            if (lastWriterInst != null) {
+                                for (final DependencyVisitor vis: this.dataDependencyVisitorsWriteAfterRead)
+                                    vis.visitDataDependency(lastWriterInst, instance, usedVariable, DataDependencyType.WRITE_AFTER_READ);
+                            }
                         }
 
                         // for RAW visitors, update the lastReaders
-                        if (this.dataDependencyVisitorsReadAfterWrite != null) {
+                        if (this.dataDependencyVisitorsReadAfterWrite != null
+                                || this.pendingDataDependencyVisitorsReadAfterWrite != null) {
                             List<Instance> readers = lastReaders.get(usedVariable);
                             if (readers == null) {
                                 readers = new ArrayList<Instance>(4);
                                 lastReaders.put(usedVariable, readers);
+                                if (lastReaders.size() > nextCleanupOfLastReaders) {
+                                    cleanUpMaps(lastWriter, lastReaders, createdObjects,
+                                        firstUsage, stepNr, frames, false);
+                                    nextCleanupOfLastWriter = Math.max(1<<16, 2*lastWriter.size());
+                                    nextCleanupOfLastReaders = Math.max(1<<16, 2*lastReaders.size());
+                                }
                             }
                             readers.add(instance);
+                            // for each used variable, we have a pending RAW dependency
+                            if (this.pendingDataDependencyVisitorsReadAfterWrite != null) {
+                                for (DependencyVisitor vis: this.pendingDataDependencyVisitorsReadAfterWrite)
+                                    vis.visitPendingDataDependency(instance, usedVariable, DataDependencyType.READ_AFTER_WRITE);
+                            }
                         }
                     }
-                // for RAW visitors, update the lastReaders
-                } else if (this.dataDependencyVisitorsReadAfterWrite != null) {
-                    for (final Variable usedVariable: dynInfo.getUsedVariables()) {
-                        List<Instance> readers = lastReaders.get(usedVariable);
-                        if (readers == null) {
-                            readers = new ArrayList<Instance>(4);
-                            lastReaders.put(usedVariable, readers);
-                        }
-                        readers.add(instance);
-                    }
-                }
-                // for each used variable, we have a pending RAW dependency
-                if (this.pendingDataDependencyVisitorsReadAfterWrite != null) {
-                    for (final Variable usedVariable: dynInfo.getUsedVariables())
-                        for (DependencyVisitor vis: this.pendingDataDependencyVisitorsReadAfterWrite)
-                            vis.visitPendingDataDependency(instance, usedVariable, DataDependencyType.READ_AFTER_WRITE);
                 }
             }
 
@@ -379,7 +437,51 @@ public class DependencyExtractor {
             else if (currentFrame.atCacheBlockStart != null)
                 currentFrame.atCacheBlockStart = null;
 
+            ++stepNr;
         }
+        cleanUpMaps(lastWriter, lastReaders, createdObjects, firstUsage, stepNr, frames, true);
+    }
+
+    private void cleanUpMaps(Map<Variable, Instance> lastWriter,
+            Map<Variable, List<Instance>> lastReaders, Set<Long> createdObjects,
+            Map<Long, Long> firstUsage, long stepNr,
+            Collection<ExecutionFrame> activeFrames, boolean cleanCompletely) {
+        Set<ExecutionFrame> activeFrameSet = new HashSet<ExecutionFrame>(activeFrames);
+
+        Iterator<Entry<Variable, Instance>> lastWriterIt = lastWriter.entrySet().iterator();
+        while (lastWriterIt.hasNext()) {
+            Entry<Variable, Instance> e = lastWriterIt.next();
+            Variable var = e.getKey();
+            if (cleanCompletely
+                    || (var instanceof ArrayElement && firstUsage.get(((ArrayElement)var).getArrayId()) < stepNr)
+                    || (var instanceof ObjectField && firstUsage.get(((ObjectField)var).getObjectId()) < stepNr)
+                    || (var instanceof StackEntry && !activeFrameSet.contains(((StackEntry)var).getFrame()))
+                    || (var instanceof LocalVariable && !activeFrameSet.contains(((LocalVariable)var).getFrame()))) {
+                if (this.pendingDataDependencyVisitorsWriteAfterRead != null)
+                    for (DependencyVisitor vis: this.pendingDataDependencyVisitorsWriteAfterRead)
+                        vis.discardPendingDataDependency(e.getValue(), var, DataDependencyType.WRITE_AFTER_READ);
+                lastWriterIt.remove();
+            }
+        }
+
+        Iterator<Entry<Variable, List<Instance>>> lastReadersIt = lastReaders.entrySet().iterator();
+        while (lastReadersIt.hasNext()) {
+            Entry<Variable, List<Instance>> e = lastReadersIt.next();
+            Variable var = e.getKey();
+            if (cleanCompletely
+                    || (var instanceof ArrayElement && firstUsage.get(((ArrayElement)var).getArrayId()) < stepNr)
+                    || (var instanceof ObjectField && firstUsage.get(((ObjectField)var).getObjectId()) < stepNr)
+                    || (var instanceof StackEntry && !activeFrameSet.contains(((StackEntry)var).getFrame()))
+                    || (var instanceof LocalVariable && !activeFrameSet.contains(((LocalVariable)var).getFrame()))) {
+                if (this.pendingDataDependencyVisitorsReadAfterWrite != null)
+                    for (Instance inst: e.getValue())
+                        for (DependencyVisitor vis: this.pendingDataDependencyVisitorsReadAfterWrite)
+                            vis.discardPendingDataDependency(inst, var, DataDependencyType.READ_AFTER_WRITE);
+                lastReadersIt.remove();
+            }
+        }
+
+        createdObjects.clear();
     }
 
     private Set<Instance> getInstanceIntersection(

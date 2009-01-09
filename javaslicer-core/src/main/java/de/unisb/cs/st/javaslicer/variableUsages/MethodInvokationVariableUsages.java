@@ -81,4 +81,8 @@ public class MethodInvokationVariableUsages implements VariableUsages {
         return false;
     }
 
+    public Collection<Long> getCreatedObjects() {
+        return Collections.emptySet();
+    }
+
 }
