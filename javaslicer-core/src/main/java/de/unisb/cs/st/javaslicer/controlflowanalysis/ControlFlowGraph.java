@@ -133,6 +133,8 @@ public class ControlFlowGraph {
 
 
     protected final Map<Instruction, AbstractInstrNode> instructionNodes;
+    
+    protected final InstrNode root;
 
     /**
      * Computes the <b>control flow graph</b> for one method, using the usual
@@ -152,9 +154,11 @@ public class ControlFlowGraph {
      */
     public ControlFlowGraph(final ReadMethod method, final NodeFactory nodeFactory) {
         this.instructionNodes = new HashMap<Instruction, AbstractInstrNode>();
+        List<AbstractInstruction> instructions = method.getInstructions();
         for (final Instruction instr: method.getInstructions()) {
             getInstrNode(instr, nodeFactory);
         }
+        this.root = getInstrNode(instructions.get(0), nodeFactory);
     }
 
     /**
@@ -168,6 +172,14 @@ public class ControlFlowGraph {
      */
     public InstrNode getNode(final Instruction instr) {
         return this.instructionNodes.get(instr);
+    }
+    
+    /**
+     * Get the root of the CFG.
+     * @return The root.
+     */
+    public InstrNode getRoot() {
+    	return root;
     }
 
     protected AbstractInstrNode getInstrNode(final Instruction instruction,
