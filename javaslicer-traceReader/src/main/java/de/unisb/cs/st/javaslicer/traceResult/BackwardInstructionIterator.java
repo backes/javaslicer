@@ -42,7 +42,7 @@ public class BackwardInstructionIterator implements Iterator<Instance>, TraceIte
     private int filteredInstructionCount = 0;
     private final PrintWriter debugFileWriter;
 
-    public BackwardInstructionIterator(final ThreadTraceResult threadTraceResult, InstanceFilter filter)
+    public BackwardInstructionIterator(final ThreadTraceResult threadTraceResult, final InstanceFilter filter)
             throws TracerException {
         this.filter = filter;
         this.threadTraceResult = threadTraceResult;
@@ -101,20 +101,20 @@ public class BackwardInstructionIterator implements Iterator<Instance>, TraceIte
                 return null;
             }
             assert backwardInstruction.getIndex() == index;
-            int stackDepth = this.stackDepth;
+            int tmpStackDepth = this.stackDepth;
             if (backwardInstruction == backwardInstruction.getMethod().getMethodEntryLabel()) {
                 --this.stackDepth;
                 assert this.stackDepth >= 0 : "enter method occured more often than leave method";
             } else if (backwardInstruction == backwardInstruction.getMethod().getMethodLeaveLabel()) {
-                this.stackDepth = ++stackDepth;
+                this.stackDepth = ++tmpStackDepth;
             } else if (backwardInstruction.getType() == Type.SIMPLE) {
                 switch (backwardInstruction.getOpcode()) {
                 case Opcodes.IRETURN: case Opcodes.LRETURN: case Opcodes.FRETURN:
                 case Opcodes.DRETURN: case Opcodes.ARETURN: case Opcodes.RETURN:
-                    this.stackDepth = ++stackDepth;
+                    this.stackDepth = ++tmpStackDepth;
                 }
             }
-            final Instance instance = backwardInstruction.getNextInstance(this, stackDepth);
+            final Instance instance = backwardInstruction.getNextInstance(this, tmpStackDepth);
             assert instance != null;
 
             if (this.filter != null && this.filter.filterInstance(instance)) {

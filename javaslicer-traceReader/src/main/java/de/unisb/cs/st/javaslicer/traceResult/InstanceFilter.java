@@ -20,11 +20,8 @@ public interface InstanceFilter {
 
         public static LabelFilter instance = new LabelFilter();
 
-        /**
-         * Returns true if the instance should be filtered out
-         */
-        public boolean filterInstance(Instance instance) {
-            return instance.getInstruction().getType() == Type.LABEL;
+        public boolean filterInstance(final Instance instrInstance) {
+            return instrInstance.getInstruction().getType() == Type.LABEL;
         }
 
         private LabelFilter() {
@@ -37,9 +34,9 @@ public interface InstanceFilter {
 
         public static AdditionalLabelFilter instance = new AdditionalLabelFilter();
 
-        public boolean filterInstance(Instance instance) {
-            return (instance.getInstruction().getType() == Type.LABEL) &&
-                (((LabelMarker)instance.getInstruction()).isAdditionalLabel());
+        public boolean filterInstance(final Instance instrInstance) {
+            return (instrInstance.getInstruction().getType() == Type.LABEL) &&
+                (((LabelMarker)instrInstance.getInstruction()).isAdditionalLabel());
         }
 
         private AdditionalLabelFilter() {
@@ -48,6 +45,9 @@ public interface InstanceFilter {
 
     }
 
+    /**
+     * Returns true if the instance should be filtered out
+     */
     boolean filterInstance(Instruction.Instance instance);
 
 }
