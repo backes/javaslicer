@@ -3,6 +3,7 @@ package de.unisb.cs.st.javaslicer.dependencyAnalysis;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -31,23 +32,40 @@ import de.unisb.cs.st.javaslicer.variables.ObjectField;
 import de.unisb.cs.st.javaslicer.variables.StackEntry;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
+
+/**
+ * This class iterates (backwards) through the execution trace and visits
+ * all dynamic data and control dependencies.
+ *
+ * @author Clemens Hammacher
+ */
 public class DependencyExtractor {
 
     private final TraceResult trace;
     private final Simulator simulator = new Simulator();
-    private ArrayList<DependencyVisitor> dataDependencyVisitorsReadAfterWrite = null;
-    private ArrayList<DependencyVisitor> dataDependencyVisitorsWriteAfterRead = null;
-    private ArrayList<DependencyVisitor> controlDependencyVisitors = null;
-    private ArrayList<DependencyVisitor> instructionVisitors = null;
-    private ArrayList<DependencyVisitor> pendingDataDependencyVisitorsReadAfterWrite = null;
-    private ArrayList<DependencyVisitor> pendingDataDependencyVisitorsWriteAfterRead = null;
-    private ArrayList<DependencyVisitor> pendingControlDependencyVisitors = null;
-    private ArrayList<DependencyVisitor> methodEntryLeaveVisitors = null;
+    private List<DependencyVisitor> dataDependencyVisitorsReadAfterWrite = null;
+    private List<DependencyVisitor> dataDependencyVisitorsWriteAfterRead = null;
+    private List<DependencyVisitor> controlDependencyVisitors = null;
+    private List<DependencyVisitor> instructionVisitors = null;
+    private List<DependencyVisitor> pendingDataDependencyVisitorsReadAfterWrite = null;
+    private List<DependencyVisitor> pendingDataDependencyVisitorsWriteAfterRead = null;
+    private List<DependencyVisitor> pendingControlDependencyVisitors = null;
+    private List<DependencyVisitor> methodEntryLeaveVisitors = null;
 
     public DependencyExtractor(final TraceResult trace) {
         this.trace = trace;
     }
 
+    /**
+     * Registers a {@link DependencyVisitor} with this {@link DependencyExtractor}.
+     * This method should only be called before {@link #processBackwardTrace(long)},
+     * otherwise you might get {@link ConcurrentModificationException}s.
+     *
+     * @param visitor the {@link DependencyVisitor} to register
+     * @param capabilities the capabilities of the visitor (determines which
+     *                     methods are called on the visitor)
+     * @return <code>true</code> if the visitor was registered with any capabilities
+     */
     public boolean registerVisitor(final DependencyVisitor visitor, final VisitorCapabilities... capabilities) {
         boolean change = false;
         for (final VisitorCapabilities cap: capabilities) {
