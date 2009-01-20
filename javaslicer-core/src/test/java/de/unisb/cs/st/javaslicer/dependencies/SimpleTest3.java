@@ -7,13 +7,13 @@ import org.junit.Test;
 
 import de.unisb.cs.st.javaslicer.AbstractDependenciesTest;
 import de.unisb.cs.st.javaslicer.AbstractDependenciesTest.Dependency.Type;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 
 public class SimpleTest3 extends AbstractDependenciesTest {
 
     protected static class Simple3Filter implements InstructionFilter {
 
-        public boolean filterInstance(Instance inst) {
+        public boolean filterInstance(InstructionInstance inst) {
             return inst.getInstruction().getMethod().getReadClass().getName().endsWith("Simple3");
         }
 

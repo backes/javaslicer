@@ -117,7 +117,7 @@ public class MultiANewArrayInstruction extends AbstractInstruction {
     }
 
     @Override
-    public Instance getNextInstance(TraceIterationInformationProvider infoProv,
+    public InstructionInstance getNextInstance(TraceIterationInformationProvider infoProv,
             int stackDepth) {
         int numNewObjects = infoProv.getNextInteger(this.numNewObjectIdentifiersSeqIndex);
         long[] newObjects = new long[numNewObjects];

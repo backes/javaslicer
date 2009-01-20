@@ -6,17 +6,17 @@ import java.util.Set;
 import de.hammacher.util.IntHolder;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.variables.LocalVariable;
 import de.unisb.cs.st.javaslicer.variables.StackEntry;
 
 public class ExecutionFrame {
 
-    public final Set<Instance> interestingInstances = new HashSet<Instance>();
+    public final Set<InstructionInstance> interestingInstances = new HashSet<InstructionInstance>();
     public final Set<Instruction> interestingInstructions = new HashSet<Instruction>();
     public ReadMethod method;
     public final IntHolder operandStack = new IntHolder(0);
-    public Instance atCacheBlockStart;
+    public InstructionInstance atCacheBlockStart;
     public boolean throwsException;
 
     public LocalVariable getLocalVariable(final int localVarIndex) {

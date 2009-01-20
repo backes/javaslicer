@@ -76,7 +76,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
             return Collections.singleton(this.lastMatch);
         }
 
-        public boolean matches(final Instruction.Instance instructionInstance) {
+        public boolean matches(final Instruction.InstructionInstance instructionInstance) {
             final int instrStackDepth = instructionInstance.getStackDepth();
             if (this.stackDepth != instrStackDepth) {
                 if (instrStackDepth > this.beingInRun.length) {

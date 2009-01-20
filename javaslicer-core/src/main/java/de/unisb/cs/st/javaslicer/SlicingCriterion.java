@@ -10,7 +10,7 @@ public interface SlicingCriterion {
 
     public interface Instance {
 
-        boolean matches(Instruction.Instance instructionInstance);
+        boolean matches(Instruction.InstructionInstance instructionInstance);
 
         Collection<Variable> getInterestingVariables(ExecutionFrame execFrame);
 

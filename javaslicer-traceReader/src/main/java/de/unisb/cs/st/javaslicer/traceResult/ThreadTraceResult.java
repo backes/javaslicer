@@ -10,7 +10,7 @@ import de.hammacher.util.IntegerMap;
 import de.hammacher.util.MultiplexedFileReader;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantThreadTraces;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence;
 
@@ -85,7 +85,7 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
      * @param filter   a filter to ignore certain instruction instances.
      *                 may be <code>null</code>.
      * @return an iterator that iterates backwards through the execution trace.
-     *         the iterator extends {@link Iterator} over {@link Instance}.
+     *         the iterator extends {@link Iterator} over {@link InstructionInstance}.
      */
     public BackwardInstructionIterator getBackwardIterator(InstanceFilter filter) {
         return new BackwardInstructionIterator(this, filter);
@@ -99,7 +99,7 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
      * So whenever you just need to iterate backwards, you should use that backward iterator.
      *
      * @return an iterator that is able to iterate in any direction through the execution trace.
-     *         the iterator extends {@link ListIterator} over {@link Instance}.
+     *         the iterator extends {@link ListIterator} over {@link InstructionInstance}.
      */
     public ForwardInstructionIterator getIterator() {
         ForwardIterationInformation forwInfo;
@@ -120,11 +120,11 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
         int[] jumps = new int[16];
         byte[] stackDepthChange = new byte[16];
 
-        final Iterator<Instance> backwardIt = getBackwardIterator(null);
+        final Iterator<InstructionInstance> backwardIt = getBackwardIterator(null);
         int lastIndex = 0;
         int curStackDepth = 1;
         while (backwardIt.hasNext()) {
-            final Instance instr = backwardIt.next();
+            final InstructionInstance instr = backwardIt.next();
             final int index = instr.getInstruction().getIndex();
             if (index != lastIndex-1 && instrCount > 1) {
                 if (numJumps == jumpInstrNrs.length) {

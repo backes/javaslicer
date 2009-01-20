@@ -15,7 +15,7 @@ import de.hammacher.util.Diff;
 import de.hammacher.util.DiffPrint;
 import de.hammacher.util.Diff.change;
 import de.unisb.cs.st.javaslicer.AbstractDependenciesTest.Dependency.Type;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.dependencyAnalysis.DependencyExtractor;
 import de.unisb.cs.st.javaslicer.dependencyAnalysis.DependencyVisitorAdapter;
 import de.unisb.cs.st.javaslicer.dependencyAnalysis.VisitorCapabilities;
@@ -93,7 +93,7 @@ public abstract class AbstractDependenciesTest {
         }
 
         @Override
-        public void visitDataDependency(Instance from, Instance to,
+        public void visitDataDependency(InstructionInstance from, InstructionInstance to,
                 Variable var, DataDependencyType type) {
             if (var instanceof StackEntry)
                 return;
@@ -112,7 +112,7 @@ public abstract class AbstractDependenciesTest {
 
     protected static interface InstructionFilter {
 
-        boolean filterInstance(Instance inst);
+        boolean filterInstance(InstructionInstance inst);
 
     }
 

@@ -11,7 +11,7 @@ import org.objectweb.asm.Opcodes;
 
 import de.hammacher.util.ArrayStack;
 import de.hammacher.util.ListUtils;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.ArrayInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.FieldInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.IIncInstruction;
@@ -35,7 +35,7 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
 
 public class Simulator {
 
-    public VariableUsages simulateInstruction(final Instance inst,
+    public VariableUsages simulateInstruction(final InstructionInstance inst,
             final ExecutionFrame executionFrame, final ExecutionFrame removedFrame,
             final ArrayStack<ExecutionFrame> allFrames) {
         final Variable var;
@@ -264,7 +264,7 @@ public class Simulator {
         }
     }
 
-    private VariableUsages simulateSimpleInsn(final Instance inst, final ExecutionFrame frame,
+    private VariableUsages simulateSimpleInsn(final InstructionInstance inst, final ExecutionFrame frame,
             final ArrayStack<ExecutionFrame> allFrames) {
         switch (inst.getInstruction().getOpcode()) {
         case DUP:

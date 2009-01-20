@@ -8,12 +8,12 @@ import de.hammacher.util.IntegerMap;
 import de.hammacher.util.IntegerToLongMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantIntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantLongTraceSequence;
 
-public class ForwardInstructionIterator implements ListIterator<Instance>, TraceIterationInformationProvider {
+public class ForwardInstructionIterator implements ListIterator<InstructionInstance>, TraceIterationInformationProvider {
 
     private long backwardInstrNr;
     private int nextIndex;
@@ -50,7 +50,7 @@ public class ForwardInstructionIterator implements ListIterator<Instance>, Trace
         return this.backwardInstrNr != 0;
     }
 
-    public Instance next() {
+    public InstructionInstance next() {
         if (!hasNext())
             throw new NoSuchElementException();
         --this.backwardInstrNr;
@@ -58,7 +58,7 @@ public class ForwardInstructionIterator implements ListIterator<Instance>, Trace
         this.backwards=false;
         while (true) {
             final Instruction instr = this.threadTraceResult.findInstruction(this.nextIndex);
-            final Instance inst = instr.getNextInstance(this, this.stackDepth);
+            final InstructionInstance inst = instr.getNextInstance(this, this.stackDepth);
             if (inst == null) {
                 ++this.nextIndex;
                 continue;
@@ -75,7 +75,7 @@ public class ForwardInstructionIterator implements ListIterator<Instance>, Trace
         }
     }
 
-    public Instance previous() {
+    public InstructionInstance previous() {
         if (!hasPrevious())
             throw new NoSuchElementException();
 
@@ -90,7 +90,7 @@ public class ForwardInstructionIterator implements ListIterator<Instance>, Trace
         this.backwards=true;
         while (true) {
             final Instruction instr = this.threadTraceResult.findInstruction(this.nextIndex);
-            final Instance inst = instr.getNextInstance(this, this.stackDepth);
+            final InstructionInstance inst = instr.getNextInstance(this, this.stackDepth);
             if (inst == null) {
                 --this.nextIndex;
                 continue;
@@ -106,7 +106,7 @@ public class ForwardInstructionIterator implements ListIterator<Instance>, Trace
         throw new UnsupportedOperationException();
     }
 
-    public void add(final Instance e) {
+    public void add(final InstructionInstance e) {
         throw new UnsupportedOperationException();
     }
 
@@ -122,7 +122,7 @@ public class ForwardInstructionIterator implements ListIterator<Instance>, Trace
         return this.nextIndex-1;
     }
 
-    public void set(final Instance e) {
+    public void set(final InstructionInstance e) {
         throw new UnsupportedOperationException();
 
     }

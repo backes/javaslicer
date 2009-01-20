@@ -18,20 +18,20 @@ import de.hammacher.util.IntegerToLongMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Type;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantIntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantLongTraceSequence;
 
-public class BackwardInstructionIterator implements Iterator<Instance>, TraceIterationInformationProvider {
+public class BackwardInstructionIterator implements Iterator<InstructionInstance>, TraceIterationInformationProvider {
 
     public static final boolean WRITE_ITERATION_DEBUG_FILE = false;
 
     private final ThreadTraceResult threadTraceResult;
     private final InstanceFilter filter;
 
-    private Instance nextInstruction;
+    private InstructionInstance nextInstruction;
     private final IntegerMap<Iterator<Integer>> integerSequenceBackwardIterators;
     private final IntegerMap<Iterator<Long>> longSequenceBackwardIterators;
     private final IntegerToLongMap instructionNextOccurenceNumber;
@@ -77,10 +77,10 @@ public class BackwardInstructionIterator implements Iterator<Instance>, TraceIte
         return false;
     }
 
-    public Instance next() throws TracerException {
+    public InstructionInstance next() throws TracerException {
         if (this.nextInstruction == null)
             throw new NoSuchElementException();
-        final Instance old = this.nextInstruction;
+        final InstructionInstance old = this.nextInstruction;
         this.nextInstruction = getNextInstruction(this.nextInstruction.getInstruction().getBackwardInstructionIndex(this));
         return old;
     }
@@ -89,7 +89,7 @@ public class BackwardInstructionIterator implements Iterator<Instance>, TraceIte
         return Collections.unmodifiableList(Arrays.asList(this.threadTraceResult.lastStackMethods));
     }
 
-    private Instance getNextInstruction(final int nextIndex) throws TracerException {
+    private InstructionInstance getNextInstruction(final int nextIndex) throws TracerException {
         int index = nextIndex;
         while (true) {
             if (WRITE_ITERATION_DEBUG_FILE) {
@@ -114,7 +114,7 @@ public class BackwardInstructionIterator implements Iterator<Instance>, TraceIte
                     this.stackDepth = ++tmpStackDepth;
                 }
             }
-            final Instance instance = backwardInstruction.getNextInstance(this, tmpStackDepth);
+            final InstructionInstance instance = backwardInstruction.getNextInstance(this, tmpStackDepth);
             assert instance != null;
 
             if (this.filter != null && this.filter.filterInstance(instance)) {

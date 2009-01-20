@@ -38,7 +38,7 @@ public class CompoundSlicingCriterion implements SlicingCriterion {
             return interestingInstructions;
         }
 
-        public boolean matches(final Instruction.Instance instructionInstance) {
+        public boolean matches(final Instruction.InstructionInstance instructionInstance) {
             for (final SlicingCriterion.Instance crit: this.instances) {
                 if (crit.matches(instructionInstance))
                     return true;

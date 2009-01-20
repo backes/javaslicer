@@ -28,7 +28,7 @@ import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
  */
 public interface Instruction extends Comparable<Instruction> {
 
-    public interface Instance {
+    public interface InstructionInstance {
 
         Instruction getInstruction();
 
@@ -117,7 +117,7 @@ public interface Instruction extends Comparable<Instruction> {
     int getBackwardInstructionIndex(final TraceIterationInformationProvider infoProv);
 
     // for internal use only!
-    Instance getNextInstance(final TraceIterationInformationProvider infoProv, int stackDepth) throws TracerException;
+    InstructionInstance getNextInstance(final TraceIterationInformationProvider infoProv, int stackDepth) throws TracerException;
 
     void writeOut(final DataOutputStream out, StringCacheOutput stringCache) throws IOException;
 

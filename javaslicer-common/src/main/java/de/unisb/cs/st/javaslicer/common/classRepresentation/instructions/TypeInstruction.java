@@ -105,7 +105,7 @@ public class TypeInstruction extends AbstractInstruction {
     }
 
     @Override
-    public Instance getNextInstance(TraceIterationInformationProvider infoProv,
+    public InstructionInstance getNextInstance(TraceIterationInformationProvider infoProv,
             int stackDepth) {
         long newObjectIdentifier = this.newObjectIdentifierSeqIndex == 0 ? 0
             : infoProv.getNextLong(this.newObjectIdentifierSeqIndex);

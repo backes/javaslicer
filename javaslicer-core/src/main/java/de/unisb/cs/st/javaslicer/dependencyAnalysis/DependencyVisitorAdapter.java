@@ -1,7 +1,7 @@
 package de.unisb.cs.st.javaslicer.dependencyAnalysis;
 
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
 
@@ -12,29 +12,29 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
  */
 public abstract class DependencyVisitorAdapter implements DependencyVisitor {
 
-    public void discardPendingDataDependency(Instance from, Variable var,
+    public void discardPendingDataDependency(InstructionInstance from, Variable var,
             DataDependencyType type) {
         // null
     }
 
-    public void visitControlDependency(Instance from, Instance to) {
+    public void visitControlDependency(InstructionInstance from, InstructionInstance to) {
         // null
     }
 
-    public void visitDataDependency(Instance from, Instance to, Variable var,
+    public void visitDataDependency(InstructionInstance from, InstructionInstance to, Variable var,
             DataDependencyType type) {
         // null
     }
 
-    public void visitInstructionExecution(Instance instance) {
+    public void visitInstructionExecution(InstructionInstance instance) {
         // null
     }
 
-    public void visitPendingControlDependency(Instance from) {
+    public void visitPendingControlDependency(InstructionInstance from) {
         // null
     }
 
-    public void visitPendingDataDependency(Instance from, Variable var,
+    public void visitPendingDataDependency(InstructionInstance from, Variable var,
             DataDependencyType type) {
         // null
     }

@@ -19,7 +19,7 @@ import de.hammacher.util.MultiplexedFileReader.MultiplexInputStream;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 
@@ -132,7 +132,7 @@ public class TraceResult {
      * @param filter   a filter to ignore certain instruction instances.
      *                 may be <code>null</code>.
      * @return an iterator that iterates backwards through the execution trace.
-     *         the iterator extends {@link Iterator} over {@link Instance}.
+     *         the iterator extends {@link Iterator} over {@link InstructionInstance}.
      */
     public BackwardInstructionIterator getBackwardIterator(final ThreadId threadId,
             final InstanceFilter filter) {
@@ -152,7 +152,7 @@ public class TraceResult {
      * @param filter       a filter to ignore certain instruction instances.
      *                     may be <code>null</code>.
      * @return an iterator that iterates backwards through the execution trace.
-     *         the iterator extends {@link Iterator} over {@link Instance}.
+     *         the iterator extends {@link Iterator} over {@link InstructionInstance}.
      */
     public BackwardInstructionIterator getBackwardIterator(final long javaThreadId,
             InstanceFilter filter) {
@@ -170,7 +170,7 @@ public class TraceResult {
      * @param threadId the identifier of the thread whose execution trace
      *                 iterator is requested
      * @return an iterator that is able to iterate in any direction through the execution trace.
-     *         the iterator extends {@link ListIterator} over {@link Instance}.
+     *         the iterator extends {@link ListIterator} over {@link InstructionInstance}.
      */
     public ForwardInstructionIterator getIterator(final ThreadId threadId) {
         final ThreadTraceResult res = findThreadTraceResult(threadId);
@@ -187,7 +187,7 @@ public class TraceResult {
      * @param javaThreadId the java thread id of the thread whose execution trace
      *                     iterator is requested
      * @return an iterator that is able to iterate in any direction through the execution trace.
-     *         the iterator extends {@link ListIterator} over {@link Instance}.
+     *         the iterator extends {@link ListIterator} over {@link InstructionInstance}.
      */
     public ForwardInstructionIterator getIterator(final long javaThreadId) {
         final ThreadId id = getThreadId(javaThreadId);
@@ -290,14 +290,14 @@ public class TraceResult {
         try {
             System.out.println();
             System.out.println("The backward trace:");
-            final Iterator<Instance> it = tr.getBackwardIterator(tracing,
+            final Iterator<InstructionInstance> it = tr.getBackwardIterator(tracing,
                 InstanceFilter.AdditionalLabelFilter.instance);
             long nr = 0;
             final String format = "%8d: %-100s -> %3d %7d %s%n";
             System.out.format("%8s  %-100s    %3s %7s %s%n",
                     "Nr", "Location", "Dep", "OccNr", "Instruction");
             while (it.hasNext()) {
-                final Instance inst = it.next();
+                final InstructionInstance inst = it.next();
                 final ReadMethod method = inst.getInstruction().getMethod();
                 final ReadClass class0 = method.getReadClass();
                 System.out.format(format, nr++, class0.getName()+"."

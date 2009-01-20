@@ -38,7 +38,7 @@ public abstract class InstructionWrapper implements Instruction {
         return this.wrappedInstruction.getMethod();
     }
 
-    public Instance getNextInstance(final TraceIterationInformationProvider infoProv, final int stackDepth)
+    public InstructionInstance getNextInstance(final TraceIterationInformationProvider infoProv, final int stackDepth)
             throws TracerException {
         return this.wrappedInstruction.getNextInstance(infoProv, stackDepth);
     }

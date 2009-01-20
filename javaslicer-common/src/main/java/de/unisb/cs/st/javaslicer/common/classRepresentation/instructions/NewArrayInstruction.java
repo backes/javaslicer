@@ -125,7 +125,7 @@ public class NewArrayInstruction extends AbstractInstruction {
     }
 
     @Override
-    public Instance getNextInstance(TraceIterationInformationProvider infoProv,
+    public InstructionInstance getNextInstance(TraceIterationInformationProvider infoProv,
             int stackDepth) {
         final long objectId = this.newObjectIdentifierSequenceIndex == -1 ? -1 :
             infoProv.getNextLong(this.newObjectIdentifierSequenceIndex);

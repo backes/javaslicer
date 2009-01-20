@@ -19,7 +19,7 @@ import de.hammacher.util.IntegerMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Type;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
@@ -158,7 +158,7 @@ public class Slicer implements Opcodes {
     }
 
     public Set<Instruction> getDynamicSlice(final ThreadId threadId, final SlicingCriterion.Instance slicingCriterion) {
-        final Iterator<Instance> backwardInsnItr = this.trace.getBackwardIterator(threadId, null);
+        final Iterator<InstructionInstance> backwardInsnItr = this.trace.getBackwardIterator(threadId, null);
 
         final IntegerMap<Set<Instruction>> controlDependencies = new IntegerMap<Set<Instruction>>();
 
@@ -171,7 +171,7 @@ public class Slicer implements Opcodes {
         frames.push(currentFrame);
 
         while (backwardInsnItr.hasNext()) {
-            final Instance instance = backwardInsnItr.next();
+            final InstructionInstance instance = backwardInsnItr.next();
             final Instruction instruction = instance.getInstruction();
 
             ExecutionFrame removedFrame = null;

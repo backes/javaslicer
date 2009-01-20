@@ -146,7 +146,7 @@ public abstract class AbstractInstruction implements Instruction {
     }
 
     // must be overridden by classes with dynamic parameters (e.g. array load/store)
-    public Instance getNextInstance(final TraceIterationInformationProvider infoProv, final int stackDepth) {
+    public InstructionInstance getNextInstance(final TraceIterationInformationProvider infoProv, final int stackDepth) {
         return new AbstractInstance(this, infoProv.getNextInstructionOccurenceNumber(this.index), stackDepth);
     }
 
@@ -200,7 +200,7 @@ public abstract class AbstractInstruction implements Instruction {
 
 
     public static class AbstractInstance extends InstructionWrapper
-            implements Instance {
+            implements InstructionInstance {
 
         private final long occurenceNumber;
         private final int stackDepth;
