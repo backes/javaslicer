@@ -62,7 +62,7 @@ public class ExceptionsTest2 extends AbstractSlicingTest {
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:21 INVOKEVIRTUAL java/lang/NullPointerException.getMessage()Ljava/lang/String;",
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:21 ASTORE 3",
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:24 ALOAD 3",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:24 IFNULL L4",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:24 IFNULL L8",
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:25 ALOAD 3",
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:25 INVOKEVIRTUAL java/lang/String.length()I",
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:25 NEWARRAY T_INT",

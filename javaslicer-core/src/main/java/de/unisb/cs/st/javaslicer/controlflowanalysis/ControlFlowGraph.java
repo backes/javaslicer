@@ -4,9 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
 
 import org.objectweb.asm.Opcodes;
@@ -14,6 +12,7 @@ import org.objectweb.asm.Opcodes;
 import de.hammacher.util.UniqueQueue;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.TryCatchBlock;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.JumpInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
@@ -39,19 +38,23 @@ public class ControlFlowGraph {
          * Returns the number of outgoing edges from this node.
          * @return the out degree of the node
          */
-        int getOutDeg();
+        int getOutDegree();
 
         /**
          * Returns the number of incoming edges of this node.
          * @return the in degree of the node
          */
-        int getInDeg();
+        int getInDegree();
 
         Collection<InstrNode> getSuccessors();
         Collection<InstrNode> getPredecessors();
 
         Instruction getInstruction();
 
+        /**
+         * For internal use only
+         */
+        void addSuccessor(InstrNode successor);
         /**
          * For internal use only
          */
@@ -64,32 +67,40 @@ public class ControlFlowGraph {
      *
      * @author Clemens Hammacher
      */
-    public static abstract class AbstractInstrNode implements InstrNode {
+    public static class AbstractInstrNode implements InstrNode {
 
-        private final List<InstrNode> predecessors = new ArrayList<InstrNode>(1);
+        private final List<InstrNode> successors = new ArrayList<InstrNode>(0);
+        private final List<InstrNode> predecessors = new ArrayList<InstrNode>(0);
         private final Instruction instruction;
 
-        public AbstractInstrNode(final Instruction instr, final ControlFlowGraph cfg) {
-            assert instr != null;
+        public AbstractInstrNode(final Instruction instr) {
+            if (instr == null)
+                throw new NullPointerException();
             this.instruction = instr;
-            assert !cfg.instructionNodes.containsKey(instr);
-            cfg.instructionNodes.put(instr, this);
         }
 
-        public abstract int getOutDeg();
+        public Instruction getInstruction() {
+            return this.instruction;
+        }
 
-        public abstract Collection<InstrNode> getSuccessors();
+        public Collection<InstrNode> getSuccessors() {
+            return this.successors;
+        }
 
         public Collection<InstrNode> getPredecessors() {
             return this.predecessors;
         }
 
-        public int getInDeg() {
+        public int getOutDegree() {
+            return this.successors.size();
+        }
+
+        public int getInDegree() {
             return this.predecessors.size();
         }
 
-        public Instruction getInstruction() {
-            return this.instruction;
+        public void addSuccessor(InstrNode successor) {
+            this.successors.add(successor);
         }
 
         public void addPredecessor(InstrNode predecessor) {
@@ -98,10 +109,7 @@ public class ControlFlowGraph {
 
         @Override
         public int hashCode() {
-            final int prime = 31;
-            int result = 1;
-            result = prime * result + this.instruction.hashCode();
-            return result;
+            return this.instruction.hashCode();
         }
 
         @Override
@@ -127,21 +135,29 @@ public class ControlFlowGraph {
 
     public interface NodeFactory {
 
-        AbstractInstrNode createNode(ControlFlowGraph cfg, Instruction instruction, Collection<Instruction> successors);
+        InstrNode createNode(Instruction instruction);
 
     }
 
+    public static class AbstractNodeFactory implements NodeFactory {
 
-    protected final Map<Instruction, AbstractInstrNode> instructionNodes;
+        public InstrNode createNode(Instruction instr) {
+            return new AbstractInstrNode(instr);
+        }
+
+    }
+
+    private final ReadMethod method;
+    private final InstrNode[] instructionNodes;
 
     /**
      * Computes the <b>control flow graph</b> for one method, using the usual
-     * {@link SimpleNodeFactory}.
+     * {@link AbstractNodeFactory}.
      *
      * @param method the method for which the CFG is computed
      */
     public ControlFlowGraph(final ReadMethod method) {
-        this(method, SimpleNodeFactory.getInstance());
+        this(method, new AbstractNodeFactory());
     }
 
     /**
@@ -151,10 +167,53 @@ public class ControlFlowGraph {
      * @param nodeFactory the factory that creates the nodes of the CFG
      */
     public ControlFlowGraph(final ReadMethod method, final NodeFactory nodeFactory) {
-        this.instructionNodes = new HashMap<Instruction, AbstractInstrNode>();
+        this(method, nodeFactory, false);
+    }
+
+    /**
+     * Computes the <b>control flow graph</b> for one method.
+     *
+     * @param method the method for which the CFG is computed
+     * @param nodeFactory the factory that creates the nodes of the CFG
+     * @param addTryCatchEdges controls whether an edge should be inserted from each
+     *                         instruction within a try block to the first instruction
+     *                         in the catch block
+     */
+    public ControlFlowGraph(final ReadMethod method, final NodeFactory nodeFactory,
+            boolean addTryCatchEdges) {
+        this.method = method;
+        this.instructionNodes = new InstrNode[method.getInstructionNumberEnd() - method.getInstructionNumberStart()];
         for (final Instruction instr: method.getInstructions()) {
             getInstrNode(instr, nodeFactory);
         }
+        // now add the edges from try blocks to catch/finally blocks
+        // TODO find out for each bytecode instruction which exceptions they can throw
+        if (addTryCatchEdges) {
+            for (TryCatchBlock tcb: method.getTryCatchBlocks()) {
+                InstrNode tcbHandler = getInstrNode(tcb.getHandler(), nodeFactory);
+                for (Instruction inst = tcb.getStart(); inst != null && inst != tcb.getEnd(); inst = inst.getNext()) {
+                    getInstrNode(inst, nodeFactory).addSuccessor(tcbHandler);
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns the root of this CFG, which is just the Node corresponding to the
+     * first instruction of this CFG's method, or null if the method contains no
+     * instructions.
+     */
+    public InstrNode getRootNode() {
+        return this.instructionNodes.length == 0 ? null : this.instructionNodes[0];
+    }
+
+    /**
+     * Returns the method on which this CFG was built.
+     *
+     * @return the method on which this CFG was built.
+     */
+    public ReadMethod getMethod() {
+        return this.method;
     }
 
     /**
@@ -167,18 +226,27 @@ public class ControlFlowGraph {
      *         <code>null</code> if the instruction is not contained in the method of this CFG
      */
     public InstrNode getNode(final Instruction instr) {
-        return this.instructionNodes.get(instr);
+        int idx = instr.getIndex() - this.method.getInstructionNumberStart();
+        if (idx >= 0 && idx < this.instructionNodes.length)
+            return this.instructionNodes[idx];
+        return null;
     }
 
-    protected AbstractInstrNode getInstrNode(final Instruction instruction,
+    protected InstrNode getInstrNode(final Instruction instruction,
             final NodeFactory nodeFactory) {
-        assert instruction != null;
-        final AbstractInstrNode node = this.instructionNodes.get(instruction);
+        int idx = instruction.getIndex() - this.method.getInstructionNumberStart();
+        final InstrNode node = this.instructionNodes[idx];
         if (node != null)
             return node;
 
-        final Collection<Instruction> successors = getSuccessors(instruction);
-        return nodeFactory.createNode(this, instruction, successors);
+        InstrNode newNode = nodeFactory.createNode(instruction);
+        this.instructionNodes[idx] = newNode;
+        for (Instruction succ: getSuccessors(instruction)) {
+            InstrNode succNode = getInstrNode(succ, nodeFactory);
+            newNode.addSuccessor(succNode);
+            succNode.addPredecessor(newNode);
+        }
+        return newNode;
     }
 
     private static Collection<Instruction> getSuccessors(final Instruction instruction) {
@@ -231,7 +299,7 @@ public class ControlFlowGraph {
             break;
         case LABEL:
             if (instruction == instruction.getMethod().getMethodLeaveLabel())
-                return null;
+                return Collections.emptySet();
             break;
         default:
             break;

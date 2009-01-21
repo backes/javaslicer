@@ -43,6 +43,7 @@ public class ReadMethod implements Comparable<ReadMethod> {
     }
 
     private final ArrayList<AbstractInstruction> instructions = new ArrayList<AbstractInstruction>();
+    private final List<TryCatchBlock> tryCatchBlocks = new ArrayList<TryCatchBlock>();
     private final ReadClass readClass;
     private final int access;
     private final String name;
@@ -64,9 +65,12 @@ public class ReadMethod implements Comparable<ReadMethod> {
         this.localVariables = new ArrayList<LocalVariable>();
     }
 
-    public int addInstruction(final AbstractInstruction instruction) {
+    public void addInstruction(final AbstractInstruction instruction) {
         this.instructions.add(instruction);
-        return this.instructions.size()-1;
+    }
+
+    public void addTryCatchBlock(TryCatchBlock tryCatchBlock) {
+        this.tryCatchBlocks.add(tryCatchBlock);
     }
 
     public void ready() {
@@ -75,6 +79,10 @@ public class ReadMethod implements Comparable<ReadMethod> {
 
     public List<AbstractInstruction> getInstructions() {
         return this.instructions;
+    }
+
+    public List<TryCatchBlock> getTryCatchBlocks() {
+        return this.tryCatchBlocks;
     }
 
     public ReadClass getReadClass() {
@@ -136,6 +144,9 @@ public class ReadMethod implements Comparable<ReadMethod> {
         for (final Instruction instr: this.instructions)
             if (!(instr instanceof LabelMarker))
                 instr.writeOut(out, stringCache);
+        OptimizedDataOutputStream.writeInt0(this.tryCatchBlocks.size(), out);
+        for (TryCatchBlock tcb: this.tryCatchBlocks)
+            tcb.writeOut(out, stringCache);
         if (this.methodEntryLabel != null && this.methodLeaveLabel != null) {
             assert this.methodEntryLabel == this.instructions.get(0);
             assert this.methodLeaveLabel == this.instructions.get(this.instructions.size()-1);
@@ -176,6 +187,10 @@ public class ReadMethod implements Comparable<ReadMethod> {
                 rm.instructions.add(labels.poll());
             rm.instructions.add(instr);
             instr = null;
+        }
+        int numTcb = OptimizedDataInputStream.readInt0(in);
+        while (numTcb-- > 0) {
+            rm.addTryCatchBlock(TryCatchBlock.readFrom(in, mri, stringCache));
         }
         rm.instructions.addAll(labels);
         rm.instructions.trimToSize();

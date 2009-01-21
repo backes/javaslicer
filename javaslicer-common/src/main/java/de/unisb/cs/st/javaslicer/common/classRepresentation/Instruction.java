@@ -123,8 +123,24 @@ public interface Instruction extends Comparable<Instruction> {
 
     Type getType();
 
+    /**
+     * Returns the (statically) preceeding instruction, which might be null if
+     * <code>this</code> instruction is the first one of the method.
+     *
+     * The index of the previous instruction is the index of this one minus one.
+     *
+     * @return the previous instruction
+     */
     Instruction getPrevious();
 
+    /**
+     * Returns the (statically) next instruction, which might be null if
+     * <code>this</code> instruction is the last one of the method.
+     *
+     * The index of the next instruction is the index of this one plus one.
+     *
+     * @return the next instruction
+     */
     Instruction getNext();
 
 }

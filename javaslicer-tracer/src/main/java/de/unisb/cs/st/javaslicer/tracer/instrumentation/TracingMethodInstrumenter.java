@@ -42,6 +42,7 @@ import de.hammacher.util.Pair;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.TryCatchBlock;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.ArrayInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.FieldInstruction;
@@ -223,7 +224,8 @@ public class TracingMethodInstrumenter implements Opcodes {
                     }
                 });
         // copy the try-catch-blocks
-        for (final Object o: this.methodNode.tryCatchBlocks.toArray()) {
+        Object[] oldTryCatchblockNodes = this.methodNode.tryCatchBlocks.toArray();
+        for (final Object o: oldTryCatchblockNodes) {
             final TryCatchBlockNode tcb = (TryCatchBlockNode) o;
             final TryCatchBlockNode newTcb = new TryCatchBlockNode(
                     labelCopies.get(tcb.start),
@@ -320,6 +322,16 @@ public class TracingMethodInstrumenter implements Opcodes {
         // if this method is the Object constructor, add extra code
         if (this.methodNode.name.equals("<init>") && this.classNode.name.equals("java/lang/Object")) {
             transformObjectConstructor();
+        }
+
+        // add the (old) try-catch blocks to the readMethods
+        // (can only be done down here since we use the information in the
+        // labels map)
+        for (Object o: oldTryCatchblockNodes) {
+            TryCatchBlockNode tcb = (TryCatchBlockNode) o;
+            this.readMethod.addTryCatchBlock(new TryCatchBlock(
+                this.labels.get(tcb.start), this.labels.get(tcb.end),
+                this.labels.get(tcb.handler), tcb.type));
         }
 
         final LabelNode l1 = new LabelNode();
@@ -434,8 +446,13 @@ public class TracingMethodInstrumenter implements Opcodes {
             }
         }
 
-        for (final Object o: method.tryCatchBlocks)
-            this.jumpTargetLabels.add(((TryCatchBlockNode) o).handler);
+        for (final Object o: method.tryCatchBlocks) {
+            // start and end are not really jump targets, but we add them nevertheless ;)
+            TryCatchBlockNode tcb = (TryCatchBlockNode) o;
+            this.jumpTargetLabels.add(tcb.start);
+            this.jumpTargetLabels.add(tcb.end);
+            this.jumpTargetLabels.add(tcb.handler);
+        }
     }
 
     private void transformJumpInsn(final JumpInsnNode insn) {
