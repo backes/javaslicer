@@ -15,8 +15,8 @@ public class ReachabilityNodeFactory extends AbstractNodeFactory {
         private final Set<AbstractInstrNode> surelyReached = new HashSet<AbstractInstrNode>();
         private final Set<AbstractInstrNode> reachable = new HashSet<AbstractInstrNode>();
 
-        public ReachInstrNode(Instruction instr) {
-            super(instr);
+        public ReachInstrNode(ControlFlowGraph cfg, Instruction instr) {
+            super(cfg, instr);
             this.surelyReached.add(this);
             this.reachable.add(this);
         }
@@ -42,8 +42,8 @@ public class ReachabilityNodeFactory extends AbstractNodeFactory {
     }
 
     @Override
-    public InstrNode createNode(Instruction instr) {
-        return new ReachInstrNode(instr);
+    public InstrNode createNode(ControlFlowGraph cfg, Instruction instr) {
+        return new ReachInstrNode(cfg, instr);
     }
 
 }

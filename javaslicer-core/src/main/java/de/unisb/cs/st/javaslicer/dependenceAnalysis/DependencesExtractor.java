@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer.dependencyAnalysis;
+package de.unisb.cs.st.javaslicer.dependenceAnalysis;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -20,7 +20,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instruct
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.ArrayInstruction.ArrayInstrInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.FieldInstruction.FieldInstrInstance;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
-import de.unisb.cs.st.javaslicer.dependencyAnalysis.DependencyVisitor.DataDependencyType;
+import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesVisitor.DataDependenceType;
 import de.unisb.cs.st.javaslicer.instructionSimulation.Simulator;
 import de.unisb.cs.st.javaslicer.traceResult.BackwardInstructionIterator;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
@@ -39,93 +39,93 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
  *
  * @author Clemens Hammacher
  */
-public class DependencyExtractor {
+public class DependencesExtractor {
 
     private final TraceResult trace;
     private final Simulator simulator = new Simulator();
-    private List<DependencyVisitor> dataDependencyVisitorsReadAfterWrite = null;
-    private List<DependencyVisitor> dataDependencyVisitorsWriteAfterRead = null;
-    private List<DependencyVisitor> controlDependencyVisitors = null;
-    private List<DependencyVisitor> instructionVisitors = null;
-    private List<DependencyVisitor> pendingDataDependencyVisitorsReadAfterWrite = null;
-    private List<DependencyVisitor> pendingDataDependencyVisitorsWriteAfterRead = null;
-    private List<DependencyVisitor> pendingControlDependencyVisitors = null;
-    private List<DependencyVisitor> methodEntryLeaveVisitors = null;
+    private List<DependencesVisitor> dataDependencyVisitorsReadAfterWrite = null;
+    private List<DependencesVisitor> dataDependencyVisitorsWriteAfterRead = null;
+    private List<DependencesVisitor> controlDependencyVisitors = null;
+    private List<DependencesVisitor> instructionVisitors = null;
+    private List<DependencesVisitor> pendingDataDependencyVisitorsReadAfterWrite = null;
+    private List<DependencesVisitor> pendingDataDependencyVisitorsWriteAfterRead = null;
+    private List<DependencesVisitor> pendingControlDependencyVisitors = null;
+    private List<DependencesVisitor> methodEntryLeaveVisitors = null;
 
-    public DependencyExtractor(final TraceResult trace) {
+    public DependencesExtractor(final TraceResult trace) {
         this.trace = trace;
     }
 
     /**
-     * Registers a {@link DependencyVisitor} with this {@link DependencyExtractor}.
+     * Registers a {@link DependencesVisitor} with this {@link DependencesExtractor}.
      * This method should only be called before {@link #processBackwardTrace(long)},
      * otherwise you might get {@link ConcurrentModificationException}s.
      *
-     * @param visitor the {@link DependencyVisitor} to register
+     * @param visitor the {@link DependencesVisitor} to register
      * @param capabilities the capabilities of the visitor (determines which
      *                     methods are called on the visitor)
      * @return <code>true</code> if the visitor was registered with any capabilities
      */
-    public boolean registerVisitor(final DependencyVisitor visitor, final VisitorCapabilities... capabilities) {
+    public boolean registerVisitor(final DependencesVisitor visitor, final VisitorCapabilities... capabilities) {
         boolean change = false;
         for (final VisitorCapabilities cap: capabilities) {
             switch (cap) {
             case DATA_DEPENDENCIES_ALL:
                 if (this.dataDependencyVisitorsReadAfterWrite == null)
-                    this.dataDependencyVisitorsReadAfterWrite = new ArrayList<DependencyVisitor>();
+                    this.dataDependencyVisitorsReadAfterWrite = new ArrayList<DependencesVisitor>();
                 change |= this.dataDependencyVisitorsReadAfterWrite.add(visitor);
 
                 if (this.dataDependencyVisitorsWriteAfterRead == null)
-                    this.dataDependencyVisitorsWriteAfterRead = new ArrayList<DependencyVisitor>();
+                    this.dataDependencyVisitorsWriteAfterRead = new ArrayList<DependencesVisitor>();
                 change |= this.dataDependencyVisitorsWriteAfterRead.add(visitor);
                 break;
             case DATA_DEPENDENCIES_READ_AFTER_WRITE:
                 if (this.dataDependencyVisitorsReadAfterWrite == null)
-                    this.dataDependencyVisitorsReadAfterWrite = new ArrayList<DependencyVisitor>();
+                    this.dataDependencyVisitorsReadAfterWrite = new ArrayList<DependencesVisitor>();
                 change |= this.dataDependencyVisitorsReadAfterWrite.add(visitor);
                 break;
             case DATA_DEPENDENCIES_WRITE_AFTER_READ:
                 if (this.dataDependencyVisitorsWriteAfterRead == null)
-                    this.dataDependencyVisitorsWriteAfterRead = new ArrayList<DependencyVisitor>();
+                    this.dataDependencyVisitorsWriteAfterRead = new ArrayList<DependencesVisitor>();
                 change |= this.dataDependencyVisitorsWriteAfterRead.add(visitor);
                 break;
             case CONTROL_DEPENDENCIES:
                 if (this.controlDependencyVisitors == null)
-                    this.controlDependencyVisitors = new ArrayList<DependencyVisitor>();
+                    this.controlDependencyVisitors = new ArrayList<DependencesVisitor>();
                 change |= this.controlDependencyVisitors.add(visitor);
                 break;
             case INSTRUCTION_EXECUTIONS:
                 if (this.instructionVisitors == null)
-                    this.instructionVisitors = new ArrayList<DependencyVisitor>();
+                    this.instructionVisitors = new ArrayList<DependencesVisitor>();
                 change |= this.instructionVisitors.add(visitor);
                 break;
             case PENDING_CONTROL_DEPENDENCIES:
                 if (this.pendingControlDependencyVisitors == null)
-                    this.pendingControlDependencyVisitors = new ArrayList<DependencyVisitor>();
+                    this.pendingControlDependencyVisitors = new ArrayList<DependencesVisitor>();
                 change |= this.pendingControlDependencyVisitors.add(visitor);
                 break;
             case PENDING_DATA_DEPENDENCIES_ALL:
                 if (this.pendingDataDependencyVisitorsReadAfterWrite == null)
-                    this.pendingDataDependencyVisitorsReadAfterWrite = new ArrayList<DependencyVisitor>();
+                    this.pendingDataDependencyVisitorsReadAfterWrite = new ArrayList<DependencesVisitor>();
                 change |= this.pendingDataDependencyVisitorsReadAfterWrite.add(visitor);
 
                 if (this.pendingDataDependencyVisitorsWriteAfterRead == null)
-                    this.pendingDataDependencyVisitorsWriteAfterRead = new ArrayList<DependencyVisitor>();
+                    this.pendingDataDependencyVisitorsWriteAfterRead = new ArrayList<DependencesVisitor>();
                 change |= this.pendingDataDependencyVisitorsWriteAfterRead.add(visitor);
                 break;
             case PENDING_DATA_DEPENDENCIES_READ_AFTER_WRITE:
                 if (this.pendingDataDependencyVisitorsReadAfterWrite == null)
-                    this.pendingDataDependencyVisitorsReadAfterWrite = new ArrayList<DependencyVisitor>();
+                    this.pendingDataDependencyVisitorsReadAfterWrite = new ArrayList<DependencesVisitor>();
                 change |= this.pendingDataDependencyVisitorsReadAfterWrite.add(visitor);
                 break;
             case PENDING_DATA_DEPENDENCIES_WRITE_AFTER_READ:
                 if (this.pendingDataDependencyVisitorsWriteAfterRead == null)
-                    this.pendingDataDependencyVisitorsWriteAfterRead = new ArrayList<DependencyVisitor>();
+                    this.pendingDataDependencyVisitorsWriteAfterRead = new ArrayList<DependencesVisitor>();
                 change |= this.pendingDataDependencyVisitorsWriteAfterRead.add(visitor);
                 break;
             case METHOD_ENTRY_LEAVE:
                 if (this.methodEntryLeaveVisitors == null)
-                    this.methodEntryLeaveVisitors = new ArrayList<DependencyVisitor>();
+                    this.methodEntryLeaveVisitors = new ArrayList<DependencesVisitor>();
                 change |= this.methodEntryLeaveVisitors.add(visitor);
                 break;
             }
@@ -133,7 +133,7 @@ public class DependencyExtractor {
         return change;
     }
 
-    public boolean unregisterVisitor(final DependencyVisitor visitor) {
+    public boolean unregisterVisitor(final DependencesVisitor visitor) {
         boolean change = false;
         if (this.dataDependencyVisitorsReadAfterWrite.remove(visitor)) {
             change = true;
@@ -175,8 +175,8 @@ public class DependencyExtractor {
 
     /**
      * Go backwards through the execution trace of the given threadId and extract
-     * all dependencies. {@link DependencyVisitor}s should have been added before
-     * by calling {@link #registerVisitor(DependencyVisitor, VisitorCapabilities...)}.
+     * all dependencies. {@link DependencesVisitor}s should have been added before
+     * by calling {@link #registerVisitor(DependencesVisitor, VisitorCapabilities...)}.
      *
      * If you know the exact {@link ThreadId} of the thread to process, you should
      * use {@link #processBackwardTrace(ThreadId)} instead, since a java thread id
@@ -192,8 +192,8 @@ public class DependencyExtractor {
 
     /**
      * Go backwards through the execution trace of the given threadId and extract
-     * all dependencies. {@link DependencyVisitor}s should have been added before
-     * by calling {@link #registerVisitor(DependencyVisitor, VisitorCapabilities...)}.
+     * all dependencies. {@link DependencesVisitor}s should have been added before
+     * by calling {@link #registerVisitor(DependencesVisitor, VisitorCapabilities...)}.
      *
      * @param threadId identifies the thread whose trace should be analyzed
      */
@@ -231,7 +231,7 @@ public class DependencyExtractor {
             currentFrame.method = method;
             frames.push(currentFrame);
             if (this.methodEntryLeaveVisitors != null)
-                for (DependencyVisitor vis: this.methodEntryLeaveVisitors)
+                for (DependencesVisitor vis: this.methodEntryLeaveVisitors)
                     vis.visitMethodLeave(method);
         }
 
@@ -265,7 +265,7 @@ public class DependencyExtractor {
                     removedFrame = frames.pop();
                     assert removedFrame.method != null;
                     if (this.methodEntryLeaveVisitors != null)
-                        for (DependencyVisitor vis: this.methodEntryLeaveVisitors)
+                        for (DependencesVisitor vis: this.methodEntryLeaveVisitors)
                             vis.visitMethodEntry(removedFrame.method);
                 } else {
                     // in all steps, the stackDepth can change by at most 1
@@ -276,7 +276,7 @@ public class DependencyExtractor {
                     newFrame.method = instruction.getMethod();
                     frames.push(newFrame);
                     if (this.methodEntryLeaveVisitors != null)
-                        for (DependencyVisitor vis: this.methodEntryLeaveVisitors)
+                        for (DependencesVisitor vis: this.methodEntryLeaveVisitors)
                             vis.visitMethodLeave(newFrame.method);
                 }
                 currentFrame = frames.peek();
@@ -291,7 +291,7 @@ public class DependencyExtractor {
                 } else {
                     ReadMethod newMethod = instruction.getMethod();
                     if (this.methodEntryLeaveVisitors != null)
-                        for (DependencyVisitor vis: this.methodEntryLeaveVisitors) {
+                        for (DependencesVisitor vis: this.methodEntryLeaveVisitors) {
                             vis.visitMethodEntry(currentFrame.method);
                             vis.visitMethodLeave(newMethod);
                         }
@@ -305,7 +305,7 @@ public class DependencyExtractor {
                     removedFrame, frames);
 
             if (this.instructionVisitors != null)
-                for (final DependencyVisitor vis: this.instructionVisitors)
+                for (final DependencesVisitor vis: this.instructionVisitors)
                     vis.visitInstructionExecution(instance);
 
             /*
@@ -352,21 +352,21 @@ public class DependencyExtractor {
                 }
                 if (!dependantInterestingInstances.isEmpty()) {
                     for (final InstructionInstance depend: dependantInterestingInstances) {
-                        for (final DependencyVisitor vis: this.controlDependencyVisitors) {
-                            vis.visitControlDependency(depend, instance);
+                        for (final DependencesVisitor vis: this.controlDependencyVisitors) {
+                            vis.visitControlDependence(depend, instance);
                         }
                     }
                     currentFrame.interestingInstances.removeAll(dependantInterestingInstances);
                 }
                 currentFrame.interestingInstances.add(instance);
                 if (this.pendingControlDependencyVisitors != null)
-                    for (DependencyVisitor vis: this.pendingControlDependencyVisitors)
-                        vis.visitPendingControlDependency(instance);
+                    for (DependencesVisitor vis: this.pendingControlDependencyVisitors)
+                        vis.visitPendingControlDependence(instance);
             }
             if (this.pendingControlDependencyVisitors != null) {
                 currentFrame.interestingInstances.add(instance);
-                for (DependencyVisitor vis: this.pendingControlDependencyVisitors)
-                    vis.visitPendingControlDependency(instance);
+                for (DependencesVisitor vis: this.pendingControlDependencyVisitors)
+                    vis.visitPendingControlDependence(instance);
             }
 
             if (!dynInfo.getDefinedVariables().isEmpty()) {
@@ -374,14 +374,14 @@ public class DependencyExtractor {
                         || this.dataDependencyVisitorsWriteAfterRead != null
                         || this.pendingDataDependencyVisitorsWriteAfterRead != null) {
                     for (final Variable definedVariable: dynInfo.getDefinedVariables()) {
-                        if (this.pendingDataDependencyVisitorsWriteAfterRead != null) {
+                        if (this.pendingDataDependencyVisitorsWriteAfterRead != null && !(definedVariable instanceof StackEntry)) {
                             // for each defined variable, we have a pending WAR dependency
                             // if the lastWriter is not null, we first discard old pending dependencies
                             InstructionInstance varLastWriter = lastWriter.put(definedVariable, instance);
-                            for (DependencyVisitor vis: this.pendingDataDependencyVisitorsWriteAfterRead) {
+                            for (DependencesVisitor vis: this.pendingDataDependencyVisitorsWriteAfterRead) {
                                 if (varLastWriter != null)
-                                    vis.discardPendingDataDependency(varLastWriter, definedVariable, DataDependencyType.WRITE_AFTER_READ);
-                                vis.visitPendingDataDependency(instance, definedVariable, DataDependencyType.WRITE_AFTER_READ);
+                                    vis.discardPendingDataDependence(varLastWriter, definedVariable, DataDependenceType.WRITE_AFTER_READ);
+                                vis.visitPendingDataDependence(instance, definedVariable, DataDependenceType.WRITE_AFTER_READ);
                             }
                         // otherwise, if there are WAR visitors, we only update the lastWriter
                         } else if (this.dataDependencyVisitorsWriteAfterRead != null) {
@@ -394,11 +394,11 @@ public class DependencyExtractor {
                             if (readers != null)
                                 for (final InstructionInstance reader: readers) {
                                     if (this.dataDependencyVisitorsReadAfterWrite != null)
-                                        for (final DependencyVisitor vis: this.dataDependencyVisitorsReadAfterWrite)
-                                            vis.visitDataDependency(reader, instance, definedVariable, DataDependencyType.READ_AFTER_WRITE);
+                                        for (final DependencesVisitor vis: this.dataDependencyVisitorsReadAfterWrite)
+                                            vis.visitDataDependence(reader, instance, definedVariable, DataDependenceType.READ_AFTER_WRITE);
                                     if (this.pendingDataDependencyVisitorsReadAfterWrite != null)
-                                        for (DependencyVisitor vis: this.pendingDataDependencyVisitorsReadAfterWrite)
-                                            vis.discardPendingDataDependency(reader, definedVariable, DataDependencyType.READ_AFTER_WRITE);
+                                        for (DependencesVisitor vis: this.pendingDataDependencyVisitorsReadAfterWrite)
+                                            vis.discardPendingDataDependence(reader, definedVariable, DataDependenceType.READ_AFTER_WRITE);
                                 }
                         }
                     }
@@ -416,12 +416,12 @@ public class DependencyExtractor {
                         this.dataDependencyVisitorsReadAfterWrite != null) {
                     for (final Variable usedVariable: dynInfo.getUsedVariables()) {
                         // if we have WAR visitors, we inform them about a new dependency
-                        if (this.dataDependencyVisitorsWriteAfterRead != null) {
+                        if (this.dataDependencyVisitorsWriteAfterRead != null && !(usedVariable instanceof StackEntry)) {
                             final InstructionInstance lastWriterInst = lastWriter.get(usedVariable);
 
                             if (lastWriterInst != null) {
-                                for (final DependencyVisitor vis: this.dataDependencyVisitorsWriteAfterRead)
-                                    vis.visitDataDependency(lastWriterInst, instance, usedVariable, DataDependencyType.WRITE_AFTER_READ);
+                                for (final DependencesVisitor vis: this.dataDependencyVisitorsWriteAfterRead)
+                                    vis.visitDataDependence(lastWriterInst, instance, usedVariable, DataDependenceType.WRITE_AFTER_READ);
                             }
                         }
 
@@ -442,8 +442,8 @@ public class DependencyExtractor {
                             readers.add(instance);
                             // for each used variable, we have a pending RAW dependency
                             if (this.pendingDataDependencyVisitorsReadAfterWrite != null) {
-                                for (DependencyVisitor vis: this.pendingDataDependencyVisitorsReadAfterWrite)
-                                    vis.visitPendingDataDependency(instance, usedVariable, DataDependencyType.READ_AFTER_WRITE);
+                                for (DependencesVisitor vis: this.pendingDataDependencyVisitorsReadAfterWrite)
+                                    vis.visitPendingDataDependence(instance, usedVariable, DataDependenceType.READ_AFTER_WRITE);
                             }
                         }
                     }
@@ -476,8 +476,8 @@ public class DependencyExtractor {
                     || (var instanceof StackEntry && !activeFrameSet.contains(((StackEntry)var).getFrame()))
                     || (var instanceof LocalVariable && !activeFrameSet.contains(((LocalVariable)var).getFrame()))) {
                 if (this.pendingDataDependencyVisitorsWriteAfterRead != null)
-                    for (DependencyVisitor vis: this.pendingDataDependencyVisitorsWriteAfterRead)
-                        vis.discardPendingDataDependency(e.getValue(), var, DataDependencyType.WRITE_AFTER_READ);
+                    for (DependencesVisitor vis: this.pendingDataDependencyVisitorsWriteAfterRead)
+                        vis.discardPendingDataDependence(e.getValue(), var, DataDependenceType.WRITE_AFTER_READ);
                 lastWriterIt.remove();
             }
         }
@@ -493,8 +493,8 @@ public class DependencyExtractor {
                     || (var instanceof LocalVariable && !activeFrameSet.contains(((LocalVariable)var).getFrame()))) {
                 if (this.pendingDataDependencyVisitorsReadAfterWrite != null)
                     for (InstructionInstance inst: e.getValue())
-                        for (DependencyVisitor vis: this.pendingDataDependencyVisitorsReadAfterWrite)
-                            vis.discardPendingDataDependency(inst, var, DataDependencyType.READ_AFTER_WRITE);
+                        for (DependencesVisitor vis: this.pendingDataDependencyVisitorsReadAfterWrite)
+                            vis.discardPendingDataDependence(inst, var, DataDependenceType.READ_AFTER_WRITE);
                 lastReadersIt.remove();
             }
         }

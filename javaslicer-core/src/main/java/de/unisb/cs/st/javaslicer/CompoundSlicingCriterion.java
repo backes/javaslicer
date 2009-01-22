@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Set;
 
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
-import de.unisb.cs.st.javaslicer.dependencyAnalysis.ExecutionFrame;
+import de.unisb.cs.st.javaslicer.dependenceAnalysis.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
 public class CompoundSlicingCriterion implements SlicingCriterion {

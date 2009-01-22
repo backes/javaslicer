@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer.dependencyAnalysis;
+package de.unisb.cs.st.javaslicer.dependenceAnalysis;
 
 import java.util.HashSet;
 import java.util.Set;

@@ -9,6 +9,7 @@ import java.util.Queue;
 
 import org.objectweb.asm.Opcodes;
 
+import de.hammacher.util.Graph;
 import de.hammacher.util.UniqueQueue;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
@@ -25,14 +26,14 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.VarInst
  *
  * @author Clemens Hammacher
  */
-public class ControlFlowGraph {
+public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
 
     /**
      * Representation of one node in the CFG.
      *
      * @author Clemens Hammacher
      */
-    public interface InstrNode {
+    public interface InstrNode extends Graph.Node<InstrNode> {
 
         /**
          * Returns the number of outgoing edges from this node.
@@ -60,6 +61,8 @@ public class ControlFlowGraph {
          */
         void addPredecessor(InstrNode predecessor);
 
+        ControlFlowGraph getGraph();
+
     }
 
     /**
@@ -72,10 +75,12 @@ public class ControlFlowGraph {
         private final List<InstrNode> successors = new ArrayList<InstrNode>(0);
         private final List<InstrNode> predecessors = new ArrayList<InstrNode>(0);
         private final Instruction instruction;
+        private final ControlFlowGraph cfg;
 
-        public AbstractInstrNode(final Instruction instr) {
-            if (instr == null)
+        public AbstractInstrNode(final ControlFlowGraph cfg, final Instruction instr) {
+            if (cfg == null || instr == null)
                 throw new NullPointerException();
+            this.cfg = cfg;
             this.instruction = instr;
         }
 
@@ -131,24 +136,32 @@ public class ControlFlowGraph {
             return this.instruction.toString();
         }
 
+        public ControlFlowGraph getGraph() {
+            return this.cfg;
+        }
+
+        public String getLabel() {
+            return toString();
+        }
+
     }
 
     public interface NodeFactory {
 
-        InstrNode createNode(Instruction instruction);
+        InstrNode createNode(ControlFlowGraph cfg, Instruction instruction);
 
     }
 
     public static class AbstractNodeFactory implements NodeFactory {
 
-        public InstrNode createNode(Instruction instr) {
-            return new AbstractInstrNode(instr);
+        public InstrNode createNode(ControlFlowGraph cfg, Instruction instr) {
+            return new AbstractInstrNode(cfg, instr);
         }
 
     }
 
     private final ReadMethod method;
-    private final InstrNode[] instructionNodes;
+    protected final InstrNode[] instructionNodes;
 
     /**
      * Computes the <b>control flow graph</b> for one method, using the usual
@@ -239,7 +252,7 @@ public class ControlFlowGraph {
         if (node != null)
             return node;
 
-        InstrNode newNode = nodeFactory.createNode(instruction);
+        InstrNode newNode = nodeFactory.createNode(this, instruction);
         this.instructionNodes[idx] = newNode;
         for (Instruction succ: getSuccessors(instruction)) {
             InstrNode succNode = getInstrNode(succ, nodeFactory);
@@ -331,6 +344,10 @@ public class ControlFlowGraph {
         }
 
         return list;
+    }
+
+    public Collection<InstrNode> getNodes() {
+        return Collections.unmodifiableList(Arrays.asList(this.instructionNodes));
     }
 
 }

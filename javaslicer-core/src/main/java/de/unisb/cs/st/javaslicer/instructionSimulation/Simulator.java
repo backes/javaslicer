@@ -23,7 +23,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.MultiAN
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.VarInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.MultiANewArrayInstruction.MultiANewArrayInstrInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.TypeInstruction.TypeInstrInstance;
-import de.unisb.cs.st.javaslicer.dependencyAnalysis.ExecutionFrame;
+import de.unisb.cs.st.javaslicer.dependenceAnalysis.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.variableUsages.MethodInvokationVariableUsages;
 import de.unisb.cs.st.javaslicer.variableUsages.SimpleVariableUsage;
 import de.unisb.cs.st.javaslicer.variableUsages.StackManipulation;

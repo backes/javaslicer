@@ -16,9 +16,9 @@ import de.hammacher.util.DiffPrint;
 import de.hammacher.util.Diff.change;
 import de.unisb.cs.st.javaslicer.AbstractDependenciesTest.Dependency.Type;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
-import de.unisb.cs.st.javaslicer.dependencyAnalysis.DependencyExtractor;
-import de.unisb.cs.st.javaslicer.dependencyAnalysis.DependencyVisitorAdapter;
-import de.unisb.cs.st.javaslicer.dependencyAnalysis.VisitorCapabilities;
+import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesExtractor;
+import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesVisitorAdapter;
+import de.unisb.cs.st.javaslicer.dependenceAnalysis.VisitorCapabilities;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.variables.StackEntry;
@@ -82,7 +82,7 @@ public abstract class AbstractDependenciesTest {
     }
 
 
-    public static class StringArrDepVisitor extends DependencyVisitorAdapter {
+    public static class StringArrDepVisitor extends DependencesVisitorAdapter {
 
         private final Set<Dependency> dependencies;
         private final InstructionFilter instrFilter;
@@ -93,8 +93,8 @@ public abstract class AbstractDependenciesTest {
         }
 
         @Override
-        public void visitDataDependency(InstructionInstance from, InstructionInstance to,
-                Variable var, DataDependencyType type) {
+        public void visitDataDependence(InstructionInstance from, InstructionInstance to,
+                Variable var, DataDependenceType type) {
             if (var instanceof StackEntry)
                 return;
             if (!this.instrFilter.filterInstance(from) || !this.instrFilter.filterInstance(to))
@@ -104,7 +104,7 @@ public abstract class AbstractDependenciesTest {
                 + ":" + from.getInstruction().getLineNumber();
             String toStr = to.getInstruction().getMethod().getReadClass().getSource()
                 + ":" + to.getInstruction().getLineNumber();
-            Type depType = type == DataDependencyType.READ_AFTER_WRITE ? Dependency.Type.RAW : Dependency.Type.WAR;
+            Type depType = type == DataDependenceType.READ_AFTER_WRITE ? Dependency.Type.RAW : Dependency.Type.WAR;
             this.dependencies.add(new Dependency(fromStr, toStr, depType));
         }
 
@@ -133,7 +133,7 @@ public abstract class AbstractDependenciesTest {
         assertTrue("Thread not found", threadId != null);
 
         Set<Dependency> dependencies = new HashSet<Dependency>();
-        DependencyExtractor extr = new DependencyExtractor(res);
+        DependencesExtractor extr = new DependencesExtractor(res);
         extr.registerVisitor(new StringArrDepVisitor(instrFilter, dependencies), VisitorCapabilities.DATA_DEPENDENCIES_ALL);
         extr.processBackwardTrace(threadId);
         Dependency[] computetedDependencies = dependencies.toArray(new Dependency[dependencies.size()]);

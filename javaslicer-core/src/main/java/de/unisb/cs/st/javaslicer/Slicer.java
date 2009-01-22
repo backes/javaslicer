@@ -23,7 +23,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instruct
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Type;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
-import de.unisb.cs.st.javaslicer.dependencyAnalysis.ExecutionFrame;
+import de.unisb.cs.st.javaslicer.dependenceAnalysis.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.instructionSimulation.Simulator;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;

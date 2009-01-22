@@ -1,6 +1,6 @@
 package de.unisb.cs.st.javaslicer.variables;
 
-import de.unisb.cs.st.javaslicer.dependencyAnalysis.ExecutionFrame;
+import de.unisb.cs.st.javaslicer.dependenceAnalysis.ExecutionFrame;
 
 public class LocalVariable implements Variable {
 
