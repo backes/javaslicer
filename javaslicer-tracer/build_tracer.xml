@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+
+<project name="Tracer" default="fat_jar" basedir=".">
+	<description>Builds a fat jar containing the tracing component of JavaSlicer</description>
+
+	<!-- global properties for this build -->
+	<property name="jarfile" value="tracer.jar" />
+
+	<!-- this property can be overwritten on the commandline -->
+	<property name="M2_REPO" value="${user.home}/.m2/repository" />
+
+	<target name="fat_jar">
+		<jar destfile="${jarfile}">
+			<zipfileset src="${M2_REPO}/commons-collections/commons-collections/3.2.1/commons-collections-3.2.1.jar" />
+			<zipfileset src="${M2_REPO}/asm/asm-all/3.1/asm-all-3.1.jar" />
+			<zipfileset src="${M2_REPO}/de/hammacher/utilities/1.1.3/utilities-1.1.3.jar" />
+			<zipfileset src="${M2_REPO}/de/unisb/cs/st/sequitur/0.5-SNAPSHOT/sequitur-0.5-SNAPSHOT.jar" />
+			<zipfileset src="${M2_REPO}/de/unisb/cs/st/javaslicer-common/0.5-SNAPSHOT/javaslicer-common-0.5-SNAPSHOT.jar" />
+			<zipfileset src="${M2_REPO}/de/unisb/cs/st/javaslicer-traceReader/0.5-SNAPSHOT/javaslicer-traceReader-0.5-SNAPSHOT.jar" />
+			<zipfileset src="${M2_REPO}/de/unisb/cs/st/javaslicer-tracer/0.5-SNAPSHOT/javaslicer-tracer-0.5-SNAPSHOT.jar" />
+			<manifest>
+				<attribute name="Boot-Class-Path" value="./tracer.jar" />
+				<attribute name="Built-By" value="${user.name}" />
+				<attribute name="Can-Retransform-Classes" value="true" />
+				<attribute name="Premain-Class" value="de.unisb.cs.st.javaslicer.tracer.TracerAgent" />
+			</manifest>
+		</jar>
+	</target>
+	
+</project>

@@ -14,10 +14,10 @@
 	<property name="M2_REPO" value="${user.home}/.m2/repository" />
 
 	<filelist dir="${M2_REPO}" id="libraries">
-		<file name="junit/junit/4.4/junit-4.4.jar" />
+		<!--file name="junit/junit/4.4/junit-4.4.jar" /-->
 		<file name="commons-collections/commons-collections/3.2.1/commons-collections-3.2.1.jar" />
 		<file name="asm/asm-all/3.1/asm-all-3.1.jar" />
-		<file name="de/hammacher/utilities/1.1/utilities-1.1.jar" />
+		<file name="de/hammacher/utilities/1.1.3/utilities-1.1.3.jar" />
 		<file name="de/unisb/cs/st/sequitur/0.5-SNAPSHOT/sequitur-0.5-SNAPSHOT.jar" />
 		<file name="de/unisb/cs/st/javaslicer-common/0.5-SNAPSHOT/javaslicer-common-0.5-SNAPSHOT.jar" />
 	</filelist>
