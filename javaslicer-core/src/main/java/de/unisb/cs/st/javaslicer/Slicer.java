@@ -160,7 +160,7 @@ public class Slicer implements Opcodes {
     public Set<Instruction> getDynamicSlice(final ThreadId threadId, final SlicingCriterion.Instance slicingCriterion) {
         final Iterator<InstructionInstance> backwardInsnItr = this.trace.getBackwardIterator(threadId, null);
 
-        final IntegerMap<Set<Instruction>> controlDependencies = new IntegerMap<Set<Instruction>>();
+        final IntegerMap<Set<Instruction>> controlDependences = new IntegerMap<Set<Instruction>>();
 
         final ArrayStack<ExecutionFrame> frames = new ArrayStack<ExecutionFrame>();
 
@@ -184,12 +184,12 @@ public class Slicer implements Opcodes {
                     assert frames.size() == stackDepth+1;
                     removedFrame = frames.pop();
                     if (!removedFrame.interestingInstances.isEmpty()) {
-                        // ok, we have a control dependency since the method was called by (or for) this instruction
+                        // ok, we have a control dependence since the method was called by (or for) this instruction
                         removedFrameIsInteresting = true;
                     }
                 } else {
                     assert frames.size() == stackDepth-1;
-                    ExecutionFrame topFrame = frames.size() == 0 ? null : frames.peek();
+                    final ExecutionFrame topFrame = frames.size() == 0 ? null : frames.peek();
                     final ExecutionFrame newFrame = new ExecutionFrame();
                     if (topFrame != null && topFrame.atCacheBlockStart != null)
                         newFrame.throwsException = true;
@@ -224,21 +224,21 @@ public class Slicer implements Opcodes {
                 currentFrame.interestingInstructions.addAll(slicingCriterion.getInterestingInstructions(currentFrame));
             }
 
-            boolean isExceptionsThrowingInstance = currentFrame.throwsException &&
+            final boolean isExceptionsThrowingInstance = currentFrame.throwsException &&
                 (instruction.getType() != Type.LABEL || !((LabelMarker)instruction).isAdditionalLabel());
             if (!currentFrame.interestingInstructions.isEmpty() || isExceptionsThrowingInstance) {
-                Set<Instruction> instrControlDependencies = controlDependencies.get(instruction.getIndex());
-                if (instrControlDependencies == null) {
-                    computeControlDependencies(instruction.getMethod(), controlDependencies);
-                    instrControlDependencies = controlDependencies.get(instruction.getIndex());
-                    assert instrControlDependencies != null;
+                Set<Instruction> instrControlDependences = controlDependences.get(instruction.getIndex());
+                if (instrControlDependences == null) {
+                    computeControlDependences(instruction.getMethod(), controlDependences);
+                    instrControlDependences = controlDependences.get(instruction.getIndex());
+                    assert instrControlDependences != null;
                 }
                 // get all interesting instructions, that are dependent on the current one
-                Set<Instruction> dependantInterestingInstructions = intersect(instrControlDependencies,
+                Set<Instruction> dependantInterestingInstructions = intersect(instrControlDependences,
                         currentFrame.interestingInstructions);
                 if (isExceptionsThrowingInstance) {
                     currentFrame.throwsException = false;
-                    // in this case, we have an additional control dependency from the catching to
+                    // in this case, we have an additional control dependence from the catching to
                     // the throwing instruction
                     for (int i = stackDepth-2; i >= 0; --i) {
                         final ExecutionFrame f = frames.get(i);
@@ -283,12 +283,12 @@ public class Slicer implements Opcodes {
         return dynamicSlice;
     }
 
-    private void computeControlDependencies(final ReadMethod method, final IntegerMap<Set<Instruction>> controlDependencies) {
-        final Map<Instruction, Set<Instruction>> deps = ControlFlowAnalyser.getInstance().getInvControlDependencies(method);
+    private void computeControlDependences(final ReadMethod method, final IntegerMap<Set<Instruction>> controlDependences) {
+        final Map<Instruction, Set<Instruction>> deps = ControlFlowAnalyser.getInstance().getInvControlDependences(method);
         for (final Entry<Instruction, Set<Instruction>> entry: deps.entrySet()) {
             final int index = entry.getKey().getIndex();
-            assert !controlDependencies.containsKey(index);
-            controlDependencies.put(index, entry.getValue());
+            assert !controlDependences.containsKey(index);
+            controlDependences.put(index, entry.getValue());
         }
     }
 

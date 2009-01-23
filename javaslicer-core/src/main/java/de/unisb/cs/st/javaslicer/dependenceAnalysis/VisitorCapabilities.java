@@ -7,30 +7,30 @@ import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesVisitor.DataDepen
 public enum VisitorCapabilities {
 
     /**
-     * combines {@link #DATA_DEPENDENCIES_READ_AFTER_WRITE} and
-     * {@link #DATA_DEPENDENCIES_WRITE_AFTER_READ}
+     * combines {@link #DATA_DEPENDENCES_READ_AFTER_WRITE} and
+     * {@link #DATA_DEPENDENCES_WRITE_AFTER_READ}
      */
-    DATA_DEPENDENCIES_ALL,
+    DATA_DEPENDENCES_ALL,
 
     /**
      * enables invokations of
      * {@link DependencesVisitor#visitDataDependence(InstructionInstance, InstructionInstance, de.unisb.cs.st.javaslicer.variables.Variable, DataDependenceType)}
      * with {@link DataDependenceType#READ_AFTER_WRITE}
      */
-    DATA_DEPENDENCIES_READ_AFTER_WRITE,
+    DATA_DEPENDENCES_READ_AFTER_WRITE,
     /**
      * enables invokations of
      * {@link DependencesVisitor#visitDataDependence(InstructionInstance, InstructionInstance, de.unisb.cs.st.javaslicer.variables.Variable, DataDependenceType)}
      * with {@link DataDependenceType#WRITE_AFTER_READ}
      */
-    DATA_DEPENDENCIES_WRITE_AFTER_READ,
+    DATA_DEPENDENCES_WRITE_AFTER_READ,
 
     /**
      * enables invokations of
      * {@link DependencesVisitor#visitDataDependence(InstructionInstance, InstructionInstance, de.unisb.cs.st.javaslicer.variables.Variable, DataDependenceType)}
      * with {@link DataDependenceType#READ_AFTER_WRITE}
      */
-    CONTROL_DEPENDENCIES,
+    CONTROL_DEPENDENCES,
 
     /**
      * enables invokations of
@@ -42,27 +42,27 @@ public enum VisitorCapabilities {
      * enables invokations of
      * {@link DependencesVisitor#visitPendingControlDependence(InstructionInstance)}
      */
-    PENDING_CONTROL_DEPENDENCIES,
+    PENDING_CONTROL_DEPENDENCES,
 
     /**
-     * combines {@link #PENDING_DATA_DEPENDENCIES_READ_AFTER_WRITE} and
-     * {@link #PENDING_DATA_DEPENDENCIES_WRITE_AFTER_READ}
+     * combines {@link #PENDING_DATA_DEPENDENCES_READ_AFTER_WRITE} and
+     * {@link #PENDING_DATA_DEPENDENCES_WRITE_AFTER_READ}
      */
-    PENDING_DATA_DEPENDENCIES_ALL,
+    PENDING_DATA_DEPENDENCES_ALL,
 
     /**
      * enables invokations of
      * {@link DependencesVisitor#visitPendingControlDependence(InstructionInstance)}
      * with {@link DataDependenceType#READ_AFTER_WRITE}
      */
-    PENDING_DATA_DEPENDENCIES_READ_AFTER_WRITE,
+    PENDING_DATA_DEPENDENCES_READ_AFTER_WRITE,
 
     /**
      * enables invokations of
      * {@link DependencesVisitor#visitPendingControlDependence(InstructionInstance)}
      * with {@link DataDependenceType#WRITE_AFTER_READ}
      */
-    PENDING_DATA_DEPENDENCIES_WRITE_AFTER_READ,
+    PENDING_DATA_DEPENDENCES_WRITE_AFTER_READ,
 
     /**
      * enables invokations of

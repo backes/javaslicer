@@ -14,7 +14,7 @@ import junit.framework.Assert;
 import de.hammacher.util.Diff;
 import de.hammacher.util.DiffPrint;
 import de.hammacher.util.Diff.change;
-import de.unisb.cs.st.javaslicer.AbstractDependenciesTest.Dependency.Type;
+import de.unisb.cs.st.javaslicer.AbstractDependencesTest.Dependence.Type;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesExtractor;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesVisitorAdapter;
@@ -25,15 +25,15 @@ import de.unisb.cs.st.javaslicer.variables.StackEntry;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
 
-public abstract class AbstractDependenciesTest {
+public abstract class AbstractDependencesTest {
 
-    public static class Dependency implements Comparable<Dependency> {
+    public static class Dependence implements Comparable<Dependence> {
         public static enum Type { RAW, WAR }
 
         String from;
         String to;
         Type type;
-        public Dependency(String from, String to, Type type) {
+        public Dependence(final String from, final String to, final Type type) {
             super();
             this.from = from;
             this.to = to;
@@ -49,14 +49,14 @@ public abstract class AbstractDependenciesTest {
             return result;
         }
         @Override
-        public boolean equals(Object obj) {
+        public boolean equals(final Object obj) {
             if (this == obj)
                 return true;
             if (obj == null)
                 return false;
             if (getClass() != obj.getClass())
                 return false;
-            Dependency other = (Dependency) obj;
+            final Dependence other = (Dependence) obj;
             if (!this.from.equals(other.from))
                 return false;
             if (!this.to.equals(other.to))
@@ -70,7 +70,7 @@ public abstract class AbstractDependenciesTest {
         public String toString() {
             return this.type + " from " + this.from + " to " + this.to;
         }
-        public int compareTo(Dependency o) {
+        public int compareTo(final Dependence o) {
             int cmp = this.from.compareTo(o.from);
             if (cmp == 0)
                 cmp = this.to.compareTo(o.to);
@@ -84,28 +84,28 @@ public abstract class AbstractDependenciesTest {
 
     public static class StringArrDepVisitor extends DependencesVisitorAdapter {
 
-        private final Set<Dependency> dependencies;
+        private final Set<Dependence> dependences;
         private final InstructionFilter instrFilter;
 
-        public StringArrDepVisitor(InstructionFilter instrFilter, Set<Dependency> dependencies) {
+        public StringArrDepVisitor(final InstructionFilter instrFilter, final Set<Dependence> dependences) {
             this.instrFilter = instrFilter;
-            this.dependencies = dependencies;
+            this.dependences = dependences;
         }
 
         @Override
-        public void visitDataDependence(InstructionInstance from, InstructionInstance to,
-                Variable var, DataDependenceType type) {
+        public void visitDataDependence(final InstructionInstance from, final InstructionInstance to,
+                final Variable var, final DataDependenceType type) {
             if (var instanceof StackEntry)
                 return;
             if (!this.instrFilter.filterInstance(from) || !this.instrFilter.filterInstance(to))
                 return;
 
-            String fromStr = from.getInstruction().getMethod().getReadClass().getSource()
+            final String fromStr = from.getInstruction().getMethod().getReadClass().getSource()
                 + ":" + from.getInstruction().getLineNumber();
-            String toStr = to.getInstruction().getMethod().getReadClass().getSource()
+            final String toStr = to.getInstruction().getMethod().getReadClass().getSource()
                 + ":" + to.getInstruction().getLineNumber();
-            Type depType = type == DataDependenceType.READ_AFTER_WRITE ? Dependency.Type.RAW : Dependency.Type.WAR;
-            this.dependencies.add(new Dependency(fromStr, toStr, depType));
+            final Type depType = type == DataDependenceType.READ_AFTER_WRITE ? Dependence.Type.RAW : Dependence.Type.WAR;
+            this.dependences.add(new Dependence(fromStr, toStr, depType));
         }
 
     }
@@ -116,11 +116,11 @@ public abstract class AbstractDependenciesTest {
 
     }
 
-    protected void compareDependencies(Dependency[] expectedDependencies,
-            String traceFilename, String threadName, InstructionFilter instrFilter) throws IOException, URISyntaxException {
+    protected void compareDependences(final Dependence[] expectedDependences,
+            final String traceFilename, final String threadName, final InstructionFilter instrFilter) throws IOException, URISyntaxException {
         final File traceFile = new File(AbstractSlicingTest.class.getResource(traceFilename).toURI());
 
-        TraceResult res = TraceResult.readFrom(traceFile);
+        final TraceResult res = TraceResult.readFrom(traceFile);
 
         ThreadId threadId = null;
         for (final ThreadId t: res.getThreads()) {
@@ -132,16 +132,16 @@ public abstract class AbstractDependenciesTest {
 
         assertTrue("Thread not found", threadId != null);
 
-        Set<Dependency> dependencies = new HashSet<Dependency>();
-        DependencesExtractor extr = new DependencesExtractor(res);
-        extr.registerVisitor(new StringArrDepVisitor(instrFilter, dependencies), VisitorCapabilities.DATA_DEPENDENCIES_ALL);
+        final Set<Dependence> dependences = new HashSet<Dependence>();
+        final DependencesExtractor extr = new DependencesExtractor(res);
+        extr.registerVisitor(new StringArrDepVisitor(instrFilter, dependences), VisitorCapabilities.DATA_DEPENDENCES_ALL);
         extr.processBackwardTrace(threadId);
-        Dependency[] computetedDependencies = dependencies.toArray(new Dependency[dependencies.size()]);
+        final Dependence[] computetedDependences = dependences.toArray(new Dependence[dependences.size()]);
 
-        Arrays.sort(expectedDependencies);
-        Arrays.sort(computetedDependencies);
+        Arrays.sort(expectedDependences);
+        Arrays.sort(computetedDependences);
 
-        final Diff differ = new Diff(expectedDependencies, computetedDependencies);
+        final Diff differ = new Diff(expectedDependences, computetedDependences);
         final change diff = differ.diff_2(false);
         if (diff == null)
             return;
@@ -149,13 +149,13 @@ public abstract class AbstractDependenciesTest {
         final StringWriter output = new StringWriter();
         output.append("Slice differs from expected slice:").append(System.getProperty("line.separator"));
 
-        if (expectedDependencies.length != computetedDependencies.length) {
-            output.append("Expected " + expectedDependencies.length +
-                " entries, got " + computetedDependencies.length + "." +
+        if (expectedDependences.length != computetedDependences.length) {
+            output.append("Expected " + expectedDependences.length +
+                " entries, got " + computetedDependences.length + "." +
                 System.getProperty("line.separator"));
         }
 
-        final DiffPrint.Base diffPrinter = new DiffPrint.Base(expectedDependencies, computetedDependencies) {
+        final DiffPrint.Base diffPrinter = new DiffPrint.Base(expectedDependences, computetedDependences) {
             @Override
             protected void print_hunk(final change hunk) {
                 /* Determine range of line numbers involved in each file. */
@@ -166,14 +166,14 @@ public abstract class AbstractDependenciesTest {
                 /* Print the lines that were expected but did not occur. */
                 if (this.deletes != 0)
                     for (int i = this.first0; i <= this.last0; i++) {
-                        final Dependency exp = (Dependency) this.file0[i];
+                        final Dependence exp = (Dependence) this.file0[i];
                         print_1_line("- ", exp);
                     }
 
                 /* Print the lines that the second file has. */
                 if (this.inserts != 0)
                     for (int i = this.first1; i <= this.last1; i++) {
-                        final Dependency exp = (Dependency) this.file1[i];
+                        final Dependence exp = (Dependence) this.file1[i];
                         print_1_line("+ ", exp);
                     }
             }

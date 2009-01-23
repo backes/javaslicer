@@ -6,7 +6,7 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
 
 
 /**
- * A visitor that gets informed about determined dependencies of one program
+ * A visitor that gets informed about determined dependences of one program
  * trace.
  *
  * @author Clemens Hammacher
@@ -19,21 +19,21 @@ public interface DependencesVisitor {
     }
 
     /**
-     * Gets called if a (dynamic) data dependency has been determined.
+     * Gets called if a (dynamic) data dependence has been determined.
      *
      * @param from the instruction that depends on another
-     * @param to the &quot;target&quot; of the data dependency
-     * @param var the variable through which the dependency exists
-     * @param type the type of the data dependency (read after write / write after read)
+     * @param to the &quot;target&quot; of the data dependence
+     * @param var the variable through which the dependence exists
+     * @param type the type of the data dependence (read after write / write after read)
      */
     void visitDataDependence(InstructionInstance from, InstructionInstance to,
             Variable var, DataDependenceType type);
 
     /**
-     * Gets called if a dynamic occurence of a control dependency has been determined.
+     * Gets called if a dynamic occurence of a control dependence has been determined.
      *
      * @param from the instruction that depends on another
-     * @param to the &quot;target&quot; of the control dependency, i.e. the instruction
+     * @param to the &quot;target&quot; of the control dependence, i.e. the instruction
      *           that controls the execution of <code>from</code>
      */
     void visitControlDependence(InstructionInstance from, InstructionInstance to);
@@ -46,7 +46,7 @@ public interface DependencesVisitor {
     void visitInstructionExecution(InstructionInstance instance);
 
     /**
-     * Gets called if there might be a data dependency that gets visited later.
+     * Gets called if there might be a data dependence that gets visited later.
      *
      * If the type is {@link DataDependenceType#READ_AFTER_WRITE}, then most probably
      * {@link #visitDataDependence(InstructionInstance, InstructionInstance, Variable, DataDependenceType)}
@@ -62,27 +62,27 @@ public interface DependencesVisitor {
      * is called.
      *
      * @param from the instruction that depends on another
-     * @param var the variable through which the dependency exists
-     * @param type the type of the data dependency (read after write / write after read)
+     * @param var the variable through which the dependence exists
+     * @param type the type of the data dependence (read after write / write after read)
      */
     void visitPendingDataDependence(InstructionInstance from, Variable var, DataDependenceType type);
 
     /**
-     * Gets called if the instruction <code>from</code> has a control dependency that
+     * Gets called if the instruction <code>from</code> has a control dependence that
      * is not known yet. At some later time, {@link #visitControlDependence(InstructionInstance, InstructionInstance)}
      * is called for that instance.
      *
-     * @param from the instruction instance that has a control dependency
+     * @param from the instruction instance that has a control dependence
      */
     void visitPendingControlDependence(InstructionInstance from);
 
     /**
-     * Gets called if all data dependencies on the specific variable <code>var</code>
+     * Gets called if all data dependences on the specific variable <code>var</code>
      * have been visited for the instruction instance <code>from</code>.
      *
      * @param from the instruction that depends on another
-     * @param var the variable through which the dependency exists
-     * @param type the type of the data dependency (read after write / write after read)
+     * @param var the variable through which the dependence exists
+     * @param type the type of the data dependence (read after write / write after read)
      */
     void discardPendingDataDependence(InstructionInstance from, Variable var, DataDependenceType type);
 

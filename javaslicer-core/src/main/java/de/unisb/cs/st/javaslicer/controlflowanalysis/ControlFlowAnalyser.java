@@ -32,12 +32,12 @@ public class ControlFlowAnalyser {
     }
 
     /**
-     * Computes the (inverted) control dependencies for one method.
+     * Computes the (inverted) control dependences for one method.
      *
-     * @param method the method for which the dependencies are computed
+     * @param method the method for which the dependences are computed
      * @return a map that contains for every instruction all instructions that are dependent on this one
      */
-    public Map<Instruction, Set<Instruction>> getInvControlDependencies(final ReadMethod method) {
+    public Map<Instruction, Set<Instruction>> getInvControlDependences(final ReadMethod method) {
         final Map<Instruction, Set<Instruction>> invControlDeps = new HashMap<Instruction, Set<Instruction>>();
         final Set<Instruction> emptyInsnSet = Collections.emptySet();
         final ControlFlowGraph graph = new ControlFlowGraph(method, ReachabilityNodeFactory.getInstance());
@@ -86,8 +86,8 @@ public class ControlFlowAnalyser {
     }
 
     private void computeReachableNodes(final ControlFlowGraph cfg) {
-        Queue<InstrNode> queue = new UniqueQueue<InstrNode>(true);
-        for (Instruction instr: cfg.getMethod().getInstructions())
+        final Queue<InstrNode> queue = new UniqueQueue<InstrNode>(true);
+        for (final Instruction instr: cfg.getMethod().getInstructions())
             queue.add(cfg.getNode(instr));
 
         InstrNode node;
