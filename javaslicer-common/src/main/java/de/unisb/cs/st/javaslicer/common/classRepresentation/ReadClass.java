@@ -87,7 +87,7 @@ public class ReadClass implements Comparable<ReadClass> {
 
     public static ReadClass readFrom(final DataInputStream in, final StringCacheInput stringCache) throws IOException {
         final String intName = stringCache.readString(in);
-        if (intName.length() == 0)
+        if (intName == null || intName.length() == 0)
             throw new IOException("corrupted data");
         final int instructionNumberStart = OptimizedDataInputStream.readInt0(in);
         final int access = OptimizedDataInputStream.readInt0(in);

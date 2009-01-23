@@ -46,19 +46,16 @@ public class TryCatchBlock {
         OptimizedDataOutputStream.writeInt0(this.start.getLabelNr(), out);
         OptimizedDataOutputStream.writeInt0(this.end.getLabelNr(), out);
         OptimizedDataOutputStream.writeInt0(this.handler.getLabelNr(), out);
-        out.writeBoolean(this.type != null);
-        if (this.type != null)
-            stringCache.writeString(this.type, out);
+        stringCache.writeString(this.type, out);
     }
 
     public static TryCatchBlock readFrom(DataInputStream in,
             MethodReadInformation mri, StringCacheInput stringCache) throws IOException {
-        return new TryCatchBlock(
-            mri.getLabel(OptimizedDataInputStream.readInt0(in)),
-            mri.getLabel(OptimizedDataInputStream.readInt0(in)),
-            mri.getLabel(OptimizedDataInputStream.readInt0(in)),
-            in.readBoolean() ? stringCache.readString(in) : null
-            );
+        LabelMarker start = mri.getLabel(OptimizedDataInputStream.readInt0(in));
+        LabelMarker end = mri.getLabel(OptimizedDataInputStream.readInt0(in));
+        LabelMarker handler = mri.getLabel(OptimizedDataInputStream.readInt0(in));
+        String type = stringCache.readString(in);
+        return new TryCatchBlock(start, end, handler, type);
     }
 
 

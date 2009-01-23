@@ -3,14 +3,15 @@ package de.unisb.cs.st.javaslicer;
 import java.util.Collection;
 
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
 public interface SlicingCriterion {
 
-    public interface Instance {
+    public interface SlicingCriterionInstance {
 
-        boolean matches(Instruction.InstructionInstance instructionInstance);
+        boolean matches(InstructionInstance instructionInstance);
 
         Collection<Variable> getInterestingVariables(ExecutionFrame execFrame);
 
@@ -18,6 +19,6 @@ public interface SlicingCriterion {
 
     }
 
-    Instance getInstance();
+    SlicingCriterionInstance getInstance();
 
 }

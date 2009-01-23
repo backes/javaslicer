@@ -13,18 +13,18 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
 
 public class CompoundSlicingCriterion implements SlicingCriterion {
 
-    public static class Instance implements SlicingCriterion.Instance {
+    public static class Instance implements SlicingCriterionInstance {
 
-        private final List<SlicingCriterion.Instance> instances;
+        private final List<SlicingCriterionInstance> instances;
         public Instance(CompoundSlicingCriterion compCrit) {
-            this.instances = new ArrayList<SlicingCriterion.Instance>(compCrit.criteria.size());
+            this.instances = new ArrayList<SlicingCriterionInstance>(compCrit.criteria.size());
             for (final SlicingCriterion crit: compCrit.criteria)
                 this.instances.add(crit.getInstance());
         }
 
         public Collection<Variable> getInterestingVariables(final ExecutionFrame execFrame) {
             final Set<Variable> interestingVariables = new HashSet<Variable>();
-            for (final SlicingCriterion.Instance crit: this.instances) {
+            for (final SlicingCriterionInstance crit: this.instances) {
                 interestingVariables.addAll(crit.getInterestingVariables(execFrame));
             }
             return interestingVariables;
@@ -32,14 +32,14 @@ public class CompoundSlicingCriterion implements SlicingCriterion {
 
         public Collection<Instruction> getInterestingInstructions(final ExecutionFrame currentFrame) {
             final Set<Instruction> interestingInstructions = new HashSet<Instruction>();
-            for (final SlicingCriterion.Instance crit: this.instances) {
+            for (final SlicingCriterionInstance crit: this.instances) {
                 interestingInstructions.addAll(crit.getInterestingInstructions(currentFrame));
             }
             return interestingInstructions;
         }
 
         public boolean matches(final Instruction.InstructionInstance instructionInstance) {
-            for (final SlicingCriterion.Instance crit: this.instances) {
+            for (final SlicingCriterionInstance crit: this.instances) {
                 if (crit.matches(instructionInstance))
                     return true;
             }
@@ -54,7 +54,7 @@ public class CompoundSlicingCriterion implements SlicingCriterion {
         this.criteria.add(slicingCriterion);
     }
 
-    public SlicingCriterion.Instance getInstance() {
+    public SlicingCriterionInstance getInstance() {
         return new Instance(this);
     }
 

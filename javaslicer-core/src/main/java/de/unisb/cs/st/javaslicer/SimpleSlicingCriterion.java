@@ -55,7 +55,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
 
     }
 
-    public class Instance implements SlicingCriterion.Instance {
+    public class Instance implements SlicingCriterion.SlicingCriterionInstance {
 
         private long seenOccurences = 0;
         private boolean[] beingInRun = new boolean[1];
@@ -291,7 +291,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
         return varList;
     }
 
-    public SlicingCriterion.Instance getInstance() {
+    public SlicingCriterionInstance getInstance() {
         return new Instance();
     }
 

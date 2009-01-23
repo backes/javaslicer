@@ -52,7 +52,7 @@ public class ReadMethod implements Comparable<ReadMethod> {
     private int instructionNumberEnd;
     private LabelMarker methodEntryLabel;
     private LabelMarker methodLeaveLabel;
-    private final List<LocalVariable> localVariables;
+    private final ArrayList<LocalVariable> localVariables;
 
     public ReadMethod(final ReadClass readClass, final int access, final String name, final String desc, final int instructionNumberStart) {
         this.readClass = readClass;
@@ -188,12 +188,12 @@ public class ReadMethod implements Comparable<ReadMethod> {
             rm.instructions.add(instr);
             instr = null;
         }
+        rm.instructions.addAll(labels);
+        rm.instructions.trimToSize();
         int numTcb = OptimizedDataInputStream.readInt0(in);
         while (numTcb-- > 0) {
             rm.addTryCatchBlock(TryCatchBlock.readFrom(in, mri, stringCache));
         }
-        rm.instructions.addAll(labels);
-        rm.instructions.trimToSize();
 
         final boolean hasEntryAndLeaveLabels = in.readBoolean();
 
@@ -214,8 +214,7 @@ public class ReadMethod implements Comparable<ReadMethod> {
         int localVarsNr = OptimizedDataInputStream.readInt0(in);
         while (localVarsNr-- > 0)
             rm.localVariables.add(LocalVariable.readFrom(in));
-        if (rm.localVariables instanceof ArrayList<?>)
-            ((ArrayList<?>)rm.localVariables).trimToSize();
+        rm.localVariables.trimToSize();
         Collections.sort(rm.localVariables, new Comparator<LocalVariable>() {
             public int compare(final LocalVariable o1, final LocalVariable o2) {
                 return o1.getIndex() - o2.getIndex();

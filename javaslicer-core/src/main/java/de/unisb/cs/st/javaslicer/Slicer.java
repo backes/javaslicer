@@ -157,7 +157,7 @@ public class Slicer implements Opcodes {
         }
     }
 
-    public Set<Instruction> getDynamicSlice(final ThreadId threadId, final SlicingCriterion.Instance slicingCriterion) {
+    public Set<Instruction> getDynamicSlice(final ThreadId threadId, final SlicingCriterion.SlicingCriterionInstance slicingCriterion) {
         final Iterator<InstructionInstance> backwardInsnItr = this.trace.getBackwardIterator(threadId, null);
 
         final IntegerMap<Set<Instruction>> controlDependences = new IntegerMap<Set<Instruction>>();

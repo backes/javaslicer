@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 
-<project name="Tracer" default="fat_jar" basedir=".">
+<project name="Tracer from Maven" default="fat_jar" basedir=".">
 	<description>Builds a fat jar containing the tracing component of JavaSlicer</description>
 
 	<!-- global properties for this build -->
