@@ -18,8 +18,6 @@ import org.objectweb.asm.tree.LocalVariableNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TryCatchBlockNode;
 
-import com.sun.jdi.LocalVariable;
-
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
@@ -76,9 +74,9 @@ public class TracingClassInstrumenter implements Opcodes {
         new TracingMethodInstrumenter(this.tracer, readMethod, classNode, method).transform(methodIt);
 
         // test the size of the instrumented method
-        ClassWriter testCW = new ClassWriter(0);
+        final ClassWriter testCW = new ClassWriter(0);
         method.accept(testCW);
-        int byteCodeSize = testCW.toByteArray().length;
+        final int byteCodeSize = testCW.toByteArray().length;
         if (byteCodeSize >= 1 << 16) {
             System.err.format("WARNING: instrumented method \"%s.%s%s\" is larger than 64k bytes. undoing instrumentation.%n",
                 this.readClass.getName(), readMethod.getName(), readMethod.getDesc());
@@ -92,9 +90,9 @@ public class TracingClassInstrumenter implements Opcodes {
         }
 
         // reset the labels
-        Iterator<?> insnIt = method.instructions.iterator();
+        final Iterator<?> insnIt = method.instructions.iterator();
         while (insnIt.hasNext()) {
-            Object insn = insnIt.next();
+            final Object insn = insnIt.next();
             if (insn instanceof LabelNode)
                 ((LabelNode)insn).resetLabel();
         }
@@ -109,8 +107,8 @@ public class TracingClassInstrumenter implements Opcodes {
         to.desc = from.desc;
         to.exceptions = from.exceptions == null ? null : new ArrayList<String>(from.exceptions);
         to.instructions.clear();
-        Iterator<?> insnIt = from.instructions.iterator();
-        Map<LabelNode, LabelNode> labelsMap = new HashMap<LabelNode, LabelNode>() {
+        final Iterator<?> insnIt = from.instructions.iterator();
+        final Map<LabelNode, LabelNode> labelsMap = new HashMap<LabelNode, LabelNode>() {
             private static final long serialVersionUID = 6883684625241587713L;
 
             @Override
@@ -122,7 +120,7 @@ public class TracingClassInstrumenter implements Opcodes {
             }
         };
         while (insnIt.hasNext()) {
-            AbstractInsnNode insn = (AbstractInsnNode) insnIt.next();
+            final AbstractInsnNode insn = (AbstractInsnNode) insnIt.next();
             to.instructions.add(insn.clone(labelsMap ));
         }
         to.invisibleAnnotations = from.invisibleAnnotations == null ? null :
@@ -139,9 +137,9 @@ public class TracingClassInstrumenter implements Opcodes {
         if (from.localVariables == null) {
             to.localVariables = null;
         } else {
-            to.localVariables = new ArrayList<LocalVariable>(from.localVariables.size());
-            for (Object lvObj: from.localVariables) {
-                LocalVariableNode lv = (LocalVariableNode) lvObj;
+            to.localVariables = new ArrayList<LocalVariableNode>(from.localVariables.size());
+            for (final Object lvObj: from.localVariables) {
+                final LocalVariableNode lv = (LocalVariableNode) lvObj;
                 to.localVariables.add(new LocalVariableNode(
                     lv.name, lv.desc, lv.signature, labelsMap.get(lv.start),
                     labelsMap.get(lv.end), lv.index));
@@ -155,8 +153,8 @@ public class TracingClassInstrumenter implements Opcodes {
             to.tryCatchBlocks = null;
         } else {
             to.tryCatchBlocks = new ArrayList<TryCatchBlockNode>(from.tryCatchBlocks.size());
-            for (Object tcbObj: from.tryCatchBlocks) {
-                TryCatchBlockNode tcb = (TryCatchBlockNode) tcbObj;
+            for (final Object tcbObj: from.tryCatchBlocks) {
+                final TryCatchBlockNode tcb = (TryCatchBlockNode) tcbObj;
                 to.tryCatchBlocks.add(new TryCatchBlockNode(
                     labelsMap.get(tcb.start), labelsMap.get(tcb.end),
                     labelsMap.get(tcb.handler), tcb.type));
