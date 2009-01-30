@@ -342,7 +342,7 @@ public class TracingMethodInstrumenter implements Opcodes {
         final AbstractInstruction methodLeaveLabel = this.readMethod.getInstructions().get(newPos);
         assert methodLeaveLabel instanceof LabelMarker;
         this.readMethod.setMethodLeaveLabel((LabelMarker) methodLeaveLabel);
-        this.instructionIterator.add(new InsnNode(ATHROW));
+        this.methodNode.instructions.add(new InsnNode(ATHROW));
 
         // add a try catch block around the method so that we can trace when this method is left
         this.methodNode.tryCatchBlocks.add(new TryCatchBlockNode(l0, l1, l1, null));

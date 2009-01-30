@@ -14,7 +14,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
@@ -23,7 +22,6 @@ import org.objectweb.asm.tree.analysis.Analyzer;
 import org.objectweb.asm.tree.analysis.AnalyzerException;
 import org.objectweb.asm.tree.analysis.BasicVerifier;
 import org.objectweb.asm.tree.analysis.Frame;
-import org.objectweb.asm.tree.analysis.SimpleVerifier;
 import org.objectweb.asm.util.CheckClassAdapter;
 import org.objectweb.asm.util.TraceMethodVisitor;
 
@@ -261,6 +259,28 @@ public class Transformer implements ClassFileTransformer {
         if (className.endsWith("line/Main"))
             printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
         */
+        /*
+        if (className.endsWith("TimeZoneNames")) {
+            System.out.format("%n%n%nBefore:");
+            for (final Object methodObj : classNode.methods) {
+                final MethodNode method = (MethodNode) methodObj;
+                method.maxLocals = 100;
+                method.maxStack = 30;
+                final Analyzer a = new Analyzer(new BasicVerifier());
+                //final Analyzer a = new Analyzer(new SimpleVerifier());
+                try {
+                    a.analyze(classNode.name, method);
+                } catch (final AnalyzerException e) {
+                    System.err.println("// error in method " + className + "." + method.name
+                            + method.desc + ":" + e);
+                }
+                printMethod(a, System.err, method);
+            }
+
+            System.out.format("%n%n%nAfter:");
+            printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
+        }
+        */
 
         return newClassfileBuffer;
     }
@@ -273,10 +293,11 @@ public class Transformer implements ClassFileTransformer {
 
         for (final Object methodObj : cn.methods) {
             final MethodNode method = (MethodNode) methodObj;
-            //final Analyzer a = new Analyzer(new BasicVerifier());
-            final Analyzer a = new Analyzer(new SimpleVerifier(
-                Type.getObjectType(cn.name), Type.getObjectType(cn.superName),
-                (cn.access & Opcodes.ACC_INTERFACE) != 0));
+            final Analyzer a = new Analyzer(new BasicVerifier());
+            // SimpleVerifier has problems with sub-classes, e.g. you cannot use PrintStream for Appendable and so on...
+            //final Analyzer a = new Analyzer(new SimpleVerifier(
+            //    Type.getObjectType(cn.name), Type.getObjectType(cn.superName),
+            //    (cn.access & Opcodes.ACC_INTERFACE) != 0));
             try {
                 a.analyze(cn.name, method);
             } catch (final AnalyzerException e) {
