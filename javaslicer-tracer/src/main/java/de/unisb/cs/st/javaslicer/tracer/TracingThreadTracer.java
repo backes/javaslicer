@@ -222,7 +222,7 @@ public class TracingThreadTracer implements ThreadTracer {
     private final String threadName;
 
     private volatile int lastInstructionIndex = -1;
-    private final int objectAllocationTraceSequence = 0;
+    private int[] objectAllocationTraceSequence = new int[4];
 
     private final Tracer tracer;
     private volatile int paused = 0;
@@ -302,7 +302,7 @@ public class TracingThreadTracer implements ThreadTracer {
             objId = ObjectIdentifier.instance.getObjectId(obj);
             resumeTracing();
         }
-        assert objId != 0;
+        assert obj == null || objId != 0;
         this.longSeqNr[this.longSeqIndex] = traceSequenceIndex;
         this.longSeqVal[this.longSeqIndex] = objId;
         if (++this.longSeqIndex == CACHE_SIZE) {
@@ -335,8 +335,14 @@ public class TracingThreadTracer implements ThreadTracer {
     public synchronized void finish() {
         pauseTracing();
 
+        // this ensures that the finishing tasks are only done once!
         if (this.writeOutThread.ready.getCount() == 0)
             return;
+
+        for (int i = this.stackSize; i >= 0; --i) {
+            if (this.objectAllocationTraceSequence[i] != 0)
+                traceObject(null, this.objectAllocationTraceSequence[i]);
+        }
 
         if (this.intSeqIndex != 0)
             this.writeOutThread.addJob(new WriteOutJob(this.intSeqNr, this.intSeqVal, null, this.intSeqIndex));
@@ -383,55 +389,49 @@ public class TracingThreadTracer implements ThreadTracer {
     public synchronized void enterMethod(final int instructionIndex) {
         if (this.paused > 0)
             return;
+
         if (this.stackSize == this.methodStack.length)
             this.methodStack = Arrays.copyOf(this.methodStack, 2*this.stackSize);
-        this.methodStack[this.stackSize++] = instructionIndex;
+        this.methodStack[this.stackSize] = instructionIndex;
+        ++this.stackSize;
+        if (this.stackSize == this.objectAllocationTraceSequence.length)
+            this.objectAllocationTraceSequence =
+                Arrays.copyOf(this.objectAllocationTraceSequence, 2*this.stackSize);
 
-        if (DEBUG_TRACE_FILE && this.threadId == 1) {
-            pauseTracing();
-            debugFile.println(instructionIndex);
-            resumeTracing();
-        }
-
-        this.lastInstructionIndex = instructionIndex;
+        passInstruction(instructionIndex);
     }
 
     @Override
     public synchronized void leaveMethod(final int instructionIndex) {
         if (this.paused > 0)
             return;
+        if (this.objectAllocationTraceSequence[this.stackSize] != 0) {
+            traceObject(null, this.objectAllocationTraceSequence[this.stackSize]);
+            this.objectAllocationTraceSequence[this.stackSize] = 0;
+        }
         --this.stackSize;
 
-        if (DEBUG_TRACE_FILE && this.threadId == 1) {
-            pauseTracing();
-            debugFile.println(instructionIndex);
-            resumeTracing();
-        }
-
-        this.lastInstructionIndex = instructionIndex;
+        passInstruction(instructionIndex);
     }
 
     @Override
-    public void objectAllocation(final int traceSequenceNr) {
-        if (this.paused == 0) {
-            // TODO
-            /*
-            assert this.objectAllocationTraceSequence == 0;
-            this.objectAllocationTraceSequence = traceSequenceNr;
-            */
-            traceObject(this, traceSequenceNr);
-        }
+    public synchronized void objectAllocated(final int instructionIndex, final int traceSequenceNr) {
+        if (this.paused > 0)
+            return;
+
+        assert this.objectAllocationTraceSequence[this.stackSize] == 0;
+        this.objectAllocationTraceSequence[this.stackSize] = traceSequenceNr;
+
+        passInstruction(instructionIndex);
     }
 
     @Override
-    public void objectInitialization(final Object obj) {
-        /*
+    public void objectInitialized(final Object obj) {
         if (this.paused == 0) {
-            assert this.objectAllocationTraceSequence != 0;
-            traceObject(obj, this.objectAllocationTraceSequence);
-            this.objectAllocationTraceSequence = 0;
+            assert this.objectAllocationTraceSequence[this.stackSize] != 0;
+            traceObject(obj, this.objectAllocationTraceSequence[this.stackSize]);
+            this.objectAllocationTraceSequence[this.stackSize] = 0;
         }
-        */
     }
 
 }

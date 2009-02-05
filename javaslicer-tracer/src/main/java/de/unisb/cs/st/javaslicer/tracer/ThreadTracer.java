@@ -5,7 +5,6 @@ import java.io.IOException;
 public interface ThreadTracer {
 
     void traceInt(int value, int traceSequenceIndex);
-
     void traceObject(Object obj, int traceSequenceIndex);
 
     void traceLastInstructionIndex(int traceSequenceIndex);
@@ -20,15 +19,16 @@ public interface ThreadTracer {
     boolean isPaused();
 
     void enterMethod(int instructionIndex);
-
     void leaveMethod(int instructionIndex);
 
     // these two work together: after the NEW bytecode instruction,
-    // objectAllocation is called to register the trace sequence where
+    // objectAllocated is called to register the trace sequence where
     // the identity of the created object should be stored.
-    // in the Object constructor, objectInitialization is called to store
-    // the identity in the registered sequence.
-    void objectAllocation(int traceSequenceNr);
-    void objectInitialization(Object obj);
+    // after the initialization of the object (the constructor call),
+    // the identitiy of the created object is stored in the registered
+    // sequence.
+    // this is necessary because we cannot use the allocated but uninitialized object!
+    void objectAllocated(int instructionIndex, int traceSequenceNr);
+    void objectInitialized(Object obj);
 
 }

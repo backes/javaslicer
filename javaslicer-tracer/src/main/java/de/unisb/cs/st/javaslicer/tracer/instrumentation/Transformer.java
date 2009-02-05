@@ -252,34 +252,8 @@ public class Transformer implements ClassFileTransformer {
 
         //printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
         /*
-        if (className.equals("java/lang/ClassLoader"))
-            printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
-        if (className.equals("java/util/zip/ZipFile"))
-            printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
         if (className.endsWith("line/Main"))
             printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
-        */
-        /*
-        if (className.endsWith("TimeZoneNames")) {
-            System.out.format("%n%n%nBefore:");
-            for (final Object methodObj : classNode.methods) {
-                final MethodNode method = (MethodNode) methodObj;
-                method.maxLocals = 100;
-                method.maxStack = 30;
-                final Analyzer a = new Analyzer(new BasicVerifier());
-                //final Analyzer a = new Analyzer(new SimpleVerifier());
-                try {
-                    a.analyze(classNode.name, method);
-                } catch (final AnalyzerException e) {
-                    System.err.println("// error in method " + className + "." + method.name
-                            + method.desc + ":" + e);
-                }
-                printMethod(a, System.err, method);
-            }
-
-            System.out.format("%n%n%nAfter:");
-            printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
-        }
         */
 
         return newClassfileBuffer;
