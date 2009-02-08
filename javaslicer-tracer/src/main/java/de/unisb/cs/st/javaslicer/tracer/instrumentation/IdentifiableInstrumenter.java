@@ -43,11 +43,13 @@ public class IdentifiableInstrumenter implements Opcodes {
         if (this.tracer.wasRedefined(Type.getObjectType(classNode.superName).getClassName()))
             return;
 
-        classNode.fields.add(new FieldNode(ACC_PRIVATE, ID_FIELD_NAME, "J", null, null));
+        classNode.fields.add(new FieldNode(ACC_PRIVATE | ACC_SYNTHETIC | ACC_TRANSIENT,
+            ID_FIELD_NAME, "J", null, null));
 
         classNode.interfaces.add(Type.getInternalName(Identifiable.class));
 
-        final MethodNode getIdMethod = new MethodNode(ACC_PUBLIC | ACC_FINAL, "__tracing_get_object_id", "()J", null, null);
+        final MethodNode getIdMethod = new MethodNode(ACC_PUBLIC | ACC_FINAL | ACC_SYNTHETIC,
+            "__tracing_get_object_id", "()J", null, null);
         // first, check if the id field is already set:
         getIdMethod.instructions.add(new VarInsnNode(ALOAD, 0));
         getIdMethod.instructions.add(new FieldInsnNode(GETFIELD, classNode.name, ID_FIELD_NAME, "J"));

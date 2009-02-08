@@ -44,13 +44,9 @@ public class TracerAgent {
             TraceSequenceFactory seqFac = null;
 
             for (final String arg : args) {
-                final String[] parts = arg.split(":");
-                if (parts.length > 2) {
-                    System.err.println("ERROR: unknown argument: \"" + arg + "\"");
-                    System.exit(1);
-                }
-                final String key = parts[0];
-                final String value = parts.length < 2 ? null : parts[1];
+                final int colonPos = arg.indexOf(':');
+                final String key = colonPos == -1 ? arg : arg.substring(0, colonPos);
+                final String value = colonPos == -1 ? null : arg.substring(colonPos+1);
 
                 if ("logfile".equalsIgnoreCase(key) || "tracefile".equalsIgnoreCase(key)) {
                     if (value == null) {

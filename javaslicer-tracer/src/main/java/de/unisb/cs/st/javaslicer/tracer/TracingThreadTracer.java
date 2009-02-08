@@ -223,6 +223,7 @@ public class TracingThreadTracer implements ThreadTracer {
 
     private volatile int lastInstructionIndex = -1;
     private int[] objectAllocationTraceSequence = new int[4];
+    private int uninitializedObjects = 0;
 
     private final Tracer tracer;
     private volatile int paused = 0;
@@ -339,9 +340,9 @@ public class TracingThreadTracer implements ThreadTracer {
         if (this.writeOutThread.ready.getCount() == 0)
             return;
 
-        for (int i = this.stackSize; i >= 0; --i) {
-            if (this.objectAllocationTraceSequence[i] != 0)
-                traceObject(null, this.objectAllocationTraceSequence[i]);
+        while (this.uninitializedObjects > 0) {
+            assert this.objectAllocationTraceSequence[this.uninitializedObjects-1] != 0;
+            traceObject(null, this.objectAllocationTraceSequence[--this.uninitializedObjects]);
         }
 
         if (this.intSeqIndex != 0)
@@ -394,9 +395,6 @@ public class TracingThreadTracer implements ThreadTracer {
             this.methodStack = Arrays.copyOf(this.methodStack, 2*this.stackSize);
         this.methodStack[this.stackSize] = instructionIndex;
         ++this.stackSize;
-        if (this.stackSize == this.objectAllocationTraceSequence.length)
-            this.objectAllocationTraceSequence =
-                Arrays.copyOf(this.objectAllocationTraceSequence, 2*this.stackSize);
 
         passInstruction(instructionIndex);
     }
@@ -405,10 +403,6 @@ public class TracingThreadTracer implements ThreadTracer {
     public synchronized void leaveMethod(final int instructionIndex) {
         if (this.paused > 0)
             return;
-        if (this.objectAllocationTraceSequence[this.stackSize] != 0) {
-            traceObject(null, this.objectAllocationTraceSequence[this.stackSize]);
-            this.objectAllocationTraceSequence[this.stackSize] = 0;
-        }
         --this.stackSize;
 
         passInstruction(instructionIndex);
@@ -419,8 +413,11 @@ public class TracingThreadTracer implements ThreadTracer {
         if (this.paused > 0)
             return;
 
-        assert this.objectAllocationTraceSequence[this.stackSize] == 0;
-        this.objectAllocationTraceSequence[this.stackSize] = traceSequenceNr;
+        if (this.uninitializedObjects == this.objectAllocationTraceSequence.length)
+            this.objectAllocationTraceSequence =
+                Arrays.copyOf(this.objectAllocationTraceSequence, 2*this.uninitializedObjects);
+        this.objectAllocationTraceSequence[this.uninitializedObjects++] = traceSequenceNr;
+        assert traceSequenceNr != 0;
 
         passInstruction(instructionIndex);
     }
@@ -428,9 +425,8 @@ public class TracingThreadTracer implements ThreadTracer {
     @Override
     public void objectInitialized(final Object obj) {
         if (this.paused == 0) {
-            assert this.objectAllocationTraceSequence[this.stackSize] != 0;
-            traceObject(obj, this.objectAllocationTraceSequence[this.stackSize]);
-            this.objectAllocationTraceSequence[this.stackSize] = 0;
+            assert this.uninitializedObjects > 0 && this.objectAllocationTraceSequence[this.uninitializedObjects-1] != 0;
+            traceObject(obj, this.objectAllocationTraceSequence[--this.uninitializedObjects]);
         }
     }
 
