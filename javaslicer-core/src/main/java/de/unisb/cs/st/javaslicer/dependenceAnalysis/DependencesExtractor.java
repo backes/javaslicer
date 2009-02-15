@@ -17,8 +17,6 @@ import de.hammacher.util.IntegerMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.ArrayInstruction.ArrayInstrInstance;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.FieldInstruction.FieldInstrInstance;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesVisitor.DataDependenceType;
 import de.unisb.cs.st.javaslicer.instructionSimulation.Simulator;
@@ -35,7 +33,8 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
 
 /**
  * This class iterates (backwards) through the execution trace and visits
- * all dynamic data and control dependences.
+ * all dynamic data and control dependences, and other events like method entries
+ * or exits.
  *
  * @author Clemens Hammacher
  */
@@ -51,6 +50,7 @@ public class DependencesExtractor {
     private List<DependencesVisitor> pendingDataDependenceVisitorsWriteAfterRead = null;
     private List<DependencesVisitor> pendingControlDependenceVisitors = null;
     private List<DependencesVisitor> methodEntryLeaveVisitors = null;
+    private List<DependencesVisitor> objectCreationVisitors = null;
 
     public DependencesExtractor(final TraceResult trace) {
         this.trace = trace;
@@ -66,9 +66,9 @@ public class DependencesExtractor {
      *                     methods are called on the visitor)
      * @return <code>true</code> if the visitor was registered with any capabilities
      */
-    public boolean registerVisitor(final DependencesVisitor visitor, final VisitorCapabilities... capabilities) {
+    public boolean registerVisitor(final DependencesVisitor visitor, final VisitorCapability... capabilities) {
         boolean change = false;
-        for (final VisitorCapabilities cap: capabilities) {
+        for (final VisitorCapability cap: capabilities) {
             switch (cap) {
             case DATA_DEPENDENCES_ALL:
                 if (this.dataDependenceVisitorsReadAfterWrite == null)
@@ -128,6 +128,11 @@ public class DependencesExtractor {
                     this.methodEntryLeaveVisitors = new ArrayList<DependencesVisitor>();
                 change |= this.methodEntryLeaveVisitors.add(visitor);
                 break;
+            case OBJECT_CREATION:
+                if (this.objectCreationVisitors == null)
+                    this.objectCreationVisitors = new ArrayList<DependencesVisitor>();
+                change |= this.objectCreationVisitors.add(visitor);
+                break;
             }
         }
         return change;
@@ -155,20 +160,30 @@ public class DependencesExtractor {
             if (this.instructionVisitors.isEmpty())
                 this.instructionVisitors = null;
         }
-        if (this.pendingControlDependenceVisitors.remove(visitor)) {
-            change = true;
-            if (this.pendingControlDependenceVisitors.isEmpty())
-                this.pendingControlDependenceVisitors = null;
-        }
         if (this.pendingDataDependenceVisitorsReadAfterWrite.remove(visitor)) {
             change = true;
             if (this.pendingDataDependenceVisitorsReadAfterWrite.isEmpty())
                 this.pendingDataDependenceVisitorsReadAfterWrite = null;
         }
+        if (this.pendingDataDependenceVisitorsWriteAfterRead.remove(visitor)) {
+            change = true;
+            if (this.pendingDataDependenceVisitorsWriteAfterRead.isEmpty())
+                this.pendingDataDependenceVisitorsWriteAfterRead = null;
+        }
+        if (this.pendingControlDependenceVisitors.remove(visitor)) {
+            change = true;
+            if (this.pendingControlDependenceVisitors.isEmpty())
+                this.pendingControlDependenceVisitors = null;
+        }
         if (this.methodEntryLeaveVisitors.remove(visitor)) {
             change = true;
             if (this.methodEntryLeaveVisitors.isEmpty())
                 this.methodEntryLeaveVisitors = null;
+        }
+        if (this.objectCreationVisitors.remove(visitor)) {
+            change = true;
+            if (this.objectCreationVisitors.isEmpty())
+                this.objectCreationVisitors = null;
         }
         return change;
     }
@@ -176,7 +191,7 @@ public class DependencesExtractor {
     /**
      * Go backwards through the execution trace of the given threadId and extract
      * all dependences. {@link DependencesVisitor}s should have been added before
-     * by calling {@link #registerVisitor(DependencesVisitor, VisitorCapabilities...)}.
+     * by calling {@link #registerVisitor(DependencesVisitor, VisitorCapability...)}.
      *
      * If you know the exact {@link ThreadId} of the thread to process, you should
      * use {@link #processBackwardTrace(ThreadId)} instead, since a java thread id
@@ -193,30 +208,11 @@ public class DependencesExtractor {
     /**
      * Go backwards through the execution trace of the given threadId and extract
      * all dependences. {@link DependencesVisitor}s should have been added before
-     * by calling {@link #registerVisitor(DependencesVisitor, VisitorCapabilities...)}.
+     * by calling {@link #registerVisitor(DependencesVisitor, VisitorCapability...)}.
      *
      * @param threadId identifies the thread whose trace should be analyzed
      */
     public void processBackwardTrace(final ThreadId threadId) {
-
-        // quickfix until the NEW bytecode knows the object it is creating:
-        // we first traverse the trace and store the first occurence of each object
-        final Map<Long, Long> firstUsage = new HashMap<Long, Long>();
-        {
-            final BackwardInstructionIterator quickFixBackwardIterator =
-                this.trace.getBackwardIterator(threadId, null);
-
-            long stepNr = 0;
-            while (quickFixBackwardIterator.hasNext()) {
-                final InstructionInstance inst = quickFixBackwardIterator.next();
-                if (inst instanceof ArrayInstrInstance)
-                    firstUsage.put(((ArrayInstrInstance)inst).getArrayId(), stepNr);
-                else if (inst instanceof FieldInstrInstance)
-                    firstUsage.put(((FieldInstrInstance)inst).getObjectId(), stepNr);
-                ++stepNr;
-            }
-
-        }
 
         final BackwardInstructionIterator backwardInsnItr =
             this.trace.getBackwardIterator(threadId, null);
@@ -403,7 +399,7 @@ public class DependencesExtractor {
                         }
                     }
                     if (lastWriter.size() > nextCleanupOfLastWriter) {
-                        cleanUpMaps(lastWriter, lastReaders, createdObjects, firstUsage,
+                        cleanUpMaps(lastWriter, lastReaders, createdObjects,
                             stepNr, frames, false);
                         nextCleanupOfLastWriter = Math.max(1<<16, 2*lastWriter.size());
                         nextCleanupOfLastReaders = Math.max(1<<16, 2*lastReaders.size());
@@ -434,7 +430,7 @@ public class DependencesExtractor {
                                 lastReaders.put(usedVariable, readers);
                                 if (lastReaders.size() > nextCleanupOfLastReaders) {
                                     cleanUpMaps(lastWriter, lastReaders, createdObjects,
-                                        firstUsage, stepNr, frames, false);
+                                        stepNr, frames, false);
                                     nextCleanupOfLastWriter = Math.max(1<<16, 2*lastWriter.size());
                                     nextCleanupOfLastReaders = Math.max(1<<16, 2*lastReaders.size());
                                 }
@@ -457,13 +453,12 @@ public class DependencesExtractor {
 
             ++stepNr;
         }
-        cleanUpMaps(lastWriter, lastReaders, createdObjects, firstUsage, stepNr, frames, true);
+        cleanUpMaps(lastWriter, lastReaders, createdObjects, stepNr, frames, true);
     }
 
     private void cleanUpMaps(final Map<Variable, InstructionInstance> lastWriter,
             final Map<Variable, List<InstructionInstance>> lastReaders, final Set<Long> createdObjects,
-            final Map<Long, Long> firstUsage, final long stepNr,
-            final Collection<ExecutionFrame> activeFrames, final boolean cleanCompletely) {
+            final long stepNr, final Collection<ExecutionFrame> activeFrames, final boolean cleanCompletely) {
         final Set<ExecutionFrame> activeFrameSet = new HashSet<ExecutionFrame>(activeFrames);
 
         final Iterator<Entry<Variable, InstructionInstance>> lastWriterIt = lastWriter.entrySet().iterator();
@@ -471,8 +466,8 @@ public class DependencesExtractor {
             final Entry<Variable, InstructionInstance> e = lastWriterIt.next();
             final Variable var = e.getKey();
             if (cleanCompletely
-                    || (var instanceof ArrayElement && firstUsage.get(((ArrayElement)var).getArrayId()) < stepNr)
-                    || (var instanceof ObjectField && firstUsage.get(((ObjectField)var).getObjectId()) < stepNr)
+                    || (var instanceof ArrayElement && createdObjects.contains(((ArrayElement)var).getArrayId()))
+                    || (var instanceof ObjectField && createdObjects.contains(((ObjectField)var).getObjectId()))
                     || (var instanceof StackEntry && !activeFrameSet.contains(((StackEntry)var).getFrame()))
                     || (var instanceof LocalVariable && !activeFrameSet.contains(((LocalVariable)var).getFrame()))) {
                 if (this.pendingDataDependenceVisitorsWriteAfterRead != null && !(var instanceof StackEntry))
@@ -487,8 +482,8 @@ public class DependencesExtractor {
             final Entry<Variable, List<InstructionInstance>> e = lastReadersIt.next();
             final Variable var = e.getKey();
             if (cleanCompletely
-                    || (var instanceof ArrayElement && firstUsage.get(((ArrayElement)var).getArrayId()) < stepNr)
-                    || (var instanceof ObjectField && firstUsage.get(((ObjectField)var).getObjectId()) < stepNr)
+                    || (var instanceof ArrayElement && createdObjects.contains(((ArrayElement)var).getArrayId()))
+                    || (var instanceof ObjectField && createdObjects.contains(((ObjectField)var).getObjectId()))
                     || (var instanceof StackEntry && !activeFrameSet.contains(((StackEntry)var).getFrame()))
                     || (var instanceof LocalVariable && !activeFrameSet.contains(((LocalVariable)var).getFrame()))) {
                 if (this.pendingDataDependenceVisitorsReadAfterWrite != null)

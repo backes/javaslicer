@@ -4,7 +4,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesVisitor.DataDependenceType;
 
-public enum VisitorCapabilities {
+public enum VisitorCapability {
 
     /**
      * combines {@link #DATA_DEPENDENCES_READ_AFTER_WRITE} and
@@ -69,6 +69,12 @@ public enum VisitorCapabilities {
      * {@link DependencesVisitor#visitMethodEntry(ReadMethod)} and
      * {@link DependencesVisitor#visitMethodLeave(ReadMethod)}
      */
-    METHOD_ENTRY_LEAVE
+    METHOD_ENTRY_LEAVE,
+
+    /**
+     * enables invokations of
+     * {@link DependencesVisitor#visitObjectCreation(long, InstructionInstance)}
+     */
+    OBJECT_CREATION
 
 }

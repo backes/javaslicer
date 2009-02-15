@@ -18,7 +18,7 @@ import de.unisb.cs.st.javaslicer.AbstractDependencesTest.Dependence.Type;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesExtractor;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesVisitorAdapter;
-import de.unisb.cs.st.javaslicer.dependenceAnalysis.VisitorCapabilities;
+import de.unisb.cs.st.javaslicer.dependenceAnalysis.VisitorCapability;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.variables.StackEntry;
@@ -134,7 +134,7 @@ public abstract class AbstractDependencesTest {
 
         final Set<Dependence> dependences = new HashSet<Dependence>();
         final DependencesExtractor extr = new DependencesExtractor(res);
-        extr.registerVisitor(new StringArrDepVisitor(instrFilter, dependences), VisitorCapabilities.DATA_DEPENDENCES_ALL);
+        extr.registerVisitor(new StringArrDepVisitor(instrFilter, dependences), VisitorCapability.DATA_DEPENDENCES_ALL);
         extr.processBackwardTrace(threadId);
         final Dependence[] computetedDependences = dependences.toArray(new Dependence[dependences.size()]);
 

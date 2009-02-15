@@ -47,4 +47,9 @@ public abstract class DependencesVisitorAdapter implements DependencesVisitor {
         // null
     }
 
+    public void visitObjectCreation(long objectId,
+            InstructionInstance instrInstance) {
+        // null
+    }
+
 }

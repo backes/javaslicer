@@ -103,4 +103,12 @@ public interface DependencesVisitor {
      */
     void visitMethodLeave(ReadMethod method);
 
+    /**
+     * Gets called if an instruction (NEW, NEWARRAY, ANEWARRAY, MULTIANEWARRAY) creates an object.
+     *
+     * @param objectId the identity of the object which is being created
+     * @param instrInstance the instruction instance which created the object
+     */
+    void visitObjectCreation(long objectId, InstructionInstance instrInstance);
+
 }
