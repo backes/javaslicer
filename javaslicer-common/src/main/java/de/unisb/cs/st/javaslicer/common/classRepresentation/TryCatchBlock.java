@@ -4,10 +4,10 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import de.hammacher.util.OptimizedDataInputStream;
-import de.hammacher.util.OptimizedDataOutputStream;
 import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
+import de.hammacher.util.streams.OptimizedDataInputStream;
+import de.hammacher.util.streams.OptimizedDataOutputStream;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
 

@@ -6,8 +6,8 @@ import java.lang.ref.SoftReference;
 import java.util.Iterator;
 import java.util.ListIterator;
 
-import de.hammacher.util.IntegerMap;
 import de.hammacher.util.MultiplexedFileReader;
+import de.hammacher.util.maps.IntegerMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;

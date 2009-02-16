@@ -10,11 +10,11 @@ import java.util.List;
 import java.util.Queue;
 
 import de.hammacher.util.ArrayQueue;
-import de.hammacher.util.IntegerMap;
-import de.hammacher.util.OptimizedDataInputStream;
-import de.hammacher.util.OptimizedDataOutputStream;
 import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
+import de.hammacher.util.maps.IntegerMap;
+import de.hammacher.util.streams.OptimizedDataInputStream;
+import de.hammacher.util.streams.OptimizedDataOutputStream;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
 

@@ -26,7 +26,7 @@ public class ObjectField implements Variable {
     @Override
     public int hashCode() {
         // the fieldName strings are internalized, so we can use identity comparison
-        return System.identityHashCode(this.fieldName) + (int)this.objectId;
+        return this.fieldName.hashCode() + (int)this.objectId;
     }
 
     @Override

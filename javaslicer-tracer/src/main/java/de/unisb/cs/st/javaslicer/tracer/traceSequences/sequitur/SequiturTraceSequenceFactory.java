@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-import de.hammacher.util.OptimizedDataOutputStream;
+import de.hammacher.util.streams.OptimizedDataOutputStream;
 import de.unisb.cs.st.javaslicer.common.TraceSequenceTypes;
 import de.unisb.cs.st.javaslicer.common.TraceSequenceTypes.Type;
 import de.unisb.cs.st.javaslicer.tracer.ThreadTracer;

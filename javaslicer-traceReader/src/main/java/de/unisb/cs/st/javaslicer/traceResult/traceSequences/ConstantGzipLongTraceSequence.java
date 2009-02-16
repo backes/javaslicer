@@ -9,10 +9,10 @@ import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.zip.GZIPInputStream;
 
-import de.hammacher.util.EmptyIterator;
 import de.hammacher.util.MultiplexedFileReader;
-import de.hammacher.util.OptimizedDataInputStream;
 import de.hammacher.util.MultiplexedFileReader.MultiplexInputStream;
+import de.hammacher.util.iterators.EmptyIterator;
+import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantLongTraceSequence;
 
 public class ConstantGzipLongTraceSequence implements ConstantLongTraceSequence {

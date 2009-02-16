@@ -6,27 +6,23 @@ import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
 import de.hammacher.util.ArrayStack;
-import de.hammacher.util.IntegerMap;
+import de.hammacher.util.maps.IntegerMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesVisitor.DataDependenceType;
+import de.unisb.cs.st.javaslicer.instructionSimulation.DynamicInformation;
 import de.unisb.cs.st.javaslicer.instructionSimulation.Simulator;
 import de.unisb.cs.st.javaslicer.traceResult.BackwardInstructionIterator;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
-import de.unisb.cs.st.javaslicer.variableUsages.VariableUsages;
-import de.unisb.cs.st.javaslicer.variables.ArrayElement;
-import de.unisb.cs.st.javaslicer.variables.LocalVariable;
-import de.unisb.cs.st.javaslicer.variables.ObjectField;
 import de.unisb.cs.st.javaslicer.variables.StackEntry;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
@@ -41,7 +37,7 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
 public class DependencesExtractor {
 
     private final TraceResult trace;
-    private final Simulator simulator = new Simulator();
+    private final Simulator simulator;
     private List<DependencesVisitor> dataDependenceVisitorsReadAfterWrite = null;
     private List<DependencesVisitor> dataDependenceVisitorsWriteAfterRead = null;
     private List<DependencesVisitor> controlDependenceVisitors = null;
@@ -54,6 +50,7 @@ public class DependencesExtractor {
 
     public DependencesExtractor(final TraceResult trace) {
         this.trace = trace;
+        this.simulator = new Simulator(trace);
     }
 
     /**
@@ -236,15 +233,6 @@ public class DependencesExtractor {
         // lastReaders are needed for RAW data dependences
         final Map<Variable, List<InstructionInstance>> lastReaders = new HashMap<Variable, List<InstructionInstance>>();
 
-        // this set contains all objects that have been created during the backwards traversal
-        // of the trace. so these objects cannot have any dependences any more. from time to time,
-        // corresponding variables are delete from lastWriter and lastReader.
-        final Set<Long> createdObjects = new HashSet<Long>();
-
-        // these variables control when lastReaders and lastWriter are cleaned up based on createdObjects
-        int nextCleanupOfLastWriter = 1<<16;
-        int nextCleanupOfLastReaders = 1<<16;
-
         long stepNr = 0;
 
         while (backwardInsnItr.hasNext()) {
@@ -297,25 +285,12 @@ public class DependencesExtractor {
                 }
             }
 
-            final VariableUsages dynInfo = this.simulator.simulateInstruction(instance, currentFrame,
+            final DynamicInformation dynInfo = this.simulator.simulateInstruction(instance, currentFrame,
                     removedFrame, frames);
 
             if (this.instructionVisitors != null)
                 for (final DependencesVisitor vis: this.instructionVisitors)
                     vis.visitInstructionExecution(instance);
-
-            /*
-            // fill createdObjects
-            {
-                Collection<Long> tmp = dynInfo.getCreatedObjects();
-                if (!tmp.isEmpty()) {
-                    if (tmp.size() == 1)
-                        createdObjects.add(tmp.iterator().next());
-                    else
-                        createdObjects.addAll(tmp);
-                }
-            }
-            */
 
             // the computation of control dependences only has to be performed
             // if there are any controlDependenceVisitors
@@ -398,12 +373,6 @@ public class DependencesExtractor {
                                 }
                         }
                     }
-                    if (lastWriter.size() > nextCleanupOfLastWriter) {
-                        cleanUpMaps(lastWriter, lastReaders, createdObjects,
-                            stepNr, frames, false);
-                        nextCleanupOfLastWriter = Math.max(1<<16, 2*lastWriter.size());
-                        nextCleanupOfLastReaders = Math.max(1<<16, 2*lastReaders.size());
-                    }
                 }
             }
 
@@ -428,12 +397,6 @@ public class DependencesExtractor {
                             if (readers == null) {
                                 readers = new ArrayList<InstructionInstance>(4);
                                 lastReaders.put(usedVariable, readers);
-                                if (lastReaders.size() > nextCleanupOfLastReaders) {
-                                    cleanUpMaps(lastWriter, lastReaders, createdObjects,
-                                        stepNr, frames, false);
-                                    nextCleanupOfLastWriter = Math.max(1<<16, 2*lastWriter.size());
-                                    nextCleanupOfLastReaders = Math.max(1<<16, 2*lastReaders.size());
-                                }
                             }
                             readers.add(instance);
                             // for each used variable, we have a pending RAW dependence
@@ -446,6 +409,28 @@ public class DependencesExtractor {
                 }
             }
 
+            for (final Entry<Long, Collection<Variable>> e: dynInfo.getCreatedObjects().entrySet()) {
+                for (final Variable var: e.getValue()) {
+                    InstructionInstance inst;
+                    if ((inst = lastWriter.remove(var)) != null
+                            && this.pendingDataDependenceVisitorsWriteAfterRead != null
+                            && !(var instanceof StackEntry)) {
+                        for (final DependencesVisitor vis: this.pendingDataDependenceVisitorsWriteAfterRead)
+                            vis.discardPendingDataDependence(inst, var, DataDependenceType.WRITE_AFTER_READ);
+                    }
+                    List<InstructionInstance> instList;
+                    if ((instList = lastReaders.remove(var)) != null
+                            && this.pendingDataDependenceVisitorsReadAfterWrite != null) {
+                        for (final DependencesVisitor vis: this.pendingDataDependenceVisitorsReadAfterWrite)
+                            for (final InstructionInstance instrInst: instList)
+                                vis.visitDataDependence(instance, instrInst, var, DataDependenceType.READ_AFTER_WRITE);
+                    }
+                }
+                if (this.objectCreationVisitors != null)
+                    for (final DependencesVisitor vis: this.objectCreationVisitors)
+                        vis.visitObjectCreation(e.getKey(), instance);
+            }
+
             if (dynInfo.isCatchBlock())
                 currentFrame.atCacheBlockStart = instance;
             else if (currentFrame.atCacheBlockStart != null)
@@ -453,48 +438,28 @@ public class DependencesExtractor {
 
             ++stepNr;
         }
-        cleanUpMaps(lastWriter, lastReaders, createdObjects, stepNr, frames, true);
+
+        cleanUpMaps(lastWriter, lastReaders);
     }
 
     private void cleanUpMaps(final Map<Variable, InstructionInstance> lastWriter,
-            final Map<Variable, List<InstructionInstance>> lastReaders, final Set<Long> createdObjects,
-            final long stepNr, final Collection<ExecutionFrame> activeFrames, final boolean cleanCompletely) {
-        final Set<ExecutionFrame> activeFrameSet = new HashSet<ExecutionFrame>(activeFrames);
-
-        final Iterator<Entry<Variable, InstructionInstance>> lastWriterIt = lastWriter.entrySet().iterator();
-        while (lastWriterIt.hasNext()) {
-            final Entry<Variable, InstructionInstance> e = lastWriterIt.next();
+            final Map<Variable, List<InstructionInstance>> lastReaders) {
+        for (final Entry<Variable, InstructionInstance> e: lastWriter.entrySet()) {
             final Variable var = e.getKey();
-            if (cleanCompletely
-                    || (var instanceof ArrayElement && createdObjects.contains(((ArrayElement)var).getArrayId()))
-                    || (var instanceof ObjectField && createdObjects.contains(((ObjectField)var).getObjectId()))
-                    || (var instanceof StackEntry && !activeFrameSet.contains(((StackEntry)var).getFrame()))
-                    || (var instanceof LocalVariable && !activeFrameSet.contains(((LocalVariable)var).getFrame()))) {
-                if (this.pendingDataDependenceVisitorsWriteAfterRead != null && !(var instanceof StackEntry))
-                    for (final DependencesVisitor vis: this.pendingDataDependenceVisitorsWriteAfterRead)
-                        vis.discardPendingDataDependence(e.getValue(), var, DataDependenceType.WRITE_AFTER_READ);
-                lastWriterIt.remove();
-            }
+            if (this.pendingDataDependenceVisitorsWriteAfterRead != null && !(var instanceof StackEntry))
+                for (final DependencesVisitor vis: this.pendingDataDependenceVisitorsWriteAfterRead)
+                    vis.discardPendingDataDependence(e.getValue(), var, DataDependenceType.WRITE_AFTER_READ);
         }
+        lastWriter.clear();
 
-        final Iterator<Entry<Variable, List<InstructionInstance>>> lastReadersIt = lastReaders.entrySet().iterator();
-        while (lastReadersIt.hasNext()) {
-            final Entry<Variable, List<InstructionInstance>> e = lastReadersIt.next();
+        for (final Entry<Variable, List<InstructionInstance>> e: lastReaders.entrySet()) {
             final Variable var = e.getKey();
-            if (cleanCompletely
-                    || (var instanceof ArrayElement && createdObjects.contains(((ArrayElement)var).getArrayId()))
-                    || (var instanceof ObjectField && createdObjects.contains(((ObjectField)var).getObjectId()))
-                    || (var instanceof StackEntry && !activeFrameSet.contains(((StackEntry)var).getFrame()))
-                    || (var instanceof LocalVariable && !activeFrameSet.contains(((LocalVariable)var).getFrame()))) {
-                if (this.pendingDataDependenceVisitorsReadAfterWrite != null)
-                    for (final InstructionInstance inst: e.getValue())
-                        for (final DependencesVisitor vis: this.pendingDataDependenceVisitorsReadAfterWrite)
-                            vis.discardPendingDataDependence(inst, var, DataDependenceType.READ_AFTER_WRITE);
-                lastReadersIt.remove();
-            }
+            if (this.pendingDataDependenceVisitorsReadAfterWrite != null)
+                for (final InstructionInstance inst: e.getValue())
+                    for (final DependencesVisitor vis: this.pendingDataDependenceVisitorsReadAfterWrite)
+                        vis.discardPendingDataDependence(inst, var, DataDependenceType.READ_AFTER_WRITE);
         }
-
-        createdObjects.clear();
+        lastReaders.clear();
     }
 
     private Set<InstructionInstance> getInstanceIntersection(

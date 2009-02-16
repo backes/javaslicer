@@ -1,10 +1,14 @@
 package de.unisb.cs.st.javaslicer.tracer.instrumentation;
 
+import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
 import java.security.ProtectionDomain;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -16,6 +20,7 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TryCatchBlockNode;
 import org.objectweb.asm.tree.analysis.Analyzer;
@@ -25,6 +30,7 @@ import org.objectweb.asm.tree.analysis.Frame;
 import org.objectweb.asm.util.CheckClassAdapter;
 import org.objectweb.asm.util.TraceMethodVisitor;
 
+import de.unisb.cs.st.javaslicer.common.classRepresentation.Field;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.tracer.ThreadTracer;
@@ -211,7 +217,20 @@ public class Transformer implements ClassFileTransformer {
         synchronized (System.out) { synchronized (this.transformationLock) {
 
             // register that class for later reconstruction of the trace
-            final ReadClass readClass = new ReadClass(className, AbstractInstruction.getNextIndex(), classNode.access);
+            List<Field> fields;
+            if (classNode.fields.isEmpty())
+                fields = Collections.emptyList();
+            else
+                fields = new ArrayList<Field>(classNode.fields.size());
+
+            final String javaSuperName = Type.getObjectType(classNode.superName).getClassName();
+            final ReadClass readClass = new ReadClass(
+                className, AbstractInstruction.getNextIndex(), classNode.access,
+                classNode.sourceFile, fields, javaSuperName);
+            for (final Object fieldObj: classNode.fields) {
+                final FieldNode f = (FieldNode) fieldObj;
+                fields.add(new Field(f.name, f.desc, f.access, readClass));
+            }
 
             //final boolean computeFrames = COMPUTE_FRAMES || Arrays.asList(this.pauseTracingClasses).contains(Type.getObjectType(className).getClassName());
             final boolean computeFrames = COMPUTE_FRAMES;
@@ -255,6 +274,16 @@ public class Transformer implements ClassFileTransformer {
         if (className.endsWith("line/Main"))
             printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
         */
+        if (className.endsWith("TestHarness")) {
+            try {
+                System.out.println("Writing class " + className);
+                final FileOutputStream fos = new FileOutputStream("error_class.class");
+                fos.write(newClassfileBuffer);
+                fos.close();
+            } catch (final Throwable t) {
+                t.printStackTrace();
+            }
+        }
 
         return newClassfileBuffer;
     }

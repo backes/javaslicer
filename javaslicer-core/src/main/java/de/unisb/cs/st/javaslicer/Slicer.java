@@ -15,7 +15,7 @@ import java.util.Map.Entry;
 import org.objectweb.asm.Opcodes;
 
 import de.hammacher.util.ArrayStack;
-import de.hammacher.util.IntegerMap;
+import de.hammacher.util.maps.IntegerMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
@@ -24,19 +24,20 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Type;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.ExecutionFrame;
+import de.unisb.cs.st.javaslicer.instructionSimulation.DynamicInformation;
 import de.unisb.cs.st.javaslicer.instructionSimulation.Simulator;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
-import de.unisb.cs.st.javaslicer.variableUsages.VariableUsages;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
 public class Slicer implements Opcodes {
 
     private final TraceResult trace;
-    private final Simulator simulator = new Simulator();
+    private final Simulator simulator;
 
     public Slicer(final TraceResult trace) {
         this.trace = trace;
+        this.simulator = new Simulator(trace);
     }
 
     public static void main(final String[] args) {
@@ -210,7 +211,7 @@ public class Slicer implements Opcodes {
                 }
             }
 
-            final VariableUsages dynInfo = this.simulator.simulateInstruction(instance, currentFrame,
+            final DynamicInformation dynInfo = this.simulator.simulateInstruction(instance, currentFrame,
                     removedFrame, frames);
 
             if (removedFrameIsInteresting) {

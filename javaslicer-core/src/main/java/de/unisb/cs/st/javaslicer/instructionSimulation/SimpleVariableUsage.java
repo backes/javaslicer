@@ -1,18 +1,19 @@
-package de.unisb.cs.st.javaslicer.variableUsages;
+package de.unisb.cs.st.javaslicer.instructionSimulation;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Map;
 
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
-public class SimpleVariableUsage implements VariableUsages {
+public class SimpleVariableUsage implements DynamicInformation {
 
     private final Collection<Variable> usedVariables;
     private final Collection<Variable> definedVariables;
     private final boolean isCatchBlock;
-    private final Collection<Long> createdObjects;
+    private final Map<Long, Collection<Variable>> createdObjects;
 
-    private static final Collection<Long> noCreatedObjects = Collections.emptySet();
+    private static final Map<Long, Collection<Variable>> noCreatedObjects = Collections.emptyMap();
 
     public SimpleVariableUsage(final Collection<Variable> usedVariables,
             final Collection<Variable> definedVariables) {
@@ -20,7 +21,7 @@ public class SimpleVariableUsage implements VariableUsages {
     }
     public SimpleVariableUsage(final Collection<Variable> usedVariables,
             final Collection<Variable> definedVariables,
-            Collection<Long> createdObjects) {
+            final Map<Long, Collection<Variable>> createdObjects) {
         this(usedVariables, definedVariables, false, createdObjects);
     }
 
@@ -30,7 +31,7 @@ public class SimpleVariableUsage implements VariableUsages {
     }
     public SimpleVariableUsage(final Collection<Variable> usedVariables,
             final Collection<Variable> definedVariables, final boolean isCatchBlock,
-            Collection<Long> createdObjects) {
+            final Map<Long, Collection<Variable>> createdObjects) {
         this.usedVariables = usedVariables;
         this.definedVariables = definedVariables;
         this.isCatchBlock = isCatchBlock;
@@ -71,7 +72,7 @@ public class SimpleVariableUsage implements VariableUsages {
         return "used:    "+getUsedVariables()+System.getProperty("line.separator")
             +"defined: "+getDefinedVariables();
     }
-    public Collection<Long> getCreatedObjects() {
+    public Map<Long, Collection<Variable>> getCreatedObjects() {
         return this.createdObjects;
     }
 

@@ -222,8 +222,42 @@ public class TraceResult {
         return new ThreadIdList(this.threadTraces);
     }
 
+    /**
+     * Returns a sorted List of all {@link ReadClass}es.
+     *
+     * @return a sorted List of all {@link ReadClass}es
+     */
     public List<ReadClass> getReadClasses() {
-        return this.readClasses;
+        return Collections.unmodifiableList(this.readClasses);
+    }
+
+    /**
+     * Search for the {@link ReadClass} with the given class name.
+     *
+     * @param name the class name to search for
+     * @return the {@link ReadClass} with the given class name, or
+     *         <code>null</code> if this TraceResult does not contain
+     *         a ReadClass with that name
+     */
+    public ReadClass findReadClass(String name) {
+        // binary search
+        int left = 0;
+        int right = this.readClasses.size();
+        int mid;
+
+        while ((mid = (left + right) / 2) != left) {
+            final ReadClass midVal = this.readClasses.get(mid);
+            int cmp = midVal.getName().compareTo(name);
+            if (cmp < 0)
+                left = mid;
+            else if (cmp == 0)
+                return midVal;
+            else
+                right = mid;
+        }
+
+        final ReadClass found = this.readClasses.get(mid);
+        return found.getName().equals(name) ? found : null;
     }
 
     public Instruction getInstruction(final int index) {

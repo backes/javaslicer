@@ -23,13 +23,13 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPOutputStream;
 
-import de.hammacher.util.ConcurrentReferenceHashMap;
 import de.hammacher.util.MultiplexedFileWriter;
 import de.hammacher.util.SimpleArrayList;
 import de.hammacher.util.StringCacheOutput;
-import de.hammacher.util.ConcurrentReferenceHashMap.Option;
-import de.hammacher.util.ConcurrentReferenceHashMap.ReferenceType;
 import de.hammacher.util.MultiplexedFileWriter.MultiplexOutputStream;
+import de.hammacher.util.maps.ConcurrentReferenceHashMap;
+import de.hammacher.util.maps.ConcurrentReferenceHashMap.Option;
+import de.hammacher.util.maps.ConcurrentReferenceHashMap.ReferenceType;
 import de.unisb.cs.st.javaslicer.common.TraceSequenceTypes;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;

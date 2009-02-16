@@ -42,7 +42,6 @@ public class TracingClassInstrumenter implements Opcodes {
 
     @SuppressWarnings("unchecked")
     public void transform(final ClassNode classNode) {
-        this.readClass.setSource(classNode.sourceFile);
         final ListIterator<MethodNode> methodIt = classNode.methods.listIterator();
         while (methodIt.hasNext()) {
             transformMethod(classNode, methodIt.next(), methodIt);

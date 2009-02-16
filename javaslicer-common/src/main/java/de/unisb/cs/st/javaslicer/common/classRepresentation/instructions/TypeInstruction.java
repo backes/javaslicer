@@ -6,10 +6,10 @@ import java.io.IOException;
 
 import org.objectweb.asm.Opcodes;
 
-import de.hammacher.util.OptimizedDataInputStream;
-import de.hammacher.util.OptimizedDataOutputStream;
 import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
+import de.hammacher.util.streams.OptimizedDataInputStream;
+import de.hammacher.util.streams.OptimizedDataOutputStream;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
@@ -25,10 +25,15 @@ public class TypeInstruction extends AbstractInstruction {
 
         private final long newObjectIdentifier;
 
-        public TypeInstrInstance(AbstractInstruction instr,
+        public TypeInstrInstance(TypeInstruction instr,
                 long occurenceNumber, int stackDepth, long newObjectIdentifier) {
             super(instr, occurenceNumber, stackDepth);
             this.newObjectIdentifier = newObjectIdentifier;
+        }
+
+        @Override
+        public TypeInstruction getInstruction() {
+            return (TypeInstruction) super.getInstruction();
         }
 
         public long getNewObjectIdentifier() {
@@ -69,10 +74,12 @@ public class TypeInstruction extends AbstractInstruction {
 
     }
 
-    private final String typeDesc;
+    private final String className;
+    private String javaClassName = null;
     private final int newObjectIdentifierSeqIndex;
 
-    public TypeInstruction(final ReadMethod readMethod, final int opcode, final int lineNumber, final String typeDesc, int newObjIdSeqIndex) {
+    public TypeInstruction(final ReadMethod readMethod, final int opcode, final int lineNumber,
+            final String className, int newObjIdSeqIndex) {
         super(readMethod, opcode, lineNumber);
         assert opcode == Opcodes.NEW
             || opcode == Opcodes.ANEWARRAY
@@ -80,7 +87,7 @@ public class TypeInstruction extends AbstractInstruction {
             || opcode == Opcodes.INSTANCEOF;
         assert ((opcode == Opcodes.CHECKCAST || opcode == Opcodes.INSTANCEOF) && newObjIdSeqIndex == 0)
             || ((opcode == Opcodes.NEW || opcode == Opcodes.ANEWARRAY) && newObjIdSeqIndex != 0);
-        this.typeDesc = typeDesc;
+        this.className = className;
         this.newObjectIdentifierSeqIndex = newObjIdSeqIndex;
     }
 
@@ -92,12 +99,30 @@ public class TypeInstruction extends AbstractInstruction {
             || opcode == Opcodes.INSTANCEOF;
         assert ((opcode == Opcodes.CHECKCAST || opcode == Opcodes.INSTANCEOF) && newObjIdSeqIndex == 0)
             || ((opcode == Opcodes.NEW || opcode == Opcodes.ANEWARRAY) && newObjIdSeqIndex != 0);
-        this.typeDesc = typeDesc;
+        this.className = typeDesc;
         this.newObjectIdentifierSeqIndex = newObjIdSeqIndex;
     }
 
-    public String getTypeDesc() {
-        return this.typeDesc;
+    /**
+     * Returns the argument to this TypeInstruction, as internal name as used in the bytecode
+     * (i.e. &quot;java/lang/Object&quot;).
+     *
+     * @return the argument to this TypeInstruction
+     */
+    public String getClassName() {
+        return this.className;
+    }
+
+    /**
+     * Returns the argument to this TypeInstruction, as java class name
+     * (i.e. &quot;java.lang.Object&quot;).
+     *
+     * @return the argument to this TypeInstruction as java class name
+     */
+    public String getJavaClassName() {
+        if (this.javaClassName == null)
+            this.javaClassName = org.objectweb.asm.Type.getObjectType(this.className).getClassName();
+        return this.javaClassName;
     }
 
     public Type getType() {
@@ -115,7 +140,7 @@ public class TypeInstruction extends AbstractInstruction {
     @Override
     public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
         super.writeOut(out, stringCache);
-        stringCache.writeString(this.typeDesc, out);
+        stringCache.writeString(this.className, out);
         if (getOpcode() == Opcodes.NEW || getOpcode() == Opcodes.ANEWARRAY)
             OptimizedDataOutputStream.writeInt0(this.newObjectIdentifierSeqIndex, out);
     }
@@ -147,7 +172,7 @@ public class TypeInstruction extends AbstractInstruction {
         default:
             instruction = "-ERROR-";
         }
-        return new StringBuilder(instruction.length() + this.typeDesc.length() + 1).append(instruction).append(' ').append(this.typeDesc).toString();
+        return new StringBuilder(instruction.length() + this.className.length() + 1).append(instruction).append(' ').append(this.className).toString();
     }
 
 }

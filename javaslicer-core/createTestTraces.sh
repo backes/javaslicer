@@ -15,9 +15,12 @@ for file in $SOURCEDIR/*.java; do
 	CLASS=${CLASS%.java}
 	TARGETFILE=`echo $CLASS | awk '{ print tolower($0);}'`
 	echo -e "\n\nRunning $CLASS..."
-	if ! time java -javaagent:$TRACER=tracefile:$TARGETDIR/$TARGETFILE -ea -esa -cp $CLASSPATH $PACKAGE.$CLASS $DEFAULT_ARGUMENT; then
+  STARTTIME=`date +%s`
+	if ! java -javaagent:$TRACER=tracefile:$TARGETDIR/$TARGETFILE -ea -esa -cp $CLASSPATH $PACKAGE.$CLASS $DEFAULT_ARGUMENT; then
 		echo ERROR
 		exit 1
 	fi
+  ENDTIME=`date +%s`
+  echo "Realtime seconds: "$((ENDTIME - STARTTIME))
 done
 

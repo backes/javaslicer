@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer.variableUsages;
+package de.unisb.cs.st.javaslicer.instructionSimulation;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -6,7 +6,7 @@ import java.util.Map;
 
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
-public class ComplexVariableUsage implements VariableUsages {
+public class ComplexVariableUsage implements DynamicInformation {
 
     private final Collection<Variable> allUsedVariables;
     private final Map<Variable, Collection<Variable>> definedVariablesAndDependancies;
@@ -42,8 +42,8 @@ public class ComplexVariableUsage implements VariableUsages {
         return false;
     }
 
-    public Collection<Long> getCreatedObjects() {
-        return Collections.emptySet();
+    public Map<Long, Collection<Variable>> getCreatedObjects() {
+        return Collections.emptyMap();
     }
 
 }

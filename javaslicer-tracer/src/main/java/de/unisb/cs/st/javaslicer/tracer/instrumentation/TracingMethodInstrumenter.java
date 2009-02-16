@@ -37,8 +37,8 @@ import org.objectweb.asm.tree.TryCatchBlockNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
-import de.hammacher.util.IntegerMap;
 import de.hammacher.util.Pair;
+import de.hammacher.util.maps.IntegerMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
@@ -909,7 +909,8 @@ public class TracingMethodInstrumenter implements Opcodes {
             this.instructionIterator.next();
             ++TracingMethodInstrumenter.statsInstructions;
         } else {
-            registerInstruction(new TypeInstruction(this.readMethod, insn.getOpcode(), this.currentLine, insn.desc, 0),
+            registerInstruction(new TypeInstruction(this.readMethod, insn.getOpcode(), this.currentLine,
+                insn.desc, 0),
                 InstructionType.UNSAFE);
         }
     }

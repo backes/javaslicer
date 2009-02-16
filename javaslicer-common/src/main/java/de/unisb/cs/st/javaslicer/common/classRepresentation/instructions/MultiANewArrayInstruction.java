@@ -7,10 +7,10 @@ import java.util.Arrays;
 
 import org.objectweb.asm.Opcodes;
 
-import de.hammacher.util.OptimizedDataInputStream;
-import de.hammacher.util.OptimizedDataOutputStream;
 import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
+import de.hammacher.util.streams.OptimizedDataInputStream;
+import de.hammacher.util.streams.OptimizedDataOutputStream;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;

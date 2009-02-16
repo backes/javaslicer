@@ -1,23 +1,24 @@
-package de.unisb.cs.st.javaslicer.variableUsages;
+package de.unisb.cs.st.javaslicer.instructionSimulation;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Map;
 
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.variables.StackEntrySet;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
-public class StackManipulation implements VariableUsages {
+public class StackManipulation implements DynamicInformation {
 
     private final ExecutionFrame frame;
     private final int read;
     private final int write;
     private final int oldStackSize;
     private Collection<Variable> readVars = null;
-    private final Collection<Long> createdObjects;
+    private final Map<Long, Collection<Variable>> createdObjects;
 
     public StackManipulation(final ExecutionFrame frame, final int read, final int write,
-            final int oldStackSize, Collection<Long> createdObjects) {
+            final int oldStackSize, final Map<Long, Collection<Variable>> createdObjects) {
         this.frame = frame;
         this.read = read;
         this.write = write;
@@ -36,7 +37,7 @@ public class StackManipulation implements VariableUsages {
             writtenVars = new StackEntrySet(this.frame, this.oldStackSize, this.write);
         }
         if (this.read == this.write)
-            this.readVars  = writtenVars;
+            this.readVars = writtenVars;
         return writtenVars;
     }
 
@@ -63,7 +64,7 @@ public class StackManipulation implements VariableUsages {
         return false;
     }
 
-    public Collection<Long> getCreatedObjects() {
+    public Map<Long, Collection<Variable>> getCreatedObjects() {
         return this.createdObjects;
     }
 

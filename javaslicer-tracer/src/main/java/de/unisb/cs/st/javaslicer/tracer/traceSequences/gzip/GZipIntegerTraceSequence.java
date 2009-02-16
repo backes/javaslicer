@@ -9,12 +9,12 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.zip.GZIPOutputStream;
 
-import de.hammacher.util.MyByteArrayInputStream;
-import de.hammacher.util.MyDataInputStream;
-import de.hammacher.util.MyDataOutputStream;
-import de.hammacher.util.OptimizedDataOutputStream;
 import de.hammacher.util.MultiplexedFileWriter.MultiplexOutputStream;
 import de.hammacher.util.MultiplexedFileWriter.MultiplexOutputStream.Reader;
+import de.hammacher.util.streams.MyByteArrayInputStream;
+import de.hammacher.util.streams.MyDataInputStream;
+import de.hammacher.util.streams.MyDataOutputStream;
+import de.hammacher.util.streams.OptimizedDataOutputStream;
 import de.unisb.cs.st.javaslicer.common.TraceSequenceTypes;
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.IntegerTraceSequence;

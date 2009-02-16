@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 
 import de.hammacher.util.MultiplexedFileReader;
-import de.hammacher.util.OptimizedDataInputStream;
+import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.unisb.cs.st.javaslicer.common.TraceSequenceTypes;
 import de.unisb.cs.st.sequitur.input.InputSequence;
 import de.unisb.cs.st.sequitur.input.ObjectReader;

@@ -5,9 +5,9 @@ import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
 
-import de.hammacher.util.IntArrayIterator;
-import de.hammacher.util.ReverseIntArrayIterator;
-import de.hammacher.util.SingletonIterator;
+import de.hammacher.util.iterators.IntArrayIterator;
+import de.hammacher.util.iterators.ReverseIntArrayIterator;
+import de.hammacher.util.iterators.SingletonIterator;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantIntegerTraceSequence;
 import de.unisb.cs.st.sequitur.input.InputSequence;
 

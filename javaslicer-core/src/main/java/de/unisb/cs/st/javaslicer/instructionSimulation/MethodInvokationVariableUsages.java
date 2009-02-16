@@ -1,15 +1,16 @@
-package de.unisb.cs.st.javaslicer.variableUsages;
+package de.unisb.cs.st.javaslicer.instructionSimulation;
 
 import java.util.AbstractList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Map;
 
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.variables.LocalVariable;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
 
-public class MethodInvokationVariableUsages implements VariableUsages {
+public class MethodInvokationVariableUsages implements DynamicInformation {
 
     public class UsedVariables extends AbstractList<Variable> {
 
@@ -81,8 +82,8 @@ public class MethodInvokationVariableUsages implements VariableUsages {
         return false;
     }
 
-    public Collection<Long> getCreatedObjects() {
-        return Collections.emptySet();
+    public Map<Long, Collection<Variable>> getCreatedObjects() {
+        return Collections.emptyMap();
     }
 
 }

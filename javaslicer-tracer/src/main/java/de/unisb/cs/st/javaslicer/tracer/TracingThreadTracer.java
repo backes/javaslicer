@@ -22,7 +22,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import de.hammacher.util.IntegerMap;
+import de.hammacher.util.maps.IntegerMap;
 import de.unisb.cs.st.javaslicer.common.TraceSequenceTypes.Type;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.Identifiable;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectIdentifier;
@@ -101,7 +101,7 @@ public class TracingThreadTracer implements ThreadTracer {
 
         public WriteOutThread(final String threadName, final TraceSequenceFactory.PerThread traceSequenceFactory,
                 final List<Type> threadSequenceTypes, final Tracer tracer, final int minPrio, final int maxPrio) {
-            super("Writer for " + threadName);
+            super("Trace Writer for " + threadName);
             setDaemon(true);
             setPriority(minPrio);
             this.minPrio = minPrio;

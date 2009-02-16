@@ -4,8 +4,8 @@ import java.io.IOException;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
 
-import de.hammacher.util.IntegerMap;
-import de.hammacher.util.IntegerToLongMap;
+import de.hammacher.util.maps.IntegerMap;
+import de.hammacher.util.maps.IntegerToLongMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
