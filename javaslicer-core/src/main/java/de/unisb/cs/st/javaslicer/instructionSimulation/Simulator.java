@@ -170,7 +170,7 @@ public class Simulator {
             while (tmpClassName != null) {
                 final ReadClass clazz = this.traceResult.findReadClass(tmpClassName);
                 if (clazz == null) {
-                    assert false;
+                    //assert "java.lang.Object".equals(tmpClassName);
                     break;
                 }
                 for (final Field field: clazz.getFields())

@@ -246,21 +246,22 @@ public class TracingThreadTracer implements ThreadTracer {
 
     protected static final PrintWriter debugFile;
     static {
+        PrintWriter tmpDebugFile = null;
         if (DEBUG_TRACE_FILE) {
             try {
-                debugFile = new PrintWriter(new BufferedWriter(new FileWriter(new File("debug.log"))));
+                tmpDebugFile = new PrintWriter(new BufferedWriter(new FileWriter(new File("debug.log"))));
+                final PrintWriter tmpDebugFile2 = tmpDebugFile;
                 Runtime.getRuntime().addShutdownHook(new UntracedThread("debug file closer") {
                     @Override
                     public void run() {
-                        debugFile.close();
+                        tmpDebugFile2.close();
                     }
                 });
             } catch (final IOException e) {
                 e.printStackTrace();
             }
-        } else {
-            debugFile = null;
         }
+        debugFile = tmpDebugFile;
     }
 
     public TracingThreadTracer(final Thread thread,
@@ -304,8 +305,15 @@ public class TracingThreadTracer implements ThreadTracer {
             resumeTracing();
         }
         assert obj == null || objId != 0;
+        traceLong(traceSequenceIndex, objId);
+    }
+
+    /**
+     * Unsynchronized, no check for pause. For internal use only!!
+     */
+    private void traceLong(final int traceSequenceIndex, final long value) {
         this.longSeqNr[this.longSeqIndex] = traceSequenceIndex;
-        this.longSeqVal[this.longSeqIndex] = objId;
+        this.longSeqVal[this.longSeqIndex] = value;
         if (++this.longSeqIndex == CACHE_SIZE) {
             pauseTracing();
             this.writeOutThread.addJob(new WriteOutJob(this.longSeqNr, null, this.longSeqVal, CACHE_SIZE));
@@ -342,7 +350,7 @@ public class TracingThreadTracer implements ThreadTracer {
 
         while (this.uninitializedObjects > 0) {
             assert this.objectAllocationTraceSequence[this.uninitializedObjects-1] != 0;
-            traceObject(null, this.objectAllocationTraceSequence[--this.uninitializedObjects]);
+            traceLong(this.objectAllocationTraceSequence[--this.uninitializedObjects], 0);
         }
 
         if (this.intSeqIndex != 0)
@@ -423,7 +431,7 @@ public class TracingThreadTracer implements ThreadTracer {
     }
 
     @Override
-    public void objectInitialized(final Object obj) {
+    public synchronized void objectInitialized(final Object obj) {
         if (this.paused == 0) {
             assert this.uninitializedObjects > 0 && this.objectAllocationTraceSequence[this.uninitializedObjects-1] != 0;
             traceObject(obj, this.objectAllocationTraceSequence[--this.uninitializedObjects]);

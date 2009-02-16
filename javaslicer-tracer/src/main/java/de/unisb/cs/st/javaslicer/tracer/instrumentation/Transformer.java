@@ -1,6 +1,5 @@
 package de.unisb.cs.st.javaslicer.tracer.instrumentation;
 
-import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
@@ -274,16 +273,6 @@ public class Transformer implements ClassFileTransformer {
         if (className.endsWith("line/Main"))
             printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
         */
-        if (className.endsWith("TestHarness")) {
-            try {
-                System.out.println("Writing class " + className);
-                final FileOutputStream fos = new FileOutputStream("error_class.class");
-                fos.write(newClassfileBuffer);
-                fos.close();
-            } catch (final Throwable t) {
-                t.printStackTrace();
-            }
-        }
 
         return newClassfileBuffer;
     }
