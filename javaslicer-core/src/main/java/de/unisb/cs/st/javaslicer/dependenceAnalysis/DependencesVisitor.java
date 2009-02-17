@@ -7,7 +7,7 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
 
 /**
  * A visitor that gets informed about determined dependences of one program
- * trace.
+ * trace as well as some other possibly interesting information.
  *
  * @author Clemens Hammacher
  */

@@ -330,9 +330,6 @@ public class DependencesExtractor {
                     currentFrame.interestingInstances.removeAll(dependantInterestingInstances);
                 }
                 currentFrame.interestingInstances.add(instance);
-                if (this.pendingControlDependenceVisitors != null)
-                    for (final DependencesVisitor vis: this.pendingControlDependenceVisitors)
-                        vis.visitPendingControlDependence(instance);
             }
             if (this.pendingControlDependenceVisitors != null) {
                 currentFrame.interestingInstances.add(instance);
@@ -419,11 +416,15 @@ public class DependencesExtractor {
                             vis.discardPendingDataDependence(inst, var, DataDependenceType.WRITE_AFTER_READ);
                     }
                     List<InstructionInstance> instList;
-                    if ((instList = lastReaders.remove(var)) != null
-                            && this.pendingDataDependenceVisitorsReadAfterWrite != null) {
-                        for (final DependencesVisitor vis: this.pendingDataDependenceVisitorsReadAfterWrite)
-                            for (final InstructionInstance instrInst: instList)
-                                vis.visitDataDependence(instance, instrInst, var, DataDependenceType.READ_AFTER_WRITE);
+                    if ((instList = lastReaders.remove(var)) != null) {
+                        if (this.dataDependenceVisitorsReadAfterWrite != null)
+                            for (final DependencesVisitor vis: this.dataDependenceVisitorsReadAfterWrite)
+                                for (final InstructionInstance instrInst: instList)
+                                    vis.visitDataDependence(instrInst, instance, var, DataDependenceType.READ_AFTER_WRITE);
+                        if (this.pendingDataDependenceVisitorsReadAfterWrite != null)
+                            for (final DependencesVisitor vis: this.pendingDataDependenceVisitorsReadAfterWrite)
+                                for (final InstructionInstance instrInst: instList)
+                                    vis.discardPendingDataDependence(instrInst, var, DataDependenceType.READ_AFTER_WRITE);
                     }
                 }
                 if (this.objectCreationVisitors != null)
