@@ -13,6 +13,7 @@ import java.util.NoSuchElementException;
 
 import org.objectweb.asm.Opcodes;
 
+import de.hammacher.util.iterators.EmptyIterator;
 import de.hammacher.util.maps.IntegerMap;
 import de.hammacher.util.maps.IntegerToLongMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
@@ -38,8 +39,8 @@ public class BackwardInstructionIterator implements Iterator<InstructionInstance
 
     private int stackDepth;
 
-    private int instructionCount = 0;
-    private int filteredInstructionCount = 0;
+    private long instructionCount = 0;
+    private long filteredInstructionCount = 0;
     private final PrintWriter debugFileWriter;
 
     public BackwardInstructionIterator(final ThreadTraceResult threadTraceResult, final InstanceFilter filter)
@@ -143,7 +144,10 @@ public class BackwardInstructionIterator implements Iterator<InstructionInstance
         }
         if (!it.hasNext())
             throw new TracerException("corrupted data (cannot trace backwards)");
-        return it.next();
+        Long ret = it.next();
+        if (!it.hasNext())
+            this.longSequenceBackwardIterators.put(seqIndex, EmptyIterator.<Long>getInstance());
+        return ret;
     }
 
     public int getNextInteger(final int seqIndex) throws TracerException {
@@ -158,7 +162,10 @@ public class BackwardInstructionIterator implements Iterator<InstructionInstance
         }
         if (!it.hasNext())
             throw new TracerException("corrupted data (cannot trace backwards)");
-        return it.next();
+        Integer ret = it.next();
+        if (!it.hasNext())
+            this.integerSequenceBackwardIterators.put(seqIndex, EmptyIterator.<Integer>getInstance());
+        return ret;
     }
 
     public long getNextInstructionOccurenceNumber(final int instructionIndex) {
@@ -166,11 +173,11 @@ public class BackwardInstructionIterator implements Iterator<InstructionInstance
         return nr - 1;
     }
 
-    public int getNumInstructions() {
+    public long getNumInstructions() {
         return this.instructionCount;
     }
 
-    public int getNumFilteredInstructions() {
+    public long getNumFilteredInstructions() {
         return this.filteredInstructionCount;
     }
 
