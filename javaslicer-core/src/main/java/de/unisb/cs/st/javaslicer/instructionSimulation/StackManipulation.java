@@ -12,16 +12,16 @@ public class StackManipulation implements DynamicInformation {
     private final ExecutionFrame frame;
     private final int read;
     private final int write;
-    private final int oldStackSize;
-    private Collection<Variable> readVars = null;
+    private final int stackOffset;
+    private Collection<Variable> usedVars = null;
     private final Map<Long, Collection<Variable>> createdObjects;
 
     public StackManipulation(final ExecutionFrame frame, final int read, final int write,
-            final int oldStackSize, final Map<Long, Collection<Variable>> createdObjects) {
+            final int stackOffset, final Map<Long, Collection<Variable>> createdObjects) {
         this.frame = frame;
         this.read = read;
         this.write = write;
-        this.oldStackSize = oldStackSize;
+        this.stackOffset = stackOffset;
         this.createdObjects = createdObjects;
     }
 
@@ -29,30 +29,30 @@ public class StackManipulation implements DynamicInformation {
         if (this.write == 0)
             return Collections.emptySet();
 
-        final Collection<Variable> writtenVars;
+        final Collection<Variable> definedVars;
         if (this.write == 1) {
-            writtenVars = Collections.singleton((Variable)this.frame.getStackEntry(this.oldStackSize-1));
+            definedVars = Collections.singleton((Variable)this.frame.getStackEntry(this.stackOffset));
         } else {
-            writtenVars = new StackEntrySet(this.frame, this.oldStackSize, this.write);
+            definedVars = new StackEntrySet(this.frame, this.stackOffset, this.write);
         }
         if (this.read == this.write)
-            this.readVars = writtenVars;
-        return writtenVars;
+            this.usedVars = definedVars;
+        return definedVars;
     }
 
     public Collection<? extends Variable> getUsedVariables() {
-        if (this.readVars != null)
-            return this.readVars;
+        if (this.usedVars != null)
+            return this.usedVars;
 
         if (this.read == 0)
-            this.readVars = Collections.emptySet();
+            this.usedVars = Collections.emptySet();
         else if (this.read == 1)
-            this.readVars = Collections.singleton((Variable)this.frame.getStackEntry(
-                    this.oldStackSize - this.write));
+            this.usedVars = Collections.singleton((Variable)this.frame.getStackEntry(
+                    this.stackOffset));
         else
-            this.readVars = new StackEntrySet(this.frame, this.oldStackSize + this.read - this.write, this.read);
+            this.usedVars = new StackEntrySet(this.frame, this.stackOffset, this.read);
 
-        return this.readVars;
+        return this.usedVars;
     }
 
     public Collection<? extends Variable> getUsedVariables(final Variable definedVariable) {

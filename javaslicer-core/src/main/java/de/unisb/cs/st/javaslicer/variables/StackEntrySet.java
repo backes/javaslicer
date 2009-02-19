@@ -10,16 +10,16 @@ public class StackEntrySet extends AbstractSet<Variable> {
 
     public class Itr implements Iterator<Variable> {
 
-        private int itrOffset = StackEntrySet.this.topOffset-StackEntrySet.this.num;
+        private int itrOffset = StackEntrySet.this.offset+StackEntrySet.this.num-1;
 
         public boolean hasNext() {
-            return this.itrOffset < StackEntrySet.this.topOffset;
+            return this.itrOffset >= StackEntrySet.this.offset;
         }
 
         public Variable next() {
             if (!hasNext())
                 throw new NoSuchElementException();
-            return StackEntrySet.this.frame.getStackEntry(this.itrOffset++);
+            return StackEntrySet.this.frame.getStackEntry(this.itrOffset--);
         }
 
         public void remove() {
@@ -29,18 +29,20 @@ public class StackEntrySet extends AbstractSet<Variable> {
     }
 
     protected final ExecutionFrame frame;
-    protected final int topOffset;
+    protected final int offset;
     protected final int num;
 
     /**
      *
      * @param frame The execution frame whose stack entries should be contained
-     * @param topOffset The stack offset above the entries
+     * @param offset The stack offset of the first entry
      * @param num the number of entries
      */
-    public StackEntrySet(final ExecutionFrame frame, final int topOffset, final int num) {
+    public StackEntrySet(final ExecutionFrame frame, final int offset, final int num) {
+        assert offset >= 0 || frame.abnormalTermination;
+        assert num >= 0;
         this.frame = frame;
-        this.topOffset = topOffset;
+        this.offset = offset;
         this.num = num;
     }
 

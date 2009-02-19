@@ -1,5 +1,6 @@
 package de.unisb.cs.st.javaslicer.variables;
 
+
 public class ObjectField implements Variable {
 
     private final long objectId;

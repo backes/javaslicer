@@ -8,7 +8,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 import org.objectweb.asm.Opcodes;
 
@@ -37,6 +36,7 @@ import de.unisb.cs.st.javaslicer.variables.ArrayElement;
 import de.unisb.cs.st.javaslicer.variables.ObjectField;
 import de.unisb.cs.st.javaslicer.variables.StackEntry;
 import de.unisb.cs.st.javaslicer.variables.StackEntrySet;
+import de.unisb.cs.st.javaslicer.variables.StaticField;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
 public class Simulator {
@@ -56,35 +56,34 @@ public class Simulator {
     public DynamicInformation simulateInstruction(final InstructionInstance inst,
             final ExecutionFrame executionFrame, final ExecutionFrame removedFrame,
             final ArrayStack<ExecutionFrame> allFrames) {
-        Collection<Variable> vars;
         switch (inst.getInstruction().getType()) {
         case ARRAY:
             return simulateArrayInstruction((ArrayInstruction.ArrayInstrInstance)inst, executionFrame);
         case FIELD:
             return simulateFieldInstruction((FieldInstruction.FieldInstrInstance)inst, executionFrame);
         case IINC:
-            vars = Collections.singleton((Variable)executionFrame.getLocalVariable(
+            Collection<Variable> vars = Collections.singleton((Variable)executionFrame.getLocalVariable(
                 ((IIncInstruction)inst.getInstruction()).getLocalVarIndex()));
             return new SimpleVariableUsage(vars, vars);
         case INT:
-            vars = Collections.emptySet();
-            return new SimpleVariableUsage(vars, new StackEntrySet(executionFrame,
-                    executionFrame.operandStack.getAndDecrement(), 1));
+            // write 1
+            return new SimpleVariableUsage(Collections.<Variable>emptySet(), new StackEntrySet(executionFrame,
+                    executionFrame.operandStack.decrementAndGet(), 1));
         case JUMP:
             return simulateJumpInsn((JumpInstruction)inst.getInstruction(), executionFrame);
         case LABEL:
             if (((LabelMarker)inst.getInstruction()).isCatchBlock()) {
+                // at the catch block start, the reference to the exception is pushed onto the stack
                 executionFrame.operandStack.decrementAndGet();
                 return DynamicInformation.CATCHBLOCK;
             }
             return DynamicInformation.EMPTY;
         case LDC:
-            vars = Collections.emptySet();
-            if (((LdcInstruction)inst.getInstruction()).constantIsLong()) {
-                final int stackHeight = executionFrame.operandStack.getAndAdd(-2);
-                return new SimpleVariableUsage(vars, new StackEntrySet(executionFrame, stackHeight, 2));
-            }
-            return new SimpleVariableUsage(vars, new StackEntrySet(executionFrame, executionFrame.operandStack.getAndDecrement(), 1));
+            // writes 1 or 2, but we only trace the lower variable
+            final int stackOffset = (((LdcInstruction)inst.getInstruction()).constantIsLong())
+                ? executionFrame.operandStack.addAndGet(-2)
+                : executionFrame.operandStack.decrementAndGet();
+            return new SimpleVariableUsage(Collections.<Variable>emptySet(), new StackEntrySet(executionFrame, stackOffset, 1));
         case LOOKUPSWITCH:
         case TABLESWITCH:
             return new SimpleVariableUsage(executionFrame.getStackEntry(executionFrame.operandStack.getAndIncrement()),
@@ -186,20 +185,24 @@ public class Simulator {
     private DynamicInformation simulateJumpInsn(final JumpInstruction instruction, final ExecutionFrame frame) {
         switch (instruction.getOpcode()) {
         case IFEQ: case IFNE: case IFLT: case IFGE: case IFGT: case IFLE:
-            return new SimpleVariableUsage(frame.getStackEntry(frame.operandStack.getAndIncrement()), DynamicInformation.EMPTY_VARIABLE_SET);
+        case IFNULL: case IFNONNULL:
+            // read 1 stack entry and compare it to zero / null
+            return new SimpleVariableUsage(frame.getStackEntry(frame.operandStack.getAndIncrement()),
+                DynamicInformation.EMPTY_VARIABLE_SET);
 
         case IF_ICMPEQ: case IF_ICMPNE: case IF_ICMPLT: case IF_ICMPGE:
         case IF_ICMPGT: case IF_ICMPLE: case IF_ACMPEQ: case IF_ACMPNE:
-        case IFNULL: case IFNONNULL:
-            final int oldSize = frame.operandStack.addAndGet(2);
-            return new SimpleVariableUsage(new StackEntrySet(frame, oldSize, 2),
-                    DynamicInformation.EMPTY_VARIABLE_SET);
+            // read two stack entries and compare them
+            return new SimpleVariableUsage(new StackEntrySet(frame, frame.operandStack.getAndAdd(2), 2),
+                DynamicInformation.EMPTY_VARIABLE_SET);
 
         case GOTO:
             return DynamicInformation.EMPTY;
 
         case JSR:
-            return new SimpleVariableUsage(DynamicInformation.EMPTY_VARIABLE_SET, frame.getStackEntry(frame.operandStack.decrementAndGet()));
+            // pushes the return address onto the stack
+            // since this is no "data" (in our sense), we do not trace it.
+            return DynamicInformation.EMPTY;
 
         default:
             assert false;
@@ -217,24 +220,30 @@ public class Simulator {
 
         switch (inst.getOpcode()) {
         case IALOAD: case FALOAD: case AALOAD: case BALOAD: case CALOAD: case SALOAD:
-            int stackDepth = frame.operandStack.getAndIncrement();
+            // read 2, write 1
+            int stackOffset = frame.operandStack.getAndIncrement()-1;
+            Variable lowerVar = frame.getStackEntry(stackOffset);
             ArrayElement arrayElem = new ArrayElement(inst.getArrayId(), inst.getArrayIndex());
-            return new SimpleVariableUsage(Arrays.asList(frame.getStackEntry(stackDepth-1), frame.getStackEntry(stackDepth),
-                    arrayElem), new StackEntrySet(frame, stackDepth, 1));
+            return new SimpleVariableUsage(Arrays.asList(lowerVar, frame.getStackEntry(stackOffset+1),
+                    arrayElem), lowerVar);
         case LALOAD: case DALOAD:
-            stackDepth = frame.operandStack.get();
+            // read 2, write 2 (but we only trace the lower written value)
+            stackOffset = frame.operandStack.get()-2;
             arrayElem = new ArrayElement(inst.getArrayId(), inst.getArrayIndex());
-            return new SimpleVariableUsage(Arrays.asList(frame.getStackEntry(stackDepth-2), frame.getStackEntry(stackDepth-1),
-                    arrayElem), new StackEntrySet(frame, stackDepth, 2));
+            lowerVar = frame.getStackEntry(stackOffset);
+            return new SimpleVariableUsage(Arrays.asList(lowerVar, frame.getStackEntry(stackOffset+1),
+                    arrayElem), lowerVar);
         case IASTORE: case FASTORE: case AASTORE: case BASTORE: case CASTORE: case SASTORE:
-            stackDepth = frame.operandStack.addAndGet(3);
+            // read 3, write 0
+            stackOffset = frame.operandStack.getAndAdd(3);
             arrayElem = new ArrayElement(inst.getArrayId(), inst.getArrayIndex());
-            return new SimpleVariableUsage(new StackEntrySet(frame, stackDepth, 3),
+            return new SimpleVariableUsage(new StackEntrySet(frame, stackOffset, 3),
                     arrayElem);
         case LASTORE: case DASTORE:
-            stackDepth = frame.operandStack.addAndGet(4);
+            // read 4 (but we only trace the lower 3), write 0
+            stackOffset = frame.operandStack.getAndAdd(4);
             arrayElem = new ArrayElement(inst.getArrayId(), inst.getArrayIndex());
-            return new SimpleVariableUsage(new StackEntrySet(frame, stackDepth, 4),
+            return new SimpleVariableUsage(new StackEntrySet(frame, stackOffset, 3),
                     arrayElem);
         default:
             assert false;
@@ -260,47 +269,38 @@ public class Simulator {
     }
 
     private DynamicInformation simulateFieldInstruction(final FieldInstruction.FieldInstrInstance instance, final ExecutionFrame frame) {
-        int stackDepth;
+        int stackOffset;
+        Variable lowerVar;
         final FieldInstruction instruction = (FieldInstruction) instance.getInstruction();
         switch (instruction.getOpcode()) {
         case GETFIELD:
-            if (instruction.isLongValue()) {
-                stackDepth = frame.operandStack.decrementAndGet();
-                return new SimpleVariableUsage(Arrays.asList(frame.getStackEntry(stackDepth-1),
-                            new ObjectField(instance.getObjectId(), instruction.getFieldName())),
-                            new StackEntrySet(frame, stackDepth+1, 2));
-            }
-            stackDepth = frame.operandStack.get();
-            return new SimpleVariableUsage(Arrays.asList(frame.getStackEntry(stackDepth-1),
+            // read 1, write 1 or 2 (we only trace the lower one of 2)
+            stackOffset = instruction.isLongValue()
+                ? frame.operandStack.decrementAndGet()-1
+                : frame.operandStack.get()-1;
+            lowerVar = frame.getStackEntry(stackOffset);
+            return new SimpleVariableUsage(Arrays.asList(lowerVar,
                         new ObjectField(instance.getObjectId(), instruction.getFieldName())),
-                        new StackEntrySet(frame, stackDepth, 1));
+                        lowerVar);
         case GETSTATIC:
-            if (instruction.isLongValue()) {
-                stackDepth = frame.operandStack.getAndAdd(-2);
-                return new SimpleVariableUsage(new ObjectField(-1, instruction.getFieldName()),
-                        new StackEntrySet(frame, stackDepth, 2));
-            }
-            stackDepth = frame.operandStack.getAndDecrement();
-            return new SimpleVariableUsage(new ObjectField(-1, instruction.getFieldName()),
-                    new StackEntrySet(frame, stackDepth, 1));
+            // read 0, write 1 or 2 (we only trace the lower one of 2)
+            stackOffset = instruction.isLongValue()
+                ? frame.operandStack.addAndGet(-2)
+                : frame.operandStack.decrementAndGet();
+            return new SimpleVariableUsage(new StaticField(instruction.getOwnerInternalClassName(), instruction.getFieldName()),
+                    frame.getStackEntry(stackOffset));
         case PUTFIELD:
-            if (instruction.isLongValue()) {
-                stackDepth = frame.operandStack.addAndGet(3);
-                return new SimpleVariableUsage(new StackEntrySet(frame, stackDepth, 3),
-                        new ObjectField(instance.getObjectId(), instruction.getFieldName()));
-            }
-            stackDepth = frame.operandStack.addAndGet(2);
-            return new SimpleVariableUsage(new StackEntrySet(frame, stackDepth, 2),
+            // read 2 or 3 (only trace 2), write 0
+            stackOffset = frame.operandStack.getAndAdd(instruction.isLongValue() ? 3 : 2);
+            return new SimpleVariableUsage(new StackEntrySet(frame, stackOffset, 2),
                     new ObjectField(instance.getObjectId(), instruction.getFieldName()));
         case PUTSTATIC:
-            if (instruction.isLongValue()) {
-                stackDepth = frame.operandStack.addAndGet(2);
-                return new SimpleVariableUsage(new StackEntrySet(frame, stackDepth, 2),
-                        new ObjectField(-1, instruction.getFieldName()));
-            }
-            stackDepth = frame.operandStack.getAndIncrement();
-            return new SimpleVariableUsage(Collections.singleton((Variable)frame.getStackEntry(stackDepth)),
-                    new ObjectField(-1, instruction.getFieldName()));
+            // read 1 or 2 (only trace 1), write 0
+            stackOffset = instruction.isLongValue()
+                ? frame.operandStack.getAndAdd(2)
+                : frame.operandStack.getAndIncrement();
+            return new SimpleVariableUsage(frame.getStackEntry(stackOffset),
+                    new StaticField(instruction.getOwnerInternalClassName(), instruction.getFieldName()));
         default:
             assert false;
             return null;
@@ -310,26 +310,30 @@ public class Simulator {
     private DynamicInformation simulateVarInstruction(final VarInstruction inst, final ExecutionFrame frame) {
         switch (inst.getOpcode()) {
         case ILOAD: case FLOAD: case ALOAD:
-            int stackDepth = frame.operandStack.decrementAndGet();
+            // read 0, write 1 stack entry
+            int stackOffset = frame.operandStack.decrementAndGet();
             return new SimpleVariableUsage(frame.getLocalVariable(inst.getLocalVarIndex()),
-                    new StackEntrySet(frame, stackDepth+1, 1));
+                    new StackEntrySet(frame, stackOffset, 1));
         case LLOAD: case DLOAD:
-            stackDepth = frame.operandStack.addAndGet(-2);
+            // read 0, write 2 stack entries (but we only trace the lower one)
+            stackOffset = frame.operandStack.addAndGet(-2);
             return new SimpleVariableUsage(frame.getLocalVariable(inst.getLocalVarIndex()),
-                    new StackEntrySet(frame, stackDepth+1, 1));
+                    new StackEntrySet(frame, stackOffset, 1));
         case ISTORE: case FSTORE: case ASTORE:
-            stackDepth = frame.operandStack.getAndIncrement();
-            return new SimpleVariableUsage(new StackEntrySet(frame, stackDepth+1, 1),
+            // read 1, write 0
+            stackOffset = frame.operandStack.getAndIncrement();
+            return new SimpleVariableUsage(new StackEntrySet(frame, stackOffset, 1),
                     frame.getLocalVariable(inst.getLocalVarIndex()));
         case LSTORE: case DSTORE:
-            stackDepth = frame.operandStack.getAndAdd(2);
-            return new SimpleVariableUsage(
-                    new StackEntrySet(frame, stackDepth+1, 1),
+            // read 2 (but only trace 1), write 0
+            stackOffset = frame.operandStack.getAndAdd(2);
+            return new SimpleVariableUsage(new StackEntrySet(frame, stackOffset, 1),
                     frame.getLocalVariable(inst.getLocalVarIndex()));
         case RET:
-            final Set<Variable> emptySet = Collections.emptySet();
-            return new SimpleVariableUsage(frame.getLocalVariable(inst.getLocalVarIndex()),
-                    emptySet);
+            // RET reads a local variable, but since this is no "data" (in our sense), we
+            // do not trace that
+            return DynamicInformation.EMPTY;
+
         default:
             assert false;
             return null;
@@ -495,8 +499,8 @@ public class Simulator {
 
     private DynamicInformation stackManipulation(final ExecutionFrame frame, final int read,
             final int write, final Map<Long, Collection<Variable>> createdObjects) {
-        final int oldStackSize = read == write ? frame.operandStack.get() : frame.operandStack.getAndAdd(read - write);
-        return new StackManipulation(frame, read, write, oldStackSize, createdObjects);
+        final int stackOffset = frame.operandStack.getAndAdd(read - write) - write;
+        return new StackManipulation(frame, read, write, stackOffset, createdObjects);
     }
 
 }

@@ -14,8 +14,8 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
 
 /**
- * Class representing an instruction that just pushes an integer onto the stack (
- * except ICONST_*, so just BIPUSH and SIPUSH).
+ * Class representing an instruction that just pushes an integer onto the stack
+ * (except ICONST_*, so just BIPUSH and SIPUSH).
  *
  * @author Clemens Hammacher
  */

@@ -437,7 +437,8 @@ public class DependencesExtractor {
                         if (this.dataDependenceVisitorsWriteAfterRead != null && !(usedVariable instanceof StackEntry)) {
                             final InstructionInstance lastWriterInst = lastWriter.get(usedVariable);
 
-                            if (lastWriterInst != null) {
+                            // avoid self-loops in the DDG (e.g. for IINC, which reads and writes to the same variable)
+                            if (lastWriterInst != null && lastWriterInst != instance) {
                                 for (final DependencesVisitor vis: this.dataDependenceVisitorsWriteAfterRead)
                                     vis.visitDataDependence(lastWriterInst, instance, usedVariable, DataDependenceType.WRITE_AFTER_READ);
                             }
