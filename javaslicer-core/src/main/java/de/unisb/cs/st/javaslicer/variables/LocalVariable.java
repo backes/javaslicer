@@ -1,6 +1,6 @@
 package de.unisb.cs.st.javaslicer.variables;
 
-import de.unisb.cs.st.javaslicer.dependenceAnalysis.ExecutionFrame;
+import de.unisb.cs.st.javaslicer.instructionSimulation.ExecutionFrame;
 
 public class LocalVariable implements Variable {
 
@@ -8,6 +8,7 @@ public class LocalVariable implements Variable {
     private final int varIndex;
 
     public LocalVariable(final ExecutionFrame executionFrame, final int localVarIndex) {
+        assert localVarIndex >= 0;
         this.frame = executionFrame;
         this.varIndex = localVarIndex;
     }
@@ -33,7 +34,7 @@ public class LocalVariable implements Variable {
 
     @Override
     public String toString() {
-        return "local["+this.frame.hashCode()+","+this.varIndex+"]";
+        return "local["+this.frame.frameNr+","+this.varIndex+" ("+getVarName()+")]";
     }
 
     @Override

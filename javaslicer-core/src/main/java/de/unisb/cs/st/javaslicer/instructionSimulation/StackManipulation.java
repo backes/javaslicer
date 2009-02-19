@@ -4,7 +4,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 
-import de.unisb.cs.st.javaslicer.dependenceAnalysis.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.variables.StackEntrySet;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
@@ -49,7 +48,7 @@ public class StackManipulation implements DynamicInformation {
             this.readVars = Collections.emptySet();
         else if (this.read == 1)
             this.readVars = Collections.singleton((Variable)this.frame.getStackEntry(
-                    this.oldStackSize + this.read - this.write - 1));
+                    this.oldStackSize - this.write));
         else
             this.readVars = new StackEntrySet(this.frame, this.oldStackSize + this.read - this.write, this.read);
 

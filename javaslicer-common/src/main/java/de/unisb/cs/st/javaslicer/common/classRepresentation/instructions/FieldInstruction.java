@@ -79,7 +79,7 @@ public class FieldInstruction extends AbstractInstruction {
             final int objectTraceSeqIndex) {
         super(readMethod, opcode, lineNumber);
         this.ownerInternalClassName = ownerInternalClassName;
-        this.fieldName = fieldName.intern();
+        this.fieldName = fieldName;
         this.fieldDesc = fieldDesc;
         this.objectTraceSeqIndex = objectTraceSeqIndex;
         this.longValue = org.objectweb.asm.Type.getType(fieldDesc).getSize() == 2;
@@ -90,7 +90,7 @@ public class FieldInstruction extends AbstractInstruction {
             final String fieldDesc, final int objectTraceSeqIndex, final int index) {
         super(readMethod, opcode, lineNumber, index);
         this.ownerInternalClassName = ownerInternalClassName;
-        this.fieldName = fieldName.intern();
+        this.fieldName = fieldName;
         this.fieldDesc = fieldDesc;
         this.objectTraceSeqIndex = objectTraceSeqIndex;
         this.longValue = org.objectweb.asm.Type.getType(fieldDesc).getSize() == 2;

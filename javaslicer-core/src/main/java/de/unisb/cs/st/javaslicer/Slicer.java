@@ -23,8 +23,8 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Instruct
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Type;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
-import de.unisb.cs.st.javaslicer.dependenceAnalysis.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.instructionSimulation.DynamicInformation;
+import de.unisb.cs.st.javaslicer.instructionSimulation.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.instructionSimulation.Simulator;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
@@ -171,7 +171,9 @@ public class Slicer implements Opcodes {
         ExecutionFrame currentFrame = new ExecutionFrame();
         frames.push(currentFrame);
 
+        int step = 0; // just for debug
         while (backwardInsnItr.hasNext()) {
+            ++step;
             final InstructionInstance instance = backwardInsnItr.next();
             final Instruction instruction = instance.getInstruction();
 
@@ -184,7 +186,7 @@ public class Slicer implements Opcodes {
                 if (frames.size() > stackDepth) {
                     assert frames.size() == stackDepth+1;
                     removedFrame = frames.pop();
-                    if (!removedFrame.interestingInstances.isEmpty()) {
+                    if (!removedFrame.interestingInstructions.isEmpty()) {
                         // ok, we have a control dependence since the method was called by (or for) this instruction
                         removedFrameIsInteresting = true;
                     }
@@ -192,8 +194,9 @@ public class Slicer implements Opcodes {
                     assert frames.size() == stackDepth-1;
                     final ExecutionFrame topFrame = frames.size() == 0 ? null : frames.peek();
                     final ExecutionFrame newFrame = new ExecutionFrame();
-                    if (topFrame != null && topFrame.atCacheBlockStart != null)
-                        newFrame.throwsException = true;
+                    if (topFrame != null && topFrame.atCacheBlockStart != null) {
+                        newFrame.throwsException = newFrame.abnormalTermination = true;
+                    }
                     frames.push(newFrame);
                 }
                 currentFrame = frames.peek();
@@ -201,15 +204,20 @@ public class Slicer implements Opcodes {
 
             // it is possible that we see successive instructions of different methods,
             // e.g. when called from native code
-            if (currentFrame.method != instruction.getMethod()) {
-                if (currentFrame.method == null) {
-                    currentFrame.method = instruction.getMethod();
-                } else {
-                    currentFrame = new ExecutionFrame();
-                    currentFrame.method = instruction.getMethod();
-                    frames.set(stackDepth-1, currentFrame);
-                }
+            if (currentFrame.method  == null) {
+                assert currentFrame.returnValue == null;
+                currentFrame.method = instruction.getMethod();
+            } else if (currentFrame.finished || currentFrame.method != instruction.getMethod()) {
+                // TODO remove
+                assert currentFrame.finished;
+                currentFrame = new ExecutionFrame();
+                currentFrame.method = instruction.getMethod();
+                frames.set(stackDepth-1, currentFrame);
             }
+
+            if (instruction == instruction.getMethod().getMethodEntryLabel())
+                currentFrame.finished = true;
+            currentFrame.lastInstruction = instruction;
 
             final DynamicInformation dynInfo = this.simulator.simulateInstruction(instance, currentFrame,
                     removedFrame, frames);
@@ -274,10 +282,11 @@ public class Slicer implements Opcodes {
                 }
             }
 
-            if (dynInfo.isCatchBlock())
+            if (dynInfo.isCatchBlock()) {
                 currentFrame.atCacheBlockStart = instance;
-            else if (currentFrame.atCacheBlockStart != null)
+            } else if (currentFrame.atCacheBlockStart != null) {
                 currentFrame.atCacheBlockStart = null;
+            }
 
         }
 
@@ -295,7 +304,7 @@ public class Slicer implements Opcodes {
 
     private static <T> Set<T> intersect(final Set<T> set1,
             final Set<T> set2) {
-        if (set1.size() == 0 || set2.size() == 0)
+        if (set1.isEmpty() || set2.isEmpty())
             return Collections.emptySet();
 
         Set<T> smallerSet;

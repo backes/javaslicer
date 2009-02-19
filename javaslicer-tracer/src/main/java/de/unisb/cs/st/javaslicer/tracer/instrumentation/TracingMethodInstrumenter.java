@@ -257,7 +257,8 @@ public class TracingMethodInstrumenter implements Opcodes {
         assert this.readMethod.getInstructions().isEmpty();
         traceLabel(null, InstructionType.METHODENTRY);
         assert this.readMethod.getInstructions().size() == 1
-            && this.readMethod.getInstructions().get(0) instanceof LabelMarker;
+            && this.readMethod.getInstructions().get(0) instanceof LabelMarker
+            && ((LabelMarker)this.readMethod.getInstructions().get(0)).isAdditionalLabel();
         this.readMethod.setMethodEntryLabel((LabelMarker) this.readMethod.getInstructions().get(0));
 
         // needed later:

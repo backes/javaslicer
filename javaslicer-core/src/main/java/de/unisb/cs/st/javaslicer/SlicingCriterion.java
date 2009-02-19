@@ -4,7 +4,7 @@ import java.util.Collection;
 
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
-import de.unisb.cs.st.javaslicer.dependenceAnalysis.ExecutionFrame;
+import de.unisb.cs.st.javaslicer.instructionSimulation.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
 public interface SlicingCriterion {

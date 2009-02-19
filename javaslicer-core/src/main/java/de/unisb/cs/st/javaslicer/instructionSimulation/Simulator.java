@@ -2,11 +2,11 @@ package de.unisb.cs.st.javaslicer.instructionSimulation;
 
 import static org.objectweb.asm.Opcodes.*;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -16,6 +16,7 @@ import de.hammacher.util.ArrayStack;
 import de.hammacher.util.IntHolder;
 import de.hammacher.util.maps.LongMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Field;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.ArrayInstruction;
@@ -31,7 +32,6 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.ArrayIn
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.MultiANewArrayInstruction.MultiANewArrayInstrInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.NewArrayInstruction.NewArrayInstrInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.TypeInstruction.TypeInstrInstance;
-import de.unisb.cs.st.javaslicer.dependenceAnalysis.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.variables.ArrayElement;
 import de.unisb.cs.st.javaslicer.variables.ObjectField;
@@ -42,7 +42,7 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
 public class Simulator {
 
     // list of all fields corresponding to a class
-    private final HashMap<String, Variable[]> fieldsCache = new HashMap<String, Variable[]>();
+    private final HashMap<String, String[]> fieldsCache = new HashMap<String, String[]>();
 
     // mapping from array identifier to the maximum element that has been accessed in that array
     private final LongMap<IntHolder> maxArrayElem = new LongMap<IntHolder>();
@@ -163,9 +163,9 @@ public class Simulator {
     }
 
     private Collection<Variable> getAllFields(final String className, final long objId) {
-        Variable[] cachedFields = this.fieldsCache.get(className);
+        String[] cachedFields = this.fieldsCache.get(className);
         if (cachedFields == null) {
-            final ArrayList<Variable> allFields = new ArrayList<Variable>();
+            final HashSet<String> allFields = new HashSet<String>();
             String tmpClassName = className;
             while (tmpClassName != null) {
                 final ReadClass clazz = this.traceResult.findReadClass(tmpClassName);
@@ -174,13 +174,13 @@ public class Simulator {
                     break;
                 }
                 for (final Field field: clazz.getFields())
-                    allFields.add(new ObjectField(objId, field.getName()));
+                    allFields.add(field.getName());
                 tmpClassName = clazz.getSuperClassName();
             }
-            cachedFields = allFields.toArray(new Variable[allFields.size()]);
+            cachedFields = allFields.toArray(new String[allFields.size()]);
             this.fieldsCache.put(className, cachedFields);
         }
-        return new ArrayList<Variable>(Arrays.asList(cachedFields));
+        return new ObjectFieldList(objId, cachedFields);
     }
 
     private DynamicInformation simulateJumpInsn(final JumpInstruction instruction, final ExecutionFrame frame) {
@@ -244,22 +244,19 @@ public class Simulator {
 
     private DynamicInformation simulateMethodInsn(final MethodInvocationInstruction inst,
             final ExecutionFrame executionFrame, final ExecutionFrame removedFrame) {
-        final boolean hasRemovedFrame = removedFrame != null
-            && inst.getMethodName().equals(removedFrame.method.getName())
-            && inst.getMethodDesc().equals(removedFrame.method.getDesc());
         int paramCount = inst.getOpcode() == INVOKESTATIC ? 0 : 1;
         for (int param = inst.getParameterCount()-1; param >= 0; --param)
             paramCount += inst.parameterIsLong(param) ? 2 : 1;
-        final int returnedSize = inst.returnValueIsLong() ? 2 : 1;
-        if (!hasRemovedFrame) {
-            final int parametersStackOffset = executionFrame.operandStack.getAndAdd(paramCount-returnedSize)-1;
-            return new MethodInvokationVariableUsages(parametersStackOffset,
-                    paramCount, returnedSize, executionFrame, null);
-        }
+        final byte returnedSize = executionFrame.atCacheBlockStart == null ? inst.getReturnedSize() : 0;
+        boolean hasReturn = returnedSize != 0;
+        final boolean hasRemovedFrame = removedFrame != null
+            && inst.getMethodName().equals(removedFrame.method.getName())
+            && inst.getMethodDesc().equals(removedFrame.method.getDesc())
+            && (!hasReturn || removedFrame.returnValue != null);
+        final int parametersStackOffset = executionFrame.operandStack.getAndAdd(paramCount-returnedSize)-returnedSize;
 
-        final int parametersStackOffset = executionFrame.operandStack.getAndAdd(paramCount)+returnedSize-1;
         return new MethodInvokationVariableUsages(parametersStackOffset,
-                paramCount, 0, executionFrame, removedFrame);
+                paramCount, hasReturn, executionFrame, hasRemovedFrame ? removedFrame : null);
     }
 
     private DynamicInformation simulateFieldInstruction(final FieldInstruction.FieldInstrInstance instance, final ExecutionFrame frame) {
@@ -319,7 +316,7 @@ public class Simulator {
         case LLOAD: case DLOAD:
             stackDepth = frame.operandStack.addAndGet(-2);
             return new SimpleVariableUsage(frame.getLocalVariable(inst.getLocalVarIndex()),
-                    new StackEntrySet(frame, stackDepth+2, 2));
+                    new StackEntrySet(frame, stackDepth+1, 1));
         case ISTORE: case FSTORE: case ASTORE:
             stackDepth = frame.operandStack.getAndIncrement();
             return new SimpleVariableUsage(new StackEntrySet(frame, stackDepth+1, 1),
@@ -327,7 +324,7 @@ public class Simulator {
         case LSTORE: case DSTORE:
             stackDepth = frame.operandStack.getAndAdd(2);
             return new SimpleVariableUsage(
-                    new StackEntrySet(frame, stackDepth+2, 2),
+                    new StackEntrySet(frame, stackDepth+1, 1),
                     frame.getLocalVariable(inst.getLocalVarIndex()));
         case RET:
             final Set<Variable> emptySet = Collections.emptySet();
@@ -380,28 +377,54 @@ public class Simulator {
                             frame.getStackEntry(stackHeight), frame.getStackEntry(stackHeight+1)));
 
         case IRETURN: case FRETURN: case ARETURN:
-            if (frame.throwsException)
-                frame.throwsException = false;
-            ExecutionFrame lowerFrame = inst.getStackDepth() < 2 ? null : allFrames.get(inst.getStackDepth()-2);
-            return new SimpleVariableUsage(frame.getStackEntry(frame.operandStack.getAndIncrement()),
+            frame.throwsException = false;
+            assert frame.returnValue == null;
+            StackEntry ret = frame.getStackEntry(frame.operandStack.getAndIncrement());
+            frame.returnValue = ret;
+            ExecutionFrame lowerFrame = null;
+            if (inst.getStackDepth() >= 2) {
+                lowerFrame = allFrames.get(inst.getStackDepth()-2);
+                Instruction prev = lowerFrame.lastInstruction != null ? lowerFrame.lastInstruction.getPrevious() : null;
+                if (prev != null && prev instanceof MethodInvocationInstruction) {
+                    MethodInvocationInstruction m = (MethodInvocationInstruction) prev;
+                    if (!m.getMethodName().equals(frame.method.getName()) || !m.getMethodDesc().equals(frame.method.getDesc())) {
+                        lowerFrame = null;
+                    }
+                }
+            }
+
+            // it is sufficient to trace the lower variable of the double-sized value (long or double)
+            return new SimpleVariableUsage(ret,
                     lowerFrame == null ? DynamicInformation.EMPTY_VARIABLE_SET :
-                        Collections.singleton((Variable)lowerFrame.getStackEntry(lowerFrame.operandStack.decrementAndGet())));
+                        Arrays.asList((Variable)lowerFrame.getStackEntry(lowerFrame.operandStack.get()-1)));
         case DRETURN: case LRETURN:
-            if (frame.throwsException)
-                frame.throwsException = false;
-            final int thisFrameStackHeight = frame.operandStack.getAndAdd(2);
-            lowerFrame = inst.getStackDepth() < 2 ? null : allFrames.get(inst.getStackDepth()-2);
-            final int lowerFrameStackHeight = lowerFrame == null ? 0 : lowerFrame.operandStack.addAndGet(-2);
-            return new SimpleVariableUsage(Arrays.asList((Variable)frame.getStackEntry(thisFrameStackHeight),
-                        frame.getStackEntry(thisFrameStackHeight+1)),
+            frame.throwsException = false;
+            assert frame.returnValue == null;
+            ret = frame.getStackEntry(frame.operandStack.getAndAdd(2));
+            frame.returnValue = ret;
+            lowerFrame = null;
+            if (inst.getStackDepth() >= 2) {
+                lowerFrame = allFrames.get(inst.getStackDepth()-2);
+                Instruction prev = lowerFrame.lastInstruction != null ? lowerFrame.lastInstruction.getPrevious() : null;
+                if (prev != null && prev instanceof MethodInvocationInstruction) {
+                    MethodInvocationInstruction m = (MethodInvocationInstruction) prev;
+                    if (!m.getMethodName().equals(frame.method.getName()) || !m.getMethodDesc().equals(frame.method.getDesc())) {
+                        lowerFrame = null;
+                    }
+                }
+            }
+
+            // it is sufficient to trace the lower variable of the double-sized value (long or double)
+            return new SimpleVariableUsage(ret,
                     lowerFrame == null ? DynamicInformation.EMPTY_VARIABLE_SET :
-                        Arrays.asList((Variable)lowerFrame.getStackEntry(lowerFrameStackHeight),
-                            lowerFrame.getStackEntry(lowerFrameStackHeight+1)));
+                        Arrays.asList((Variable)lowerFrame.getStackEntry(lowerFrame.operandStack.get()-2)));
+
+        case RETURN:
+            assert frame.returnValue == null;
+            frame.throwsException = false;
+            return DynamicInformation.EMPTY;
 
         case NOP:
-        case RETURN:
-            if (frame.throwsException)
-                frame.throwsException = false;
             return DynamicInformation.EMPTY;
 
         case ACONST_NULL: case ICONST_M1: case ICONST_0: case ICONST_1: case ICONST_2: case ICONST_3:

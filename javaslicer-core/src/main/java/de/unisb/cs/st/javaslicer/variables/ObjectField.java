@@ -39,8 +39,10 @@ public class ObjectField implements Variable {
             return false;
         final ObjectField other = (ObjectField) obj;
         // the fieldName strings are internalized, so we can use identity comparison
-        if (this.fieldName != other.fieldName)
+        if (this.fieldName != other.fieldName) {
+            assert this.fieldName != null && !this.fieldName.equals(other.fieldName);
             return false;
+        }
         if (this.objectId != other.objectId)
             return false;
         return true;

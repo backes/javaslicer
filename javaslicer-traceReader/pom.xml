@@ -41,7 +41,7 @@
         <dependency>
             <groupId>de.unisb.cs.st</groupId>
             <artifactId>sequitur</artifactId>
-            <version>[0.1-SNAPSHOT,)</version>
+            <version>0.5-SNAPSHOT</version>
         </dependency>
     </dependencies>
 </project>

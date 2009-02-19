@@ -49,10 +49,46 @@ public class TraceResult {
 
     private final Instruction[] instructions;
 
-    private TraceResult(final List<ReadClass> readClasses, final List<ThreadTraceResult> threadTraces) throws IOException {
-        this.readClasses = readClasses;
-        this.threadTraces = threadTraces;
-        this.instructions = getInstructionArray(readClasses);
+    public TraceResult(File filename) throws IOException {
+        final MultiplexedFileReader file = new MultiplexedFileReader(filename);
+        if (file.getStreamIds().size() < 2)
+            throw new IOException("corrupted data");
+        final MultiplexInputStream readClassesStream = file.getInputStream(0);
+        if (readClassesStream == null)
+            throw new IOException("corrupted data");
+        PushbackInputStream pushBackInput =
+            new PushbackInputStream(new BufferedInputStream(
+                    new GZIPInputStream(readClassesStream, 512), 512), 1);
+        final DataInputStream readClassesInputStream = new DataInputStream(
+                pushBackInput);
+        final ArrayList<ReadClass> readClasses0 = new ArrayList<ReadClass>();
+        final StringCacheInput stringCache = new StringCacheInput();
+        int testRead;
+        while ((testRead = pushBackInput.read()) != -1) {
+            pushBackInput.unread(testRead);
+            readClasses0.add(ReadClass.readFrom(readClassesInputStream, stringCache));
+        }
+        readClasses0.trimToSize();
+        Collections.sort(readClasses0);
+        this.readClasses = readClasses0;
+        this.instructions = getInstructionArray(readClasses0);
+
+        final MultiplexInputStream threadTracersStream = file.getInputStream(1);
+        if (threadTracersStream == null)
+            throw new IOException("corrupted data");
+        pushBackInput = new PushbackInputStream(new BufferedInputStream(
+                new GZIPInputStream(threadTracersStream, 512), 512), 1);
+        final DataInputStream threadTracersInputStream = new DataInputStream(
+                pushBackInput);
+
+        final ArrayList<ThreadTraceResult> threadTraces0 = new ArrayList<ThreadTraceResult>();
+        while ((testRead = pushBackInput.read()) != -1) {
+            pushBackInput.unread(testRead);
+            threadTraces0.add(ThreadTraceResult.readFrom(threadTracersInputStream, this, file));
+        }
+        threadTraces0.trimToSize();
+        Collections.sort(threadTraces0);
+        this.threadTraces = threadTraces0;
     }
 
     private static Instruction[] getInstructionArray(final List<ReadClass> classes) throws IOException {
@@ -80,44 +116,7 @@ public class TraceResult {
     }
 
     public static TraceResult readFrom(final File filename) throws IOException {
-        final MultiplexedFileReader file = new MultiplexedFileReader(filename);
-        if (file.getStreamIds().size() < 2)
-            throw new IOException("corrupted data");
-        final MultiplexInputStream readClassesStream = file.getInputStream(0);
-        if (readClassesStream == null)
-            throw new IOException("corrupted data");
-        PushbackInputStream pushBackInput =
-            new PushbackInputStream(new BufferedInputStream(
-                    new GZIPInputStream(readClassesStream, 512), 512), 1);
-        final DataInputStream readClassesInputStream = new DataInputStream(
-                pushBackInput);
-        final ArrayList<ReadClass> readClasses = new ArrayList<ReadClass>();
-        final StringCacheInput stringCache = new StringCacheInput();
-        int testRead;
-        while ((testRead = pushBackInput.read()) != -1) {
-            pushBackInput.unread(testRead);
-            readClasses.add(ReadClass.readFrom(readClassesInputStream, stringCache));
-        }
-        readClasses.trimToSize();
-        Collections.sort(readClasses);
-
-        final MultiplexInputStream threadTracersStream = file.getInputStream(1);
-        if (threadTracersStream == null)
-            throw new IOException("corrupted data");
-        pushBackInput = new PushbackInputStream(new BufferedInputStream(
-                new GZIPInputStream(threadTracersStream, 512), 512), 1);
-        final DataInputStream threadTracersInputStream = new DataInputStream(
-                pushBackInput);
-        final ArrayList<ThreadTraceResult> threadTraces = new ArrayList<ThreadTraceResult>();
-        final TraceResult traceResult = new TraceResult(readClasses, threadTraces);
-        while ((testRead = pushBackInput.read()) != -1) {
-            pushBackInput.unread(testRead);
-            threadTraces.add(ThreadTraceResult.readFrom(threadTracersInputStream, traceResult, file));
-        }
-        threadTraces.trimToSize();
-        Collections.sort(threadTraces);
-
-        return traceResult;
+        return new TraceResult(filename);
     }
 
     /**
@@ -331,6 +330,18 @@ public class TraceResult {
             System.out.format("%8s  %-100s    %3s %7s %s%n",
                     "Nr", "Location", "Dep", "OccNr", "Instruction");
             while (it.hasNext()) {
+                /*
+                if (++nr % 10000000 == 0) {
+                    System.out.format("%10d: %s (%7.2f - %7.2f = %7.2f MB memory)%n",
+                        nr, new Date(),
+                        1e-6*Runtime.getRuntime().totalMemory(),
+                        1e-6*Runtime.getRuntime().freeMemory(),
+                        1e-6*(Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory())
+                        );
+                }
+                it.next();
+                */
+
                 final InstructionInstance inst = it.next();
                 final ReadMethod method = inst.getInstruction().getMethod();
                 final ReadClass class0 = method.getReadClass();

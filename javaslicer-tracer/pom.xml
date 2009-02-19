@@ -19,15 +19,17 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>2.1</version>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.2-beta-3</version>
                 <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <finalName>tracer</finalName>
+                    <appendAssemblyId>false</appendAssemblyId>
+                    <attach>false</attach>
                     <archive>
-                        <manifestEntries>
-                            <Premain-Class>de.unisb.cs.st.javaslicer.tracer.TracerAgent</Premain-Class>
-                            <Can-Retransform-Classes>true</Can-Retransform-Classes>
-                            <Boot-Class-Path>./${project.build.finalName}.jar</Boot-Class-Path>
-                        </manifestEntries>
+                        <manifestFile>${basedir}/src/main/resources/META-INF/MANIFEST.MF</manifestFile>
                     </archive>
                 </configuration>
             </plugin>

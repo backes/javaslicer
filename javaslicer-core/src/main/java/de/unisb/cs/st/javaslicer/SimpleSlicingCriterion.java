@@ -19,7 +19,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.IIncInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.VarInstruction;
-import de.unisb.cs.st.javaslicer.dependenceAnalysis.ExecutionFrame;
+import de.unisb.cs.st.javaslicer.instructionSimulation.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
 public class SimpleSlicingCriterion implements SlicingCriterion {

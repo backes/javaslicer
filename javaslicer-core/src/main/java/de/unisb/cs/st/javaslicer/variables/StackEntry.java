@@ -1,6 +1,6 @@
 package de.unisb.cs.st.javaslicer.variables;
 
-import de.unisb.cs.st.javaslicer.dependenceAnalysis.ExecutionFrame;
+import de.unisb.cs.st.javaslicer.instructionSimulation.ExecutionFrame;
 
 public class StackEntry implements Variable {
 
@@ -8,6 +8,7 @@ public class StackEntry implements Variable {
     private final int index;
 
     public StackEntry(final ExecutionFrame frame, final int index) {
+        assert index >= 0;
         this.frame = frame;
         this.index = index;
     }
@@ -22,7 +23,7 @@ public class StackEntry implements Variable {
 
     @Override
     public String toString() {
-        return "stack["+this.frame.hashCode()+","+this.index+"]";
+        return "stack["+this.frame.frameNr+","+this.index+"]";
     }
 
     @Override

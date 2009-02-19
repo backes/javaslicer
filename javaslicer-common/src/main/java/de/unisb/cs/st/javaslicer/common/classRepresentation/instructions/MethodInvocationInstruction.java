@@ -23,7 +23,7 @@ public class MethodInvocationInstruction extends AbstractInstruction {
     private final String methodName;
     private final String methodDesc;
     private final boolean[] parameterIsLong;
-    private final boolean returnValueIsLong;
+    private final byte returnedSize; // 0, 1 or 2
 
     public MethodInvocationInstruction(final ReadMethod readMethod, final int opcode,
             final int lineNumber, final String internalClassName, final String methodName,
@@ -39,7 +39,8 @@ public class MethodInvocationInstruction extends AbstractInstruction {
         for (int i = 0; i < parameterTypes.length; ++i) {
             this.parameterIsLong[i] = parameterTypes[i].getSize() == 2;
         }
-        this.returnValueIsLong = org.objectweb.asm.Type.getReturnType(methodDesc).getSize() == 2;
+        org.objectweb.asm.Type returnType = org.objectweb.asm.Type.getReturnType(methodDesc);
+        this.returnedSize = returnType == org.objectweb.asm.Type.VOID_TYPE ? 0 : (byte) returnType.getSize();
     }
 
     private MethodInvocationInstruction(final ReadMethod readMethod, final int lineNumber, final int opcode,
@@ -55,7 +56,8 @@ public class MethodInvocationInstruction extends AbstractInstruction {
         for (int i = 0; i < parameterTypes.length; ++i) {
             this.parameterIsLong[i] = parameterTypes[i].getSize() == 2;
         }
-        this.returnValueIsLong = org.objectweb.asm.Type.getReturnType(methodDesc).getSize() == 2;
+        org.objectweb.asm.Type returnType = org.objectweb.asm.Type.getReturnType(methodDesc);
+        this.returnedSize = returnType == org.objectweb.asm.Type.VOID_TYPE ? 0 : (byte) returnType.getSize();
     }
 
     public String getInternalClassName() {
@@ -75,13 +77,11 @@ public class MethodInvocationInstruction extends AbstractInstruction {
     }
 
     public boolean parameterIsLong(final int paramIndex) {
-        if (paramIndex < 0 || paramIndex >= this.parameterIsLong.length)
-            throw new IllegalArgumentException("Parameter count: " + this.parameterIsLong.length + "; requested: " + paramIndex);
         return this.parameterIsLong[paramIndex];
     }
 
-    public boolean returnValueIsLong() {
-        return this.returnValueIsLong;
+    public byte getReturnedSize() {
+        return this.returnedSize;
     }
 
     public Type getType() {
