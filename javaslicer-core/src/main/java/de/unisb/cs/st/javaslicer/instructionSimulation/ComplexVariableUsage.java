@@ -9,13 +9,13 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
 public class ComplexVariableUsage implements DynamicInformation {
 
     private final Collection<Variable> allUsedVariables;
-    private final Map<Variable, Collection<Variable>> definedVariablesAndDependancies;
+    private final Map<Variable, Collection<Variable>> definedVariablesAndDependences;
 
     public ComplexVariableUsage(final Collection<Variable> allUsedVariables,
-            final Map<Variable, Collection<Variable>> definedVariablesAndDependancies) {
+            final Map<Variable, Collection<Variable>> definedVariablesAndDependences) {
         this.allUsedVariables = allUsedVariables;
-        this.definedVariablesAndDependancies = definedVariablesAndDependancies;
-        assert allSubsets(definedVariablesAndDependancies.values(), allUsedVariables);
+        this.definedVariablesAndDependences = definedVariablesAndDependences;
+        assert allSubsets(definedVariablesAndDependences.values(), allUsedVariables);
     }
 
     private boolean allSubsets(final Collection<Collection<Variable>> sets, final Collection<Variable> superSet) {
@@ -26,7 +26,7 @@ public class ComplexVariableUsage implements DynamicInformation {
     }
 
     public Collection<? extends Variable> getDefinedVariables() {
-        return this.definedVariablesAndDependancies.keySet();
+        return this.definedVariablesAndDependences.keySet();
     }
 
     public Collection<? extends Variable> getUsedVariables() {
@@ -34,8 +34,8 @@ public class ComplexVariableUsage implements DynamicInformation {
     }
 
     public Collection<? extends Variable> getUsedVariables(final Variable definedVariable) {
-        assert this.definedVariablesAndDependancies.containsKey(definedVariable);
-        return this.definedVariablesAndDependancies.get(definedVariable);
+        assert this.definedVariablesAndDependences.containsKey(definedVariable);
+        return this.definedVariablesAndDependences.get(definedVariable);
     }
 
     public boolean isCatchBlock() {

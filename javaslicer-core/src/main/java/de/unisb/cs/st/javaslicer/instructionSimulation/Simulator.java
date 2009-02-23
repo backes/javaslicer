@@ -383,8 +383,8 @@ public class Simulator {
         case IRETURN: case FRETURN: case ARETURN:
             frame.throwsException = false;
             assert frame.returnValue == null;
-            StackEntry ret = frame.getStackEntry(frame.operandStack.getAndIncrement());
-            frame.returnValue = ret;
+            StackEntry stackEntry = frame.getStackEntry(frame.operandStack.getAndIncrement());
+            frame.returnValue = stackEntry;
             ExecutionFrame lowerFrame = null;
             if (inst.getStackDepth() >= 2) {
                 lowerFrame = allFrames.get(inst.getStackDepth()-2);
@@ -398,14 +398,14 @@ public class Simulator {
             }
 
             // it is sufficient to trace the lower variable of the double-sized value (long or double)
-            return new SimpleVariableUsage(ret,
+            return new SimpleVariableUsage(stackEntry,
                     lowerFrame == null ? DynamicInformation.EMPTY_VARIABLE_SET :
                         Arrays.asList((Variable)lowerFrame.getStackEntry(lowerFrame.operandStack.get()-1)));
         case DRETURN: case LRETURN:
             frame.throwsException = false;
             assert frame.returnValue == null;
-            ret = frame.getStackEntry(frame.operandStack.getAndAdd(2));
-            frame.returnValue = ret;
+            stackEntry = frame.getStackEntry(frame.operandStack.getAndAdd(2));
+            frame.returnValue = stackEntry;
             lowerFrame = null;
             if (inst.getStackDepth() >= 2) {
                 lowerFrame = allFrames.get(inst.getStackDepth()-2);
@@ -419,7 +419,7 @@ public class Simulator {
             }
 
             // it is sufficient to trace the lower variable of the double-sized value (long or double)
-            return new SimpleVariableUsage(ret,
+            return new SimpleVariableUsage(stackEntry,
                     lowerFrame == null ? DynamicInformation.EMPTY_VARIABLE_SET :
                         Arrays.asList((Variable)lowerFrame.getStackEntry(lowerFrame.operandStack.get()-2)));
 
@@ -439,6 +439,7 @@ public class Simulator {
             return stackManipulation(frame, 0, 2);
 
         case ATHROW:
+        {
             // first search the frame where the exception is catched
             ExecutionFrame catchingFrame = null;
             for (int i = inst.getStackDepth()-2; i >= 0; --i) {
@@ -451,6 +452,7 @@ public class Simulator {
             return new SimpleVariableUsage(frame.getStackEntry(frame.operandStack.getAndIncrement()),
                     catchingFrame == null ? DynamicInformation.EMPTY_VARIABLE_SET :
                         Collections.singleton((Variable)catchingFrame.getStackEntry(catchingFrame.operandStack.get())));
+        }
 
         case MONITORENTER: case MONITOREXIT:
         case POP:
@@ -462,12 +464,20 @@ public class Simulator {
             return stackManipulation(frame, 1, 1);
 
         case I2L: case I2D: case F2L: case F2D:
-            return stackManipulation(frame, 1, 2);
+            // these operations write two entries, but we only trace the lower one
+            Collection<Variable> stackEntryColl = Collections.singleton(
+                (Variable)frame.getStackEntry(frame.operandStack.decrementAndGet() - 1));
+            return new SimpleVariableUsage(stackEntryColl, stackEntryColl);
 
         case POP2:
             return stackManipulation(frame, 2, 0);
 
         case L2I: case L2F: case D2I:
+            // these operations read two entries, but we only trace the lower one
+            stackEntryColl = Collections.singleton(
+                (Variable)frame.getStackEntry(frame.operandStack.getAndIncrement() - 1));
+            return new SimpleVariableUsage(stackEntryColl, stackEntryColl);
+
         case FCMPL: case FCMPG:
         case IADD: case FADD: case ISUB: case FSUB: case IMUL: case FMUL: case IDIV: case FDIV: case IREM:
         case FREM: case ISHL: case ISHR: case IUSHR: case IAND: case IOR: case IXOR:
@@ -475,15 +485,35 @@ public class Simulator {
 
         case L2D: case D2L:
         case LNEG: case DNEG:
+            // reads one double-sized value and writes one. we only trace the lower parts
+            stackEntryColl = Collections.<Variable>singleton(frame.getStackEntry(frame.operandStack.get() - 2));
+            return new SimpleVariableUsage(stackEntryColl, stackEntryColl);
+
         case SWAP:
-            return stackManipulation(frame, 2, 2);
+            return new SwapVariableUsages(frame);
 
         case LCMP: case DCMPL: case DCMPG:
-            return stackManipulation(frame, 4, 1);
+            // reads two double-sized values. we only trace the lower parts
+            // writes one single-sized value
+            int stackOffset = frame.operandStack.getAndAdd(3) - 1;
+            stackEntry = frame.getStackEntry(stackOffset);
+            return new SimpleVariableUsage(Arrays.<Variable>asList(stackEntry, frame.getStackEntry(stackOffset+2)),
+                stackEntry);
 
         case LADD: case DADD: case LSUB: case DSUB: case LMUL: case DMUL: case LDIV: case DDIV: case LREM:
-        case DREM: case LSHL: case LSHR: case LUSHR: case LAND: case LOR: case LXOR:
-            return stackManipulation(frame, 4, 2);
+        case DREM: case LAND: case LOR: case LXOR:
+            // reads two double-sized values and writes one. we only trace the lower parts
+            stackOffset = frame.operandStack.getAndAdd(2);
+            stackEntry = frame.getStackEntry(stackOffset - 2);
+            return new SimpleVariableUsage(Arrays.<Variable>asList(stackEntry, frame.getStackEntry(stackOffset)),
+                stackEntry);
+
+        case LSHL: case LSHR: case LUSHR:
+            // reads one double-sized and one single-sized value and writes one double-sized. we only trace the lower parts
+            stackOffset = frame.operandStack.getAndIncrement();
+            stackEntry = frame.getStackEntry(stackOffset-2);
+            return new SimpleVariableUsage(Arrays.<Variable>asList(stackEntry, frame.getStackEntry(stackOffset)),
+                stackEntry);
 
         default:
             assert false;
@@ -493,13 +523,12 @@ public class Simulator {
 
     private DynamicInformation stackManipulation(final ExecutionFrame frame, final int read,
             final int write) {
-        final Map<Long, Collection<Variable>> createdObjects = Collections.emptyMap();
-        return stackManipulation(frame, read, write, createdObjects);
+        return stackManipulation(frame, read, write, Collections.<Long, Collection<Variable>>emptyMap());
     }
 
     private DynamicInformation stackManipulation(final ExecutionFrame frame, final int read,
             final int write, final Map<Long, Collection<Variable>> createdObjects) {
-        final int stackOffset = frame.operandStack.getAndAdd(read - write) - write;
+        final int stackOffset = (read == write ? frame.operandStack.get() : frame.operandStack.getAndAdd(read - write)) - write;
         return new StackManipulation(frame, read, write, stackOffset, createdObjects);
     }
 

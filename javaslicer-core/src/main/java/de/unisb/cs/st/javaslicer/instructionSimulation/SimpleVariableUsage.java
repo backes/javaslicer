@@ -13,11 +13,9 @@ public class SimpleVariableUsage implements DynamicInformation {
     private final boolean isCatchBlock;
     private final Map<Long, Collection<Variable>> createdObjects;
 
-    private static final Map<Long, Collection<Variable>> noCreatedObjects = Collections.emptyMap();
-
     public SimpleVariableUsage(final Collection<Variable> usedVariables,
             final Collection<Variable> definedVariables) {
-        this(usedVariables, definedVariables, noCreatedObjects);
+        this(usedVariables, definedVariables, Collections.<Long, Collection<Variable>>emptyMap());
     }
     public SimpleVariableUsage(final Collection<Variable> usedVariables,
             final Collection<Variable> definedVariables,
@@ -27,7 +25,7 @@ public class SimpleVariableUsage implements DynamicInformation {
 
     public SimpleVariableUsage(final Collection<Variable> usedVariables,
             final Collection<Variable> definedVariables, final boolean isCatchBlock) {
-        this(usedVariables, definedVariables, isCatchBlock, noCreatedObjects);
+        this(usedVariables, definedVariables, isCatchBlock, Collections.<Long, Collection<Variable>>emptyMap());
     }
     public SimpleVariableUsage(final Collection<Variable> usedVariables,
             final Collection<Variable> definedVariables, final boolean isCatchBlock,

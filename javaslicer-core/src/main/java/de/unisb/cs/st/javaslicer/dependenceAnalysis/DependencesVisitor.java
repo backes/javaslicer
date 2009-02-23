@@ -19,6 +19,11 @@ public interface DependencesVisitor {
     }
 
     /**
+     * Gets called when the {@link DependencesExtractor} finished tracersing the trace.
+     */
+    void visitEnd();
+
+    /**
      * Gets called if a (dynamic) data dependence has been determined.
      *
      * @param from the instruction that depends on another

@@ -169,14 +169,14 @@
             <url>https://maven.st.cs.uni-sb.de/archiva/repository/group-internal</url>
         </repository>
         <repository>
-            <id>hammacher-releases</id>
-            <name>Releases on Clemens Hammachers Nexus server</name>
-            <url>http://hammacher.name:8081/nexus/content/repositories/releases</url>
-        </repository>
-        <repository>
             <id>hammacher-snapshots</id>
             <name>Snapshots on Clemens Hammachers Nexus server</name>
-            <url>http://hammacher.name:8081/nexus/content/repositories/snapshots</url>
+            <url>http://hammacher.name:8081/nexus/content/groups/public-snapshots</url>
+        </repository>
+        <repository>
+            <id>hammacher-releases</id>
+            <name>Releases on Clemens Hammachers Nexus server</name>
+            <url>http://hammacher.name:8081/nexus/content/groups/public</url>
         </repository>
     </repositories>
 
@@ -409,14 +409,14 @@
         </site>
         -->
         <repository>
-          <id>hammacher-releases</id>
-          <name>Releases on Clemens Hammachers Nexus server</name>
-          <url>http://hammacher.name:8081/nexus/content/repositories/releases</url>
+            <id>hammacher-releases</id>
+            <name>Releases on Clemens Hammachers Nexus server</name>
+            <url>http://hammacher.name:8081/nexus/content/repositories/releases</url>
         </repository>
         <snapshotRepository>
-          <id>hammacher-snapshots</id>
-          <name>Snapshots on Clemens Hammachers Nexus server</name>
-          <url>http://hammacher.name:8081/nexus/content/repositories/snapshots</url>
+            <id>hammacher-snapshots</id>
+            <name>Snapshots on Clemens Hammachers Nexus server</name>
+            <url>http://hammacher.name:8081/nexus/content/repositories/snapshots</url>
         </snapshotRepository>
         <site>
             <id>local-tmp</id>

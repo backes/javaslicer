@@ -12,6 +12,10 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
  */
 public abstract class DependencesVisitorAdapter implements DependencesVisitor {
 
+    public void visitEnd() {
+        // null
+    }
+
     public void discardPendingDataDependence(InstructionInstance from, Variable var,
             DataDependenceType type) {
         // null
