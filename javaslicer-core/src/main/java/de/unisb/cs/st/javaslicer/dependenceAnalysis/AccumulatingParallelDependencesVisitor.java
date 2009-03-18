@@ -12,8 +12,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
 
@@ -83,74 +83,79 @@ public class AccumulatingParallelDependencesVisitor implements
         }
 
         public void replay(DependencesVisitor visitor) {
-            int instructionPos = 0;
-            int methodPos = 0;
-            int longPos = 0;
-            int variablePos = 0;
-            byte[] events0 = this.events;
-            InstructionInstance[] instructionInstances0 = this.instructionInstances;
-            ReadMethod[] methods0 = this.methods;
-            long[] longs0 = this.longs;
-            Variable[] variables0 = this.variables;
-            int numEvents = events0.length;
-            for (int eventPos = 0; eventPos < numEvents; ++eventPos) {
-                switch (events0[eventPos]) {
-                    case INSTRUCTION_EXECUTION:
-                        visitor.visitInstructionExecution(instructionInstances0[instructionPos++]);
-                        break;
-                    case METHOD_ENTRY:
-                        visitor.visitMethodEntry(methods0[methodPos++]);
-                        break;
-                    case METHOD_LEAVE:
-                        visitor.visitMethodLeave(methods0[methodPos++]);
-                        break;
-                    case OBJECT_CREATION:
-                        visitor.visitObjectCreation(longs0[longPos++], instructionInstances0[instructionPos++]);
-                        break;
-                    case DATA_DEPENDENCE_RAW:
-                        visitor.visitDataDependence(instructionInstances0[instructionPos++],
-                            instructionInstances0[instructionPos++], variables0[variablePos++],
-                            DataDependenceType.READ_AFTER_WRITE);
-                        break;
-                    case DATA_DEPENDENCE_WAR:
-                        visitor.visitDataDependence(instructionInstances0[instructionPos++],
-                            instructionInstances0[instructionPos++], variables0[variablePos++],
-                            DataDependenceType.WRITE_AFTER_READ);
-                        break;
-                    case PENDING_DATA_DEPENDENCE_RAW:
-                        visitor.visitPendingDataDependence(instructionInstances0[instructionPos++],
-                            variables0[variablePos++], DataDependenceType.READ_AFTER_WRITE);
-                        break;
-                    case PENDING_DATA_DEPENDENCE_WAR:
-                        visitor.visitPendingDataDependence(instructionInstances0[instructionPos++],
-                            variables0[variablePos++], DataDependenceType.WRITE_AFTER_READ);
-                        break;
-                    case DISCARD_PENDING_DATA_DEPENDENCE_RAW:
-                        visitor.discardPendingDataDependence(instructionInstances0[instructionPos++],
-                            variables0[variablePos++], DataDependenceType.READ_AFTER_WRITE);
-                        break;
-                    case DISCARD_PENDING_DATA_DEPENDENCE_WAR:
-                        visitor.discardPendingDataDependence(instructionInstances0[instructionPos++],
-                            variables0[variablePos++], DataDependenceType.WRITE_AFTER_READ);
-                        break;
-                    case CONTROL_DEPENDENCE:
-                        visitor.visitControlDependence(instructionInstances0[instructionPos++],
-                            instructionInstances0[instructionPos++]);
-                        break;
-                    case PENDING_CONTROL_DEPENDENCE:
-                        visitor.visitPendingControlDependence(instructionInstances0[instructionPos++]);
-                        break;
-                    default:
-                        assert false;
-                        break;
+            // TODO check if this is necessary
+            synchronized (visitor) {
+                int instructionPos = 0;
+                int methodPos = 0;
+                int longPos = 0;
+                int variablePos = 0;
+                byte[] events0 = this.events;
+                InstructionInstance[] instructionInstances0 = this.instructionInstances;
+                ReadMethod[] methods0 = this.methods;
+                long[] longs0 = this.longs;
+                Variable[] variables0 = this.variables;
+                int numEvents = events0.length;
+                for (int eventPos = 0; eventPos < numEvents; ++eventPos) {
+                    switch (events0[eventPos]) {
+                        case INSTRUCTION_EXECUTION:
+                            visitor.visitInstructionExecution(instructionInstances0[instructionPos++]);
+                            break;
+                        case METHOD_ENTRY:
+                            visitor.visitMethodEntry(methods0[methodPos++]);
+                            break;
+                        case METHOD_LEAVE:
+                            visitor.visitMethodLeave(methods0[methodPos++]);
+                            break;
+                        case OBJECT_CREATION:
+                            visitor.visitObjectCreation(longs0[longPos++], instructionInstances0[instructionPos++]);
+                            break;
+                        case DATA_DEPENDENCE_RAW:
+                            visitor.visitDataDependence(instructionInstances0[instructionPos++],
+                                instructionInstances0[instructionPos++], variables0[variablePos++],
+                                DataDependenceType.READ_AFTER_WRITE);
+                            break;
+                        case DATA_DEPENDENCE_WAR:
+                            visitor.visitDataDependence(instructionInstances0[instructionPos++],
+                                instructionInstances0[instructionPos++], variables0[variablePos++],
+                                DataDependenceType.WRITE_AFTER_READ);
+                            break;
+                        case PENDING_DATA_DEPENDENCE_RAW:
+                            visitor.visitPendingDataDependence(instructionInstances0[instructionPos++],
+                                variables0[variablePos++], DataDependenceType.READ_AFTER_WRITE);
+                            break;
+                        case PENDING_DATA_DEPENDENCE_WAR:
+                            visitor.visitPendingDataDependence(instructionInstances0[instructionPos++],
+                                variables0[variablePos++], DataDependenceType.WRITE_AFTER_READ);
+                            break;
+                        case DISCARD_PENDING_DATA_DEPENDENCE_RAW:
+                            visitor.discardPendingDataDependence(instructionInstances0[instructionPos++],
+                                variables0[variablePos++], DataDependenceType.READ_AFTER_WRITE);
+                            break;
+                        case DISCARD_PENDING_DATA_DEPENDENCE_WAR:
+                            visitor.discardPendingDataDependence(instructionInstances0[instructionPos++],
+                                variables0[variablePos++], DataDependenceType.WRITE_AFTER_READ);
+                            break;
+                        case CONTROL_DEPENDENCE:
+                            visitor.visitControlDependence(instructionInstances0[instructionPos++],
+                                instructionInstances0[instructionPos++]);
+                            break;
+                        case PENDING_CONTROL_DEPENDENCE:
+                            visitor.visitPendingControlDependence(instructionInstances0[instructionPos++]);
+                            break;
+                        case END:
+                            visitor.visitEnd(longs0[longPos++]);
+                            break;
+                        default:
+                            assert false;
+                            break;
+                    }
                 }
+                assert instructionPos == (this.instructionInstances == null ? 0 : this.instructionInstances.length);
+                assert methodPos == (this.methods == null ? 0 : this.methods.length);
+                assert longPos == (this.longs == null ? 0 : this.longs.length);
+                assert variablePos == (this.variables == null ? 0 : this.variables.length);
             }
-            assert instructionPos == (this.instructionInstances == null ? 0 : this.instructionInstances.length);
-            assert methodPos == (this.methods == null ? 0 : this.methods.length);
-            assert longPos == (this.longs == null ? 0 : this.longs.length);
-            assert variablePos == (this.variables == null ? 0 : this.variables.length);
         }
-
     }
 
     private static class OutstandingWork implements Runnable {
@@ -276,12 +281,18 @@ public class AccumulatingParallelDependencesVisitor implements
     }
 
     public boolean removeVisitor(DependencesVisitor visitor, boolean waitForFinish) {
-        OutstandingWork ow = this.visitors.remove(visitor);
-        if (ow == null)
+        if (!this.visitors.containsKey(visitor))
             return false;
 
         if (this.eventCount > 0)
             flush();
+
+        // can only be removed AFTER flush()!!
+        OutstandingWork ow = this.visitors.remove(visitor);
+        if (ow == null) {
+            assert false;
+            return false;
+        }
 
         if (waitForFinish) {
             ow.finish(this.maxBufferLength);
@@ -341,8 +352,9 @@ public class AccumulatingParallelDependencesVisitor implements
             Thread.currentThread().interrupt();
     }
 
-    public void visitEnd() {
+    public void visitEnd(long numInstances) {
         this.events[this.eventCount++] = END;
+        addLong(numInstances);
         flush();
         finish();
     }

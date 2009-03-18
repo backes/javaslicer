@@ -10,6 +10,9 @@ import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
 import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.hammacher.util.streams.OptimizedDataOutputStream;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
@@ -26,8 +29,8 @@ public class NewArrayInstruction extends AbstractInstruction {
         private final long newObjectIdentifier;
 
         public NewArrayInstrInstance(AbstractInstruction instr,
-                long occurenceNumber, int stackDepth, long newObjId) {
-            super(instr, occurenceNumber, stackDepth);
+                long occurenceNumber, int stackDepth, long instanceNr, long newObjId) {
+            super(instr, occurenceNumber, stackDepth, instanceNr);
             this.newObjectIdentifier = newObjId;
         }
 
@@ -120,18 +123,18 @@ public class NewArrayInstruction extends AbstractInstruction {
         return this.arrayElemType;
     }
 
-    public Type getType() {
-        return Type.NEWARRAY;
+    public InstructionType getType() {
+        return InstructionType.NEWARRAY;
     }
 
     @Override
     public InstructionInstance getNextInstance(TraceIterationInformationProvider infoProv,
-            int stackDepth) {
+            int stackDepth, long instanceNr) {
         final long objectId = this.newObjectIdentifierSequenceIndex == -1 ? -1 :
             infoProv.getNextLong(this.newObjectIdentifierSequenceIndex);
         return new NewArrayInstrInstance(this,
             infoProv.getNextInstructionOccurenceNumber(getIndex()),
-                stackDepth, objectId);
+                stackDepth, instanceNr, objectId);
     }
 
     @Override

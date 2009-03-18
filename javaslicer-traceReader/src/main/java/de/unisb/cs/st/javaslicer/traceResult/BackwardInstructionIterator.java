@@ -17,10 +17,10 @@ import de.hammacher.util.iterators.EmptyIterator;
 import de.hammacher.util.maps.IntegerMap;
 import de.hammacher.util.maps.IntegerToLongMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Type;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantIntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantLongTraceSequence;
@@ -39,8 +39,8 @@ public class BackwardInstructionIterator implements Iterator<InstructionInstance
 
     private int stackDepth;
 
-    private long instructionCount = 0;
-    private long filteredInstructionCount = 0;
+    private long instancesCount = 0;
+    private long filteredInstancesCount = 0;
     private final PrintWriter debugFileWriter;
 
     public BackwardInstructionIterator(final ThreadTraceResult threadTraceResult, final InstanceFilter filter)
@@ -108,20 +108,20 @@ public class BackwardInstructionIterator implements Iterator<InstructionInstance
                 assert this.stackDepth >= 0 : "enter method occured more often than leave method";
             } else if (backwardInstruction == backwardInstruction.getMethod().getMethodLeaveLabel()) {
                 this.stackDepth = ++tmpStackDepth;
-            } else if (backwardInstruction.getType() == Type.SIMPLE) {
+            } else if (backwardInstruction.getType() == InstructionType.SIMPLE) {
                 switch (backwardInstruction.getOpcode()) {
                 case Opcodes.IRETURN: case Opcodes.LRETURN: case Opcodes.FRETURN:
                 case Opcodes.DRETURN: case Opcodes.ARETURN: case Opcodes.RETURN:
                     this.stackDepth = ++tmpStackDepth;
                 }
             }
-            final InstructionInstance instance = backwardInstruction.getNextInstance(this, tmpStackDepth);
+            final InstructionInstance instance = backwardInstruction.getNextInstance(this, tmpStackDepth, this.instancesCount);
             assert instance != null;
 
             if (this.filter != null && this.filter.filterInstance(instance)) {
-                ++this.filteredInstructionCount;
+                ++this.filteredInstancesCount;
             } else {
-                ++this.instructionCount;
+                ++this.instancesCount;
                 return instance;
             }
             index = backwardInstruction.getBackwardInstructionIndex(this);
@@ -174,11 +174,11 @@ public class BackwardInstructionIterator implements Iterator<InstructionInstance
     }
 
     public long getNumInstructions() {
-        return this.instructionCount;
+        return this.instancesCount;
     }
 
     public long getNumFilteredInstructions() {
-        return this.filteredInstructionCount;
+        return this.filteredInstancesCount;
     }
 
 }

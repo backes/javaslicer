@@ -8,6 +8,7 @@ import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
 import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.hammacher.util.streams.OptimizedDataOutputStream;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
@@ -65,8 +66,8 @@ public class LabelMarker extends AbstractInstruction {
         return this.isCatchBlock;
     }
 
-    public Type getType() {
-        return Type.LABEL;
+    public InstructionType getType() {
+        return InstructionType.LABEL;
     }
 
     @Override

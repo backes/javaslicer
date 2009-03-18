@@ -10,6 +10,7 @@ import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
 import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.hammacher.util.streams.OptimizedDataOutputStream;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
 
@@ -66,8 +67,8 @@ public class TableSwitchInstruction extends AbstractInstruction {
         return this.min + this.handlers.length - 1;
     }
 
-    public Type getType() {
-        return Type.TABLESWITCH;
+    public InstructionType getType() {
+        return InstructionType.TABLESWITCH;
     }
 
     @Override

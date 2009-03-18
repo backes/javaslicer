@@ -16,6 +16,7 @@ import de.hammacher.util.StringCacheOutput;
 import de.hammacher.util.maps.IntegerMap;
 import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.hammacher.util.streams.OptimizedDataOutputStream;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
 
@@ -59,8 +60,8 @@ public class LookupSwitchInstruction extends AbstractInstruction {
         this.handlers = handlers;
     }
 
-    public Type getType() {
-        return Type.LOOKUPSWITCH;
+    public InstructionType getType() {
+        return InstructionType.LOOKUPSWITCH;
     }
 
     @Override

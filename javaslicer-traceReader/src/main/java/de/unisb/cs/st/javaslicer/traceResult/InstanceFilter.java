@@ -1,8 +1,7 @@
 package de.unisb.cs.st.javaslicer.traceResult;
 
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Type;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
 
 
@@ -21,7 +20,7 @@ public interface InstanceFilter {
         public static LabelFilter instance = new LabelFilter();
 
         public boolean filterInstance(final InstructionInstance instrInstance) {
-            return instrInstance.getInstruction().getType() == Type.LABEL;
+            return instrInstance.getInstruction().getType() == InstructionType.LABEL;
         }
 
         private LabelFilter() {
@@ -35,7 +34,7 @@ public interface InstanceFilter {
         public static AdditionalLabelFilter instance = new AdditionalLabelFilter();
 
         public boolean filterInstance(final InstructionInstance instrInstance) {
-            return (instrInstance.getInstruction().getType() == Type.LABEL) &&
+            return (instrInstance.getInstruction().getType() == InstructionType.LABEL) &&
                 (((LabelMarker)instrInstance.getInstruction()).isAdditionalLabel());
         }
 
@@ -48,6 +47,6 @@ public interface InstanceFilter {
     /**
      * Returns true if the instance should be filtered out
      */
-    boolean filterInstance(Instruction.InstructionInstance instance);
+    boolean filterInstance(InstructionInstance instance);
 
 }

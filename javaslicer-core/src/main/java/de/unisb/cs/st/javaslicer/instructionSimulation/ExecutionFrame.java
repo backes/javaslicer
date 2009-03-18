@@ -8,8 +8,8 @@ import java.util.Set;
 
 import de.hammacher.util.IntHolder;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.variables.LocalVariable;
 import de.unisb.cs.st.javaslicer.variables.StackEntry;
 import de.unisb.cs.st.javaslicer.variables.Variable;

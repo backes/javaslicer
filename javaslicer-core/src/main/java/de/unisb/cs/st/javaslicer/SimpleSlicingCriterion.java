@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 import org.objectweb.asm.Opcodes;
 
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
@@ -76,7 +77,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
             return Collections.singleton(this.lastMatch);
         }
 
-        public boolean matches(final Instruction.InstructionInstance instructionInstance) {
+        public boolean matches(final InstructionInstance instructionInstance) {
             final int instrStackDepth = instructionInstance.getStackDepth();
             if (this.stackDepth != instrStackDepth) {
                 if (instrStackDepth > this.beingInRun.length) {

@@ -11,9 +11,13 @@ import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
 import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.hammacher.util.streams.OptimizedDataOutputStream;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
+import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 
 /**
  * Class representing a MULTIANEWARRAY instruction.
@@ -27,8 +31,9 @@ public class MultiANewArrayInstruction extends AbstractInstruction {
         private final long[] newObjectIdentifiers;
 
         public MultiANewArrayInstrInstance(AbstractInstruction instr,
-                long occurenceNumber, int stackDepth, long[] newObjects) {
-            super(instr, occurenceNumber, stackDepth);
+                long occurenceNumber, int stackDepth, long instanceNr,
+                long[] newObjects) {
+            super(instr, occurenceNumber, stackDepth, instanceNr);
             this.newObjectIdentifiers = newObjects;
         }
 
@@ -112,19 +117,19 @@ public class MultiANewArrayInstruction extends AbstractInstruction {
         return this.typeDesc;
     }
 
-    public Type getType() {
-        return Type.MULTIANEWARRAY;
+    public InstructionType getType() {
+        return InstructionType.MULTIANEWARRAY;
     }
 
     @Override
     public InstructionInstance getNextInstance(TraceIterationInformationProvider infoProv,
-            int stackDepth) {
+            int stackDepth, long instanceNr) throws TracerException {
         int numNewObjects = infoProv.getNextInteger(this.numNewObjectIdentifiersSeqIndex);
         long[] newObjects = new long[numNewObjects];
         for (int i = 0; i < numNewObjects; ++i)
             newObjects[i] = infoProv.getNextLong(this.newObjectIdentifierSeqIndex);
         return new MultiANewArrayInstrInstance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()),
-            stackDepth, newObjects);
+            stackDepth, instanceNr, newObjects);
     }
 
     @Override

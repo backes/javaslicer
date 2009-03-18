@@ -9,8 +9,8 @@ import java.util.ListIterator;
 import de.hammacher.util.MultiplexedFileReader;
 import de.hammacher.util.maps.IntegerMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantThreadTraces;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence;
 

@@ -7,8 +7,8 @@ import java.util.NoSuchElementException;
 import de.hammacher.util.maps.IntegerMap;
 import de.hammacher.util.maps.IntegerToLongMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantIntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantLongTraceSequence;
@@ -58,7 +58,7 @@ public class ForwardInstructionIterator implements ListIterator<InstructionInsta
         this.backwards=false;
         while (true) {
             final Instruction instr = this.threadTraceResult.findInstruction(this.nextIndex);
-            final InstructionInstance inst = instr.getNextInstance(this, this.stackDepth);
+            final InstructionInstance inst = instr.getNextInstance(this, this.stackDepth, this.backwardInstrNr);
             if (inst == null) {
                 ++this.nextIndex;
                 continue;
@@ -90,7 +90,7 @@ public class ForwardInstructionIterator implements ListIterator<InstructionInsta
         this.backwards=true;
         while (true) {
             final Instruction instr = this.threadTraceResult.findInstruction(this.nextIndex);
-            final InstructionInstance inst = instr.getNextInstance(this, this.stackDepth);
+            final InstructionInstance inst = instr.getNextInstance(this, this.stackDepth, this.backwardInstrNr);
             if (inst == null) {
                 --this.nextIndex;
                 continue;

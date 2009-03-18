@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Set;
 
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.instructionSimulation.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
@@ -38,7 +39,7 @@ public class CompoundSlicingCriterion implements SlicingCriterion {
             return interestingInstructions;
         }
 
-        public boolean matches(final Instruction.InstructionInstance instructionInstance) {
+        public boolean matches(final InstructionInstance instructionInstance) {
             for (final SlicingCriterionInstance crit: this.instances) {
                 if (crit.matches(instructionInstance))
                     return true;

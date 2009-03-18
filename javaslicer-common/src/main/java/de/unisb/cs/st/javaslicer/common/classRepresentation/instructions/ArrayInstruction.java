@@ -10,9 +10,13 @@ import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
 import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.hammacher.util.streams.OptimizedDataOutputStream;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
+import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 
 /**
  * Class representing an array load or array store (*ALOAD / *ASTORE) instruction.
@@ -26,9 +30,9 @@ public class ArrayInstruction extends AbstractInstruction {
         private final long arrayId;
         private final int arrayIndex;
 
-        public ArrayInstrInstance(final ArrayInstruction arrayInstr, final long occurenceNumber, final int stackDepth,
-                final long arrayId, final int arrayIndex) {
-            super(arrayInstr, occurenceNumber, stackDepth);
+        public ArrayInstrInstance(ArrayInstruction arrayInstr, long occurenceNumber, int stackDepth,
+                long instanceNr, long arrayId, int arrayIndex) {
+            super(arrayInstr, occurenceNumber, stackDepth, instanceNr);
             this.arrayId = arrayId;
             this.arrayIndex = arrayIndex;
         }
@@ -43,15 +47,15 @@ public class ArrayInstruction extends AbstractInstruction {
 
         @Override
         public String toString() {
-            final String type = super.toString();
-            final StringBuilder sb = new StringBuilder(type.length() + 20);
+            String type = super.toString();
+            StringBuilder sb = new StringBuilder(type.length() + 20);
             sb.append(type).append(" [").append(this.arrayId).append(", ").append(this.arrayIndex).append(']');
             return sb.toString();
         }
 
         @Override
         public int hashCode() {
-            final int prime = 31;
+            int prime = 31;
             int result = super.hashCode();
             result = prime * result + (int) this.arrayId;
             result = prime * result + this.arrayIndex;
@@ -79,46 +83,46 @@ public class ArrayInstruction extends AbstractInstruction {
     private final int arrayTraceSeqIndex;
     private final int indexTraceSeqIndex;
 
-    public ArrayInstruction(final ReadMethod readMethod, final int opcode,
-            final int lineNumber,
-            final int arrayTraceSeqIndex, final int indexTraceSeqIndex) {
+    public ArrayInstruction(ReadMethod readMethod, int opcode,
+            int lineNumber,
+            int arrayTraceSeqIndex, int indexTraceSeqIndex) {
         super(readMethod, opcode, lineNumber);
         this.arrayTraceSeqIndex = arrayTraceSeqIndex;
         this.indexTraceSeqIndex = indexTraceSeqIndex;
     }
 
-    private ArrayInstruction(final ReadMethod readMethod, final int lineNumber, final int opcode,
-            final int arrayTraceSeqIndex, final int indexTraceSeqIndex, final int index) {
+    private ArrayInstruction(ReadMethod readMethod, int lineNumber, int opcode,
+            int arrayTraceSeqIndex, int indexTraceSeqIndex, int index) {
         super(readMethod, opcode, lineNumber, index);
         this.arrayTraceSeqIndex = arrayTraceSeqIndex;
         this.indexTraceSeqIndex = indexTraceSeqIndex;
     }
 
     @Override
-    public ArrayInstrInstance getNextInstance(
-            final TraceIterationInformationProvider infoProv, final int stackDepth) {
-        final long arrayId = infoProv.getNextLong(this.arrayTraceSeqIndex);
-        final int index = infoProv.getNextInteger(this.indexTraceSeqIndex);
+    public InstructionInstance getNextInstance(TraceIterationInformationProvider infoProv,
+            int stackDepth, long instanceNr) throws TracerException {
+        long arrayId = infoProv.getNextLong(this.arrayTraceSeqIndex);
+        int arrayIndex = infoProv.getNextInteger(this.indexTraceSeqIndex);
         return new ArrayInstrInstance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()),
-                stackDepth, arrayId, index);
+                stackDepth, instanceNr, arrayId, arrayIndex);
     }
 
-    public Type getType() {
-        return Type.ARRAY;
+    public InstructionType getType() {
+        return InstructionType.ARRAY;
     }
 
     @Override
-    public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
+    public void writeOut(DataOutputStream out, StringCacheOutput stringCache) throws IOException {
         super.writeOut(out, stringCache);
         OptimizedDataOutputStream.writeInt0(this.arrayTraceSeqIndex, out);
         OptimizedDataOutputStream.writeInt0(this.indexTraceSeqIndex, out);
     }
 
-    public static ArrayInstruction readFrom(final DataInputStream in, final MethodReadInformation methodInfo,
-            @SuppressWarnings("unused") final StringCacheInput stringCache,
-            final int opcode, final int index, final int lineNumber) throws IOException {
-        final int arrayTraceSeqIndex = OptimizedDataInputStream.readInt0(in);
-        final int indexTraceSeqIndex = OptimizedDataInputStream.readInt0(in);
+    public static ArrayInstruction readFrom(DataInputStream in, MethodReadInformation methodInfo,
+            @SuppressWarnings("unused") StringCacheInput stringCache,
+            int opcode, int index, int lineNumber) throws IOException {
+        int arrayTraceSeqIndex = OptimizedDataInputStream.readInt0(in);
+        int indexTraceSeqIndex = OptimizedDataInputStream.readInt0(in);
         return new ArrayInstruction(methodInfo.getMethod(), lineNumber, opcode, arrayTraceSeqIndex, indexTraceSeqIndex, index);
     }
 

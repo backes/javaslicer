@@ -10,6 +10,7 @@ import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
 import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.hammacher.util.streams.OptimizedDataOutputStream;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
 
@@ -45,8 +46,8 @@ public class JumpInstruction extends AbstractInstruction {
         this.label = label;
     }
 
-    public Type getType() {
-        return Type.JUMP;
+    public InstructionType getType() {
+        return InstructionType.JUMP;
     }
 
     @Override

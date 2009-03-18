@@ -7,7 +7,7 @@ import org.junit.Test;
 
 import de.unisb.cs.st.javaslicer.AbstractDependencesTest;
 import de.unisb.cs.st.javaslicer.AbstractDependencesTest.Dependence.Type;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 
 public class SimpleTest3 extends AbstractDependencesTest {
 

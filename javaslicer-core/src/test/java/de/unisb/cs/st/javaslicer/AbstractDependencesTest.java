@@ -15,7 +15,7 @@ import de.hammacher.util.Diff;
 import de.hammacher.util.DiffPrint;
 import de.hammacher.util.Diff.change;
 import de.unisb.cs.st.javaslicer.AbstractDependencesTest.Dependence.Type;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesExtractor;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesVisitorAdapter;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.VisitorCapability;

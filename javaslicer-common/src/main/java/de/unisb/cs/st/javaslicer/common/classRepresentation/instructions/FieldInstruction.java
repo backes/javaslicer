@@ -10,6 +10,9 @@ import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
 import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.hammacher.util.streams.OptimizedDataOutputStream;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
@@ -27,8 +30,9 @@ public class FieldInstruction extends AbstractInstruction {
 
         private final long objectId;
 
-        public FieldInstrInstance(final FieldInstruction fieldInstr, final long occurenceNumber, final int stackDepth, final long objectId) {
-            super(fieldInstr, occurenceNumber, stackDepth);
+        public FieldInstrInstance(FieldInstruction fieldInstr, long occurenceNumber, int stackDepth,
+                long instanceNr, long objectId) {
+            super(fieldInstr, occurenceNumber, stackDepth, instanceNr);
             this.objectId = objectId;
         }
 
@@ -45,7 +49,7 @@ public class FieldInstruction extends AbstractInstruction {
 
         @Override
         public int hashCode() {
-            final int prime = 31;
+            int prime = 31;
             int result = super.hashCode();
             result = prime * result + (int)this.objectId;
             return result;
@@ -73,10 +77,10 @@ public class FieldInstruction extends AbstractInstruction {
     private final int objectTraceSeqIndex;
     private final boolean longValue;
 
-    public FieldInstruction(final ReadMethod readMethod, final int opcode,
-            final int lineNumber, final String ownerInternalClassName,
-            final String fieldName, final String fieldDesc,
-            final int objectTraceSeqIndex) {
+    public FieldInstruction(ReadMethod readMethod, int opcode,
+            int lineNumber, String ownerInternalClassName,
+            String fieldName, String fieldDesc,
+            int objectTraceSeqIndex) {
         super(readMethod, opcode, lineNumber);
         this.ownerInternalClassName = ownerInternalClassName;
         this.fieldName = fieldName;
@@ -85,9 +89,9 @@ public class FieldInstruction extends AbstractInstruction {
         this.longValue = org.objectweb.asm.Type.getType(fieldDesc).getSize() == 2;
     }
 
-    private FieldInstruction(final ReadMethod readMethod, final int opcode, final int lineNumber,
-            final String ownerInternalClassName, final String fieldName,
-            final String fieldDesc, final int objectTraceSeqIndex, final int index) {
+    private FieldInstruction(ReadMethod readMethod, int opcode, int lineNumber,
+            String ownerInternalClassName, String fieldName,
+            String fieldDesc, int objectTraceSeqIndex, int index) {
         super(readMethod, opcode, lineNumber, index);
         this.ownerInternalClassName = ownerInternalClassName;
         this.fieldName = fieldName;
@@ -112,16 +116,17 @@ public class FieldInstruction extends AbstractInstruction {
         return this.longValue;
     }
 
-    public Type getType() {
-        return Type.FIELD;
+    public InstructionType getType() {
+        return InstructionType.FIELD;
     }
 
     @Override
-    public FieldInstrInstance getNextInstance(final TraceIterationInformationProvider infoProv, final int stackDepth) throws TracerException {
-        final long objectId = this.objectTraceSeqIndex == -1 ? -1 :
+    public InstructionInstance getNextInstance(TraceIterationInformationProvider infoProv,
+            int stackDepth, long instanceNr) throws TracerException {
+        long objectId = this.objectTraceSeqIndex == -1 ? -1 :
             infoProv.getNextLong(this.objectTraceSeqIndex);
         return new FieldInstrInstance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()),
-                stackDepth, objectId);
+                stackDepth, instanceNr, objectId);
     }
 
     @Override
@@ -149,13 +154,13 @@ public class FieldInstruction extends AbstractInstruction {
             break;
         }
 
-        final StringBuilder sb = new StringBuilder(type.length() + this.ownerInternalClassName.length() + this.fieldName.length() + this.fieldDesc.length() + 3);
+        StringBuilder sb = new StringBuilder(type.length() + this.ownerInternalClassName.length() + this.fieldName.length() + this.fieldDesc.length() + 3);
         sb.append(type).append(' ').append(this.ownerInternalClassName).append('.').append(this.fieldName).append(' ').append(this.fieldDesc);
         return sb.toString();
     }
 
     @Override
-    public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
+    public void writeOut(DataOutputStream out, StringCacheOutput stringCache) throws IOException {
         super.writeOut(out, stringCache);
         stringCache.writeString(this.fieldDesc, out);
         stringCache.writeString(this.fieldName, out);
@@ -163,13 +168,13 @@ public class FieldInstruction extends AbstractInstruction {
         stringCache.writeString(this.ownerInternalClassName, out);
     }
 
-    public static FieldInstruction readFrom(final DataInputStream in, final MethodReadInformation methodInfo,
-            final StringCacheInput stringCache,
-            final int opcode, final int index, final int lineNumber) throws IOException {
-        final String fieldDesc = stringCache.readString(in);
-        final String fieldName = stringCache.readString(in);
-        final int objectTraceSeqIndex = OptimizedDataInputStream.readInt0(in);
-        final String ownerInternalClassName = stringCache.readString(in);
+    public static FieldInstruction readFrom(DataInputStream in, MethodReadInformation methodInfo,
+            StringCacheInput stringCache,
+            int opcode, int index, int lineNumber) throws IOException {
+        String fieldDesc = stringCache.readString(in);
+        String fieldName = stringCache.readString(in);
+        int objectTraceSeqIndex = OptimizedDataInputStream.readInt0(in);
+        String ownerInternalClassName = stringCache.readString(in);
         return new FieldInstruction(methodInfo.getMethod(), opcode, lineNumber, ownerInternalClassName, fieldName, fieldDesc, objectTraceSeqIndex, index);
     }
 

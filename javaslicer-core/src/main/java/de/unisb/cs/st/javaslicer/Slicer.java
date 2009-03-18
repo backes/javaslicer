@@ -17,10 +17,10 @@ import org.objectweb.asm.Opcodes;
 import de.hammacher.util.ArrayStack;
 import de.hammacher.util.maps.IntegerMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Type;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.instructionSimulation.DynamicInformation;
@@ -234,7 +234,7 @@ public class Slicer implements Opcodes {
             }
 
             final boolean isExceptionsThrowingInstance = currentFrame.throwsException &&
-                (instruction.getType() != Type.LABEL || !((LabelMarker)instruction).isAdditionalLabel());
+                (instruction.getType() != InstructionType.LABEL || !((LabelMarker)instruction).isAdditionalLabel());
             if (!currentFrame.interestingInstructions.isEmpty() || isExceptionsThrowingInstance) {
                 Set<Instruction> instrControlDependences = controlDependences.get(instruction.getIndex());
                 if (instrControlDependences == null) {
@@ -263,7 +263,7 @@ public class Slicer implements Opcodes {
                     }
                 }
                 if (!dependantInterestingInstructions.isEmpty()) {
-                    if (instruction.getType() != Type.LABEL)
+                    if (instruction.getType() != InstructionType.LABEL)
                         dynamicSlice.add(instruction);
                     currentFrame.interestingInstructions.removeAll(dependantInterestingInstructions);
                     currentFrame.interestingInstructions.add(instruction);

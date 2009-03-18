@@ -16,8 +16,8 @@ import de.hammacher.util.IntHolder;
 import de.hammacher.util.maps.LongMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Field;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.ArrayInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.FieldInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.IIncInstruction;
@@ -135,7 +135,7 @@ public class Simulator {
     }
 
     private DynamicInformation simulateTypeInsn(final TypeInstrInstance inst, final ExecutionFrame frame) {
-        switch (inst.getOpcode()) {
+        switch (inst.getInstruction().getOpcode()) {
         case Opcodes.NEW:
             final Collection<Variable> definedVariables = Collections.singleton(
                 (Variable)frame.getStackEntry(frame.operandStack.decrementAndGet()));
@@ -218,7 +218,7 @@ public class Simulator {
         else if (inst.getArrayIndex() > h.get())
             h.set(inst.getArrayIndex());
 
-        switch (inst.getOpcode()) {
+        switch (inst.getInstruction().getOpcode()) {
         case IALOAD: case FALOAD: case AALOAD: case BALOAD: case CALOAD: case SALOAD:
             // read 2, write 1
             int stackOffset = frame.operandStack.getAndIncrement()-1;

@@ -8,6 +8,7 @@ import org.objectweb.asm.Opcodes;
 
 import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
 
@@ -84,8 +85,8 @@ public class MethodInvocationInstruction extends AbstractInstruction {
         return this.returnedSize;
     }
 
-    public Type getType() {
-        return Type.METHODINVOCATION;
+    public InstructionType getType() {
+        return InstructionType.METHODINVOCATION;
     }
 
     @Override

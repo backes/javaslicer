@@ -1,7 +1,7 @@
 package de.unisb.cs.st.javaslicer.dependenceAnalysis;
 
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
 
@@ -12,7 +12,7 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
  */
 public abstract class DependencesVisitorAdapter implements DependencesVisitor {
 
-    public void visitEnd() {
+    public void visitEnd(long numInstances) {
         // null
     }
 

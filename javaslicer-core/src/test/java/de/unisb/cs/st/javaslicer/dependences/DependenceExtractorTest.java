@@ -18,7 +18,7 @@ import org.junit.Test;
 import de.hammacher.util.IntHolder;
 import de.hammacher.util.Pair;
 import de.unisb.cs.st.javaslicer.AbstractSlicingTest;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesExtractor;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesVisitorAdapter;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.VisitorCapability;

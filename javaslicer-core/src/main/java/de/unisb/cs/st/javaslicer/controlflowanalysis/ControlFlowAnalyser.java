@@ -12,8 +12,8 @@ import java.util.Set;
 
 import de.hammacher.util.UniqueQueue;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.Type;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowGraph.AbstractInstrNode;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowGraph.InstrNode;
@@ -45,7 +45,7 @@ public class ControlFlowAnalyser {
         for (final Instruction insn: method.getInstructions()) {
             final InstrNode node = graph.getNode(insn);
             final ReachInstrNode reachNode = (ReachabilityNodeFactory.ReachInstrNode)node;
-            if (insn.getType() == Type.LABEL) {
+            if (insn.getType() == InstructionType.LABEL) {
                 final LabelMarker label = (LabelMarker) insn;
                 if (label.isCatchBlock()) {
                     final Set<AbstractInstrNode> executedIfException = reachNode.getSurelyReached();

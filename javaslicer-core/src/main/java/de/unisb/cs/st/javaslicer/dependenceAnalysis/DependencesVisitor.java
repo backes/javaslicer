@@ -1,7 +1,7 @@
 package de.unisb.cs.st.javaslicer.dependenceAnalysis;
 
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
 
@@ -20,8 +20,10 @@ public interface DependencesVisitor {
 
     /**
      * Gets called when the {@link DependencesExtractor} finished tracersing the trace.
+     * @param numInstances the total number of instances that have been visited
+     *                     during the tracersal of the trace
      */
-    void visitEnd();
+    void visitEnd(long numInstances);
 
     /**
      * Gets called if a (dynamic) data dependence has been determined.

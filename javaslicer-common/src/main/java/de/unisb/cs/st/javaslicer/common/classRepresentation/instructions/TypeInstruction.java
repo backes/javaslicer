@@ -10,6 +10,9 @@ import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
 import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.hammacher.util.streams.OptimizedDataOutputStream;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
@@ -26,8 +29,8 @@ public class TypeInstruction extends AbstractInstruction {
         private final long newObjectIdentifier;
 
         public TypeInstrInstance(TypeInstruction instr,
-                long occurenceNumber, int stackDepth, long newObjectIdentifier) {
-            super(instr, occurenceNumber, stackDepth);
+                long occurenceNumber, int stackDepth, long instanceNr, long newObjectIdentifier) {
+            super(instr, occurenceNumber, stackDepth, instanceNr);
             this.newObjectIdentifier = newObjectIdentifier;
         }
 
@@ -125,16 +128,17 @@ public class TypeInstruction extends AbstractInstruction {
         return this.javaClassName;
     }
 
-    public Type getType() {
-        return Type.TYPE;
+    public InstructionType getType() {
+        return InstructionType.TYPE;
     }
 
     @Override
     public InstructionInstance getNextInstance(TraceIterationInformationProvider infoProv,
-            int stackDepth) {
+            int stackDepth, long instanceNr) {
         long newObjectIdentifier = this.newObjectIdentifierSeqIndex == 0 ? 0
             : infoProv.getNextLong(this.newObjectIdentifierSeqIndex);
-        return new TypeInstrInstance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()), stackDepth, newObjectIdentifier);
+        return new TypeInstrInstance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()), stackDepth,
+            instanceNr, newObjectIdentifier);
     }
 
     @Override

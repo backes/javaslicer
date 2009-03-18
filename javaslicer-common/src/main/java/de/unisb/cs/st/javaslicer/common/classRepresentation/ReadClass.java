@@ -140,7 +140,7 @@ public class ReadClass implements Comparable<ReadClass> {
     }
 
     public int compareTo(final ReadClass o) {
-        return this.className.compareTo(o.className);
+        return this == o ? 0 : this.className.compareTo(o.className);
     }
 
     @Override

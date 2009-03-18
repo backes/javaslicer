@@ -17,9 +17,9 @@ import de.hammacher.util.MultiplexedFileReader;
 import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.MultiplexedFileReader.MultiplexInputStream;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 
@@ -348,7 +348,7 @@ public class TraceResult {
                 System.out.format(format, nr++, class0.getName()+"."
                         +method.getName()+":"+inst.getInstruction().getLineNumber(),
                         inst.getStackDepth(),
-                        inst.getOccurenceNumber(), inst.toString());
+                        inst.getOccurrenceNumber(), inst.toString());
             }
 
             final BackwardInstructionIterator it2 = (BackwardInstructionIterator) it;

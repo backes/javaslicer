@@ -233,6 +233,8 @@ public class ReadMethod implements Comparable<ReadMethod> {
     }
 
     public int compareTo(final ReadMethod o) {
+        if (this == o)
+            return 0;
         int cmp = getReadClass().compareTo(o.getReadClass());
         if (cmp != 0)
             return cmp;

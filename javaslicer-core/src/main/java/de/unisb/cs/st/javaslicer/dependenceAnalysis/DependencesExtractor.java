@@ -15,8 +15,8 @@ import java.util.Map.Entry;
 import de.hammacher.util.ArrayStack;
 import de.hammacher.util.maps.IntegerMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction.InstructionInstance;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesVisitor.DataDependenceType;
 import de.unisb.cs.st.javaslicer.instructionSimulation.DynamicInformation;
@@ -221,16 +221,18 @@ public class DependencesExtractor {
         HashSet<Long> seenObjects = new HashSet<Long>();
         */
 
-        long stepNr = 0;
+        InstructionInstance instance = null;
+        Instruction instruction = null;
 
         while (backwardInsnItr.hasNext()) {
+            instance = backwardInsnItr.next();
+            instruction = instance.getInstruction();
+
             /*
-            if (stepNr % 1000000 == 0) {
-                System.out.format("%5de6: %s%n", stepNr / 1000000, new Date());
+            if (instance.getInstanceNr() % 1000000 == 0) {
+                System.out.format("%5de6: %s%n", instance.getInstanceNr() / 1000000, new Date());
             }
             */
-            final InstructionInstance instance = backwardInsnItr.next();
-            final Instruction instruction = instance.getInstruction();
 
             ExecutionFrame removedFrame = null;
             final int stackDepth = instance.getStackDepth();
@@ -491,10 +493,8 @@ public class DependencesExtractor {
                     pendingDataDependenceVisitorsWriteAfterRead0, pendingDataDependenceVisitorsReadAfterWrite0,
                     dataDependenceVisitorsWriteAfterRead0, dataDependenceVisitorsReadAfterWrite0);
 
-            ++stepNr;
-
             /*
-            if (stepNr % 1000000 == 0) {
+            if (instance.getInstanceNr() % 1000000 == 0) {
                 for (Variable var: lastReaders.keySet()) {
                     if (var instanceof ObjectField) {
                         assert seenObjects.contains(((ObjectField)var).getObjectId());
@@ -552,7 +552,7 @@ public class DependencesExtractor {
             allVisitors.addAll(Arrays.asList(objectCreationVisitors0));
 
         for (DependencesVisitor vis: allVisitors)
-            vis.visitEnd();
+            vis.visitEnd(instance == null ? 0 : instance.getInstanceNr());
     }
 
     private static void cleanUpExecutionFrame(ExecutionFrame frame,

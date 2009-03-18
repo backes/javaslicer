@@ -13,11 +13,13 @@ import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
 import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.hammacher.util.streams.OptimizedDataOutputStream;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionWrapper;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
+import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 
 /**
  * Abstract superclass that builds the basis for most Instruction implementing classes.
@@ -146,8 +148,10 @@ public abstract class AbstractInstruction implements Instruction {
     }
 
     // must be overridden by classes with dynamic parameters (e.g. array load/store)
-    public InstructionInstance getNextInstance(final TraceIterationInformationProvider infoProv, final int stackDepth) {
-        return new AbstractInstance(this, infoProv.getNextInstructionOccurenceNumber(this.index), stackDepth);
+    public InstructionInstance getNextInstance(TraceIterationInformationProvider infoProv,
+            int stackDepth, long instanceNr) throws TracerException {
+        return new AbstractInstance(this, infoProv.getNextInstructionOccurenceNumber(this.index),
+            stackDepth, instanceNr);
     }
 
     public AbstractInstruction getPrevious() {
@@ -196,59 +200,6 @@ public abstract class AbstractInstruction implements Instruction {
             return false;
         AbstractInstruction other = (AbstractInstruction) obj;
         return this.index == other.index;
-    }
-
-
-    public static class AbstractInstance extends InstructionWrapper
-            implements InstructionInstance {
-
-        private final long occurenceNumber;
-        private final int stackDepth;
-
-        public AbstractInstance(final AbstractInstruction instr, final long occurenceNumber, final int stackDepth) {
-            super(instr);
-            this.occurenceNumber = occurenceNumber;
-            this.stackDepth = stackDepth;
-        }
-
-        public long getOccurenceNumber() {
-            return this.occurenceNumber;
-        }
-
-        public Instruction getInstruction() {
-            return this.wrappedInstruction;
-        }
-
-        public int getStackDepth() {
-            return this.stackDepth;
-        }
-
-        @Override
-        public int hashCode() {
-            final int prime = 31;
-            int result = super.hashCode();
-            result = prime * result
-                + (int)this.occurenceNumber;
-            result = prime * result + this.stackDepth;
-            return result;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj)
-                return true;
-            if (!super.equals(obj))
-                return false;
-            if (getClass() != obj.getClass())
-                return false;
-            AbstractInstance other = (AbstractInstance) obj;
-            if (this.occurenceNumber != other.occurenceNumber)
-                return false;
-            if (this.stackDepth != other.stackDepth)
-                return false;
-            return true;
-        }
-
     }
 
 }

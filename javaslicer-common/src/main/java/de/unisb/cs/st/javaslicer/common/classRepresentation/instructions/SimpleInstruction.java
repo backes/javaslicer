@@ -5,6 +5,7 @@ import java.io.DataInputStream;
 import org.objectweb.asm.Opcodes;
 
 import de.hammacher.util.StringCacheInput;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
 
@@ -49,8 +50,8 @@ public class SimpleInstruction extends AbstractInstruction {
         return new SimpleInstruction(methodInfo.getMethod(), lineNumber, opcode, index);
     }
 
-    public Type getType() {
-        return Type.SIMPLE;
+    public InstructionType getType() {
+        return InstructionType.SIMPLE;
     }
 
     @Override
