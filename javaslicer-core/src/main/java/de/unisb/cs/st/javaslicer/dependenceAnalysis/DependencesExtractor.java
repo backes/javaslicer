@@ -9,14 +9,18 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.Map.Entry;
 
 import de.hammacher.util.ArrayStack;
+import de.hammacher.util.collections.BlockwiseSynchronizedBuffer;
 import de.hammacher.util.maps.IntegerMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesVisitor.DataDependenceType;
 import de.unisb.cs.st.javaslicer.instructionSimulation.DynamicInformation;
@@ -162,6 +166,11 @@ public class DependencesExtractor {
      * @param threadId identifies the thread whose trace should be analyzed
      */
     public void processBackwardTrace(final ThreadId threadId) {
+        processBackwardTrace(threadId, false);
+    }
+
+    // TODO document
+    public void processBackwardTrace(final ThreadId threadId, boolean multithreaded) {
 
         final BackwardInstructionIterator backwardInsnItr =
             this.trace.getBackwardIterator(threadId, null);
@@ -204,11 +213,68 @@ public class DependencesExtractor {
         for (final ReadMethod method: backwardInsnItr.getInitialStackMethods()) {
             currentFrame = new ExecutionFrame();
             currentFrame.method = method;
-            currentFrame.abnormalTermination = true;
+            currentFrame.interruptedControlFlow = true;
             frames.push(currentFrame);
             if (methodEntryLeaveVisitors0 != null)
                 for (final DependencesVisitor vis: methodEntryLeaveVisitors0)
                     vis.visitMethodLeave(method);
+        }
+
+        final Iterator<InstructionInstance> instanceIterator;
+        if (multithreaded) {
+            final BlockwiseSynchronizedBuffer<InstructionInstance> buffer = new BlockwiseSynchronizedBuffer<InstructionInstance>(1<<16, 1<<20);
+            final InstructionInstance firstInstance = backwardInsnItr.hasNext() ? backwardInsnItr.next() : null;
+            new Thread("Trace iterator") {
+                @Override
+                public void run() {
+                    try {
+                        while (backwardInsnItr.hasNext())
+                            buffer.put(backwardInsnItr.next());
+                        buffer.put(firstInstance); // to signal that this is the end of the trace
+                        buffer.flush();
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException("This private thread should never get interrupted", e);
+                    }
+                }
+            }.start();
+            instanceIterator = new Iterator<InstructionInstance>() {
+
+                private InstructionInstance next = firstInstance;
+
+                public boolean hasNext() {
+                    if (this.next == null) {
+                        boolean interrupted = false;
+                        while (true) {
+                            try {
+                                this.next = buffer.take();
+                                if (this.next == firstInstance)
+                                    this.next = null;
+                                break;
+                            } catch (InterruptedException e) {
+                                interrupted = true;
+                            }
+                        }
+                        if (interrupted)
+                            Thread.currentThread().interrupt();
+                    }
+                    return this.next != null;
+                }
+
+                public InstructionInstance next() {
+                    if (!hasNext())
+                        throw new NoSuchElementException();
+                    InstructionInstance ret = this.next;
+                    this.next = null;
+                    return ret;
+                }
+
+                public void remove() {
+                    throw new UnsupportedOperationException();
+                }
+
+            };
+        } else {
+            instanceIterator = backwardInsnItr;
         }
 
         // the lastWriter is needed for WAR data dependences
@@ -224,8 +290,8 @@ public class DependencesExtractor {
         InstructionInstance instance = null;
         Instruction instruction = null;
 
-        while (backwardInsnItr.hasNext()) {
-            instance = backwardInsnItr.next();
+        while (instanceIterator.hasNext()) {
+            instance = instanceIterator.next();
             instruction = instance.getInstruction();
 
             /*
@@ -246,19 +312,25 @@ public class DependencesExtractor {
                     if (methodEntryLeaveVisitors0 != null)
                         for (final DependencesVisitor vis: methodEntryLeaveVisitors0)
                             vis.visitMethodEntry(removedFrame.method);
+                    currentFrame = frames.peek();
                 } else {
                     // in all steps, the stackDepth can change by at most 1
                     assert frames.size() == stackDepth-1;
                     final ExecutionFrame newFrame = new ExecutionFrame();
-                    if (frames.size() > 0 && frames.peek().atCacheBlockStart != null)
-                        newFrame.throwsException = newFrame.abnormalTermination = true;
+                    // assertion: if the current frame catched an exception, then the new frame
+                    // must have thrown it
+                    assert currentFrame == null || currentFrame.atCatchBlockStart == null
+                        || instruction == instruction.getMethod().getAbnormalTerminationLabel();
                     newFrame.method = instruction.getMethod();
+                    if (instruction == newFrame.method.getAbnormalTerminationLabel()) {
+                        newFrame.throwsException = newFrame.interruptedControlFlow = true;
+                    }
                     frames.push(newFrame);
                     if (methodEntryLeaveVisitors0 != null)
                         for (final DependencesVisitor vis: methodEntryLeaveVisitors0)
                             vis.visitMethodLeave(newFrame.method);
+                    currentFrame = newFrame;
                 }
-                currentFrame = frames.peek();
             }
             assert currentFrame != null;
 
@@ -268,8 +340,6 @@ public class DependencesExtractor {
                 assert currentFrame.returnValue == null;
                 currentFrame.method = instruction.getMethod();
             } else if (currentFrame.finished || currentFrame.method != instruction.getMethod()) {
-                // TODO remove
-                assert currentFrame.finished;
                 final ReadMethod newMethod = instruction.getMethod();
                 if (methodEntryLeaveVisitors0 != null)
                     for (final DependencesVisitor vis: methodEntryLeaveVisitors0) {
@@ -310,21 +380,24 @@ public class DependencesExtractor {
                     instrControlDependences = controlDependences.get(instruction.getIndex());
                     assert instrControlDependences != null;
                 }
+                final boolean isExceptionsThrowingInstruction = currentFrame.throwsException &&
+                    (instruction.getType() != InstructionType.LABEL || !((LabelMarker)instruction).isAdditionalLabel());
                 // get all interesting instructions, that are dependent on the current one
-                Set<InstructionInstance> dependantInterestingInstances = getInstanceIntersection(instrControlDependences,
-                        currentFrame.interestingInstances);
-                if (currentFrame.throwsException) {
+                Set<InstructionInstance> dependantInterestingInstances = currentFrame.interestingInstances == null
+                    ? Collections.<InstructionInstance>emptySet()
+                    : getInstanceIntersection(instrControlDependences, currentFrame.interestingInstances);
+                if (isExceptionsThrowingInstruction) {
                     currentFrame.throwsException = false;
                     // in this case, we have an additional control dependence from the catching to
                     // the throwing instruction
                     for (int i = stackDepth-2; i >= 0; --i) {
                         final ExecutionFrame f = frames.get(i);
-                        if (f.atCacheBlockStart != null) {
-                            if (f.interestingInstances.contains(f.atCacheBlockStart)) {
+                        if (f.atCatchBlockStart != null) {
+                            if (f.interestingInstances != null && f.interestingInstances.contains(f.atCatchBlockStart)) {
                                 if (dependantInterestingInstances.isEmpty())
-                                    dependantInterestingInstances = Collections.singleton(f.atCacheBlockStart);
+                                    dependantInterestingInstances = Collections.singleton(f.atCatchBlockStart);
                                 else
-                                    dependantInterestingInstances.add(f.atCacheBlockStart);
+                                    dependantInterestingInstances.add(f.atCatchBlockStart);
                             }
                             break;
                         }
@@ -336,12 +409,17 @@ public class DependencesExtractor {
                             vis.visitControlDependence(depend, instance);
                         }
                     }
-                    currentFrame.interestingInstances.removeAll(dependantInterestingInstances);
+                    if (currentFrame.interestingInstances != null)
+                        currentFrame.interestingInstances.removeAll(dependantInterestingInstances);
                 }
+                if (currentFrame.interestingInstances == null)
+                    currentFrame.interestingInstances = new HashSet<InstructionInstance>();
                 currentFrame.interestingInstances.add(instance);
             }
             // TODO check this:
             if (pendingControlDependenceVisitors0 != null) {
+                if (currentFrame.interestingInstances == null)
+                    currentFrame.interestingInstances = new HashSet<InstructionInstance>();
                 currentFrame.interestingInstances.add(instance);
                 for (final DependencesVisitor vis: pendingControlDependenceVisitors0)
                     vis.visitPendingControlDependence(instance);
@@ -483,9 +561,10 @@ public class DependencesExtractor {
             }
 
             if (dynInfo.isCatchBlock()) {
-                currentFrame.atCacheBlockStart = instance;
-            } else if (currentFrame.atCacheBlockStart != null) {
-                currentFrame.atCacheBlockStart = null;
+                currentFrame.atCatchBlockStart = instance;
+                currentFrame.interruptedControlFlow = true;
+            } else if (currentFrame.atCatchBlockStart != null) {
+                currentFrame.atCatchBlockStart = null;
             }
 
             if (removedFrame != null)

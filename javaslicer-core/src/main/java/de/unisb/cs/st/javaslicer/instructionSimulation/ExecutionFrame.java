@@ -1,7 +1,6 @@
 package de.unisb.cs.st.javaslicer.instructionSimulation;
 
 import java.util.AbstractList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -42,15 +41,41 @@ public class ExecutionFrame {
     private static int nextFrameNr = 0;
     public final int frameNr = nextFrameNr++;
 
-    public final Set<InstructionInstance> interestingInstances = new HashSet<InstructionInstance>();
-    public final Set<Instruction> interestingInstructions = new HashSet<Instruction>();
+    public Set<InstructionInstance> interestingInstances = null;
+    public Set<Instruction> interestingInstructions = null;
     public ReadMethod method;
     public final IntHolder operandStack = new IntHolder(0);
-    public InstructionInstance atCacheBlockStart;
+
+    /**
+     * <code>true</code> if this frame is at the start of a catchblock
+     */
+    public InstructionInstance atCatchBlockStart;
+
+    /**
+     * <code>true</code> if the next visited instruction in this frame must
+     * have thrown an exception
+     */
     public boolean throwsException;
-    public boolean abnormalTermination = false;
-    public Variable returnValue = null;
-    public boolean finished = false; // is set to true if the entry label has been passed
+
+    /**
+     * <code>true</code> if this frame was aborted abnormally (NOT by a RETURN
+     * instruction), or catched an exception. In both cases, the control flow
+     * was interrupted, so the stack entry indexes cannot be computed precisely
+     * any more.
+     */
+    public boolean interruptedControlFlow = false;
+
+    /**
+     * holds the stack entry whose value was used as the return value of
+     * the method
+     */
+    public StackEntry returnValue = null;
+
+    /**
+     * is set to true if the methods entry label has been passed
+     */
+    public boolean finished = false;
+
     public Instruction lastInstruction = null;
 
     int maxStackEntry = -1;
@@ -58,7 +83,7 @@ public class ExecutionFrame {
     int minStackEntry = 0;
 
     public LocalVariable getLocalVariable(final int localVarIndex) {
-        assert localVarIndex >= 0 || this.abnormalTermination;
+        assert localVarIndex >= 0 || this.interruptedControlFlow;
         int index = Math.max(0, localVarIndex);
         this.maxLocalVariable = Math.max(this.maxLocalVariable, index);
         return new LocalVariable(this, index);
@@ -66,7 +91,7 @@ public class ExecutionFrame {
 
     public StackEntry getStackEntry(final int index) {
         if (index < 0) {
-            assert this.abnormalTermination;
+            assert this.interruptedControlFlow;
             this.minStackEntry = Math.min(this.minStackEntry, index);
             this.maxStackEntry = Math.max(this.maxStackEntry, 0);
             return new StackEntry(this, 0);

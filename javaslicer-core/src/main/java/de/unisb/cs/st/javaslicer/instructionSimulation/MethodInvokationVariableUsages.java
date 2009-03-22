@@ -51,7 +51,7 @@ public class MethodInvokationVariableUsages implements DynamicInformation {
 
     public MethodInvokationVariableUsages(final int stackOffset, final int paramCount,
             boolean hasReturn, final ExecutionFrame execFrame, final ExecutionFrame removedFrame) {
-        assert stackOffset >= 0 || execFrame.abnormalTermination;
+        assert stackOffset >= 0 || execFrame.interruptedControlFlow;
         this.stackOffset = stackOffset;
         this.paramCount = paramCount;
         this.hasReturn = hasReturn;

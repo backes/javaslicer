@@ -338,12 +338,13 @@ public class TracingMethodInstrumenter implements Opcodes {
         final int newPos = this.readMethod.getInstructions().size();
         traceLabel(null, InstructionType.METHODEXIT);
         assert this.readMethod.getInstructions().size() == newPos+1;
-        final AbstractInstruction methodLeaveLabel = this.readMethod.getInstructions().get(newPos);
-        assert methodLeaveLabel instanceof LabelMarker;
-        this.readMethod.setMethodLeaveLabel((LabelMarker) methodLeaveLabel);
+        final AbstractInstruction abnormalTerminationLabel = this.readMethod.getInstructions().get(newPos);
+        assert abnormalTerminationLabel instanceof LabelMarker;
+        this.readMethod.setAbnormalTerminationLabel((LabelMarker) abnormalTerminationLabel);
         this.methodNode.instructions.add(new InsnNode(ATHROW));
 
         // add a try catch block around the method so that we can trace when this method is left
+        // a thrown exception
         this.methodNode.tryCatchBlocks.add(new TryCatchBlockNode(l0, l1, l1, null));
 
         // now add the code that is executed if no tracing should be performed

@@ -39,7 +39,7 @@ public class StackEntrySet extends AbstractSet<Variable> {
      * @param num the number of entries
      */
     public StackEntrySet(final ExecutionFrame frame, final int offset, final int num) {
-        assert offset >= 0 || frame.abnormalTermination;
+        assert offset >= 0 || frame.interruptedControlFlow;
         assert num >= 0;
         this.frame = frame;
         this.offset = offset;

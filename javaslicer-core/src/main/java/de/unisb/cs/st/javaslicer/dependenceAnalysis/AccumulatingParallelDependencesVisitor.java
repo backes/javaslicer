@@ -1,15 +1,17 @@
 package de.unisb.cs.st.javaslicer.dependenceAnalysis;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReference;
 
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
@@ -22,6 +24,9 @@ public class AccumulatingParallelDependencesVisitor implements
 
 
     private static class DefaultThreadFactory implements ThreadFactory {
+
+        private static final AtomicInteger nextFactoryId = new AtomicInteger(0);
+        private final int factoryId = nextFactoryId.getAndIncrement();
 
         private final ThreadGroup group;
         private final AtomicInteger threadNumber = new AtomicInteger(1);
@@ -36,7 +41,7 @@ public class AccumulatingParallelDependencesVisitor implements
 
         public Thread newThread(Runnable r) {
             Thread t = new Thread(this.group, r,
-                                  "ParallelDependencesVisitor Worker " + this.threadNumber.getAndIncrement());
+                                  "ParallelDependencesVisitor"+this.factoryId+" Worker"+this.threadNumber.getAndIncrement());
             if (t.isDaemon())
                 t.setDaemon(false);
             if (t.getPriority() != this.newThreadPriority)
@@ -67,22 +72,33 @@ public class AccumulatingParallelDependencesVisitor implements
         private final ReadMethod[] methods;
         private final long[] longs;
         private final Variable[] variables;
+        private volatile int remainingVisits;
+
+        private static final AtomicIntegerFieldUpdater<EventStamp> remainingVisitsUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(EventStamp.class, "remainingVisits");
 
         public EventStamp(byte[] events,
                 InstructionInstance[] instructionInstances,
-                ReadMethod[] methods, long[] longs, Variable[] variables) {
+                ReadMethod[] methods, long[] longs, Variable[] variables, int numVisitors) {
             this.events = events;
             this.instructionInstances = instructionInstances;
             this.methods = methods;
             this.longs = longs;
             this.variables = variables;
+            this.remainingVisits = numVisitors;
         }
 
         public int getLength() {
             return this.events.length;
         }
 
-        public void replay(DependencesVisitor visitor) {
+        /**
+         * Replay this stamp on a visitor.
+         *
+         * @param visitor
+         * @return <code>true</code> if this was the last visitor on which the stamp had to be executed
+         */
+        public boolean replay(DependencesVisitor visitor) {
             // TODO check if this is necessary
             synchronized (visitor) {
                 int instructionPos = 0;
@@ -154,88 +170,109 @@ public class AccumulatingParallelDependencesVisitor implements
                 assert methodPos == (this.methods == null ? 0 : this.methods.length);
                 assert longPos == (this.longs == null ? 0 : this.longs.length);
                 assert variablePos == (this.variables == null ? 0 : this.variables.length);
+                assert this.remainingVisits > 0;
+                return remainingVisitsUpdater.decrementAndGet(this) == 0;
             }
         }
     }
 
-    private static class OutstandingWork implements Runnable {
+    private class OutstandingWork {
 
-        private final Semaphore freeBuffer;
-        private final AtomicReference<Thread> executingThread = new AtomicReference<Thread>(null);
-        private final ConcurrentLinkedQueue<EventStamp> workQueue = new ConcurrentLinkedQueue<EventStamp>();
-        private final AtomicInteger workQueueLength = new AtomicInteger(0);
+        private final AtomicReference<Thread> currentExecutingThread = new AtomicReference<Thread>(null);
+        private final ConcurrentLinkedQueue<EventStamp> stamps = new ConcurrentLinkedQueue<EventStamp>();
+        private final AtomicBoolean outstandingStamps = new AtomicBoolean(false);
         private final DependencesVisitor visitor;
+        private volatile CountDownLatch waitForFinishLatch = null;
 
-        public OutstandingWork(int maxBufferLength, DependencesVisitor visitor) {
-            this.freeBuffer = new Semaphore(maxBufferLength);
+        public OutstandingWork(DependencesVisitor visitor) {
             this.visitor = visitor;
         }
 
         // returns true if this is the first stamp on the queue and there is no executing thread
         public boolean addWork(EventStamp stamp) {
-            int newEvents = stamp.getLength();
-            acquireBufferSpace(newEvents);
-            this.workQueue.add(stamp);
-            int oldLength = this.workQueueLength.getAndIncrement();
-            return oldLength == 0 && this.executingThread.get() == null;
-        }
-
-        private void acquireBufferSpace(int space) {
-            if (!this.freeBuffer.tryAcquire(space)) {
-                Thread thisThread = Thread.currentThread();
-                if (this.executingThread.compareAndSet(null, thisThread)) {
-                    int released = 0;
-                    while (released < space && !this.freeBuffer.tryAcquire(space - released)) {
-                        EventStamp execStamp = this.workQueue.poll();
-                        assert execStamp != null;
-                        execStamp.replay(this.visitor);
-                        released += execStamp.getLength();
-                    }
-                    if (released > space)
-                        this.freeBuffer.release(released - space);
-                    assert this.executingThread.get() == thisThread;
-                    this.executingThread.set(null);
-                } else {
-                    this.freeBuffer.acquireUninterruptibly(space);
-                }
-            }
+            this.stamps.add(stamp);
+            return this.outstandingStamps.compareAndSet(false, true);
         }
 
         // executed by the worker threads:
-        public void run() {
-            Thread thisThread = Thread.currentThread();
-            if (this.executingThread.compareAndSet(null, thisThread)) {
+        public void execute(Thread executingThread) {
+            assert executingThread == Thread.currentThread();
+            if (this.currentExecutingThread.compareAndSet(null, executingThread)) {
                 while (true) {
                     EventStamp stamp;
-                    while ((stamp = this.workQueue.poll()) != null) {
-                        int newQueueLength = this.workQueueLength.decrementAndGet();
-                        assert newQueueLength >= 0;
-                        stamp.replay(this.visitor);
-                        this.freeBuffer.release(stamp.getLength());
+                    while ((stamp = this.stamps.poll()) != null) {
+                        if (stamp.replay(this.visitor))
+                            AccumulatingParallelDependencesVisitor.this.freeOutstanding.release(stamp.getLength());
                     }
-                    assert this.executingThread.get() == thisThread;
-                    this.executingThread.set(null);
-                    // now check again whether there really is no more work (otherwise this OutstandingWork
-                    // could not be appended to the outstandingWork queue)
-                    if (this.workQueue.isEmpty() || !this.executingThread.compareAndSet(null, thisThread))
+                    assert this.currentExecutingThread.get() == executingThread;
+                    this.currentExecutingThread.set(null);
+                    this.outstandingStamps.set(false);
+                    CountDownLatch latch = this.waitForFinishLatch;
+                    if (latch != null && this.stamps.isEmpty())
+                        latch.countDown();
+                    // now check again whether there really is no more work (otherwise it could happen that
+                    // this OutstandingWork is not appended to the outstandingWork queue even if there is
+                    // more work to do and nobody executes it)
+                    if (this.stamps.isEmpty() || !this.currentExecutingThread.compareAndSet(null, executingThread))
                         break;
                 }
             }
         }
 
-        public void finish(int maxBufferLength) {
-            acquireBufferSpace(maxBufferLength);
+        public void finish() {
+            CountDownLatch latch = new CountDownLatch(1);
+            this.waitForFinishLatch = latch;
+            if (!this.stamps.isEmpty() || this.currentExecutingThread != null) {
+                boolean interrupted = false;
+                while (true) {
+                    try {
+                        latch.await();
+                        break;
+                    } catch (InterruptedException e) {
+                        interrupted = true;
+                    }
+                }
+                if (interrupted)
+                    Thread.currentThread().interrupt();
+            }
         }
 
     }
 
+    private class Worker implements Runnable {
+
+        public Worker() {
+            // nop
+        }
+
+        public void run() {
+            Thread currentThread = Thread.currentThread();
+            try {
+                while (true) {
+                    AccumulatingParallelDependencesVisitor.this.outstandingWork.acquire();
+                    OutstandingWork work = AccumulatingParallelDependencesVisitor.this.outstandingWorkQueue.poll();
+                    if (work == null)
+                        break; // this is the signal for the worker thread to terminate
+                    work.execute(currentThread);
+                }
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+    }
 
     private final Map<DependencesVisitor, OutstandingWork> visitors
         = new HashMap<DependencesVisitor, OutstandingWork>();
 
-    private final ExecutorService executor;
+    private final ThreadFactory threadFactory;
+    private final List<Thread> workerThreads = new ArrayList<Thread>(4);
+    private final int maxNumWorkerThreads;
 
-    private final int maxBufferLength;
+    // package-visible
+    final Semaphore freeOutstanding;
+    final Queue<OutstandingWork> outstandingWorkQueue = new ConcurrentLinkedQueue<OutstandingWork>();
+    final Semaphore outstandingWork = new Semaphore(0);
 
     private final byte[] events;
     private int eventCount = 0;
@@ -249,23 +286,24 @@ public class AccumulatingParallelDependencesVisitor implements
     private Variable[] variables = new Variable[1];
     private int variableCount = 0;
 
-    public AccumulatingParallelDependencesVisitor(int cacheSize, int maxBufferLength) {
-        this(cacheSize, maxBufferLength, Math.max(Thread.MIN_PRIORITY, Thread.currentThread().getPriority()-1));
+    public AccumulatingParallelDependencesVisitor(int cacheSize, int maxOutstanding) {
+        this(cacheSize, maxOutstanding, Runtime.getRuntime().availableProcessors(),
+            Math.max(Thread.MIN_PRIORITY, Thread.currentThread().getPriority()-1));
     }
 
-    public AccumulatingParallelDependencesVisitor(int cacheSize, int maxBufferLength, int workerThreadPriority) {
-        this(cacheSize, maxBufferLength, new ThreadPoolExecutor(1, Runtime.getRuntime().availableProcessors(),
-          60L, TimeUnit.SECONDS,
-          new LinkedBlockingQueue<Runnable>(),
-          new DefaultThreadFactory(workerThreadPriority)));
+    public AccumulatingParallelDependencesVisitor(int cacheSize, int maxOutstanding,
+            int maxNumWorkerThreads, int workerThreadPriority) {
+        this(cacheSize, maxOutstanding, maxNumWorkerThreads, new DefaultThreadFactory(workerThreadPriority));
     }
 
-    public AccumulatingParallelDependencesVisitor(int cacheSize, int maxBufferLength, ExecutorService executor) {
-        if (maxBufferLength < cacheSize)
-            throw new IllegalArgumentException("maxBufferLength must be >= cacheSize");
+    public AccumulatingParallelDependencesVisitor(int cacheSize, int maxOutstanding,
+            int maxNumWorkerThreads, ThreadFactory threadFactory) {
+        if (maxOutstanding < cacheSize)
+            throw new IllegalArgumentException("maxOutstanding must be >= cacheSize");
         this.events = new byte[cacheSize];
-        this.maxBufferLength = maxBufferLength;
-        this.executor = executor;
+        this.freeOutstanding = new Semaphore(maxOutstanding);
+        this.threadFactory = threadFactory;
+        this.maxNumWorkerThreads = maxNumWorkerThreads;
     }
 
     public boolean addVisitor(DependencesVisitor visitor) {
@@ -274,7 +312,7 @@ public class AccumulatingParallelDependencesVisitor implements
 
         if (this.eventCount > 0)
             flush();
-        OutstandingWork newOW = new OutstandingWork(this.maxBufferLength, visitor);
+        OutstandingWork newOW = new OutstandingWork(visitor);
         OutstandingWork oldValue = this.visitors.put(visitor, newOW);
         assert oldValue == null;
         return true;
@@ -294,9 +332,8 @@ public class AccumulatingParallelDependencesVisitor implements
             return false;
         }
 
-        if (waitForFinish) {
-            ow.finish(this.maxBufferLength);
-        }
+        if (waitForFinish)
+            ow.finish();
 
         return true;
     }
@@ -335,24 +372,33 @@ public class AccumulatingParallelDependencesVisitor implements
         }
 
         return new EventStamp(stampEvents, stampInstructionInstances, stampMethods,
-            stampLongs, stampVariables);
+            stampLongs, stampVariables, this.visitors.size());
     }
 
     private void finish() {
-        this.executor.shutdown();
+        this.outstandingWork.release(this.workerThreads.size());
+
         boolean interrupted = false;
-        while (!this.executor.isTerminated()) {
-            try {
-                this.executor.awaitTermination(60, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                interrupted = true;
+        for (Thread t: this.workerThreads) {
+            while (true) {
+                try {
+                    t.join();
+                    break;
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
             }
         }
         if (interrupted)
             Thread.currentThread().interrupt();
+
+        assert this.outstandingWorkQueue.isEmpty();
+        this.outstandingWorkQueue.clear();
     }
 
     public void visitEnd(long numInstances) {
+        if (this.visitors.isEmpty())
+            return;
         this.events[this.eventCount++] = END;
         addLong(numInstances);
         flush();
@@ -360,18 +406,24 @@ public class AccumulatingParallelDependencesVisitor implements
     }
 
     public void visitInstructionExecution(InstructionInstance instance) {
+        if (this.visitors.isEmpty())
+            return;
         this.events[this.eventCount++] = INSTRUCTION_EXECUTION;
         addInstruction(instance);
         checkFull();
     }
 
     public void visitMethodEntry(ReadMethod method) {
+        if (this.visitors.isEmpty())
+            return;
         this.events[this.eventCount++] = METHOD_ENTRY;
         addMethod(method);
         checkFull();
     }
 
     public void visitMethodLeave(ReadMethod method) {
+        if (this.visitors.isEmpty())
+            return;
         this.events[this.eventCount++] = METHOD_LEAVE;
         addMethod(method);
         checkFull();
@@ -379,6 +431,8 @@ public class AccumulatingParallelDependencesVisitor implements
 
     public void visitObjectCreation(long objectId,
             InstructionInstance instrInstance) {
+        if (this.visitors.isEmpty())
+            return;
         this.events[this.eventCount++] = OBJECT_CREATION;
         addLong(objectId);
         addInstruction(instrInstance);
@@ -387,6 +441,8 @@ public class AccumulatingParallelDependencesVisitor implements
 
     public void visitDataDependence(InstructionInstance from,
             InstructionInstance to, Variable var, DataDependenceType type) {
+        if (this.visitors.isEmpty())
+            return;
         this.events[this.eventCount++] = type == DataDependenceType.READ_AFTER_WRITE
             ? DATA_DEPENDENCE_RAW : DATA_DEPENDENCE_WAR;
         addInstruction(from);
@@ -397,6 +453,8 @@ public class AccumulatingParallelDependencesVisitor implements
 
     public void visitPendingDataDependence(InstructionInstance from,
             Variable var, DataDependenceType type) {
+        if (this.visitors.isEmpty())
+            return;
         this.events[this.eventCount++] = type == DataDependenceType.READ_AFTER_WRITE
             ? PENDING_DATA_DEPENDENCE_RAW : PENDING_DATA_DEPENDENCE_WAR;
         addInstruction(from);
@@ -406,6 +464,8 @@ public class AccumulatingParallelDependencesVisitor implements
 
     public void discardPendingDataDependence(InstructionInstance from,
             Variable var, DataDependenceType type) {
+        if (this.visitors.isEmpty())
+            return;
         this.events[this.eventCount++] = type == DataDependenceType.READ_AFTER_WRITE
             ? DISCARD_PENDING_DATA_DEPENDENCE_RAW : DISCARD_PENDING_DATA_DEPENDENCE_WAR;
         addInstruction(from);
@@ -415,6 +475,8 @@ public class AccumulatingParallelDependencesVisitor implements
 
     public void visitControlDependence(InstructionInstance from,
             InstructionInstance to) {
+        if (this.visitors.isEmpty())
+            return;
         this.events[this.eventCount++] = CONTROL_DEPENDENCE;
         addInstruction(from);
         addInstruction(to);
@@ -422,6 +484,8 @@ public class AccumulatingParallelDependencesVisitor implements
     }
 
     public void visitPendingControlDependence(InstructionInstance from) {
+        if (this.visitors.isEmpty())
+            return;
         this.events[this.eventCount++] = PENDING_CONTROL_DEPENDENCE;
         addInstruction(from);
         checkFull();
@@ -470,11 +534,54 @@ public class AccumulatingParallelDependencesVisitor implements
     }
 
     private void flush() {
+        assert this.visitors.size() > 0;
         EventStamp stamp = toStamp(); // resets all counters
+
+        // the memory for the new stamp has already been allocated, so we can first
+        // add it to the work queue, and afterwards claim the freeOutstanding space
+        int added = 0;
         for (OutstandingWork ow: this.visitors.values()) {
-            if (ow.addWork(stamp))
-                this.executor.execute(ow);
+            if (ow.addWork(stamp)) {
+                this.outstandingWorkQueue.add(ow);
+                ++added;
+            }
         }
+
+        if (added != 0)
+            this.outstandingWork.release(added);
+
+        int permits = stamp.getLength();
+        int numWorkers = this.workerThreads.size();
+        if (numWorkers < this.maxNumWorkerThreads) {
+            if (numWorkers == 0) {
+                // create the first thread
+                Thread newThread = this.threadFactory.newThread(new Worker());
+                this.workerThreads.add(newThread);
+                newThread.start();
+                this.freeOutstanding.acquireUninterruptibly(permits);
+            } else if (!this.freeOutstanding.tryAcquire(permits)) {
+                // create a new thread
+                Thread newThread = this.threadFactory.newThread(new Worker());
+                this.workerThreads.add(newThread);
+                newThread.start();
+                // after the additional thread has started, we wait until the count
+                // of outstanding work drops to 50%, but at most 2 seconds
+                int limit = this.outstandingWork.availablePermits() / 2;
+                this.freeOutstanding.acquireUninterruptibly(permits);
+                long maxWait = System.currentTimeMillis() + 2000;
+                try {
+                    while (System.currentTimeMillis() < maxWait &&
+                            this.outstandingWork.availablePermits() > limit) {
+                        Thread.sleep(10);
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        } else {
+            this.freeOutstanding.acquireUninterruptibly(permits);
+        }
+
     }
 
 }

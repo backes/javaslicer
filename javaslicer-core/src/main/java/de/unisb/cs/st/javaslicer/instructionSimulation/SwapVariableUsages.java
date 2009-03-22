@@ -25,7 +25,7 @@ public class SwapVariableUsages extends AbstractList<StackEntry>
 
     public SwapVariableUsages(ExecutionFrame frame) {
         int stackOffset = frame.operandStack.get() - 2;
-        assert stackOffset >= 0 || frame.abnormalTermination;
+        assert stackOffset >= 0 || frame.interruptedControlFlow;
         this.lowerStackEntry = frame.getStackEntry(stackOffset);
         this.lowerStackEntry = frame.getStackEntry(stackOffset+1);
     }

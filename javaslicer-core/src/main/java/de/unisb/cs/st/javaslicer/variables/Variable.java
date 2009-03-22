@@ -9,5 +9,7 @@ package de.unisb.cs.st.javaslicer.variables;
  * @author Clemens Hammacher
  */
 public interface Variable {
-    // TODO
+
+    // no methods
+
 }

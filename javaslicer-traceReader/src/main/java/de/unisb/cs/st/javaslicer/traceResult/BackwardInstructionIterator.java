@@ -18,7 +18,6 @@ import de.hammacher.util.maps.IntegerMap;
 import de.hammacher.util.maps.IntegerToLongMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
@@ -103,17 +102,15 @@ public class BackwardInstructionIterator implements Iterator<InstructionInstance
             }
             assert backwardInstruction.getIndex() == index;
             int tmpStackDepth = this.stackDepth;
+            int opcode;
             if (backwardInstruction == backwardInstruction.getMethod().getMethodEntryLabel()) {
                 --this.stackDepth;
                 assert this.stackDepth >= 0 : "enter method occured more often than leave method";
-            } else if (backwardInstruction == backwardInstruction.getMethod().getMethodLeaveLabel()) {
+            } else if (backwardInstruction == backwardInstruction.getMethod().getAbnormalTerminationLabel()
+                    || ((opcode = backwardInstruction.getOpcode()) >= Opcodes.IRETURN
+                            && opcode <= Opcodes.RETURN)) {
+                // info: the return statements opcodes lie between 172 (IRETURN) and 177 (RETURN)
                 this.stackDepth = ++tmpStackDepth;
-            } else if (backwardInstruction.getType() == InstructionType.SIMPLE) {
-                switch (backwardInstruction.getOpcode()) {
-                case Opcodes.IRETURN: case Opcodes.LRETURN: case Opcodes.FRETURN:
-                case Opcodes.DRETURN: case Opcodes.ARETURN: case Opcodes.RETURN:
-                    this.stackDepth = ++tmpStackDepth;
-                }
             }
             final InstructionInstance instance = backwardInstruction.getNextInstance(this, tmpStackDepth, this.instancesCount);
             assert instance != null;

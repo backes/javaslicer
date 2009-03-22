@@ -51,7 +51,7 @@ public class ReadMethod implements Comparable<ReadMethod> {
     private final int instructionNumberStart;
     private int instructionNumberEnd;
     private LabelMarker methodEntryLabel;
-    private LabelMarker methodLeaveLabel;
+    private LabelMarker abnormalTerminationLabel;
     private final ArrayList<LocalVariable> localVariables;
 
     public ReadMethod(final ReadClass readClass, final int access, final String name, final String desc, final int instructionNumberStart) {
@@ -113,6 +113,13 @@ public class ReadMethod implements Comparable<ReadMethod> {
         this.instructionNumberEnd = instructionNumberEnd;
     }
 
+    /**
+     * Returns the {@link LabelMarker} which is passed whenever this method is
+     * entered.
+     *
+     * @return the {@link LabelMarker} which is passed whenever this method is
+     *         entered
+     */
     public LabelMarker getMethodEntryLabel() {
         return this.methodEntryLabel;
     }
@@ -121,12 +128,20 @@ public class ReadMethod implements Comparable<ReadMethod> {
         this.methodEntryLabel = methodEntryLabel;
     }
 
-    public LabelMarker getMethodLeaveLabel() {
-        return this.methodLeaveLabel;
+    /**
+     * Returns the {@link LabelMarker} which is passed if this method is left
+     * by a thrown exception (either is this method or a method called from this
+     * one).
+     *
+     * @return the {@link LabelMarker} which is passed if this method is left
+     *         by a thrown exception
+     */
+    public LabelMarker getAbnormalTerminationLabel() {
+        return this.abnormalTerminationLabel;
     }
 
-    public void setMethodLeaveLabel(final LabelMarker methodLeaveLabel) {
-        this.methodLeaveLabel = methodLeaveLabel;
+    public void setAbnormalTerminationLabel(final LabelMarker abnormalTerminationLabel) {
+        this.abnormalTerminationLabel = abnormalTerminationLabel;
     }
 
     public List<LocalVariable> getLocalVariables() {
@@ -147,9 +162,9 @@ public class ReadMethod implements Comparable<ReadMethod> {
         OptimizedDataOutputStream.writeInt0(this.tryCatchBlocks.size(), out);
         for (TryCatchBlock tcb: this.tryCatchBlocks)
             tcb.writeOut(out, stringCache);
-        if (this.methodEntryLabel != null && this.methodLeaveLabel != null) {
+        if (this.methodEntryLabel != null && this.abnormalTerminationLabel != null) {
             assert this.methodEntryLabel == this.instructions.get(0);
-            assert this.methodLeaveLabel == this.instructions.get(this.instructions.size()-1);
+            assert this.abnormalTerminationLabel == this.instructions.get(this.instructions.size()-1);
             out.writeBoolean(true);
         } else {
             out.writeBoolean(false);
@@ -204,9 +219,9 @@ public class ReadMethod implements Comparable<ReadMethod> {
             else
                 throw new IOException("corrupted data");
 
-            final AbstractInstruction methodLeaveLabel = rm.instructions.get(rm.instructions.size()-1);
-            if (methodLeaveLabel instanceof LabelMarker)
-                rm.setMethodLeaveLabel((LabelMarker) methodLeaveLabel);
+            final AbstractInstruction abnormalTerminationLabel = rm.instructions.get(rm.instructions.size()-1);
+            if (abnormalTerminationLabel instanceof LabelMarker)
+                rm.setAbnormalTerminationLabel((LabelMarker) abnormalTerminationLabel);
             else
                 throw new IOException("corrupted data");
         }

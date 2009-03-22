@@ -19,7 +19,7 @@ public class TryCatchBlock {
 
     public TryCatchBlock(LabelMarker start, LabelMarker end,
             LabelMarker handler, String type) {
-        super();
+        assert start != null && end != null && handler != null;
         this.start = start;
         this.end = end;
         this.handler = handler;
@@ -58,5 +58,49 @@ public class TryCatchBlock {
         return new TryCatchBlock(start, end, handler, type);
     }
 
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + this.start.hashCode();
+        result = prime * result + this.end.hashCode();
+        result = prime * result + this.handler.hashCode();
+        result = prime * result + (this.type == null ? 0 : this.type.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        TryCatchBlock other = (TryCatchBlock) obj;
+        if (!this.start.equals(other.start))
+            return false;
+        if (!this.end.equals(other.end))
+            return false;
+        if (!this.handler.equals(other.handler))
+            return false;
+        if (this.type == null) {
+            if (other.type != null)
+                return false;
+        } else if (!this.type.equals(other.type))
+            return false;
+        return true;
+    }
+
+    @Override
+    public String toString() {
+        String sStart = this.start.toString();
+        String sEnd = this.end.toString();
+        String sHandler = this.handler.toString();
+        String sType = this.type == null ? "*" : this.type.toString();
+        StringBuilder sb = new StringBuilder(sStart.length() + sEnd.length() + sHandler.length() + sType.length() + 8);
+        return sb.append(sStart).append(" - ").append(sEnd).append(": ").append(sHandler).
+            append(" (").append(sType).append(')').toString();
+    }
 
 }

@@ -104,6 +104,7 @@ public class TableSwitchInstruction extends AbstractInstruction {
                 sb.append(", ");
             sb.append(this.min+i).append(" => ").append(this.handlers[i]);
         }
+        sb.append("* => ").append(this.defaultHandler);
         sb.append(')');
         return sb.toString();
     }

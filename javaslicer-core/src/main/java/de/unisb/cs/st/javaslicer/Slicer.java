@@ -3,6 +3,7 @@ package de.unisb.cs.st.javaslicer;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -171,35 +172,38 @@ public class Slicer implements Opcodes {
         ExecutionFrame currentFrame = new ExecutionFrame();
         frames.push(currentFrame);
 
-        int step = 0; // just for debug
         while (backwardInsnItr.hasNext()) {
-            ++step;
             final InstructionInstance instance = backwardInsnItr.next();
             final Instruction instruction = instance.getInstruction();
 
             ExecutionFrame removedFrame = null;
             boolean removedFrameIsInteresting = false;
             final int stackDepth = instance.getStackDepth();
-            assert stackDepth >= 0;
+            assert stackDepth > 0;
 
             if (frames.size() != stackDepth) {
                 if (frames.size() > stackDepth) {
                     assert frames.size() == stackDepth+1;
                     removedFrame = frames.pop();
-                    if (!removedFrame.interestingInstructions.isEmpty()) {
+                    if (removedFrame.interestingInstances != null && !removedFrame.interestingInstructions.isEmpty()) {
                         // ok, we have a control dependence since the method was called by (or for) this instruction
                         removedFrameIsInteresting = true;
                     }
+                    currentFrame = frames.peek();
                 } else {
                     assert frames.size() == stackDepth-1;
-                    final ExecutionFrame topFrame = frames.size() == 0 ? null : frames.peek();
                     final ExecutionFrame newFrame = new ExecutionFrame();
-                    if (topFrame != null && topFrame.atCacheBlockStart != null) {
-                        newFrame.throwsException = newFrame.abnormalTermination = true;
+                    // assertion: if the current frame catched an exception, then the new frame
+                    // must have thrown it
+                    assert currentFrame.atCatchBlockStart == null
+                        || instruction == instruction.getMethod().getAbnormalTerminationLabel();
+                    newFrame.method = instruction.getMethod();
+                    if (instruction == newFrame.method.getAbnormalTerminationLabel()) {
+                        newFrame.throwsException = newFrame.interruptedControlFlow = true;
                     }
                     frames.push(newFrame);
+                    currentFrame = newFrame;
                 }
-                currentFrame = frames.peek();
             }
 
             // it is possible that we see successive instructions of different methods,
@@ -208,8 +212,6 @@ public class Slicer implements Opcodes {
                 assert currentFrame.returnValue == null;
                 currentFrame.method = instruction.getMethod();
             } else if (currentFrame.finished || currentFrame.method != instruction.getMethod()) {
-                // TODO remove
-                assert currentFrame.finished;
                 currentFrame = new ExecutionFrame();
                 currentFrame.method = instruction.getMethod();
                 frames.set(stackDepth-1, currentFrame);
@@ -225,17 +227,25 @@ public class Slicer implements Opcodes {
             if (removedFrameIsInteresting) {
                 // checking if this is the instr. that called the method is impossible
                 dynamicSlice.add(instruction);
+                if (currentFrame.interestingInstructions == null)
+                    currentFrame.interestingInstructions = new HashSet<Instruction>();
                 currentFrame.interestingInstructions.add(instruction);
             }
 
             if (slicingCriterion.matches(instance)) {
                 interestingVariables.addAll(slicingCriterion.getInterestingVariables(currentFrame));
-                currentFrame.interestingInstructions.addAll(slicingCriterion.getInterestingInstructions(currentFrame));
+                Collection<Instruction> newInterestingInstructions = slicingCriterion.getInterestingInstructions(currentFrame);
+                if (!newInterestingInstructions.isEmpty()) {
+                    if (currentFrame.interestingInstructions == null)
+                        currentFrame.interestingInstructions = new HashSet<Instruction>();
+                    currentFrame.interestingInstructions.addAll(newInterestingInstructions);
+                }
             }
 
             final boolean isExceptionsThrowingInstance = currentFrame.throwsException &&
                 (instruction.getType() != InstructionType.LABEL || !((LabelMarker)instruction).isAdditionalLabel());
-            if (!currentFrame.interestingInstructions.isEmpty() || isExceptionsThrowingInstance) {
+            if ((currentFrame.interestingInstructions != null && !currentFrame.interestingInstructions.isEmpty())
+                    || isExceptionsThrowingInstance) {
                 Set<Instruction> instrControlDependences = controlDependences.get(instruction.getIndex());
                 if (instrControlDependences == null) {
                     computeControlDependences(instruction.getMethod(), controlDependences);
@@ -243,20 +253,22 @@ public class Slicer implements Opcodes {
                     assert instrControlDependences != null;
                 }
                 // get all interesting instructions, that are dependent on the current one
-                Set<Instruction> dependantInterestingInstructions = intersect(instrControlDependences,
-                        currentFrame.interestingInstructions);
+                Set<Instruction> dependantInterestingInstructions = currentFrame.interestingInstructions == null
+                    ? Collections.<Instruction>emptySet()
+                    : intersect(instrControlDependences, currentFrame.interestingInstructions);
                 if (isExceptionsThrowingInstance) {
                     currentFrame.throwsException = false;
                     // in this case, we have an additional control dependence from the catching to
                     // the throwing instruction
                     for (int i = stackDepth-2; i >= 0; --i) {
                         final ExecutionFrame f = frames.get(i);
-                        if (f.atCacheBlockStart != null) {
-                            if (f.interestingInstructions.contains(f.atCacheBlockStart.getInstruction())) {
+                        if (f.atCatchBlockStart != null) {
+                            if (f.interestingInstructions != null &&
+                                    f.interestingInstructions.contains(f.atCatchBlockStart.getInstruction())) {
                                 if (dependantInterestingInstructions.isEmpty())
-                                    dependantInterestingInstructions = Collections.singleton(f.atCacheBlockStart.getInstruction());
+                                    dependantInterestingInstructions = Collections.singleton(f.atCatchBlockStart.getInstruction());
                                 else
-                                    dependantInterestingInstructions.add(f.atCacheBlockStart.getInstruction());
+                                    dependantInterestingInstructions.add(f.atCatchBlockStart.getInstruction());
                             }
                             break;
                         }
@@ -265,7 +277,10 @@ public class Slicer implements Opcodes {
                 if (!dependantInterestingInstructions.isEmpty()) {
                     if (instruction.getType() != InstructionType.LABEL)
                         dynamicSlice.add(instruction);
-                    currentFrame.interestingInstructions.removeAll(dependantInterestingInstructions);
+                    if (currentFrame.interestingInstructions == null)
+                        currentFrame.interestingInstructions = new HashSet<Instruction>();
+                    else
+                        currentFrame.interestingInstructions.removeAll(dependantInterestingInstructions);
                     currentFrame.interestingInstructions.add(instruction);
                     interestingVariables.addAll(dynInfo.getUsedVariables());
                 }
@@ -274,6 +289,8 @@ public class Slicer implements Opcodes {
             if (!interestingVariables.isEmpty()) {
                 for (final Variable definedVariable: dynInfo.getDefinedVariables()) {
                     if (interestingVariables.contains(definedVariable)) {
+                        if (currentFrame.interestingInstructions == null)
+                            currentFrame.interestingInstructions = new HashSet<Instruction>();
                         currentFrame.interestingInstructions.add(instruction);
                         dynamicSlice.add(instruction);
                         interestingVariables.remove(definedVariable);
@@ -283,9 +300,9 @@ public class Slicer implements Opcodes {
             }
 
             if (dynInfo.isCatchBlock()) {
-                currentFrame.atCacheBlockStart = instance;
-            } else if (currentFrame.atCacheBlockStart != null) {
-                currentFrame.atCacheBlockStart = null;
+                currentFrame.atCatchBlockStart = instance;
+            } else if (currentFrame.atCatchBlockStart != null) {
+                currentFrame.atCatchBlockStart = null;
             }
 
         }

@@ -109,6 +109,7 @@ public class LookupSwitchInstruction extends AbstractInstruction {
                 sb.append(", ");
             sb.append(entry.getKey().intValue()).append(" => ").append(entry.getValue());
         }
+        sb.append("* => ").append(this.defaultHandler);
         sb.append(')');
         return sb.toString();
     }

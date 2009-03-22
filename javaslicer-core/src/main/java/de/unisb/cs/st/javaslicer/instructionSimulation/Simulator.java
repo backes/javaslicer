@@ -256,13 +256,15 @@ public class Simulator {
         int paramCount = inst.getOpcode() == INVOKESTATIC ? 0 : 1;
         for (int param = inst.getParameterCount()-1; param >= 0; --param)
             paramCount += inst.parameterIsLong(param) ? 2 : 1;
-        final byte returnedSize = executionFrame.atCacheBlockStart == null ? inst.getReturnedSize() : 0;
+        final byte returnedSize = executionFrame.atCatchBlockStart == null ? inst.getReturnedSize() : 0;
         boolean hasReturn = returnedSize != 0;
         final boolean hasRemovedFrame = removedFrame != null
             && inst.getMethodName().equals(removedFrame.method.getName())
             && inst.getMethodDesc().equals(removedFrame.method.getDesc())
             && (!hasReturn || removedFrame.returnValue != null);
-        final int parametersStackOffset = executionFrame.operandStack.getAndAdd(paramCount-returnedSize)-returnedSize;
+        final int parametersStackOffset = (paramCount == returnedSize
+            ? executionFrame.operandStack.get()
+            : executionFrame.operandStack.getAndAdd(paramCount-returnedSize)) - returnedSize;
 
         return new MethodInvokationVariableUsages(parametersStackOffset,
                 paramCount, hasReturn, executionFrame, hasRemovedFrame ? removedFrame : null);
@@ -444,7 +446,7 @@ public class Simulator {
             ExecutionFrame catchingFrame = null;
             for (int i = inst.getStackDepth()-2; i >= 0; --i) {
                 final ExecutionFrame f = allFrames.get(i);
-                if (f.atCacheBlockStart != null) {
+                if (f.atCatchBlockStart != null) {
                     catchingFrame = f;
                     break;
                 }

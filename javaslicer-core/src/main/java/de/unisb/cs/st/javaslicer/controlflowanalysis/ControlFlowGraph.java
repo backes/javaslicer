@@ -205,7 +205,9 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
             for (TryCatchBlock tcb: method.getTryCatchBlocks()) {
                 InstrNode tcbHandler = getInstrNode(tcb.getHandler(), nodeFactory);
                 for (Instruction inst = tcb.getStart(); inst != null && inst != tcb.getEnd(); inst = inst.getNext()) {
-                    getInstrNode(inst, nodeFactory).addSuccessor(tcbHandler);
+                    InstrNode instrNode = getInstrNode(inst, nodeFactory);
+                    instrNode.addSuccessor(tcbHandler);
+                    tcbHandler.addPredecessor(instrNode);
                 }
             }
         }
@@ -264,14 +266,16 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
 
     private static Collection<Instruction> getSuccessors(final Instruction instruction) {
         final int opcode = instruction.getOpcode();
+        Instruction nextInstruction = instruction.getNext();
         switch (instruction.getType()) {
         case JUMP:
             // GOTO and JSR are not conditional
             if (opcode == Opcodes.GOTO || opcode == Opcodes.JSR) {
                 return Collections.singleton((Instruction)((JumpInstruction)instruction).getLabel());
             }
+            assert nextInstruction != null;
             return Arrays.asList(((JumpInstruction)instruction).getLabel(),
-                    instruction.getNext());
+                    nextInstruction);
         case LOOKUPSWITCH:
         {
             final LookupSwitchInstruction lsi = (LookupSwitchInstruction) instruction;
@@ -311,13 +315,14 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
             }
             break;
         case LABEL:
-            if (instruction == instruction.getMethod().getMethodLeaveLabel())
+            if (instruction == instruction.getMethod().getAbnormalTerminationLabel())
                 return Collections.emptySet();
             break;
         default:
             break;
         }
-        return Collections.singleton(instruction.getNext());
+        assert nextInstruction != null;
+        return Collections.singleton(nextInstruction);
     }
 
     /**
