@@ -393,15 +393,14 @@ public class AccumulatingParallelDependencesVisitor implements
             Thread.currentThread().interrupt();
 
         assert this.outstandingWorkQueue.isEmpty();
-        this.outstandingWorkQueue.clear();
     }
 
     public void visitEnd(long numInstances) {
-        if (this.visitors.isEmpty())
-            return;
-        this.events[this.eventCount++] = END;
-        addLong(numInstances);
-        flush();
+        if (!this.visitors.isEmpty()) {
+            this.events[this.eventCount++] = END;
+            addLong(numInstances);
+            flush();
+        }
         finish();
     }
 
