@@ -185,6 +185,7 @@ public class AccumulatingParallelDependencesVisitor implements
         private volatile CountDownLatch waitForFinishLatch = null;
 
         public OutstandingWork(DependencesVisitor visitor) {
+            assert visitor != null;
             this.visitor = visitor;
         }
 
