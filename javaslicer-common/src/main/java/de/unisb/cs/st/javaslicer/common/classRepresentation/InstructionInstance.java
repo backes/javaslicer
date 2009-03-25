@@ -5,7 +5,7 @@ package de.unisb.cs.st.javaslicer.common.classRepresentation;
  *
  * @author Clemens Hammacher
  */
-public interface InstructionInstance {
+public interface InstructionInstance extends Comparable<InstructionInstance> {
 
     /**
      * Returns the Instruction that this InstructionInstance is an instance of.

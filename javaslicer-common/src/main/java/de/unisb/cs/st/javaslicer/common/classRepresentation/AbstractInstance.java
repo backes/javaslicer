@@ -82,4 +82,11 @@ public class AbstractInstance implements InstructionInstance {
         return this.instruction.toString();
     }
 
+    public int compareTo(InstructionInstance o) {
+        long thisInstanceNr = getInstanceNr();
+        long otherInstanceNr = o.getInstanceNr();
+        return thisInstanceNr < otherInstanceNr ? -1 :
+            (thisInstanceNr == otherInstanceNr ? 0 : 1);
+    }
+
 }
