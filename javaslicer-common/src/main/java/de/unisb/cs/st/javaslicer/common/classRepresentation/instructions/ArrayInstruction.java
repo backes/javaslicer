@@ -10,11 +10,13 @@ import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
 import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.hammacher.util.streams.OptimizedDataOutputStream;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceFactory;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceInfo;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance.InstructionInstanceType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 
@@ -25,14 +27,14 @@ import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
  */
 public class ArrayInstruction extends AbstractInstruction {
 
-    public static class ArrayInstrInstance extends AbstractInstance {
+    public static class ArrayInstrInstanceInfo implements InstructionInstanceInfo {
 
         private final long arrayId;
         private final int arrayIndex;
 
-        public ArrayInstrInstance(ArrayInstruction arrayInstr, long occurenceNumber, int stackDepth,
-                long instanceNr, long arrayId, int arrayIndex) {
-            super(arrayInstr, occurenceNumber, stackDepth, instanceNr);
+
+        public ArrayInstrInstanceInfo(long arrayId, int arrayIndex) {
+            super();
             this.arrayId = arrayId;
             this.arrayIndex = arrayIndex;
         }
@@ -46,18 +48,10 @@ public class ArrayInstruction extends AbstractInstruction {
         }
 
         @Override
-        public String toString() {
-            String type = super.toString();
-            StringBuilder sb = new StringBuilder(type.length() + 20);
-            sb.append(type).append(" [").append(this.arrayId).append(", ").append(this.arrayIndex).append(']');
-            return sb.toString();
-        }
-
-        @Override
         public int hashCode() {
-            int prime = 31;
-            int result = super.hashCode();
-            result = prime * result + (int) this.arrayId;
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + (int) (this.arrayId ^ (this.arrayId >>> 32));
             result = prime * result + this.arrayIndex;
             return result;
         }
@@ -66,16 +60,23 @@ public class ArrayInstruction extends AbstractInstruction {
         public boolean equals(Object obj) {
             if (this == obj)
                 return true;
-            if (!super.equals(obj))
+            if (obj == null)
                 return false;
             if (getClass() != obj.getClass())
                 return false;
-            ArrayInstrInstance other = (ArrayInstrInstance) obj;
+            ArrayInstrInstanceInfo other = (ArrayInstrInstanceInfo) obj;
             if (this.arrayId != other.arrayId)
                 return false;
             if (this.arrayIndex != other.arrayIndex)
                 return false;
             return true;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder(20);
+            sb.append(" [").append(this.arrayId).append(", ").append(this.arrayIndex).append(']');
+            return sb.toString();
         }
 
     }
@@ -100,11 +101,14 @@ public class ArrayInstruction extends AbstractInstruction {
 
     @Override
     public InstructionInstance getNextInstance(TraceIterationInformationProvider infoProv,
-            int stackDepth, long instanceNr) throws TracerException {
+            int stackDepth, long instanceNr, InstructionInstanceFactory instanceFactory)
+            throws TracerException {
+
         long arrayId = infoProv.getNextLong(this.arrayTraceSeqIndex);
         int arrayIndex = infoProv.getNextInteger(this.indexTraceSeqIndex);
-        return new ArrayInstrInstance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()),
-                stackDepth, instanceNr, arrayId, arrayIndex);
+        return instanceFactory.createInstructionInstance(this,
+            infoProv.getNextInstructionOccurenceNumber(getIndex()), stackDepth, instanceNr,
+            InstructionInstanceType.ARRAY, new ArrayInstrInstanceInfo(arrayId, arrayIndex));
     }
 
     public InstructionType getType() {

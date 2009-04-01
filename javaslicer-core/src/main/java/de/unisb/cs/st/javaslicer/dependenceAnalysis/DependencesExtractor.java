@@ -12,21 +12,25 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicReference;
 
 import de.hammacher.util.ArrayStack;
 import de.hammacher.util.collections.BlockwiseSynchronizedBuffer;
 import de.hammacher.util.maps.IntegerMap;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstructionInstanceFactory;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceFactory;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
+import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesVisitor.DataDependenceType;
 import de.unisb.cs.st.javaslicer.instructionSimulation.DynamicInformation;
 import de.unisb.cs.st.javaslicer.instructionSimulation.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.instructionSimulation.Simulator;
-import de.unisb.cs.st.javaslicer.traceResult.BackwardInstructionIterator;
+import de.unisb.cs.st.javaslicer.traceResult.BackwardTraceIterator;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.variables.ArrayElement;
@@ -159,21 +163,32 @@ public class DependencesExtractor {
     }
 
     /**
+     * @see #processBackwardTrace(ThreadId, boolean, InstructionInstanceFactory)
+     */
+    public void processBackwardTrace(ThreadId threadId) {
+        processBackwardTrace(threadId, false);
+    }
+
+    /**
+     * @see #processBackwardTrace(ThreadId, boolean, InstructionInstanceFactory)
+     */
+    public void processBackwardTrace(ThreadId threadId, boolean multithreaded) {
+        processBackwardTrace(threadId, multithreaded, new AbstractInstructionInstanceFactory());
+    }
+    /**
      * Go backwards through the execution trace of the given threadId and extract
      * all dependences. {@link DependencesVisitor}s should have been added before
      * by calling {@link #registerVisitor(DependencesVisitor, VisitorCapability...)}.
      *
      * @param threadId identifies the thread whose trace should be analyzed
+     * @param multithreaded use an extra thread to traverse the trace
+     * @param instanceFactory a factory that creates the instruction instance objects
      */
-    public void processBackwardTrace(final ThreadId threadId) {
-        processBackwardTrace(threadId, false);
-    }
+    public void processBackwardTrace(ThreadId threadId, boolean multithreaded,
+            InstructionInstanceFactory instanceFactory) {
 
-    // TODO document
-    public void processBackwardTrace(final ThreadId threadId, boolean multithreaded) {
-
-        final BackwardInstructionIterator backwardInsnItr =
-            this.trace.getBackwardIterator(threadId, null);
+        final BackwardTraceIterator backwardInsnItr =
+            this.trace.getBackwardIterator(threadId, null, instanceFactory);
 
         // store the current set of visitors of each capability in an array for better
         // performance and faster empty-check (null reference if empty)
@@ -224,16 +239,22 @@ public class DependencesExtractor {
         if (multithreaded) {
             final BlockwiseSynchronizedBuffer<InstructionInstance> buffer = new BlockwiseSynchronizedBuffer<InstructionInstance>(1<<16, 1<<20);
             final InstructionInstance firstInstance = backwardInsnItr.hasNext() ? backwardInsnItr.next() : null;
+            final AtomicReference<Throwable> iteratorException = new AtomicReference<Throwable>(null);
             new Thread("Trace iterator") {
                 @Override
                 public void run() {
                     try {
                         while (backwardInsnItr.hasNext())
                             buffer.put(backwardInsnItr.next());
-                        buffer.put(firstInstance); // to signal that this is the end of the trace
-                        buffer.flush();
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException("This private thread should never get interrupted", e);
+                    } catch (Throwable t) {
+                        iteratorException.set(t);
+                    } finally {
+                        try {
+                            buffer.put(firstInstance); // to signal that this is the end of the trace
+                            buffer.flush();
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException("This private thread should never get interrupted", e);
+                        }
                     }
                 }
             }.start();
@@ -247,8 +268,17 @@ public class DependencesExtractor {
                         while (true) {
                             try {
                                 this.next = buffer.take();
-                                if (this.next == firstInstance)
+                                if (this.next == firstInstance) {
                                     this.next = null;
+                                    Throwable t = iteratorException.get();
+                                    if (t instanceof RuntimeException)
+                                        throw (RuntimeException)t;
+                                    else if (t != null) {
+                                        throw new TracerException(
+                                            "Iterator should not throw anything but RuntimeExceptions",
+                                            t);
+                                    }
+                                }
                                 break;
                             } catch (InterruptedException e) {
                                 interrupted = true;

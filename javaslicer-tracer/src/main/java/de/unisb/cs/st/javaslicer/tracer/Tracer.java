@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPOutputStream;
 
 import de.hammacher.util.MultiplexedFileWriter;
-import de.hammacher.util.SimpleArrayList;
 import de.hammacher.util.StringCacheOutput;
 import de.hammacher.util.MultiplexedFileWriter.MultiplexOutputStream;
 import de.hammacher.util.maps.ConcurrentReferenceHashMap;
@@ -52,10 +51,10 @@ public class Tracer {
     // an (untraced) list that holds ThreadTracers that can be finished. They are added to this
     // list first, because if they would be finished immediately, it would leed to an recursive
     // loop...
-    protected SimpleArrayList<TracingThreadTracer> readyThreadTracers = new SimpleArrayList<TracingThreadTracer>();
+    protected UntracedArrayList<TracingThreadTracer> readyThreadTracers = new UntracedArrayList<TracingThreadTracer>();
 
     protected final List<TraceSequenceTypes.Type> traceSequenceTypes
-        = Collections.synchronizedList(new SimpleArrayList<TraceSequenceTypes.Type>());
+        = Collections.synchronizedList(new UntracedArrayList<TraceSequenceTypes.Type>());
 
     public volatile boolean tracingStarted = false;
     public volatile boolean tracingReady = false;

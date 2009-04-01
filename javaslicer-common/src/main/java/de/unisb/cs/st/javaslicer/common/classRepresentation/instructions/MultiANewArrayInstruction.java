@@ -11,11 +11,13 @@ import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
 import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.hammacher.util.streams.OptimizedDataOutputStream;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceFactory;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceInfo;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance.InstructionInstanceType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 
@@ -26,29 +28,26 @@ import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
  */
 public class MultiANewArrayInstruction extends AbstractInstruction {
 
-    public static class MultiANewArrayInstrInstance extends AbstractInstance {
+    public static class MultiANewArrayInstrInstanceInfo implements InstructionInstanceInfo {
 
         private final long[] newObjectIdentifiers;
 
-        public MultiANewArrayInstrInstance(AbstractInstruction instr,
-                long occurenceNumber, int stackDepth, long instanceNr,
-                long[] newObjects) {
-            super(instr, occurenceNumber, stackDepth, instanceNr);
+        public MultiANewArrayInstrInstanceInfo(long[] newObjects) {
             this.newObjectIdentifiers = newObjects;
         }
 
+        // TODO this is unsafe
         public long[] getNewObjectIdentifiers() {
             return this.newObjectIdentifiers;
         }
 
         @Override
         public String toString() {
-            String s = super.toString();
             if (this.newObjectIdentifiers.length == 0)
-                return s + " [(0)]";
+                return "[(0)]";
 
-            StringBuilder sb = new StringBuilder(s.length() + 30).append(s);
-            sb.append(" [(").append(this.newObjectIdentifiers.length).append(") ");
+            StringBuilder sb = new StringBuilder(30);
+            sb.append("[(").append(this.newObjectIdentifiers.length).append(") ");
             for (int i = 0; i < this.newObjectIdentifiers.length; ++i) {
                 if (i != 0)
                     sb.append(", ");
@@ -61,24 +60,20 @@ public class MultiANewArrayInstruction extends AbstractInstruction {
 
         @Override
         public int hashCode() {
-            final int prime = 31;
-            int result = super.hashCode();
-            result = prime * result + Arrays.hashCode(this.newObjectIdentifiers);
-            return result;
+            return Arrays.hashCode(this.newObjectIdentifiers);
         }
 
         @Override
         public boolean equals(Object obj) {
             if (this == obj)
                 return true;
-            if (!super.equals(obj))
+            if (obj == null)
                 return false;
             if (getClass() != obj.getClass())
                 return false;
-            MultiANewArrayInstrInstance other =
-                    (MultiANewArrayInstrInstance) obj;
-            if (!Arrays
-                .equals(this.newObjectIdentifiers, other.newObjectIdentifiers))
+            MultiANewArrayInstrInstanceInfo other =
+                    (MultiANewArrayInstrInstanceInfo) obj;
+            if (!Arrays.equals(this.newObjectIdentifiers, other.newObjectIdentifiers))
                 return false;
             return true;
         }
@@ -123,13 +118,16 @@ public class MultiANewArrayInstruction extends AbstractInstruction {
 
     @Override
     public InstructionInstance getNextInstance(TraceIterationInformationProvider infoProv,
-            int stackDepth, long instanceNr) throws TracerException {
+            int stackDepth, long instanceNr, InstructionInstanceFactory instanceFactory)
+            throws TracerException {
+
         int numNewObjects = infoProv.getNextInteger(this.numNewObjectIdentifiersSeqIndex);
         long[] newObjects = new long[numNewObjects];
         for (int i = 0; i < numNewObjects; ++i)
             newObjects[i] = infoProv.getNextLong(this.newObjectIdentifierSeqIndex);
-        return new MultiANewArrayInstrInstance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()),
-            stackDepth, instanceNr, newObjects);
+        return instanceFactory.createInstructionInstance(this,
+            infoProv.getNextInstructionOccurenceNumber(getIndex()), stackDepth, instanceNr,
+            InstructionInstanceType.MULTIANEWARRAY, new MultiANewArrayInstrInstanceInfo(newObjects));
     }
 
     @Override

@@ -10,12 +10,15 @@ import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
 import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.hammacher.util.streams.OptimizedDataOutputStream;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceFactory;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceInfo;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance.InstructionInstanceType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
+import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 
 /**
  * Class representing a NEWARRAY instruction.
@@ -24,13 +27,11 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodRea
  */
 public class NewArrayInstruction extends AbstractInstruction {
 
-    public static class NewArrayInstrInstance extends AbstractInstance {
+    public static class NewArrayInstrInstanceInfo implements InstructionInstanceInfo {
 
         private final long newObjectIdentifier;
 
-        public NewArrayInstrInstance(AbstractInstruction instr,
-                long occurenceNumber, int stackDepth, long instanceNr, long newObjId) {
-            super(instr, occurenceNumber, stackDepth, instanceNr);
+        public NewArrayInstrInstanceInfo(long newObjId) {
             this.newObjectIdentifier = newObjId;
         }
 
@@ -40,28 +41,26 @@ public class NewArrayInstruction extends AbstractInstruction {
 
         @Override
         public String toString() {
-            String s = super.toString();
-            return new StringBuilder(s.length() + 10).append(s).append(" [").
+            if (this.newObjectIdentifier == -1)
+                return "";
+            return new StringBuilder(10).append('[').
                 append(this.newObjectIdentifier).append(']').toString();
         }
 
         @Override
         public int hashCode() {
-            final int prime = 31;
-            int result = super.hashCode();
-            result = prime * result + (int)this.newObjectIdentifier;
-            return result;
+            return (int)this.newObjectIdentifier;
         }
 
         @Override
         public boolean equals(Object obj) {
             if (this == obj)
                 return true;
-            if (!super.equals(obj))
+            if (obj == null)
                 return false;
             if (getClass() != obj.getClass())
                 return false;
-            NewArrayInstrInstance other = (NewArrayInstrInstance) obj;
+            NewArrayInstrInstanceInfo other = (NewArrayInstrInstanceInfo) obj;
             if (this.newObjectIdentifier != other.newObjectIdentifier)
                 return false;
             return true;
@@ -129,12 +128,14 @@ public class NewArrayInstruction extends AbstractInstruction {
 
     @Override
     public InstructionInstance getNextInstance(TraceIterationInformationProvider infoProv,
-            int stackDepth, long instanceNr) {
+            int stackDepth, long instanceNr, InstructionInstanceFactory instanceFactory)
+            throws TracerException {
+
         final long objectId = this.newObjectIdentifierSequenceIndex == -1 ? -1 :
             infoProv.getNextLong(this.newObjectIdentifierSequenceIndex);
-        return new NewArrayInstrInstance(this,
+        return instanceFactory.createInstructionInstance(this,
             infoProv.getNextInstructionOccurenceNumber(getIndex()),
-                stackDepth, instanceNr, objectId);
+            stackDepth, instanceNr, InstructionInstanceType.NEWARRAY, new NewArrayInstrInstanceInfo(objectId));
     }
 
     @Override

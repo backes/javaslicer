@@ -8,8 +8,10 @@ import java.util.ListIterator;
 
 import de.hammacher.util.MultiplexedFileReader;
 import de.hammacher.util.maps.IntegerMap;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstructionInstanceFactory;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceFactory;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantThreadTraces;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence;
@@ -79,29 +81,31 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
      * Returns an iterator that iterates backwards through the execution trace.
      *
      * This iteration is very cheap since no information has to be cached (in
-     * contrast to the Iterator returned by {@link #getIterator()}.
+     * contrast to the Iterator returned by {@link #getForwardIterator(InstructionInstanceFactory)}.
      * The trace is generated while reading in the trace file.
      *
      * @param filter   a filter to ignore certain instruction instances.
      *                 may be <code>null</code>.
+     * @param instanceFactory
      * @return an iterator that iterates backwards through the execution trace.
      *         the iterator extends {@link Iterator} over {@link InstructionInstance}.
      */
-    public BackwardInstructionIterator getBackwardIterator(InstanceFilter filter) {
-        return new BackwardInstructionIterator(this, filter);
+    public BackwardTraceIterator getBackwardIterator(InstanceFilter filter, InstructionInstanceFactory instanceFactory) {
+        return new BackwardTraceIterator(this, filter, instanceFactory);
     }
 
     /**
      * Returns an iterator that is able to iterate in any direction through the execution trace.
      *
      * This iteration is usually much more expensive (especially with respect to memory
-     * consumption) than the Iterator returned by {@link #getBackwardIterator(InstanceFilter)}.
+     * consumption) than the Iterator returned by {@link #getBackwardIterator(InstanceFilter, InstructionInstanceFactory)}.
      * So whenever you just need to iterate backwards, you should use that backward iterator.
+     * @param instanceFactory
      *
      * @return an iterator that is able to iterate in any direction through the execution trace.
      *         the iterator extends {@link ListIterator} over {@link InstructionInstance}.
      */
-    public ForwardInstructionIterator getIterator() {
+    public ForwardTraceIterator getForwardIterator(InstructionInstanceFactory instanceFactory) {
         ForwardIterationInformation forwInfo;
         synchronized (this.forwardIterationInfoLock) {
             forwInfo = this.forwardIterationInformation.get();
@@ -110,7 +114,7 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
                 this.forwardIterationInformation = new SoftReference<ForwardIterationInformation>(forwInfo);
             }
         }
-        return new ForwardInstructionIterator(this, forwInfo);
+        return new ForwardTraceIterator(this, forwInfo, instanceFactory);
     }
 
     private ForwardIterationInformation getForwardInformation() {
@@ -120,7 +124,7 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
         int[] jumps = new int[16];
         byte[] stackDepthChange = new byte[16];
 
-        final Iterator<InstructionInstance> backwardIt = getBackwardIterator(null);
+        final Iterator<InstructionInstance> backwardIt = getBackwardIterator(null, new AbstractInstructionInstanceFactory());
         int lastIndex = 0;
         int curStackDepth = 1;
         while (backwardIt.hasNext()) {

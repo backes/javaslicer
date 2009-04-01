@@ -10,12 +10,15 @@ import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
 import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.hammacher.util.streams.OptimizedDataOutputStream;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceFactory;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceInfo;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance.InstructionInstanceType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
+import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 
 /**
  * Class representing an instruction that takes a type as argument (NEW, ANEWARRAY, CHECKCAST, INSTANCEOF).
@@ -24,19 +27,12 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodRea
  */
 public class TypeInstruction extends AbstractInstruction {
 
-    public static class TypeInstrInstance extends AbstractInstance {
+    public static class TypeInstrInstanceInfo implements InstructionInstanceInfo {
 
         private final long newObjectIdentifier;
 
-        public TypeInstrInstance(TypeInstruction instr,
-                long occurenceNumber, int stackDepth, long instanceNr, long newObjectIdentifier) {
-            super(instr, occurenceNumber, stackDepth, instanceNr);
+        public TypeInstrInstanceInfo(long newObjectIdentifier) {
             this.newObjectIdentifier = newObjectIdentifier;
-        }
-
-        @Override
-        public TypeInstruction getInstruction() {
-            return (TypeInstruction) super.getInstruction();
         }
 
         public long getNewObjectIdentifier() {
@@ -45,35 +41,31 @@ public class TypeInstruction extends AbstractInstruction {
 
         @Override
         public String toString() {
-            String s = super.toString();
             if (this.newObjectIdentifier == 0)
-                return s;
-            return new StringBuilder(s.length() + 10).append(s).append(" [").
+                return "";
+            return new StringBuilder(10).append('[').
                 append(this.newObjectIdentifier).append(']').toString();
         }
 
         @Override
         public int hashCode() {
-            final int prime = 31;
-            int result = super.hashCode();
-            result = prime * result
-                + (int)this.newObjectIdentifier;
-            return result;
+            return (int) this.newObjectIdentifier;
         }
 
         @Override
         public boolean equals(Object obj) {
             if (this == obj)
                 return true;
-            if (!super.equals(obj))
+            if (obj == null)
                 return false;
             if (getClass() != obj.getClass())
                 return false;
-            TypeInstrInstance other = (TypeInstrInstance) obj;
+            TypeInstrInstanceInfo other = (TypeInstrInstanceInfo) obj;
             if (this.newObjectIdentifier != other.newObjectIdentifier)
                 return false;
             return true;
         }
+
 
     }
 
@@ -134,11 +126,14 @@ public class TypeInstruction extends AbstractInstruction {
 
     @Override
     public InstructionInstance getNextInstance(TraceIterationInformationProvider infoProv,
-            int stackDepth, long instanceNr) {
+            int stackDepth, long instanceNr, InstructionInstanceFactory instanceFactory)
+            throws TracerException {
+
         long newObjectIdentifier = this.newObjectIdentifierSeqIndex == 0 ? 0
             : infoProv.getNextLong(this.newObjectIdentifierSeqIndex);
-        return new TypeInstrInstance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()), stackDepth,
-            instanceNr, newObjectIdentifier);
+        return instanceFactory.createInstructionInstance(this,
+            infoProv.getNextInstructionOccurenceNumber(getIndex()), stackDepth,
+            instanceNr, InstructionInstanceType.TYPE, new TypeInstrInstanceInfo(newObjectIdentifier));
     }
 
     @Override

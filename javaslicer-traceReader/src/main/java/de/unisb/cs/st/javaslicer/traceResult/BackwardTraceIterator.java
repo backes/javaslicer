@@ -18,18 +18,20 @@ import de.hammacher.util.maps.IntegerMap;
 import de.hammacher.util.maps.IntegerToLongMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceFactory;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantIntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantLongTraceSequence;
 
-public class BackwardInstructionIterator implements Iterator<InstructionInstance>, TraceIterationInformationProvider {
+public class BackwardTraceIterator implements Iterator<InstructionInstance>, TraceIterationInformationProvider {
 
     public static final boolean WRITE_ITERATION_DEBUG_FILE = false;
 
     private final ThreadTraceResult threadTraceResult;
     private final InstanceFilter filter;
+    private final InstructionInstanceFactory instanceFactory;
 
     private InstructionInstance nextInstruction;
     private final IntegerMap<Iterator<Integer>> integerSequenceBackwardIterators;
@@ -42,10 +44,11 @@ public class BackwardInstructionIterator implements Iterator<InstructionInstance
     private long filteredInstancesCount = 0;
     private final PrintWriter debugFileWriter;
 
-    public BackwardInstructionIterator(final ThreadTraceResult threadTraceResult, final InstanceFilter filter)
+    public BackwardTraceIterator(final ThreadTraceResult threadTraceResult, final InstanceFilter filter, InstructionInstanceFactory instanceFactory)
             throws TracerException {
         this.filter = filter;
         this.threadTraceResult = threadTraceResult;
+        this.instanceFactory = instanceFactory;
         this.integerSequenceBackwardIterators = new IntegerMap<Iterator<Integer>>();
         this.longSequenceBackwardIterators = new IntegerMap<Iterator<Long>>();
         this.instructionNextOccurenceNumber = new IntegerToLongMap();
@@ -56,7 +59,7 @@ public class BackwardInstructionIterator implements Iterator<InstructionInstance
                 Runtime.getRuntime().addShutdownHook(new Thread() {
                     @Override
                     public void run() {
-                        BackwardInstructionIterator.this.debugFileWriter.close();
+                        BackwardTraceIterator.this.debugFileWriter.close();
                     }
                 });
             } catch (final FileNotFoundException e) {
@@ -112,7 +115,8 @@ public class BackwardInstructionIterator implements Iterator<InstructionInstance
                 // info: the return statements opcodes lie between 172 (IRETURN) and 177 (RETURN)
                 this.stackDepth = ++tmpStackDepth;
             }
-            final InstructionInstance instance = backwardInstruction.getNextInstance(this, tmpStackDepth, this.instancesCount);
+            final InstructionInstance instance = backwardInstruction.getNextInstance(this, tmpStackDepth,
+                this.instancesCount, this.instanceFactory);
             assert instance != null;
 
             if (this.filter != null && this.filter.filterInstance(instance)) {

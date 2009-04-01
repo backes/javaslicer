@@ -10,11 +10,13 @@ import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
 import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.hammacher.util.streams.OptimizedDataOutputStream;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceFactory;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceInfo;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance.InstructionInstanceType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 
@@ -26,13 +28,11 @@ import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
  */
 public class FieldInstruction extends AbstractInstruction {
 
-    public static class FieldInstrInstance extends AbstractInstance {
+    public static class FieldInstrInstanceInfo implements InstructionInstanceInfo {
 
         private final long objectId;
 
-        public FieldInstrInstance(FieldInstruction fieldInstr, long occurenceNumber, int stackDepth,
-                long instanceNr, long objectId) {
-            super(fieldInstr, occurenceNumber, stackDepth, instanceNr);
+        public FieldInstrInstanceInfo(long objectId) {
             this.objectId = objectId;
         }
 
@@ -42,28 +42,26 @@ public class FieldInstruction extends AbstractInstruction {
 
         @Override
         public String toString() {
-            String s = super.toString();
-            return new StringBuilder(s.length() + 10).append(s).append(" [").
+            if (this.objectId == -1)
+                return "";
+            return new StringBuilder(10).append('[').
                 append(this.objectId).append(']').toString();
         }
 
         @Override
         public int hashCode() {
-            int prime = 31;
-            int result = super.hashCode();
-            result = prime * result + (int)this.objectId;
-            return result;
+            return (int) this.objectId;
         }
 
         @Override
         public boolean equals(Object obj) {
             if (this == obj)
                 return true;
-            if (!super.equals(obj))
+            if (obj == null)
                 return false;
             if (getClass() != obj.getClass())
                 return false;
-            FieldInstrInstance other = (FieldInstrInstance) obj;
+            FieldInstrInstanceInfo other = (FieldInstrInstanceInfo) obj;
             if (this.objectId != other.objectId)
                 return false;
             return true;
@@ -122,11 +120,14 @@ public class FieldInstruction extends AbstractInstruction {
 
     @Override
     public InstructionInstance getNextInstance(TraceIterationInformationProvider infoProv,
-            int stackDepth, long instanceNr) throws TracerException {
+            int stackDepth, long instanceNr, InstructionInstanceFactory instanceFactory)
+            throws TracerException {
+
         long objectId = this.objectTraceSeqIndex == -1 ? -1 :
             infoProv.getNextLong(this.objectTraceSeqIndex);
-        return new FieldInstrInstance(this, infoProv.getNextInstructionOccurenceNumber(getIndex()),
-                stackDepth, instanceNr, objectId);
+        return instanceFactory.createInstructionInstance(this,
+            infoProv.getNextInstructionOccurenceNumber(getIndex()), stackDepth, instanceNr,
+            InstructionInstanceType.FIELD, new FieldInstrInstanceInfo(objectId));
     }
 
     @Override
