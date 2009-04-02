@@ -1,10 +1,5 @@
 package de.unisb.cs.st.javaslicer.common.classRepresentation;
 
-import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.ArrayInstruction;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.FieldInstruction;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.MultiANewArrayInstruction;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.NewArrayInstruction;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.TypeInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.ArrayInstruction.ArrayInstrInstanceInfo;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.FieldInstruction.FieldInstrInstanceInfo;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.MultiANewArrayInstruction.MultiANewArrayInstrInstanceInfo;
@@ -18,46 +13,6 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.TypeIns
  * @author Clemens Hammacher
  */
 public interface InstructionInstance extends Comparable<InstructionInstance> {
-
-    public enum InstructionInstanceType {
-
-        /**
-         * The type for most instructions.
-         * {@link InstructionInstance#getAdditionalInfo()} returns <code>null</code>.
-         */
-        DEFAULT,
-
-        /**
-         * The type for {@link ArrayInstruction}s.
-         * {@link InstructionInstance#getAdditionalInfo()} returns an {@link ArrayInstrInstanceInfo}.
-         */
-        ARRAY,
-
-        /**
-         * The type for {@link FieldInstruction}s.
-         * {@link InstructionInstance#getAdditionalInfo()} returns an {@link FieldInstrInstanceInfo}.
-         */
-        FIELD,
-
-        /**
-         * The type for {@link NewArrayInstruction}s.
-         * {@link InstructionInstance#getAdditionalInfo()} returns an {@link NewArrayInstrInstanceInfo}.
-         */
-        NEWARRAY,
-
-        /**
-         * The type for {@link MultiANewArrayInstruction}s.
-         * {@link InstructionInstance#getAdditionalInfo()} returns an {@link MultiANewArrayInstrInstanceInfo}.
-         */
-        MULTIANEWARRAY,
-
-        /**
-         * The type for {@link TypeInstruction}s.
-         * {@link InstructionInstance#getAdditionalInfo()} returns an {@link TypeInstrInstanceInfo}.
-         */
-        TYPE;
-
-    }
 
     /**
      * Returns the Instruction that this InstructionInstance is an instance of.
@@ -91,16 +46,18 @@ public interface InstructionInstance extends Comparable<InstructionInstance> {
     int getStackDepth();
 
     /**
-     * Returns the type of this instruction instance.
-     * The type also determines the kind of information which is returned
-     * by {@link #getAdditionalInfo()}.
-     *
-     * @return the type of this instruction instance
-     */
-    InstructionInstanceType getType();
-
-    /**
      * Returns additonal information which corresponds to this {@link InstructionInstance}.
+     *
+     * The kind of information depends of the type of the corresponding instruction
+     * (<code>getInstruction().getType()</code>):
+     * <ul>
+     * <li>for {@link InstructionType#ARRAY}, it's an {@link ArrayInstrInstanceInfo}</li>
+     * <li>for {@link InstructionType#FIELD}, it's an {@link FieldInstrInstanceInfo}</li>
+     * <li>for {@link InstructionType#NEWARRAY}, it's an {@link NewArrayInstrInstanceInfo}</li>
+     * <li>for {@link InstructionType#MULTIANEWARRAY}, it's an {@link MultiANewArrayInstrInstanceInfo}</li>
+     * <li>for {@link InstructionType#TYPE}, it's an {@link TypeInstrInstanceInfo}</li>
+     * <li>for the rest, this method returns <code>null</code></li>
+     * </ul>
      *
      * @return additional information for this InstructionInstance
      */

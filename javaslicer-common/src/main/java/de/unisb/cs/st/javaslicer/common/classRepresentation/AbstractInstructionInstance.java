@@ -16,24 +16,20 @@ public class AbstractInstructionInstance implements InstructionInstance {
     private final long occurenceNumber;
     private final int stackDepth;
     private final long instanceNr;
-    private final InstructionInstanceType type;
     private final InstructionInstanceInfo additionalInfo;
 
     public AbstractInstructionInstance(final AbstractInstruction instr,
             final long occurenceNumber, final int stackDepth,
-            long instanceNr, InstructionInstanceType type,
-            InstructionInstanceInfo additionalInfo) {
+            long instanceNr, InstructionInstanceInfo additionalInfo) {
         assert instr != null;
         assert occurenceNumber >= 0;
         assert stackDepth >= 0;
         assert instanceNr >= 0;
-        assert type != null;
 
         this.instruction = instr;
         this.occurenceNumber = occurenceNumber;
         this.stackDepth = stackDepth;
         this.instanceNr = instanceNr;
-        this.type = type;
         this.additionalInfo = additionalInfo;
     }
 
@@ -53,10 +49,6 @@ public class AbstractInstructionInstance implements InstructionInstance {
         return this.stackDepth;
     }
 
-    public InstructionInstanceType getType() {
-        return this.type;
-    }
-
     public InstructionInstanceInfo getAdditionalInfo() {
         return this.additionalInfo;
     }
@@ -69,7 +61,6 @@ public class AbstractInstructionInstance implements InstructionInstance {
         result = prime * result + this.instruction.hashCode();
         result = prime * result + (int) (this.occurenceNumber ^ (this.occurenceNumber >>> 32));
         result = prime * result + this.stackDepth;
-        result = prime * result + this.type.ordinal();
         result = prime * result + (this.additionalInfo == null ? 0 : this.additionalInfo.hashCode());
         return result;
     }
@@ -90,8 +81,6 @@ public class AbstractInstructionInstance implements InstructionInstance {
         if (this.stackDepth != other.stackDepth)
             return false;
         if (!this.instruction.equals(other.instruction))
-            return false;
-        if (!this.type.equals(other.type))
             return false;
         if (this.additionalInfo == null) {
             if (other.additionalInfo != null)

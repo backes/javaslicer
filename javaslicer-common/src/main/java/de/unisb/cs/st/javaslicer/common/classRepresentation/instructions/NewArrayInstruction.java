@@ -16,7 +16,6 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceI
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance.InstructionInstanceType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 
@@ -135,7 +134,7 @@ public class NewArrayInstruction extends AbstractInstruction {
             infoProv.getNextLong(this.newObjectIdentifierSequenceIndex);
         return instanceFactory.createInstructionInstance(this,
             infoProv.getNextInstructionOccurenceNumber(getIndex()),
-            stackDepth, instanceNr, InstructionInstanceType.NEWARRAY, new NewArrayInstrInstanceInfo(objectId));
+            stackDepth, instanceNr, new NewArrayInstrInstanceInfo(objectId));
     }
 
     @Override

@@ -912,7 +912,7 @@ public class TracingMethodInstrumenter implements Opcodes {
             ++TracingMethodInstrumenter.statsInstructions;
         } else {
             registerInstruction(new TypeInstruction(this.readMethod, insn.getOpcode(), this.currentLine,
-                insn.desc, 0),
+                insn.desc, -1),
                 InstructionType.UNSAFE);
         }
     }

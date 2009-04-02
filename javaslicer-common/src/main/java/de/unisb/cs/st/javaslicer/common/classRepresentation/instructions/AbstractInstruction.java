@@ -18,7 +18,6 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceFactory;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance.InstructionInstanceType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 
@@ -154,7 +153,7 @@ public abstract class AbstractInstruction implements Instruction {
             long instanceNr, InstructionInstanceFactory instanceFactory)
             throws TracerException {
         return instanceFactory.createInstructionInstance(this, infoProv.getNextInstructionOccurenceNumber(this.index),
-            stackDepth, instanceNr, InstructionInstanceType.DEFAULT, null);
+            stackDepth, instanceNr, null);
     }
 
     public AbstractInstruction getPrevious() {

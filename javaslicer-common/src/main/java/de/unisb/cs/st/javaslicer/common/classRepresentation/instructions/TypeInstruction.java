@@ -16,7 +16,6 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceI
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance.InstructionInstanceType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 
@@ -29,6 +28,7 @@ public class TypeInstruction extends AbstractInstruction {
 
     public static class TypeInstrInstanceInfo implements InstructionInstanceInfo {
 
+        public static final TypeInstrInstanceInfo NO_INFO = new TypeInstrInstanceInfo(-1);
         private final long newObjectIdentifier;
 
         public TypeInstrInstanceInfo(long newObjectIdentifier) {
@@ -41,7 +41,7 @@ public class TypeInstruction extends AbstractInstruction {
 
         @Override
         public String toString() {
-            if (this.newObjectIdentifier == 0)
+            if (this.newObjectIdentifier == -1)
                 return "";
             return new StringBuilder(10).append('[').
                 append(this.newObjectIdentifier).append(']').toString();
@@ -80,8 +80,8 @@ public class TypeInstruction extends AbstractInstruction {
             || opcode == Opcodes.ANEWARRAY
             || opcode == Opcodes.CHECKCAST
             || opcode == Opcodes.INSTANCEOF;
-        assert ((opcode == Opcodes.CHECKCAST || opcode == Opcodes.INSTANCEOF) && newObjIdSeqIndex == 0)
-            || ((opcode == Opcodes.NEW || opcode == Opcodes.ANEWARRAY) && newObjIdSeqIndex != 0);
+        assert ((opcode == Opcodes.CHECKCAST || opcode == Opcodes.INSTANCEOF) && newObjIdSeqIndex == -1)
+            || ((opcode == Opcodes.NEW || opcode == Opcodes.ANEWARRAY) && newObjIdSeqIndex != -1);
         this.className = className;
         this.newObjectIdentifierSeqIndex = newObjIdSeqIndex;
     }
@@ -92,8 +92,8 @@ public class TypeInstruction extends AbstractInstruction {
             || opcode == Opcodes.ANEWARRAY
             || opcode == Opcodes.CHECKCAST
             || opcode == Opcodes.INSTANCEOF;
-        assert ((opcode == Opcodes.CHECKCAST || opcode == Opcodes.INSTANCEOF) && newObjIdSeqIndex == 0)
-            || ((opcode == Opcodes.NEW || opcode == Opcodes.ANEWARRAY) && newObjIdSeqIndex != 0);
+        assert ((opcode == Opcodes.CHECKCAST || opcode == Opcodes.INSTANCEOF) && newObjIdSeqIndex == -1)
+            || ((opcode == Opcodes.NEW || opcode == Opcodes.ANEWARRAY) && newObjIdSeqIndex != -1);
         this.className = typeDesc;
         this.newObjectIdentifierSeqIndex = newObjIdSeqIndex;
     }
@@ -129,11 +129,12 @@ public class TypeInstruction extends AbstractInstruction {
             int stackDepth, long instanceNr, InstructionInstanceFactory instanceFactory)
             throws TracerException {
 
-        long newObjectIdentifier = this.newObjectIdentifierSeqIndex == 0 ? 0
-            : infoProv.getNextLong(this.newObjectIdentifierSeqIndex);
+        TypeInstrInstanceInfo info = this.newObjectIdentifierSeqIndex == -1
+            ? TypeInstrInstanceInfo.NO_INFO
+            : new TypeInstrInstanceInfo(infoProv.getNextLong(this.newObjectIdentifierSeqIndex));
         return instanceFactory.createInstructionInstance(this,
             infoProv.getNextInstructionOccurenceNumber(getIndex()), stackDepth,
-            instanceNr, InstructionInstanceType.TYPE, new TypeInstrInstanceInfo(newObjectIdentifier));
+            instanceNr, info);
     }
 
     @Override
@@ -148,7 +149,7 @@ public class TypeInstruction extends AbstractInstruction {
             final int opcode, final int index, final int lineNumber) throws IOException {
         final String type = stringCache.readString(in);
         int newObjIdSeqIndex = opcode == Opcodes.NEW || opcode == Opcodes.ANEWARRAY
-            ? OptimizedDataInputStream.readInt0(in) : 0;
+            ? OptimizedDataInputStream.readInt0(in) : -1;
         return new TypeInstruction(methodInfo.getMethod(), lineNumber, opcode, type, index, newObjIdSeqIndex);
     }
 

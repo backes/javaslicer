@@ -17,8 +17,8 @@ import de.hammacher.util.maps.LongMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Field;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance.InstructionInstanceType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.FieldInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.IIncInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.JumpInstruction;
@@ -111,7 +111,7 @@ public class Simulator {
 
     private DynamicInformation simulateMultiANewArrayInsn(final InstructionInstance inst,
             final ExecutionFrame executionFrame) {
-        assert inst.getType() == InstructionInstanceType.MULTIANEWARRAY;
+        assert inst.getInstruction().getType() == InstructionType.MULTIANEWARRAY;
         MultiANewArrayInstrInstanceInfo info = (MultiANewArrayInstrInstanceInfo) inst.getAdditionalInfo();
 
         final LongMap<Collection<Variable>> createdObjects = new LongMap<Collection<Variable>>();
@@ -128,7 +128,7 @@ public class Simulator {
 
     private DynamicInformation simulateNewarrayInsn(final InstructionInstance inst,
             final ExecutionFrame frame) {
-        assert inst.getType() == InstructionInstanceType.NEWARRAY;
+        assert inst.getInstruction().getType() == InstructionType.NEWARRAY;
         NewArrayInstrInstanceInfo info = (NewArrayInstrInstanceInfo) inst.getAdditionalInfo();
         final IntHolder h = this.maxArrayElem.remove(info.getNewObjectIdentifier());
         final StackEntry stackEntry = frame.getStackEntry(frame.operandStack.get()-1);
@@ -141,7 +141,7 @@ public class Simulator {
     }
 
     private DynamicInformation simulateTypeInsn(final InstructionInstance inst, final ExecutionFrame frame) {
-        assert inst.getType() == InstructionInstanceType.TYPE;
+        assert inst.getInstruction().getType() == InstructionType.TYPE;
         TypeInstrInstanceInfo info = (TypeInstrInstanceInfo) inst.getAdditionalInfo();
         switch (inst.getInstruction().getOpcode()) {
         case Opcodes.NEW:
@@ -220,7 +220,7 @@ public class Simulator {
 
     private DynamicInformation simulateArrayInstruction(final InstructionInstance inst,
             final ExecutionFrame frame) {
-        assert inst.getType() == InstructionInstanceType.ARRAY;
+        assert inst.getInstruction().getType() == InstructionType.ARRAY;
         ArrayInstrInstanceInfo arrInfo = (ArrayInstrInstanceInfo) inst.getAdditionalInfo();
         long arrayId = arrInfo.getArrayId();
         int arrayIndex = arrInfo.getArrayIndex();
@@ -283,7 +283,7 @@ public class Simulator {
     }
 
     private DynamicInformation simulateFieldInstruction(final InstructionInstance instance, final ExecutionFrame frame) {
-        assert instance.getType() == InstructionInstanceType.FIELD;
+        assert instance.getInstruction().getType() == InstructionType.FIELD;
         FieldInstrInstanceInfo info = (FieldInstrInstanceInfo) instance.getAdditionalInfo();
         int stackOffset;
         Variable lowerVar;
