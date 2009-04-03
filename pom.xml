@@ -164,19 +164,14 @@
 
     <repositories>
         <repository>
-            <id>public-chair</id>
-            <name>Archiva Managed Internal Repository Group</name>
-            <url>https://maven.st.cs.uni-sb.de/archiva/repository/group-internal</url>
+            <id>st-internal-releases</id>
+            <name>internal artifacts released by the chair</name>
+            <url>https://maven.st.cs.uni-saarland.de/nexus/content/repositories/internal-releases</url>
         </repository>
         <repository>
-            <id>hammacher-snapshots</id>
-            <name>Snapshots on Clemens Hammachers Nexus server</name>
-            <url>http://hammacher.name:8081/nexus/content/groups/public-snapshots</url>
-        </repository>
-        <repository>
-            <id>hammacher-releases</id>
-            <name>Releases on Clemens Hammachers Nexus server</name>
-            <url>http://hammacher.name:8081/nexus/content/groups/public</url>
+            <id>st-internal-snapshots</id>
+            <name>internal snapshots deployed by the chair</name>
+            <url>https://maven.st.cs.uni-saarland.de/nexus/content/repositories/internal-snapshots</url>
         </repository>
     </repositories>
 
@@ -391,37 +386,20 @@
 
     <!-- See: http://wiki.st.cs.uni-sb.de/wiki/Maven_Archiva -->
     <distributionManagement>
-        <!--
         <repository>
-            <id>internal-releases</id>
+            <id>st-internal-releases</id>
             <name>internal artifacts released by the chair</name>
-            <url>https://maven.st.cs.uni-sb.de/archiva/repository/internal-releases</url>
+            <url>https://maven.st.cs.uni-saarland.de/nexus/content/repositories/internal-releases</url>
         </repository>
         <snapshotRepository>
-            <id>internal-snapshots</id>
+            <id>st-internal-snapshots</id>
             <name>internal snapshots deployed by the chair</name>
-            <url>https://maven.st.cs.uni-sb.de/archiva/repository/internal-snapshots</url>
-        </snapshotRepository>
-        <site>
-            <id>chair-public-website</id>
-            <name>Chair's Projects Website</name>
-            <url>file:///tmp/maven-sites/javaslicer</url>
-        </site>
-        -->
-        <repository>
-            <id>hammacher-releases</id>
-            <name>Releases on Clemens Hammachers Nexus server</name>
-            <url>http://hammacher.name:8081/nexus/content/repositories/releases</url>
-        </repository>
-        <snapshotRepository>
-            <id>hammacher-snapshots</id>
-            <name>Snapshots on Clemens Hammachers Nexus server</name>
-            <url>http://hammacher.name:8081/nexus/content/repositories/snapshots</url>
+            <url>https://maven.st.cs.uni-saarland.de/nexus/content/repositories/internal-snapshots</url>
         </snapshotRepository>
         <site>
             <id>local-tmp</id>
             <name>Local tmp directory</name>
-            <url>file:///tmp/javaslicer-site</url>
+            <url>file:///tmp/maven-sites/javaslicer</url>
         </site>
     </distributionManagement>
 
