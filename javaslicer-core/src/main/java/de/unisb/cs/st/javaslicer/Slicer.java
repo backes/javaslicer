@@ -34,11 +34,11 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
 public class Slicer implements Opcodes {
 
     private final TraceResult trace;
-    private final Simulator simulator;
+    private final Simulator<InstructionInstance> simulator;
 
     public Slicer(final TraceResult trace) {
         this.trace = trace;
-        this.simulator = new Simulator(trace);
+        this.simulator = new Simulator<InstructionInstance>(trace);
     }
 
     public static void main(final String[] args) {
@@ -164,19 +164,19 @@ public class Slicer implements Opcodes {
 
         final IntegerMap<Set<Instruction>> controlDependences = new IntegerMap<Set<Instruction>>();
 
-        final ArrayStack<ExecutionFrame> frames = new ArrayStack<ExecutionFrame>();
+        final ArrayStack<ExecutionFrame<InstructionInstance>> frames = new ArrayStack<ExecutionFrame<InstructionInstance>>();
 
         final Set<Variable> interestingVariables = new HashSet<Variable>();
         final Set<Instruction> dynamicSlice = new HashSet<Instruction>();
 
-        ExecutionFrame currentFrame = new ExecutionFrame();
+        ExecutionFrame<InstructionInstance> currentFrame = new ExecutionFrame<InstructionInstance>();
         frames.push(currentFrame);
 
         while (backwardInsnItr.hasNext()) {
             final InstructionInstance instance = backwardInsnItr.next();
             final Instruction instruction = instance.getInstruction();
 
-            ExecutionFrame removedFrame = null;
+            ExecutionFrame<InstructionInstance> removedFrame = null;
             boolean removedFrameIsInteresting = false;
             final int stackDepth = instance.getStackDepth();
             assert stackDepth > 0;
@@ -192,7 +192,7 @@ public class Slicer implements Opcodes {
                     currentFrame = frames.peek();
                 } else {
                     assert frames.size() == stackDepth-1;
-                    final ExecutionFrame newFrame = new ExecutionFrame();
+                    final ExecutionFrame<InstructionInstance> newFrame = new ExecutionFrame<InstructionInstance>();
                     // assertion: if the current frame catched an exception, then the new frame
                     // must have thrown it
                     assert currentFrame.atCatchBlockStart == null
@@ -212,7 +212,7 @@ public class Slicer implements Opcodes {
                 assert currentFrame.returnValue == null;
                 currentFrame.method = instruction.getMethod();
             } else if (currentFrame.finished || currentFrame.method != instruction.getMethod()) {
-                currentFrame = new ExecutionFrame();
+                currentFrame = new ExecutionFrame<InstructionInstance>();
                 currentFrame.method = instruction.getMethod();
                 frames.set(stackDepth-1, currentFrame);
             }
@@ -261,7 +261,7 @@ public class Slicer implements Opcodes {
                     // in this case, we have an additional control dependence from the catching to
                     // the throwing instruction
                     for (int i = stackDepth-2; i >= 0; --i) {
-                        final ExecutionFrame f = frames.get(i);
+                        final ExecutionFrame<InstructionInstance> f = frames.get(i);
                         if (f.atCatchBlockStart != null) {
                             if (f.interestingInstructions != null &&
                                     f.interestingInstructions.contains(f.atCatchBlockStart.getInstruction())) {

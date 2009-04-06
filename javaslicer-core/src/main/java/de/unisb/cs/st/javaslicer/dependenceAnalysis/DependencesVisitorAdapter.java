@@ -1,6 +1,5 @@
 package de.unisb.cs.st.javaslicer.dependenceAnalysis;
 
-import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
@@ -10,35 +9,35 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
  *
  * @author Clemens Hammacher
  */
-public abstract class DependencesVisitorAdapter implements DependencesVisitor {
+public abstract class DependencesVisitorAdapter<InstanceType> implements DependencesVisitor<InstanceType> {
 
     public void visitEnd(long numInstances) {
         // null
     }
 
-    public void discardPendingDataDependence(InstructionInstance from, Variable var,
+    public void discardPendingDataDependence(InstanceType from, Variable var,
             DataDependenceType type) {
         // null
     }
 
-    public void visitControlDependence(InstructionInstance from, InstructionInstance to) {
+    public void visitControlDependence(InstanceType from, InstanceType to) {
         // null
     }
 
-    public void visitDataDependence(InstructionInstance from, InstructionInstance to, Variable var,
+    public void visitDataDependence(InstanceType from, InstanceType to, Variable var,
             DataDependenceType type) {
         // null
     }
 
-    public void visitInstructionExecution(InstructionInstance instance) {
+    public void visitInstructionExecution(InstanceType instance) {
         // null
     }
 
-    public void visitPendingControlDependence(InstructionInstance from) {
+    public void visitPendingControlDependence(InstanceType from) {
         // null
     }
 
-    public void visitPendingDataDependence(InstructionInstance from, Variable var,
+    public void visitPendingDataDependence(InstanceType from, Variable var,
             DataDependenceType type) {
         // null
     }
@@ -52,7 +51,7 @@ public abstract class DependencesVisitorAdapter implements DependencesVisitor {
     }
 
     public void visitObjectCreation(long objectId,
-            InstructionInstance instrInstance) {
+            InstanceType instrInstance) {
         // null
     }
 

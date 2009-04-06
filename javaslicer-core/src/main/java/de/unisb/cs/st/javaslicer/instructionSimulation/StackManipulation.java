@@ -7,16 +7,16 @@ import java.util.Map;
 import de.unisb.cs.st.javaslicer.variables.StackEntrySet;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
-public class StackManipulation implements DynamicInformation {
+public class StackManipulation<InstanceType> implements DynamicInformation {
 
-    private final ExecutionFrame frame;
+    private final ExecutionFrame<InstanceType> frame;
     private final int read;
     private final int write;
     private final int stackOffset;
     private Collection<Variable> usedVars = null;
     private final Map<Long, Collection<Variable>> createdObjects;
 
-    public StackManipulation(final ExecutionFrame frame, final int read, final int write,
+    public StackManipulation(final ExecutionFrame<InstanceType> frame, final int read, final int write,
             final int stackOffset, final Map<Long, Collection<Variable>> createdObjects) {
         this.frame = frame;
         this.read = read;
@@ -33,7 +33,7 @@ public class StackManipulation implements DynamicInformation {
         if (this.write == 1) {
             definedVars = Collections.singleton((Variable)this.frame.getStackEntry(this.stackOffset));
         } else {
-            definedVars = new StackEntrySet(this.frame, this.stackOffset, this.write);
+            definedVars = new StackEntrySet<InstanceType>(this.frame, this.stackOffset, this.write);
         }
         if (this.read == this.write)
             this.usedVars = definedVars;
@@ -50,7 +50,7 @@ public class StackManipulation implements DynamicInformation {
             this.usedVars = Collections.singleton((Variable)this.frame.getStackEntry(
                     this.stackOffset));
         else
-            this.usedVars = new StackEntrySet(this.frame, this.stackOffset, this.read);
+            this.usedVars = new StackEntrySet<InstanceType>(this.frame, this.stackOffset, this.read);
 
         return this.usedVars;
     }

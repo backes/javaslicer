@@ -13,9 +13,9 @@ public interface SlicingCriterion {
 
         boolean matches(InstructionInstance instructionInstance);
 
-        Collection<Variable> getInterestingVariables(ExecutionFrame execFrame);
+        Collection<Variable> getInterestingVariables(ExecutionFrame<InstructionInstance> execFrame);
 
-        Collection<Instruction> getInterestingInstructions(ExecutionFrame currentFrame);
+        Collection<Instruction> getInterestingInstructions(ExecutionFrame<InstructionInstance> currentFrame);
 
     }
 

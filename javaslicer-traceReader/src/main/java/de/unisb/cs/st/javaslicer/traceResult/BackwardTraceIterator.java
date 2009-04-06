@@ -25,15 +25,16 @@ import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantIntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantLongTraceSequence;
 
-public class BackwardTraceIterator implements Iterator<InstructionInstance>, TraceIterationInformationProvider {
+public class BackwardTraceIterator<InstanceType extends InstructionInstance>
+        implements Iterator<InstanceType>, TraceIterationInformationProvider {
 
     public static final boolean WRITE_ITERATION_DEBUG_FILE = false;
 
     private final ThreadTraceResult threadTraceResult;
-    private final InstanceFilter filter;
-    private final InstructionInstanceFactory instanceFactory;
+    private final InstanceFilter<? super InstanceType> filter;
+    private final InstructionInstanceFactory<? extends InstanceType> instanceFactory;
 
-    private InstructionInstance nextInstruction;
+    private InstanceType nextInstruction;
     private final IntegerMap<Iterator<Integer>> integerSequenceBackwardIterators;
     private final IntegerMap<Iterator<Long>> longSequenceBackwardIterators;
     private final IntegerToLongMap instructionNextOccurenceNumber;
@@ -44,7 +45,9 @@ public class BackwardTraceIterator implements Iterator<InstructionInstance>, Tra
     private long filteredInstancesCount = 0;
     private final PrintWriter debugFileWriter;
 
-    public BackwardTraceIterator(final ThreadTraceResult threadTraceResult, final InstanceFilter filter, InstructionInstanceFactory instanceFactory)
+    public BackwardTraceIterator(final ThreadTraceResult threadTraceResult,
+            final InstanceFilter<? super InstanceType> filter,
+            InstructionInstanceFactory<? extends InstanceType> instanceFactory)
             throws TracerException {
         this.filter = filter;
         this.threadTraceResult = threadTraceResult;
@@ -80,10 +83,10 @@ public class BackwardTraceIterator implements Iterator<InstructionInstance>, Tra
         return false;
     }
 
-    public InstructionInstance next() throws TracerException {
+    public InstanceType next() throws TracerException {
         if (this.nextInstruction == null)
             throw new NoSuchElementException();
-        final InstructionInstance old = this.nextInstruction;
+        final InstanceType old = this.nextInstruction;
         this.nextInstruction = getNextInstruction(this.nextInstruction.getInstruction().getBackwardInstructionIndex(this));
         return old;
     }
@@ -92,7 +95,7 @@ public class BackwardTraceIterator implements Iterator<InstructionInstance>, Tra
         return Collections.unmodifiableList(Arrays.asList(this.threadTraceResult.lastStackMethods));
     }
 
-    private InstructionInstance getNextInstruction(final int nextIndex) throws TracerException {
+    private InstanceType getNextInstruction(final int nextIndex) throws TracerException {
         int index = nextIndex;
         while (true) {
             if (WRITE_ITERATION_DEBUG_FILE) {
@@ -115,7 +118,7 @@ public class BackwardTraceIterator implements Iterator<InstructionInstance>, Tra
                 // info: the return statements opcodes lie between 172 (IRETURN) and 177 (RETURN)
                 this.stackDepth = ++tmpStackDepth;
             }
-            final InstructionInstance instance = backwardInstruction.getNextInstance(this, tmpStackDepth,
+            final InstanceType instance = backwardInstruction.getNextInstance(this, tmpStackDepth,
                 this.instancesCount, this.instanceFactory);
             assert instance != null;
 

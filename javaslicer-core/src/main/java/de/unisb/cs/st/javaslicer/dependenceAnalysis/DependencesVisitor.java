@@ -1,6 +1,5 @@
 package de.unisb.cs.st.javaslicer.dependenceAnalysis;
 
-import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
@@ -11,7 +10,7 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
  *
  * @author Clemens Hammacher
  */
-public interface DependencesVisitor {
+public interface DependencesVisitor<InstanceType> {
 
     public static enum DataDependenceType {
         READ_AFTER_WRITE,
@@ -33,7 +32,7 @@ public interface DependencesVisitor {
      * @param var the variable through which the dependence exists
      * @param type the type of the data dependence (read after write / write after read)
      */
-    void visitDataDependence(InstructionInstance from, InstructionInstance to,
+    void visitDataDependence(InstanceType from, InstanceType to,
             Variable var, DataDependenceType type);
 
     /**
@@ -43,45 +42,45 @@ public interface DependencesVisitor {
      * @param to the &quot;target&quot; of the control dependence, i.e. the instruction
      *           that controls the execution of <code>from</code>
      */
-    void visitControlDependence(InstructionInstance from, InstructionInstance to);
+    void visitControlDependence(InstanceType from, InstanceType to);
 
     /**
      * Gets called for every instruction in the execution trace.
      *
      * @param instance the instruction instance that has just been visited
      */
-    void visitInstructionExecution(InstructionInstance instance);
+    void visitInstructionExecution(InstanceType instance);
 
     /**
      * Gets called if there might be a data dependence that gets visited later.
      *
      * If the type is {@link DataDependenceType#READ_AFTER_WRITE}, then most probably
-     * {@link #visitDataDependence(InstructionInstance, InstructionInstance, Variable, DataDependenceType)}
+     * {@link #visitDataDependence(Object, Object, Variable, DataDependenceType)}
      * gets called exactly one (may also be that it is not called in some cases), but
      * definitively, at some later point
-     * {@link #discardPendingDataDependence(InstructionInstance, Variable, DataDependenceType)}
+     * {@link #discardPendingDataDependence(Object, Variable, DataDependenceType)}
      * is called.
      *
      * If the type is {@link DataDependenceType#WRITE_AFTER_READ}, then
-     * {@link #visitDataDependence(InstructionInstance, InstructionInstance, Variable, DataDependenceType)}
+     * {@link #visitDataDependence(Object, Object, Variable, DataDependenceType)}
      * may get called one or several times, and finally
-     * {@link #discardPendingDataDependence(InstructionInstance, Variable, DataDependenceType)}
+     * {@link #discardPendingDataDependence(Object, Variable, DataDependenceType)}
      * is called.
      *
      * @param from the instruction that depends on another
      * @param var the variable through which the dependence exists
      * @param type the type of the data dependence (read after write / write after read)
      */
-    void visitPendingDataDependence(InstructionInstance from, Variable var, DataDependenceType type);
+    void visitPendingDataDependence(InstanceType from, Variable var, DataDependenceType type);
 
     /**
      * Gets called if the instruction <code>from</code> has a control dependence that
-     * is not known yet. At some later time, {@link #visitControlDependence(InstructionInstance, InstructionInstance)}
+     * is not known yet. At some later time, {@link #visitControlDependence(Object, Object)}
      * is called for that instance.
      *
      * @param from the instruction instance that has a control dependence
      */
-    void visitPendingControlDependence(InstructionInstance from);
+    void visitPendingControlDependence(InstanceType from);
 
     /**
      * Gets called if all data dependences on the specific variable <code>var</code>
@@ -91,7 +90,7 @@ public interface DependencesVisitor {
      * @param var the variable through which the dependence exists
      * @param type the type of the data dependence (read after write / write after read)
      */
-    void discardPendingDataDependence(InstructionInstance from, Variable var, DataDependenceType type);
+    void discardPendingDataDependence(InstanceType from, Variable var, DataDependenceType type);
 
     /**
      * Gets called each time a new method in entered.
@@ -116,6 +115,6 @@ public interface DependencesVisitor {
      * @param objectId the identity of the object which is being created
      * @param instrInstance the instruction instance which created the object
      */
-    void visitObjectCreation(long objectId, InstructionInstance instrInstance);
+    void visitObjectCreation(long objectId, InstanceType instrInstance);
 
 }

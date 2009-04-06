@@ -2,18 +2,18 @@ package de.unisb.cs.st.javaslicer.variables;
 
 import de.unisb.cs.st.javaslicer.instructionSimulation.ExecutionFrame;
 
-public class StackEntry implements Variable {
+public class StackEntry<InstanceType> implements Variable {
 
-    private final ExecutionFrame frame;
+    private final ExecutionFrame<InstanceType> frame;
     private final int index;
 
-    public StackEntry(final ExecutionFrame frame, final int index) {
+    public StackEntry(final ExecutionFrame<InstanceType> frame, final int index) {
         assert index >= 0;
         this.frame = frame;
         this.index = index;
     }
 
-    public ExecutionFrame getFrame() {
+    public ExecutionFrame<InstanceType> getFrame() {
         return this.frame;
     }
 
@@ -39,7 +39,7 @@ public class StackEntry implements Variable {
             return false;
         if (getClass() != obj.getClass())
             return false;
-        final StackEntry other = (StackEntry) obj;
+        final StackEntry<?> other = (StackEntry<?>) obj;
         if (!this.frame.equals(other.frame))
             return false;
         if (this.index != other.index)

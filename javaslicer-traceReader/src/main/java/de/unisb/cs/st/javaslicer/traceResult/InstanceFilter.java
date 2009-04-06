@@ -13,9 +13,9 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMa
  *
  * @author Clemens Hammacher
  */
-public interface InstanceFilter {
+public interface InstanceFilter<InstanceType> {
 
-    public static class LabelFilter implements InstanceFilter {
+    public static class LabelFilter implements InstanceFilter<InstructionInstance> {
 
         public static LabelFilter instance = new LabelFilter();
 
@@ -29,7 +29,7 @@ public interface InstanceFilter {
 
     }
 
-    public static class AdditionalLabelFilter implements InstanceFilter {
+    public static class AdditionalLabelFilter implements InstanceFilter<InstructionInstance> {
 
         public static AdditionalLabelFilter instance = new AdditionalLabelFilter();
 
@@ -47,6 +47,6 @@ public interface InstanceFilter {
     /**
      * Returns true if the instance should be filtered out
      */
-    boolean filterInstance(InstructionInstance instance);
+    boolean filterInstance(InstanceType instance);
 
 }

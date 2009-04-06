@@ -35,7 +35,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
             this.varIndex = varIndex;
         }
 
-        public Variable instantiate(final ExecutionFrame execFrame) {
+        public Variable instantiate(final ExecutionFrame<InstructionInstance> execFrame) {
             return execFrame.getLocalVariable(this.varIndex);
         }
 
@@ -52,7 +52,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
 
     public static interface CriterionVariable {
 
-        Variable instantiate(ExecutionFrame execFrame);
+        Variable instantiate(ExecutionFrame<InstructionInstance> execFrame);
 
     }
 
@@ -63,7 +63,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
         private int stackDepth = 0;
         private Instruction lastMatch = null;
 
-        public Collection<Variable> getInterestingVariables(final ExecutionFrame execFrame) {
+        public Collection<Variable> getInterestingVariables(ExecutionFrame<InstructionInstance> execFrame) {
             final List<Variable> varList = new ArrayList<Variable>(SimpleSlicingCriterion.this.variables.size());
             for (final CriterionVariable var: SimpleSlicingCriterion.this.variables)
                 varList.add(var.instantiate(execFrame));
@@ -71,7 +71,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
             return varList;
         }
 
-        public Collection<Instruction> getInterestingInstructions(final ExecutionFrame currentFrame) {
+        public Collection<Instruction> getInterestingInstructions(ExecutionFrame<InstructionInstance> currentFrame) {
             if (this.lastMatch == null)
                 return Collections.emptySet();
             return Collections.singleton(this.lastMatch);

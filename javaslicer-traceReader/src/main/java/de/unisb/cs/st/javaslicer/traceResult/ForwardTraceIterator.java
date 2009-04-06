@@ -15,7 +15,8 @@ import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantIntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantLongTraceSequence;
 
-public class ForwardTraceIterator implements Iterator<InstructionInstance>, TraceIterationInformationProvider {
+public class ForwardTraceIterator<InstanceType extends InstructionInstance>
+        implements Iterator<InstructionInstance>, TraceIterationInformationProvider {
 
     private long backwardInstrNr;
     private int nextIndex;
@@ -30,10 +31,10 @@ public class ForwardTraceIterator implements Iterator<InstructionInstance>, Trac
     private final ThreadTraceResult threadTraceResult;
     private final IntegerMap<ListIterator<Integer>> integerSequenceIterators;
     private final IntegerMap<ListIterator<Long>> longSequenceIterators;
-    private final InstructionInstanceFactory instanceFactory;
+    private final InstructionInstanceFactory<? extends InstanceType> instanceFactory;
 
     public ForwardTraceIterator(ThreadTraceResult threadTraceResult,
-            ForwardIterationInformation forwInfo, InstructionInstanceFactory instanceFactory) {
+            ForwardIterationInformation forwInfo, InstructionInstanceFactory<? extends InstanceType> instanceFactory) {
         this.threadTraceResult = threadTraceResult;
         this.backwardInstrNr = forwInfo.instrCount;
         this.nextIndex = forwInfo.firstInstrIndex;

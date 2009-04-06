@@ -23,7 +23,7 @@ public class CompoundSlicingCriterion implements SlicingCriterion {
                 this.instances.add(crit.getInstance());
         }
 
-        public Collection<Variable> getInterestingVariables(final ExecutionFrame execFrame) {
+        public Collection<Variable> getInterestingVariables(final ExecutionFrame<InstructionInstance> execFrame) {
             final Set<Variable> interestingVariables = new HashSet<Variable>();
             for (final SlicingCriterionInstance crit: this.instances) {
                 interestingVariables.addAll(crit.getInterestingVariables(execFrame));
@@ -31,7 +31,7 @@ public class CompoundSlicingCriterion implements SlicingCriterion {
             return interestingVariables;
         }
 
-        public Collection<Instruction> getInterestingInstructions(final ExecutionFrame currentFrame) {
+        public Collection<Instruction> getInterestingInstructions(final ExecutionFrame<InstructionInstance> currentFrame) {
             final Set<Instruction> interestingInstructions = new HashSet<Instruction>();
             for (final SlicingCriterionInstance crit: this.instances) {
                 interestingInstructions.addAll(crit.getInterestingInstructions(currentFrame));

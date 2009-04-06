@@ -8,6 +8,7 @@ import java.util.ListIterator;
 
 import de.hammacher.util.MultiplexedFileReader;
 import de.hammacher.util.maps.IntegerMap;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstructionInstanceFactory;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
@@ -90,8 +91,9 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
      * @return an iterator that iterates backwards through the execution trace.
      *         the iterator extends {@link Iterator} over {@link InstructionInstance}.
      */
-    public BackwardTraceIterator getBackwardIterator(InstanceFilter filter, InstructionInstanceFactory instanceFactory) {
-        return new BackwardTraceIterator(this, filter, instanceFactory);
+    public <InstanceType extends InstructionInstance> BackwardTraceIterator<InstanceType> getBackwardIterator(
+            InstanceFilter<? super InstanceType> filter, InstructionInstanceFactory<? extends InstanceType> instanceFactory) {
+        return new BackwardTraceIterator<InstanceType>(this, filter, instanceFactory);
     }
 
     /**
@@ -105,7 +107,8 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
      * @return an iterator that is able to iterate in any direction through the execution trace.
      *         the iterator extends {@link ListIterator} over {@link InstructionInstance}.
      */
-    public ForwardTraceIterator getForwardIterator(InstructionInstanceFactory instanceFactory) {
+    public <InstanceType extends InstructionInstance> ForwardTraceIterator<InstanceType> getForwardIterator(
+            InstructionInstanceFactory<InstanceType> instanceFactory) {
         ForwardIterationInformation forwInfo;
         synchronized (this.forwardIterationInfoLock) {
             forwInfo = this.forwardIterationInformation.get();
@@ -114,7 +117,7 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
                 this.forwardIterationInformation = new SoftReference<ForwardIterationInformation>(forwInfo);
             }
         }
-        return new ForwardTraceIterator(this, forwInfo, instanceFactory);
+        return new ForwardTraceIterator<InstanceType>(this, forwInfo, instanceFactory);
     }
 
     private ForwardIterationInformation getForwardInformation() {
@@ -124,7 +127,7 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
         int[] jumps = new int[16];
         byte[] stackDepthChange = new byte[16];
 
-        final Iterator<InstructionInstance> backwardIt = getBackwardIterator(null, new AbstractInstructionInstanceFactory());
+        final BackwardTraceIterator<AbstractInstructionInstance> backwardIt = getBackwardIterator(null, new AbstractInstructionInstanceFactory());
         int lastIndex = 0;
         int curStackDepth = 1;
         while (backwardIt.hasNext()) {

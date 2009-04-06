@@ -10,7 +10,7 @@ import de.unisb.cs.st.javaslicer.variables.StackEntry;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
 
-public class MethodInvokationVariableUsages implements DynamicInformation {
+public class MethodInvokationVariableUsages<InstanceType> implements DynamicInformation {
 
     public class UsedVariables extends AbstractList<Variable> {
 
@@ -44,13 +44,13 @@ public class MethodInvokationVariableUsages implements DynamicInformation {
 
     protected final int stackOffset;
     protected final int paramCount;
-    protected final ExecutionFrame execFrame;
-    protected final ExecutionFrame removedFrame;
+    protected final ExecutionFrame<InstanceType> execFrame;
+    protected final ExecutionFrame<InstanceType> removedFrame;
     protected Collection<Variable> usedVariables;
     protected final boolean hasReturn;
 
     public MethodInvokationVariableUsages(final int stackOffset, final int paramCount,
-            boolean hasReturn, final ExecutionFrame execFrame, final ExecutionFrame removedFrame) {
+            boolean hasReturn, final ExecutionFrame<InstanceType> execFrame, final ExecutionFrame<InstanceType> removedFrame) {
         assert stackOffset >= 0 || execFrame.interruptedControlFlow;
         this.stackOffset = stackOffset;
         this.paramCount = paramCount;
@@ -85,7 +85,7 @@ public class MethodInvokationVariableUsages implements DynamicInformation {
         }
 
         assert definedVariable instanceof LocalVariable; // local variable in the new frame
-        int varIndex = ((LocalVariable)definedVariable).getVarIndex();
+        int varIndex = ((LocalVariable<?>)definedVariable).getVarIndex();
         assert varIndex < this.paramCount;
         // it has been defined by the stack entry in the old frame at the corresponding position
         return Collections.singleton((Variable)this.execFrame.getStackEntry(this.stackOffset + varIndex));

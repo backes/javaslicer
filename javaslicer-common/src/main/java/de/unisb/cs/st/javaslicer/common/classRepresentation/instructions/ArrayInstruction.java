@@ -10,7 +10,6 @@ import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.StringCacheOutput;
 import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.hammacher.util.streams.OptimizedDataOutputStream;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceFactory;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceInfo;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
@@ -99,8 +98,9 @@ public class ArrayInstruction extends AbstractInstruction {
     }
 
     @Override
-    public InstructionInstance getNextInstance(TraceIterationInformationProvider infoProv,
-            int stackDepth, long instanceNr, InstructionInstanceFactory instanceFactory)
+    public <InstanceType> InstanceType getNextInstance(
+            TraceIterationInformationProvider infoProv, int stackDepth, long instanceNr,
+            InstructionInstanceFactory<InstanceType> instanceFactory)
             throws TracerException {
 
         long arrayId = infoProv.getNextLong(this.arrayTraceSeqIndex);

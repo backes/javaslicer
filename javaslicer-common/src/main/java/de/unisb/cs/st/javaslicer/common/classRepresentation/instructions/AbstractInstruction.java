@@ -14,7 +14,6 @@ import de.hammacher.util.StringCacheOutput;
 import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.hammacher.util.streams.OptimizedDataOutputStream;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceFactory;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
@@ -148,9 +147,9 @@ public abstract class AbstractInstruction implements Instruction {
     }
 
     // must be overridden by classes with dynamic parameters (e.g. array load/store)
-    public InstructionInstance getNextInstance(
+    public <InstanceType> InstanceType getNextInstance(
             TraceIterationInformationProvider infoProv, int stackDepth,
-            long instanceNr, InstructionInstanceFactory instanceFactory)
+            long instanceNr, InstructionInstanceFactory<InstanceType> instanceFactory)
             throws TracerException {
         return instanceFactory.createInstructionInstance(this, infoProv.getNextInstructionOccurenceNumber(this.index),
             stackDepth, instanceNr, null);

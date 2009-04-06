@@ -14,13 +14,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReference;
 
-import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
 
-public class AccumulatingParallelDependencesVisitor implements
-        DependencesVisitor {
+public class AccumulatingParallelDependencesVisitor<InstanceType>
+        implements DependencesVisitor<InstanceType> {
 
 
     private static class DefaultThreadFactory implements ThreadFactory {
@@ -66,19 +65,20 @@ public class AccumulatingParallelDependencesVisitor implements
     private static final byte PENDING_CONTROL_DEPENDENCE = 11;
     private static final byte END = 12;
 
-    private static class EventStamp {
+    private static class EventStamp<InstanceType> {
         private final byte[] events;
-        private final InstructionInstance[] instructionInstances;
+        private final InstanceType[] instructionInstances;
         private final ReadMethod[] methods;
         private final long[] longs;
         private final Variable[] variables;
         private volatile int remainingVisits;
 
+        @SuppressWarnings("unchecked")
         private static final AtomicIntegerFieldUpdater<EventStamp> remainingVisitsUpdater =
             AtomicIntegerFieldUpdater.newUpdater(EventStamp.class, "remainingVisits");
 
         public EventStamp(byte[] events,
-                InstructionInstance[] instructionInstances,
+                InstanceType[] instructionInstances,
                 ReadMethod[] methods, long[] longs, Variable[] variables, int numVisitors) {
             this.events = events;
             this.instructionInstances = instructionInstances;
@@ -98,7 +98,7 @@ public class AccumulatingParallelDependencesVisitor implements
          * @param visitor
          * @return <code>true</code> if this was the last visitor on which the stamp had to be executed
          */
-        public boolean replay(DependencesVisitor visitor) {
+        public boolean replay(DependencesVisitor<? super InstanceType> visitor) {
             // TODO check if this is necessary
             synchronized (visitor) {
                 int instructionPos = 0;
@@ -106,7 +106,7 @@ public class AccumulatingParallelDependencesVisitor implements
                 int longPos = 0;
                 int variablePos = 0;
                 byte[] events0 = this.events;
-                InstructionInstance[] instructionInstances0 = this.instructionInstances;
+                InstanceType[] instructionInstances0 = this.instructionInstances;
                 ReadMethod[] methods0 = this.methods;
                 long[] longs0 = this.longs;
                 Variable[] variables0 = this.variables;
@@ -179,18 +179,18 @@ public class AccumulatingParallelDependencesVisitor implements
     private class OutstandingWork {
 
         private final AtomicReference<Thread> currentExecutingThread = new AtomicReference<Thread>(null);
-        private final ConcurrentLinkedQueue<EventStamp> stamps = new ConcurrentLinkedQueue<EventStamp>();
+        private final ConcurrentLinkedQueue<EventStamp<InstanceType>> stamps = new ConcurrentLinkedQueue<EventStamp<InstanceType>>();
         private final AtomicBoolean outstandingStamps = new AtomicBoolean(false);
-        private final DependencesVisitor visitor;
+        private final DependencesVisitor<? super InstanceType> visitor;
         private volatile CountDownLatch waitForFinishLatch = null;
 
-        public OutstandingWork(DependencesVisitor visitor) {
+        public OutstandingWork(DependencesVisitor<? super InstanceType> visitor) {
             assert visitor != null;
             this.visitor = visitor;
         }
 
         // returns true if this is the first stamp on the queue and there is no executing thread
-        public boolean addWork(EventStamp stamp) {
+        public boolean addWork(EventStamp<InstanceType> stamp) {
             this.stamps.add(stamp);
             return this.outstandingStamps.compareAndSet(false, true);
         }
@@ -200,7 +200,7 @@ public class AccumulatingParallelDependencesVisitor implements
             assert executingThread == Thread.currentThread();
             if (this.currentExecutingThread.compareAndSet(null, executingThread)) {
                 while (true) {
-                    EventStamp stamp;
+                    EventStamp<InstanceType> stamp;
                     while ((stamp = this.stamps.poll()) != null) {
                         boolean stampReady = false;
                         try {
@@ -278,8 +278,8 @@ public class AccumulatingParallelDependencesVisitor implements
 
     }
 
-    private final Map<DependencesVisitor, OutstandingWork> visitors
-        = new HashMap<DependencesVisitor, OutstandingWork>();
+    private final Map<DependencesVisitor<? super InstanceType>, OutstandingWork> visitors
+        = new HashMap<DependencesVisitor<? super InstanceType>, OutstandingWork>();
 
     private final ThreadFactory threadFactory;
     private final List<Thread> workerThreads = new ArrayList<Thread>(4);
@@ -296,7 +296,7 @@ public class AccumulatingParallelDependencesVisitor implements
     private final byte[] events;
     private int eventCount = 0;
 
-    private InstructionInstance[] instructionInstances = new InstructionInstance[1];
+    private InstanceType[] instructionInstances = newInstanceTypeArray(1);
     private int instructionInstanceCount = 0;
     private ReadMethod[] methods = new ReadMethod[1];
     private int methodCount = 0;
@@ -308,6 +308,11 @@ public class AccumulatingParallelDependencesVisitor implements
     public AccumulatingParallelDependencesVisitor(int cacheSize, int maxOutstanding) {
         this(cacheSize, maxOutstanding, Runtime.getRuntime().availableProcessors(),
             Math.max(Thread.MIN_PRIORITY, Thread.currentThread().getPriority()-1));
+    }
+
+    @SuppressWarnings("unchecked")
+    private InstanceType[] newInstanceTypeArray(int size) {
+        return (InstanceType[]) new Object[size];
     }
 
     public AccumulatingParallelDependencesVisitor(int cacheSize, int maxOutstanding,
@@ -325,7 +330,7 @@ public class AccumulatingParallelDependencesVisitor implements
         this.maxNumWorkerThreads = maxNumWorkerThreads;
     }
 
-    public boolean addVisitor(DependencesVisitor visitor) {
+    public boolean addVisitor(DependencesVisitor<? super InstanceType> visitor) {
         if (this.visitors.containsKey(visitor))
             return false;
 
@@ -337,7 +342,7 @@ public class AccumulatingParallelDependencesVisitor implements
         return true;
     }
 
-    public boolean removeVisitor(DependencesVisitor visitor, boolean waitForFinish) {
+    public boolean removeVisitor(DependencesVisitor<? super InstanceType> visitor, boolean waitForFinish) {
         if (!this.visitors.containsKey(visitor))
             return false;
 
@@ -357,14 +362,14 @@ public class AccumulatingParallelDependencesVisitor implements
         return true;
     }
 
-    private EventStamp toStamp() {
+    private EventStamp<InstanceType> toStamp() {
         byte[] stampEvents = new byte[this.eventCount];
         System.arraycopy(this.events, 0, stampEvents, 0, this.eventCount);
         this.eventCount = 0;
 
-        InstructionInstance[] stampInstructionInstances = null;
+        InstanceType[] stampInstructionInstances = null;
         if (this.instructionInstanceCount > 0) {
-            stampInstructionInstances = new InstructionInstance[this.instructionInstanceCount];
+            stampInstructionInstances = newInstanceTypeArray(this.instructionInstanceCount);
             System.arraycopy(this.instructionInstances, 0, stampInstructionInstances, 0, this.instructionInstanceCount);
             this.instructionInstanceCount = 0;
         }
@@ -390,7 +395,7 @@ public class AccumulatingParallelDependencesVisitor implements
             this.variableCount = 0;
         }
 
-        return new EventStamp(stampEvents, stampInstructionInstances, stampMethods,
+        return new EventStamp<InstanceType>(stampEvents, stampInstructionInstances, stampMethods,
             stampLongs, stampVariables, this.visitors.size());
     }
 
@@ -422,7 +427,7 @@ public class AccumulatingParallelDependencesVisitor implements
         checkException();
     }
 
-    public void visitInstructionExecution(InstructionInstance instance) {
+    public void visitInstructionExecution(InstanceType instance) {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = INSTRUCTION_EXECUTION;
@@ -447,7 +452,7 @@ public class AccumulatingParallelDependencesVisitor implements
     }
 
     public void visitObjectCreation(long objectId,
-            InstructionInstance instrInstance) {
+            InstanceType instrInstance) {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = OBJECT_CREATION;
@@ -456,8 +461,8 @@ public class AccumulatingParallelDependencesVisitor implements
         checkFull();
     }
 
-    public void visitDataDependence(InstructionInstance from,
-            InstructionInstance to, Variable var, DataDependenceType type) {
+    public void visitDataDependence(InstanceType from,
+            InstanceType to, Variable var, DataDependenceType type) {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = type == DataDependenceType.READ_AFTER_WRITE
@@ -468,7 +473,7 @@ public class AccumulatingParallelDependencesVisitor implements
         checkFull();
     }
 
-    public void visitPendingDataDependence(InstructionInstance from,
+    public void visitPendingDataDependence(InstanceType from,
             Variable var, DataDependenceType type) {
         if (this.visitors.isEmpty())
             return;
@@ -479,7 +484,7 @@ public class AccumulatingParallelDependencesVisitor implements
         checkFull();
     }
 
-    public void discardPendingDataDependence(InstructionInstance from,
+    public void discardPendingDataDependence(InstanceType from,
             Variable var, DataDependenceType type) {
         if (this.visitors.isEmpty())
             return;
@@ -490,8 +495,7 @@ public class AccumulatingParallelDependencesVisitor implements
         checkFull();
     }
 
-    public void visitControlDependence(InstructionInstance from,
-            InstructionInstance to) {
+    public void visitControlDependence(InstanceType from, InstanceType to) {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = CONTROL_DEPENDENCE;
@@ -500,7 +504,7 @@ public class AccumulatingParallelDependencesVisitor implements
         checkFull();
     }
 
-    public void visitPendingControlDependence(InstructionInstance from) {
+    public void visitPendingControlDependence(InstanceType from) {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = PENDING_CONTROL_DEPENDENCE;
@@ -508,10 +512,10 @@ public class AccumulatingParallelDependencesVisitor implements
         checkFull();
     }
 
-    private void addInstruction(InstructionInstance instance) {
+    private void addInstruction(InstanceType instance) {
         if (this.instructionInstanceCount == this.instructionInstances.length) {
-            InstructionInstance[] old = this.instructionInstances;
-            this.instructionInstances = new InstructionInstance[2 * this.instructionInstanceCount];
+            InstanceType[] old = this.instructionInstances;
+            this.instructionInstances = newInstanceTypeArray(2 * this.instructionInstanceCount);
             System.arraycopy(old, 0, this.instructionInstances, 0, this.instructionInstanceCount);
         }
         this.instructionInstances[this.instructionInstanceCount++] = instance;
@@ -552,7 +556,7 @@ public class AccumulatingParallelDependencesVisitor implements
 
     private void flush() {
         assert this.visitors.size() > 0;
-        EventStamp stamp = toStamp(); // resets all counters
+        EventStamp<InstanceType> stamp = toStamp(); // resets all counters
 
         // the memory for the new stamp has already been allocated, so we can first
         // add it to the work queue, and afterwards claim the freeOutstanding space

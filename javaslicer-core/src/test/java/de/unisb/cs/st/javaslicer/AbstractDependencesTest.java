@@ -82,7 +82,7 @@ public abstract class AbstractDependencesTest {
     }
 
 
-    public static class StringArrDepVisitor extends DependencesVisitorAdapter {
+    public static class StringArrDepVisitor extends DependencesVisitorAdapter<InstructionInstance> {
 
         private final Set<Dependence> dependences;
         private final InstructionFilter instrFilter;
@@ -133,7 +133,7 @@ public abstract class AbstractDependencesTest {
         assertTrue("Thread not found", threadId != null);
 
         final Set<Dependence> dependences = new HashSet<Dependence>();
-        final DependencesExtractor extr = new DependencesExtractor(res);
+        final DependencesExtractor<InstructionInstance> extr = DependencesExtractor.forTrace(res);
         extr.registerVisitor(new StringArrDepVisitor(instrFilter, dependences), VisitorCapability.DATA_DEPENDENCES_ALL);
         extr.processBackwardTrace(threadId);
         final Dependence[] computetedDependences = dependences.toArray(new Dependence[dependences.size()]);

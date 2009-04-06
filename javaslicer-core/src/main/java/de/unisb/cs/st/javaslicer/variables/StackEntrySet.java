@@ -6,7 +6,7 @@ import java.util.NoSuchElementException;
 
 import de.unisb.cs.st.javaslicer.instructionSimulation.ExecutionFrame;
 
-public class StackEntrySet extends AbstractSet<Variable> {
+public class StackEntrySet<InstanceType> extends AbstractSet<Variable> {
 
     public class Itr implements Iterator<Variable> {
 
@@ -28,7 +28,7 @@ public class StackEntrySet extends AbstractSet<Variable> {
 
     }
 
-    protected final ExecutionFrame frame;
+    protected final ExecutionFrame<InstanceType> frame;
     protected final int offset;
     protected final int num;
 
@@ -38,7 +38,7 @@ public class StackEntrySet extends AbstractSet<Variable> {
      * @param offset The stack offset of the first entry
      * @param num the number of entries
      */
-    public StackEntrySet(final ExecutionFrame frame, final int offset, final int num) {
+    public StackEntrySet(final ExecutionFrame<InstanceType> frame, final int offset, final int num) {
         assert offset >= 0 || frame.interruptedControlFlow;
         assert num >= 0;
         this.frame = frame;

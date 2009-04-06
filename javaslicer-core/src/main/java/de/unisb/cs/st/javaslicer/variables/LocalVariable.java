@@ -2,18 +2,18 @@ package de.unisb.cs.st.javaslicer.variables;
 
 import de.unisb.cs.st.javaslicer.instructionSimulation.ExecutionFrame;
 
-public class LocalVariable implements Variable {
+public class LocalVariable<InstanceType> implements Variable {
 
-    private final ExecutionFrame frame;
+    private final ExecutionFrame<InstanceType> frame;
     private final int varIndex;
 
-    public LocalVariable(final ExecutionFrame executionFrame, final int localVarIndex) {
+    public LocalVariable(final ExecutionFrame<InstanceType> executionFrame, final int localVarIndex) {
         assert localVarIndex >= 0;
         this.frame = executionFrame;
         this.varIndex = localVarIndex;
     }
 
-    public ExecutionFrame getFrame() {
+    public ExecutionFrame<InstanceType> getFrame() {
         return this.frame;
     }
 
@@ -50,7 +50,7 @@ public class LocalVariable implements Variable {
             return false;
         if (getClass() != obj.getClass())
             return false;
-        final LocalVariable other = (LocalVariable) obj;
+        final LocalVariable<?> other = (LocalVariable<?>) obj;
         if (!this.frame.equals(other.frame))
             return false;
         if (this.varIndex != other.varIndex)

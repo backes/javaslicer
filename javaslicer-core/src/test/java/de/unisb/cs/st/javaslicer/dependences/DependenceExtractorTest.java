@@ -31,7 +31,7 @@ import de.unisb.cs.st.javaslicer.variables.StackEntry;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
 
-public class DependenceExtractorTest extends DependencesVisitorAdapter {
+public class DependenceExtractorTest extends DependencesVisitorAdapter<InstructionInstance> {
 
     private Map<Pair<InstructionInstance, Variable>, IntHolder> pendingDataDependences;
     private Set<Long> createdObjects;
@@ -68,7 +68,7 @@ public class DependenceExtractorTest extends DependencesVisitorAdapter {
     private void test(final File traceFile) throws IOException {
         TraceResult traceResult = new TraceResult(traceFile);
 
-        DependencesExtractor extractor = new DependencesExtractor(traceResult);
+        DependencesExtractor<InstructionInstance> extractor = DependencesExtractor.forTrace(traceResult);
         extractor.registerVisitor(this,
             VisitorCapability.PENDING_DATA_DEPENDENCES_ALL,
             VisitorCapability.OBJECT_CREATION);

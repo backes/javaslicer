@@ -25,7 +25,12 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.tracer.ThreadTracer;
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
 
-// TODO doc
+/**
+ * This class instruments methods to stop tracing as soon as the method is entered
+ * and continue when it is left (either by a return statement or by a thrown exception).
+ * 
+ * @author Clemens Hammacher
+ */
 public class PauseTracingInstrumenter implements Opcodes {
 
     private final Tracer tracer;

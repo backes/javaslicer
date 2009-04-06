@@ -17,13 +17,13 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
  *
  * @author Clemens Hammacher
  */
-public class SwapVariableUsages extends AbstractList<StackEntry>
+public class SwapVariableUsages<InstanceType> extends AbstractList<StackEntry<InstanceType>>
         implements DynamicInformation, RandomAccess {
 
-    private StackEntry lowerStackEntry;
-    private StackEntry upperStackEntry;
+    private StackEntry<InstanceType> lowerStackEntry;
+    private StackEntry<InstanceType> upperStackEntry;
 
-    public SwapVariableUsages(ExecutionFrame frame) {
+    public SwapVariableUsages(ExecutionFrame<InstanceType> frame) {
         int stackOffset = frame.operandStack.get() - 2;
         assert stackOffset >= 0 || frame.interruptedControlFlow;
         this.lowerStackEntry = frame.getStackEntry(stackOffset);
@@ -57,7 +57,7 @@ public class SwapVariableUsages extends AbstractList<StackEntry>
     }
 
     @Override
-    public StackEntry get(int index) {
+    public StackEntry<InstanceType> get(int index) {
         assert index >= 0 && index <= 1;
         return index == 0 ? this.lowerStackEntry : this.upperStackEntry;
     }

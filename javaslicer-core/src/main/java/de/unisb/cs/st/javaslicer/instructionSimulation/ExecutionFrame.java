@@ -7,13 +7,12 @@ import java.util.Set;
 
 import de.hammacher.util.IntHolder;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.variables.LocalVariable;
 import de.unisb.cs.st.javaslicer.variables.StackEntry;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
-public class ExecutionFrame {
+public class ExecutionFrame<InstanceType> {
 
 
     public class FrameVariableList extends AbstractList<Variable> {
@@ -41,7 +40,7 @@ public class ExecutionFrame {
     private static int nextFrameNr = 0;
     public final int frameNr = nextFrameNr++;
 
-    public Set<InstructionInstance> interestingInstances = null;
+    public Set<InstanceType> interestingInstances = null;
     public Set<Instruction> interestingInstructions = null;
     public ReadMethod method;
     public final IntHolder operandStack = new IntHolder(0);
@@ -49,7 +48,7 @@ public class ExecutionFrame {
     /**
      * <code>true</code> if this frame is at the start of a catchblock
      */
-    public InstructionInstance atCatchBlockStart;
+    public InstanceType atCatchBlockStart;
 
     /**
      * <code>true</code> if the next visited instruction in this frame must
@@ -69,7 +68,7 @@ public class ExecutionFrame {
      * holds the stack entry whose value was used as the return value of
      * the method
      */
-    public StackEntry returnValue = null;
+    public StackEntry<InstanceType> returnValue = null;
 
     /**
      * is set to true if the methods entry label has been passed
@@ -82,22 +81,22 @@ public class ExecutionFrame {
     int maxLocalVariable = -1;
     int minStackEntry = 0;
 
-    public LocalVariable getLocalVariable(final int localVarIndex) {
+    public LocalVariable<InstanceType> getLocalVariable(final int localVarIndex) {
         assert localVarIndex >= 0 || this.interruptedControlFlow;
         int index = Math.max(0, localVarIndex);
         this.maxLocalVariable = Math.max(this.maxLocalVariable, index);
-        return new LocalVariable(this, index);
+        return new LocalVariable<InstanceType>(this, index);
     }
 
-    public StackEntry getStackEntry(final int index) {
+    public StackEntry<InstanceType> getStackEntry(final int index) {
         if (index < 0) {
             assert this.interruptedControlFlow;
             this.minStackEntry = Math.min(this.minStackEntry, index);
             this.maxStackEntry = Math.max(this.maxStackEntry, 0);
-            return new StackEntry(this, 0);
+            return new StackEntry<InstanceType>(this, 0);
         }
         this.maxStackEntry = Math.max(this.maxStackEntry, index);
-        return new StackEntry(this, index);
+        return new StackEntry<InstanceType>(this, index);
     }
 
     public List<Variable> getAllVariables() {
@@ -118,7 +117,7 @@ public class ExecutionFrame {
             return false;
         if (getClass() != obj.getClass())
             return false;
-        ExecutionFrame other = (ExecutionFrame) obj;
+        ExecutionFrame<?> other = (ExecutionFrame<?>) obj;
         if (this.frameNr != other.frameNr)
             return false;
         if (this.lastInstruction == null) {

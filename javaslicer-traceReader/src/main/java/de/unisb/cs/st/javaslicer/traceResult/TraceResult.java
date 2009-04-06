@@ -16,6 +16,7 @@ import java.util.zip.GZIPInputStream;
 import de.hammacher.util.MultiplexedFileReader;
 import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.MultiplexedFileReader.MultiplexInputStream;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstructionInstanceFactory;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
@@ -137,8 +138,8 @@ public class TraceResult {
      * @return an iterator that iterates backwards through the execution trace.
      *         the iterator extends {@link Iterator} over {@link InstructionInstance}.
      */
-    public BackwardTraceIterator getBackwardIterator(final ThreadId threadId,
-            final InstanceFilter filter, InstructionInstanceFactory instanceFactory) {
+    public <InstanceType extends InstructionInstance> BackwardTraceIterator<InstanceType> getBackwardIterator(final ThreadId threadId,
+            final InstanceFilter<? super InstanceType> filter, InstructionInstanceFactory<? extends InstanceType> instanceFactory) {
         final ThreadTraceResult res = findThreadTraceResult(threadId);
         return res == null ? null : res.getBackwardIterator(filter, instanceFactory);
     }
@@ -146,9 +147,10 @@ public class TraceResult {
     /**
      * @see #getBackwardIterator(ThreadId, InstanceFilter)
      */
-    public BackwardTraceIterator getBackwardIterator(final ThreadId threadId,
-            final InstanceFilter filter) {
-        return getBackwardIterator(threadId, filter, new AbstractInstructionInstanceFactory());
+    public BackwardTraceIterator<InstructionInstance> getBackwardIterator(
+            final ThreadId threadId, final InstanceFilter<? super InstructionInstance> filter) {
+        InstructionInstanceFactory<? extends InstructionInstance> factory = new AbstractInstructionInstanceFactory();
+        return getBackwardIterator(threadId, filter, factory);
     }
 
     /**
@@ -166,8 +168,8 @@ public class TraceResult {
      * @return an iterator that iterates backwards through the execution trace.
      *         the iterator extends {@link Iterator} over {@link InstructionInstance}.
      */
-    public BackwardTraceIterator getBackwardIterator(final long javaThreadId,
-            InstanceFilter filter) {
+    public BackwardTraceIterator<AbstractInstructionInstance> getBackwardIterator(
+            final long javaThreadId, InstanceFilter<? super AbstractInstructionInstance> filter) {
         final ThreadId id = getThreadId(javaThreadId);
         return id == null ? null : getBackwardIterator(id, filter, new AbstractInstructionInstanceFactory());
     }
@@ -185,7 +187,8 @@ public class TraceResult {
      * @return an iterator that is able to iterate in any direction through the execution trace.
      *         the iterator extends {@link ListIterator} over {@link InstructionInstance}.
      */
-    public ForwardTraceIterator getForwardIterator(final ThreadId threadId, InstructionInstanceFactory instanceFactory) {
+    public <InstanceType extends InstructionInstance> ForwardTraceIterator<InstanceType> getForwardIterator(
+            final ThreadId threadId, InstructionInstanceFactory<InstanceType> instanceFactory) {
         final ThreadTraceResult res = findThreadTraceResult(threadId);
         return res == null ? null : res.getForwardIterator(instanceFactory);
     }
@@ -203,7 +206,8 @@ public class TraceResult {
      * @return an iterator that is able to iterate in any direction through the execution trace.
      *         the iterator extends {@link ListIterator} over {@link InstructionInstance}.
      */
-    public ForwardTraceIterator getIterator(final long javaThreadId, InstructionInstanceFactory instanceFactory) {
+    public <InstanceType extends InstructionInstance> ForwardTraceIterator<InstanceType> getIterator(
+            final long javaThreadId, InstructionInstanceFactory<InstanceType> instanceFactory) {
         final ThreadId id = getThreadId(javaThreadId);
         return id == null ? null : getForwardIterator(id, instanceFactory);
     }
@@ -338,7 +342,7 @@ public class TraceResult {
         try {
             System.out.println();
             System.out.println("The backward trace:");
-            final Iterator<InstructionInstance> it = tr.getBackwardIterator(tracing,
+            final BackwardTraceIterator<AbstractInstructionInstance> it = tr.getBackwardIterator(tracing,
                 InstanceFilter.AdditionalLabelFilter.instance, new AbstractInstructionInstanceFactory());
             long nr = 0;
             final String format = "%8d: %-100s -> %3d %7d %s%n";
@@ -366,11 +370,9 @@ public class TraceResult {
                         inst.getOccurrenceNumber(), inst.toString());
             }
 
-            final BackwardTraceIterator it2 = (BackwardTraceIterator) it;
-
             System.out.format("%nNumber of instructions: %d  (+ %d additional = %d total instructions)%nReady%n",
-                    it2.getNumInstructions(), it2.getNumFilteredInstructions(),
-                    it2.getNumInstructions() + it2.getNumFilteredInstructions());
+                    it.getNumInstructions(), it.getNumFilteredInstructions(),
+                    it.getNumInstructions() + it.getNumFilteredInstructions());
 
         } catch (final TracerException e) {
             System.err.print("Error while tracing: ");
