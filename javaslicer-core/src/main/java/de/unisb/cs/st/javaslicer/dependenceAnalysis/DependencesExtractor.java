@@ -50,6 +50,7 @@ public class DependencesExtractor {
 
     private final TraceResult trace;
     private final Simulator simulator;
+
     private final Set<DependencesVisitor> dataDependenceVisitorsReadAfterWrite = new HashSet<DependencesVisitor>();
     private final Set<DependencesVisitor> dataDependenceVisitorsWriteAfterRead = new HashSet<DependencesVisitor>();
     private final Set<DependencesVisitor> controlDependenceVisitors = new HashSet<DependencesVisitor>();
@@ -60,9 +61,17 @@ public class DependencesExtractor {
     private final Set<DependencesVisitor> methodEntryLeaveVisitors = new HashSet<DependencesVisitor>();
     private final Set<DependencesVisitor> objectCreationVisitors = new HashSet<DependencesVisitor>();
 
+    private final InstructionInstanceFactory instanceFactory;
+
+
     public DependencesExtractor(final TraceResult trace) {
+        this(trace, new AbstractInstructionInstanceFactory());
+    }
+
+    public DependencesExtractor(final TraceResult trace, InstructionInstanceFactory instanceFactory) {
         this.trace = trace;
         this.simulator = new Simulator(trace);
+        this.instanceFactory = instanceFactory;
     }
 
     /**
@@ -163,18 +172,12 @@ public class DependencesExtractor {
     }
 
     /**
-     * @see #processBackwardTrace(ThreadId, boolean, InstructionInstanceFactory)
+     * @see #processBackwardTrace(ThreadId, boolean)
      */
     public void processBackwardTrace(ThreadId threadId) {
         processBackwardTrace(threadId, false);
     }
 
-    /**
-     * @see #processBackwardTrace(ThreadId, boolean, InstructionInstanceFactory)
-     */
-    public void processBackwardTrace(ThreadId threadId, boolean multithreaded) {
-        processBackwardTrace(threadId, multithreaded, new AbstractInstructionInstanceFactory());
-    }
     /**
      * Go backwards through the execution trace of the given threadId and extract
      * all dependences. {@link DependencesVisitor}s should have been added before
@@ -182,13 +185,11 @@ public class DependencesExtractor {
      *
      * @param threadId identifies the thread whose trace should be analyzed
      * @param multithreaded use an extra thread to traverse the trace
-     * @param instanceFactory a factory that creates the instruction instance objects
      */
-    public void processBackwardTrace(ThreadId threadId, boolean multithreaded,
-            InstructionInstanceFactory instanceFactory) {
+    public void processBackwardTrace(ThreadId threadId, boolean multithreaded) {
 
         final BackwardTraceIterator backwardInsnItr =
-            this.trace.getBackwardIterator(threadId, null, instanceFactory);
+            this.trace.getBackwardIterator(threadId, null, this.instanceFactory);
 
         // store the current set of visitors of each capability in an array for better
         // performance and faster empty-check (null reference if empty)
