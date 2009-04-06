@@ -202,8 +202,21 @@ public class AccumulatingParallelDependencesVisitor implements
                 while (true) {
                     EventStamp stamp;
                     while ((stamp = this.stamps.poll()) != null) {
-                        if (stamp.replay(this.visitor))
-                            AccumulatingParallelDependencesVisitor.this.freeOutstanding.release(stamp.getLength());
+                        boolean stampReady = false;
+                        try {
+                            stampReady = stamp.replay(this.visitor);
+                        } catch (RuntimeException e) {
+                            stampReady = true;
+                            AccumulatingParallelDependencesVisitor.this.workerException.compareAndSet(null, e);
+                            throw e;
+                        } catch (Error e) {
+                            stampReady = true;
+                            AccumulatingParallelDependencesVisitor.this.workerException.compareAndSet(null, e);
+                            throw e;
+                        } finally {
+                            if (stampReady)
+                                AccumulatingParallelDependencesVisitor.this.freeOutstanding.release(stamp.getLength());
+                        }
                     }
                     assert this.currentExecutingThread.get() == executingThread;
                     this.currentExecutingThread.set(null);
@@ -257,7 +270,9 @@ public class AccumulatingParallelDependencesVisitor implements
                     work.execute(currentThread);
                 }
             } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Worker threads should never be interrupted", e);
+            } catch (Throwable t) {
+                AccumulatingParallelDependencesVisitor.this.workerException.compareAndSet(null, t);
             }
         }
 
@@ -269,6 +284,9 @@ public class AccumulatingParallelDependencesVisitor implements
     private final ThreadFactory threadFactory;
     private final List<Thread> workerThreads = new ArrayList<Thread>(4);
     private final int maxNumWorkerThreads;
+
+    // package-visible
+    final AtomicReference<Throwable> workerException = new AtomicReference<Throwable>();
 
     // package-visible
     final Semaphore freeOutstanding;
@@ -392,8 +410,6 @@ public class AccumulatingParallelDependencesVisitor implements
         }
         if (interrupted)
             Thread.currentThread().interrupt();
-
-        assert this.outstandingWorkQueue.isEmpty();
     }
 
     public void visitEnd(long numInstances) {
@@ -403,6 +419,7 @@ public class AccumulatingParallelDependencesVisitor implements
             flush();
         }
         finish();
+        checkException();
     }
 
     public void visitInstructionExecution(InstructionInstance instance) {
@@ -550,6 +567,8 @@ public class AccumulatingParallelDependencesVisitor implements
         if (added != 0)
             this.outstandingWork.release(added);
 
+        checkException();
+
         int permits = stamp.getLength();
         int numWorkers = this.workerThreads.size();
         if (numWorkers < this.maxNumWorkerThreads) {
@@ -582,6 +601,18 @@ public class AccumulatingParallelDependencesVisitor implements
             this.freeOutstanding.acquireUninterruptibly(permits);
         }
 
+    }
+
+    private void checkException() {
+        Throwable workerEx = this.workerException.get();
+        if (workerEx != null) {
+            finish();
+            if (workerEx instanceof RuntimeException)
+                throw (RuntimeException)workerEx;
+            if (workerEx instanceof Error)
+                throw (Error)workerEx;
+            throw new RuntimeException(workerEx);
+        }
     }
 
 }

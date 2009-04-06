@@ -172,6 +172,8 @@ public class DependencesExtractor {
     }
 
     /**
+     * Calls {@link #processBackwardTrace(ThreadId, boolean)} with multithreaded == false
+     *
      * @see #processBackwardTrace(ThreadId, boolean)
      */
     public void processBackwardTrace(ThreadId threadId) {
@@ -237,11 +239,12 @@ public class DependencesExtractor {
         }
 
         final Iterator<InstructionInstance> instanceIterator;
+        Thread iteratorThread = null;
         if (multithreaded) {
             final BlockwiseSynchronizedBuffer<InstructionInstance> buffer = new BlockwiseSynchronizedBuffer<InstructionInstance>(1<<16, 1<<20);
             final InstructionInstance firstInstance = backwardInsnItr.hasNext() ? backwardInsnItr.next() : null;
             final AtomicReference<Throwable> iteratorException = new AtomicReference<Throwable>(null);
-            new Thread("Trace iterator") {
+            iteratorThread = new Thread("Trace iterator") {
                 @Override
                 public void run() {
                     try {
@@ -258,7 +261,8 @@ public class DependencesExtractor {
                         }
                     }
                 }
-            }.start();
+            };
+            iteratorThread.start();
             instanceIterator = new Iterator<InstructionInstance>() {
 
                 private InstructionInstance next = firstInstance;
@@ -321,348 +325,353 @@ public class DependencesExtractor {
         InstructionInstance instance = null;
         Instruction instruction = null;
 
-        while (instanceIterator.hasNext()) {
-            instance = instanceIterator.next();
-            instruction = instance.getInstruction();
+        try {
+            while (instanceIterator.hasNext()) {
+                instance = instanceIterator.next();
+                instruction = instance.getInstruction();
 
-            /*
-            if (instance.getInstanceNr() % 1000000 == 0) {
-                System.out.format("%5de6: %s%n", instance.getInstanceNr() / 1000000, new Date());
-            }
-            */
-
-            ExecutionFrame removedFrame = null;
-            final int stackDepth = instance.getStackDepth();
-            assert stackDepth > 0;
-
-            if (frames.size() != stackDepth) {
-                if (frames.size() > stackDepth) {
-                    assert frames.size() == stackDepth+1;
-                    removedFrame = frames.pop();
-                    assert removedFrame.method != null;
-                    if (methodEntryLeaveVisitors0 != null)
-                        for (final DependencesVisitor vis: methodEntryLeaveVisitors0)
-                            vis.visitMethodEntry(removedFrame.method);
-                    currentFrame = frames.peek();
-                } else {
-                    // in all steps, the stackDepth can change by at most 1
-                    assert frames.size() == stackDepth-1;
-                    final ExecutionFrame newFrame = new ExecutionFrame();
-                    // assertion: if the current frame catched an exception, then the new frame
-                    // must have thrown it
-                    assert currentFrame == null || currentFrame.atCatchBlockStart == null
-                        || instruction == instruction.getMethod().getAbnormalTerminationLabel();
-                    newFrame.method = instruction.getMethod();
-                    if (instruction == newFrame.method.getAbnormalTerminationLabel()) {
-                        newFrame.throwsException = newFrame.interruptedControlFlow = true;
-                    }
-                    frames.push(newFrame);
-                    if (methodEntryLeaveVisitors0 != null)
-                        for (final DependencesVisitor vis: methodEntryLeaveVisitors0)
-                            vis.visitMethodLeave(newFrame.method);
-                    currentFrame = newFrame;
-                }
-            }
-            assert currentFrame != null;
-
-            // it is possible that we see successive instructions of different methods,
-            // e.g. when called from native code
-            if (currentFrame.method  == null) {
-                assert currentFrame.returnValue == null;
-                currentFrame.method = instruction.getMethod();
-            } else if (currentFrame.finished || currentFrame.method != instruction.getMethod()) {
-                final ReadMethod newMethod = instruction.getMethod();
-                if (methodEntryLeaveVisitors0 != null)
-                    for (final DependencesVisitor vis: methodEntryLeaveVisitors0) {
-                        vis.visitMethodEntry(currentFrame.method);
-                        vis.visitMethodLeave(newMethod);
-                    }
-                cleanUpExecutionFrame(currentFrame, lastReaders, lastWriter,
-                    pendingDataDependenceVisitorsWriteAfterRead0, pendingDataDependenceVisitorsReadAfterWrite0,
-                    dataDependenceVisitorsWriteAfterRead0, dataDependenceVisitorsReadAfterWrite0);
-                currentFrame = new ExecutionFrame();
-                currentFrame.method = newMethod;
-                frames.set(stackDepth-1, currentFrame);
-            }
-
-            if (instruction == instruction.getMethod().getMethodEntryLabel())
-                currentFrame.finished = true;
-            currentFrame.lastInstruction = instruction;
-
-            /*
-            if (stackDepth == 1) {
-                System.out.format("%3d    %3d   %s%n", stepNr, currentFrame.operandStack.intValue(), instance);
-            }
-            */
-
-            final DynamicInformation dynInfo = this.simulator.simulateInstruction(instance, currentFrame,
-                    removedFrame, frames);
-
-            if (instructionVisitors0 != null)
-                for (final DependencesVisitor vis: instructionVisitors0)
-                    vis.visitInstructionExecution(instance);
-
-            // the computation of control dependences only has to be performed
-            // if there are any controlDependenceVisitors
-            if (controlDependenceVisitors0 != null) {
-                Set<Instruction> instrControlDependences = controlDependences.get(instruction.getIndex());
-                if (instrControlDependences == null) {
-                    computeControlDependences(instruction.getMethod(), controlDependences);
-                    instrControlDependences = controlDependences.get(instruction.getIndex());
-                    assert instrControlDependences != null;
-                }
-                final boolean isExceptionsThrowingInstruction = currentFrame.throwsException &&
-                    (instruction.getType() != InstructionType.LABEL || !((LabelMarker)instruction).isAdditionalLabel());
-                // get all interesting instructions, that are dependent on the current one
-                Set<InstructionInstance> dependantInterestingInstances = currentFrame.interestingInstances == null
-                    ? Collections.<InstructionInstance>emptySet()
-                    : getInstanceIntersection(instrControlDependences, currentFrame.interestingInstances);
-                if (isExceptionsThrowingInstruction) {
-                    currentFrame.throwsException = false;
-                    // in this case, we have an additional control dependence from the catching to
-                    // the throwing instruction
-                    for (int i = stackDepth-2; i >= 0; --i) {
-                        final ExecutionFrame f = frames.get(i);
-                        if (f.atCatchBlockStart != null) {
-                            if (f.interestingInstances != null && f.interestingInstances.contains(f.atCatchBlockStart)) {
-                                if (dependantInterestingInstances.isEmpty())
-                                    dependantInterestingInstances = Collections.singleton(f.atCatchBlockStart);
-                                else
-                                    dependantInterestingInstances.add(f.atCatchBlockStart);
-                            }
-                            break;
-                        }
-                    }
-                }
-                if (!dependantInterestingInstances.isEmpty()) {
-                    for (final InstructionInstance depend: dependantInterestingInstances) {
-                        for (final DependencesVisitor vis: this.controlDependenceVisitors) {
-                            vis.visitControlDependence(depend, instance);
-                        }
-                    }
-                    if (currentFrame.interestingInstances != null)
-                        currentFrame.interestingInstances.removeAll(dependantInterestingInstances);
-                }
-                if (currentFrame.interestingInstances == null)
-                    currentFrame.interestingInstances = new HashSet<InstructionInstance>();
-                currentFrame.interestingInstances.add(instance);
-            }
-            // TODO check this:
-            if (pendingControlDependenceVisitors0 != null) {
-                if (currentFrame.interestingInstances == null)
-                    currentFrame.interestingInstances = new HashSet<InstructionInstance>();
-                currentFrame.interestingInstances.add(instance);
-                for (final DependencesVisitor vis: pendingControlDependenceVisitors0)
-                    vis.visitPendingControlDependence(instance);
-            }
-
-            if (!dynInfo.getDefinedVariables().isEmpty()) {
                 /*
-                for (final Variable definedVariable: dynInfo.getDefinedVariables()) {
-                    if (definedVariable instanceof ObjectField) {
-                        seenObjects.add(((ObjectField)definedVariable).getObjectId());
-                        assert !createdObjects.contains(((ObjectField)definedVariable).getObjectId());
-                    }
-                    if (definedVariable instanceof ArrayElement) {
-                        seenObjects.add(((ArrayElement)definedVariable).getArrayId());
-                        assert !createdObjects.contains(((ArrayElement)definedVariable).getArrayId());
-                    }
+                if (instance.getInstanceNr() % 1000000 == 0) {
+                    System.out.format("%5de6: %s%n", instance.getInstanceNr() / 1000000, new Date());
                 }
                 */
-                if (dataDependenceVisitorsReadAfterWrite0 != null
-                        || dataDependenceVisitorsWriteAfterRead0 != null
-                        || pendingDataDependenceVisitorsWriteAfterRead0 != null) {
+
+                ExecutionFrame removedFrame = null;
+                final int stackDepth = instance.getStackDepth();
+                assert stackDepth > 0;
+
+                if (frames.size() != stackDepth) {
+                    if (frames.size() > stackDepth) {
+                        assert frames.size() == stackDepth+1;
+                        removedFrame = frames.pop();
+                        assert removedFrame.method != null;
+                        if (methodEntryLeaveVisitors0 != null)
+                            for (final DependencesVisitor vis: methodEntryLeaveVisitors0)
+                                vis.visitMethodEntry(removedFrame.method);
+                        currentFrame = frames.peek();
+                    } else {
+                        // in all steps, the stackDepth can change by at most 1
+                        assert frames.size() == stackDepth-1;
+                        final ExecutionFrame newFrame = new ExecutionFrame();
+                        // assertion: if the current frame catched an exception, then the new frame
+                        // must have thrown it
+                        assert currentFrame == null || currentFrame.atCatchBlockStart == null
+                            || instruction == instruction.getMethod().getAbnormalTerminationLabel();
+                        newFrame.method = instruction.getMethod();
+                        if (instruction == newFrame.method.getAbnormalTerminationLabel()) {
+                            newFrame.throwsException = newFrame.interruptedControlFlow = true;
+                        }
+                        frames.push(newFrame);
+                        if (methodEntryLeaveVisitors0 != null)
+                            for (final DependencesVisitor vis: methodEntryLeaveVisitors0)
+                                vis.visitMethodLeave(newFrame.method);
+                        currentFrame = newFrame;
+                    }
+                }
+                assert currentFrame != null;
+
+                // it is possible that we see successive instructions of different methods,
+                // e.g. when called from native code
+                if (currentFrame.method  == null) {
+                    assert currentFrame.returnValue == null;
+                    currentFrame.method = instruction.getMethod();
+                } else if (currentFrame.finished || currentFrame.method != instruction.getMethod()) {
+                    final ReadMethod newMethod = instruction.getMethod();
+                    if (methodEntryLeaveVisitors0 != null)
+                        for (final DependencesVisitor vis: methodEntryLeaveVisitors0) {
+                            vis.visitMethodEntry(currentFrame.method);
+                            vis.visitMethodLeave(newMethod);
+                        }
+                    cleanUpExecutionFrame(currentFrame, lastReaders, lastWriter,
+                        pendingDataDependenceVisitorsWriteAfterRead0, pendingDataDependenceVisitorsReadAfterWrite0,
+                        dataDependenceVisitorsWriteAfterRead0, dataDependenceVisitorsReadAfterWrite0);
+                    currentFrame = new ExecutionFrame();
+                    currentFrame.method = newMethod;
+                    frames.set(stackDepth-1, currentFrame);
+                }
+
+                if (instruction == instruction.getMethod().getMethodEntryLabel())
+                    currentFrame.finished = true;
+                currentFrame.lastInstruction = instruction;
+
+                /*
+                if (stackDepth == 1) {
+                    System.out.format("%3d    %3d   %s%n", stepNr, currentFrame.operandStack.intValue(), instance);
+                }
+                */
+
+                final DynamicInformation dynInfo = this.simulator.simulateInstruction(instance, currentFrame,
+                        removedFrame, frames);
+
+                if (instructionVisitors0 != null)
+                    for (final DependencesVisitor vis: instructionVisitors0)
+                        vis.visitInstructionExecution(instance);
+
+                // the computation of control dependences only has to be performed
+                // if there are any controlDependenceVisitors
+                if (controlDependenceVisitors0 != null) {
+                    Set<Instruction> instrControlDependences = controlDependences.get(instruction.getIndex());
+                    if (instrControlDependences == null) {
+                        computeControlDependences(instruction.getMethod(), controlDependences);
+                        instrControlDependences = controlDependences.get(instruction.getIndex());
+                        assert instrControlDependences != null;
+                    }
+                    final boolean isExceptionsThrowingInstruction = currentFrame.throwsException &&
+                        (instruction.getType() != InstructionType.LABEL || !((LabelMarker)instruction).isAdditionalLabel());
+                    // get all interesting instructions, that are dependent on the current one
+                    Set<InstructionInstance> dependantInterestingInstances = currentFrame.interestingInstances == null
+                        ? Collections.<InstructionInstance>emptySet()
+                        : getInstanceIntersection(instrControlDependences, currentFrame.interestingInstances);
+                    if (isExceptionsThrowingInstruction) {
+                        currentFrame.throwsException = false;
+                        // in this case, we have an additional control dependence from the catching to
+                        // the throwing instruction
+                        for (int i = stackDepth-2; i >= 0; --i) {
+                            final ExecutionFrame f = frames.get(i);
+                            if (f.atCatchBlockStart != null) {
+                                if (f.interestingInstances != null && f.interestingInstances.contains(f.atCatchBlockStart)) {
+                                    if (dependantInterestingInstances.isEmpty())
+                                        dependantInterestingInstances = Collections.singleton(f.atCatchBlockStart);
+                                    else
+                                        dependantInterestingInstances.add(f.atCatchBlockStart);
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    if (!dependantInterestingInstances.isEmpty()) {
+                        for (final InstructionInstance depend: dependantInterestingInstances) {
+                            for (final DependencesVisitor vis: this.controlDependenceVisitors) {
+                                vis.visitControlDependence(depend, instance);
+                            }
+                        }
+                        if (currentFrame.interestingInstances != null)
+                            currentFrame.interestingInstances.removeAll(dependantInterestingInstances);
+                    }
+                    if (currentFrame.interestingInstances == null)
+                        currentFrame.interestingInstances = new HashSet<InstructionInstance>();
+                    currentFrame.interestingInstances.add(instance);
+                }
+                // TODO check this:
+                if (pendingControlDependenceVisitors0 != null) {
+                    if (currentFrame.interestingInstances == null)
+                        currentFrame.interestingInstances = new HashSet<InstructionInstance>();
+                    currentFrame.interestingInstances.add(instance);
+                    for (final DependencesVisitor vis: pendingControlDependenceVisitors0)
+                        vis.visitPendingControlDependence(instance);
+                }
+
+                if (!dynInfo.getDefinedVariables().isEmpty()) {
+                    /*
                     for (final Variable definedVariable: dynInfo.getDefinedVariables()) {
-                        if (!(definedVariable instanceof StackEntry)) {
-                            // we ignore WAR dependences over the stack!
-                            if (pendingDataDependenceVisitorsWriteAfterRead0 != null) {
-                                // for each defined variable, we have a pending WAR dependence
-                                // if the lastWriter is not null, we first discard old pending dependences
-                                final InstructionInstance varLastWriter = lastWriter.put(definedVariable, instance);
-                                for (final DependencesVisitor vis: pendingDataDependenceVisitorsWriteAfterRead0) {
-                                    if (varLastWriter != null)
-                                        vis.discardPendingDataDependence(varLastWriter, definedVariable, DataDependenceType.WRITE_AFTER_READ);
-                                    vis.visitPendingDataDependence(instance, definedVariable, DataDependenceType.WRITE_AFTER_READ);
+                        if (definedVariable instanceof ObjectField) {
+                            seenObjects.add(((ObjectField)definedVariable).getObjectId());
+                            assert !createdObjects.contains(((ObjectField)definedVariable).getObjectId());
+                        }
+                        if (definedVariable instanceof ArrayElement) {
+                            seenObjects.add(((ArrayElement)definedVariable).getArrayId());
+                            assert !createdObjects.contains(((ArrayElement)definedVariable).getArrayId());
+                        }
+                    }
+                    */
+                    if (dataDependenceVisitorsReadAfterWrite0 != null
+                            || dataDependenceVisitorsWriteAfterRead0 != null
+                            || pendingDataDependenceVisitorsWriteAfterRead0 != null) {
+                        for (final Variable definedVariable: dynInfo.getDefinedVariables()) {
+                            if (!(definedVariable instanceof StackEntry)) {
+                                // we ignore WAR dependences over the stack!
+                                if (pendingDataDependenceVisitorsWriteAfterRead0 != null) {
+                                    // for each defined variable, we have a pending WAR dependence
+                                    // if the lastWriter is not null, we first discard old pending dependences
+                                    final InstructionInstance varLastWriter = lastWriter.put(definedVariable, instance);
+                                    for (final DependencesVisitor vis: pendingDataDependenceVisitorsWriteAfterRead0) {
+                                        if (varLastWriter != null)
+                                            vis.discardPendingDataDependence(varLastWriter, definedVariable, DataDependenceType.WRITE_AFTER_READ);
+                                        vis.visitPendingDataDependence(instance, definedVariable, DataDependenceType.WRITE_AFTER_READ);
+                                    }
+                                // otherwise, if there are WAR visitors, we only update the lastWriter
+                                } else if (dataDependenceVisitorsWriteAfterRead0 != null) {
+                                    lastWriter.put(definedVariable, instance);
                                 }
-                            // otherwise, if there are WAR visitors, we only update the lastWriter
-                            } else if (dataDependenceVisitorsWriteAfterRead0 != null) {
-                                lastWriter.put(definedVariable, instance);
+                            }
+                            // if we have RAW visitors, we need to analyse the lastReaders
+                            if (dataDependenceVisitorsReadAfterWrite0 != null
+                                    || pendingDataDependenceVisitorsReadAfterWrite0 != null) {
+                                final List<InstructionInstance> readers = lastReaders.remove(definedVariable);
+                                if (readers != null)
+                                    for (final InstructionInstance reader: readers) {
+                                        if (dataDependenceVisitorsReadAfterWrite0 != null)
+                                            for (final DependencesVisitor vis: dataDependenceVisitorsReadAfterWrite0)
+                                                vis.visitDataDependence(reader, instance, definedVariable, DataDependenceType.READ_AFTER_WRITE);
+                                        if (pendingDataDependenceVisitorsReadAfterWrite0 != null)
+                                            for (final DependencesVisitor vis: pendingDataDependenceVisitorsReadAfterWrite0)
+                                                vis.discardPendingDataDependence(reader, definedVariable, DataDependenceType.READ_AFTER_WRITE);
+                                    }
                             }
                         }
-                        // if we have RAW visitors, we need to analyse the lastReaders
-                        if (dataDependenceVisitorsReadAfterWrite0 != null
-                                || pendingDataDependenceVisitorsReadAfterWrite0 != null) {
-                            final List<InstructionInstance> readers = lastReaders.remove(definedVariable);
-                            if (readers != null)
-                                for (final InstructionInstance reader: readers) {
-                                    if (dataDependenceVisitorsReadAfterWrite0 != null)
-                                        for (final DependencesVisitor vis: dataDependenceVisitorsReadAfterWrite0)
-                                            vis.visitDataDependence(reader, instance, definedVariable, DataDependenceType.READ_AFTER_WRITE);
-                                    if (pendingDataDependenceVisitorsReadAfterWrite0 != null)
-                                        for (final DependencesVisitor vis: pendingDataDependenceVisitorsReadAfterWrite0)
-                                            vis.discardPendingDataDependence(reader, definedVariable, DataDependenceType.READ_AFTER_WRITE);
-                                }
-                        }
                     }
                 }
-            }
 
-            if (!dynInfo.getUsedVariables().isEmpty()) {
-                /*
-                for (final Variable usedVariable: dynInfo.getUsedVariables()) {
-                    if (usedVariable instanceof ObjectField) {
-                        seenObjects.add(((ObjectField)usedVariable).getObjectId());
-                        assert !createdObjects.contains(((ObjectField)usedVariable).getObjectId());
-                    }
-                    if (usedVariable instanceof ArrayElement) {
-                        seenObjects.add(((ArrayElement)usedVariable).getArrayId());
-                        assert !createdObjects.contains(((ArrayElement)usedVariable).getArrayId());
-                    }
-                }
-                */
-
-                if (dataDependenceVisitorsWriteAfterRead0 != null ||
-                        dataDependenceVisitorsReadAfterWrite0 != null ||
-                        pendingDataDependenceVisitorsReadAfterWrite0 != null) {
+                if (!dynInfo.getUsedVariables().isEmpty()) {
+                    /*
                     for (final Variable usedVariable: dynInfo.getUsedVariables()) {
-                        // if we have WAR visitors, we inform them about a new dependence
-                        if (dataDependenceVisitorsWriteAfterRead0 != null && !(usedVariable instanceof StackEntry)) {
-                            final InstructionInstance lastWriterInst = lastWriter.get(usedVariable);
-
-                            // avoid self-loops in the DDG (e.g. for IINC, which reads and writes to the same variable)
-                            if (lastWriterInst != null && lastWriterInst != instance) {
-                                for (final DependencesVisitor vis: dataDependenceVisitorsWriteAfterRead0)
-                                    vis.visitDataDependence(lastWriterInst, instance, usedVariable, DataDependenceType.WRITE_AFTER_READ);
-                            }
+                        if (usedVariable instanceof ObjectField) {
+                            seenObjects.add(((ObjectField)usedVariable).getObjectId());
+                            assert !createdObjects.contains(((ObjectField)usedVariable).getObjectId());
                         }
+                        if (usedVariable instanceof ArrayElement) {
+                            seenObjects.add(((ArrayElement)usedVariable).getArrayId());
+                            assert !createdObjects.contains(((ArrayElement)usedVariable).getArrayId());
+                        }
+                    }
+                    */
 
-                        // for RAW visitors, update the lastReaders
-                        if (dataDependenceVisitorsReadAfterWrite0 != null
-                                || pendingDataDependenceVisitorsReadAfterWrite0 != null) {
-                            List<InstructionInstance> readers = lastReaders.get(usedVariable);
-                            if (readers == null) {
-                                readers = new ArrayList<InstructionInstance>(4);
-                                lastReaders.put(usedVariable, readers);
+                    if (dataDependenceVisitorsWriteAfterRead0 != null ||
+                            dataDependenceVisitorsReadAfterWrite0 != null ||
+                            pendingDataDependenceVisitorsReadAfterWrite0 != null) {
+                        for (final Variable usedVariable: dynInfo.getUsedVariables()) {
+                            // if we have WAR visitors, we inform them about a new dependence
+                            if (dataDependenceVisitorsWriteAfterRead0 != null && !(usedVariable instanceof StackEntry)) {
+                                final InstructionInstance lastWriterInst = lastWriter.get(usedVariable);
+
+                                // avoid self-loops in the DDG (e.g. for IINC, which reads and writes to the same variable)
+                                if (lastWriterInst != null && lastWriterInst != instance) {
+                                    for (final DependencesVisitor vis: dataDependenceVisitorsWriteAfterRead0)
+                                        vis.visitDataDependence(lastWriterInst, instance, usedVariable, DataDependenceType.WRITE_AFTER_READ);
+                                }
                             }
-                            readers.add(instance);
-                            // for each used variable, we have a pending RAW dependence
-                            if (pendingDataDependenceVisitorsReadAfterWrite0 != null) {
-                                for (final DependencesVisitor vis: pendingDataDependenceVisitorsReadAfterWrite0)
-                                    vis.visitPendingDataDependence(instance, usedVariable, DataDependenceType.READ_AFTER_WRITE);
+
+                            // for RAW visitors, update the lastReaders
+                            if (dataDependenceVisitorsReadAfterWrite0 != null
+                                    || pendingDataDependenceVisitorsReadAfterWrite0 != null) {
+                                List<InstructionInstance> readers = lastReaders.get(usedVariable);
+                                if (readers == null) {
+                                    readers = new ArrayList<InstructionInstance>(4);
+                                    lastReaders.put(usedVariable, readers);
+                                }
+                                readers.add(instance);
+                                // for each used variable, we have a pending RAW dependence
+                                if (pendingDataDependenceVisitorsReadAfterWrite0 != null) {
+                                    for (final DependencesVisitor vis: pendingDataDependenceVisitorsReadAfterWrite0)
+                                        vis.visitPendingDataDependence(instance, usedVariable, DataDependenceType.READ_AFTER_WRITE);
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            for (final Entry<Long, Collection<Variable>> e: dynInfo.getCreatedObjects().entrySet()) {
+                for (final Entry<Long, Collection<Variable>> e: dynInfo.getCreatedObjects().entrySet()) {
+                    /*
+                    boolean added = createdObjects.add(e.getKey());
+                    assert added;
+                    */
+
+                    for (final Variable var: e.getValue()) {
+                        assert var instanceof ObjectField || var instanceof ArrayElement;
+                        // clean up lastWriter if we have any WAR visitors
+                        if (pendingDataDependenceVisitorsWriteAfterRead0 != null) {
+                            InstructionInstance inst;
+                            if ((inst = lastWriter.remove(var)) != null)
+                                for (final DependencesVisitor vis: pendingDataDependenceVisitorsWriteAfterRead0)
+                                    vis.discardPendingDataDependence(inst, var, DataDependenceType.WRITE_AFTER_READ);
+                        } else if (dataDependenceVisitorsWriteAfterRead0 != null)
+                            lastWriter.remove(var);
+                        // clean up lastReaders if we have any RAW visitors
+                        if (dataDependenceVisitorsReadAfterWrite0 != null || pendingDataDependenceVisitorsReadAfterWrite0 != null) {
+                            List<InstructionInstance> instList;
+                            if ((instList = lastReaders.remove(var)) != null) {
+                                if (dataDependenceVisitorsReadAfterWrite0 != null)
+                                    for (final DependencesVisitor vis: dataDependenceVisitorsReadAfterWrite0)
+                                        for (final InstructionInstance instrInst: instList)
+                                            vis.visitDataDependence(instrInst, instance, var, DataDependenceType.READ_AFTER_WRITE);
+                                if (pendingDataDependenceVisitorsReadAfterWrite0 != null)
+                                    for (final DependencesVisitor vis: pendingDataDependenceVisitorsReadAfterWrite0)
+                                        for (final InstructionInstance instrInst: instList)
+                                            vis.discardPendingDataDependence(instrInst, var, DataDependenceType.READ_AFTER_WRITE);
+                            }
+                        }
+                    }
+                    if (objectCreationVisitors0 != null)
+                        for (final DependencesVisitor vis: objectCreationVisitors0)
+                            vis.visitObjectCreation(e.getKey(), instance);
+                }
+
+                if (dynInfo.isCatchBlock()) {
+                    currentFrame.atCatchBlockStart = instance;
+                    currentFrame.interruptedControlFlow = true;
+                } else if (currentFrame.atCatchBlockStart != null) {
+                    currentFrame.atCatchBlockStart = null;
+                }
+
+                if (removedFrame != null)
+                    cleanUpExecutionFrame(removedFrame, lastReaders, lastWriter,
+                        pendingDataDependenceVisitorsWriteAfterRead0, pendingDataDependenceVisitorsReadAfterWrite0,
+                        dataDependenceVisitorsWriteAfterRead0, dataDependenceVisitorsReadAfterWrite0);
+
                 /*
-                boolean added = createdObjects.add(e.getKey());
-                assert added;
-                */
-
-                for (final Variable var: e.getValue()) {
-                    assert var instanceof ObjectField || var instanceof ArrayElement;
-                    // clean up lastWriter if we have any WAR visitors
-                    if (pendingDataDependenceVisitorsWriteAfterRead0 != null) {
-                        InstructionInstance inst;
-                        if ((inst = lastWriter.remove(var)) != null)
-                            for (final DependencesVisitor vis: pendingDataDependenceVisitorsWriteAfterRead0)
-                                vis.discardPendingDataDependence(inst, var, DataDependenceType.WRITE_AFTER_READ);
-                    } else if (dataDependenceVisitorsWriteAfterRead0 != null)
-                        lastWriter.remove(var);
-                    // clean up lastReaders if we have any RAW visitors
-                    if (dataDependenceVisitorsReadAfterWrite0 != null || pendingDataDependenceVisitorsReadAfterWrite0 != null) {
-                        List<InstructionInstance> instList;
-                        if ((instList = lastReaders.remove(var)) != null) {
-                            if (dataDependenceVisitorsReadAfterWrite0 != null)
-                                for (final DependencesVisitor vis: dataDependenceVisitorsReadAfterWrite0)
-                                    for (final InstructionInstance instrInst: instList)
-                                        vis.visitDataDependence(instrInst, instance, var, DataDependenceType.READ_AFTER_WRITE);
-                            if (pendingDataDependenceVisitorsReadAfterWrite0 != null)
-                                for (final DependencesVisitor vis: pendingDataDependenceVisitorsReadAfterWrite0)
-                                    for (final InstructionInstance instrInst: instList)
-                                        vis.discardPendingDataDependence(instrInst, var, DataDependenceType.READ_AFTER_WRITE);
+                if (instance.getInstanceNr() % 1000000 == 0) {
+                    for (Variable var: lastReaders.keySet()) {
+                        if (var instanceof ObjectField) {
+                            assert seenObjects.contains(((ObjectField)var).getObjectId());
+                            assert !createdObjects.contains(((ObjectField)var).getObjectId());
+                        }
+                        if (var instanceof ArrayElement) {
+                            assert seenObjects.contains(((ArrayElement)var).getArrayId());
+                            assert !createdObjects.contains(((ArrayElement)var).getArrayId());
+                        }
+                        if (var instanceof StackEntry)
+                            assert frames.contains(((StackEntry)var).getFrame());
+                        if (var instanceof LocalVariable) {
+                            assert frames.contains(((LocalVariable)var).getFrame());
+                        }
+                    }
+                    for (Variable var: lastWriter.keySet()) {
+                        if (var instanceof ObjectField) {
+                            assert seenObjects.contains(((ObjectField)var).getObjectId());
+                            assert !createdObjects.contains(((ObjectField)var).getObjectId());
+                        }
+                        if (var instanceof ArrayElement) {
+                            assert seenObjects.contains(((ArrayElement)var).getArrayId());
+                            assert !createdObjects.contains(((ArrayElement)var).getArrayId());
+                        }
+                        // we do not store the last writer of a stack entry
+                        assert !(var instanceof StackEntry);
+                        if (var instanceof LocalVariable) {
+                            assert frames.contains(((LocalVariable)var).getFrame());
                         }
                     }
                 }
-                if (objectCreationVisitors0 != null)
-                    for (final DependencesVisitor vis: objectCreationVisitors0)
-                        vis.visitObjectCreation(e.getKey(), instance);
+                */
             }
 
-            if (dynInfo.isCatchBlock()) {
-                currentFrame.atCatchBlockStart = instance;
-                currentFrame.interruptedControlFlow = true;
-            } else if (currentFrame.atCatchBlockStart != null) {
-                currentFrame.atCatchBlockStart = null;
-            }
+            cleanUpMaps(lastWriter, lastReaders, pendingDataDependenceVisitorsWriteAfterRead0, pendingDataDependenceVisitorsReadAfterWrite0);
 
-            if (removedFrame != null)
-                cleanUpExecutionFrame(removedFrame, lastReaders, lastWriter,
-                    pendingDataDependenceVisitorsWriteAfterRead0, pendingDataDependenceVisitorsReadAfterWrite0,
-                    dataDependenceVisitorsWriteAfterRead0, dataDependenceVisitorsReadAfterWrite0);
+            Set<DependencesVisitor> allVisitors = new HashSet<DependencesVisitor>();
+            if (dataDependenceVisitorsReadAfterWrite0 != null)
+                allVisitors.addAll(Arrays.asList(dataDependenceVisitorsReadAfterWrite0));
+            if (dataDependenceVisitorsWriteAfterRead0 != null)
+                allVisitors.addAll(Arrays.asList(dataDependenceVisitorsWriteAfterRead0));
+            if (controlDependenceVisitors0 != null)
+                allVisitors.addAll(Arrays.asList(controlDependenceVisitors0));
+            if (instructionVisitors0 != null)
+                allVisitors.addAll(Arrays.asList(instructionVisitors0));
+            if (pendingDataDependenceVisitorsReadAfterWrite0 != null)
+                allVisitors.addAll(Arrays.asList(pendingDataDependenceVisitorsReadAfterWrite0));
+            if (pendingDataDependenceVisitorsWriteAfterRead0 != null)
+                allVisitors.addAll(Arrays.asList(pendingDataDependenceVisitorsWriteAfterRead0));
+            if (pendingControlDependenceVisitors0 != null)
+                allVisitors.addAll(Arrays.asList(pendingControlDependenceVisitors0));
+            if (methodEntryLeaveVisitors0 != null)
+                allVisitors.addAll(Arrays.asList(methodEntryLeaveVisitors0));
+            if (objectCreationVisitors0 != null)
+                allVisitors.addAll(Arrays.asList(objectCreationVisitors0));
 
-            /*
-            if (instance.getInstanceNr() % 1000000 == 0) {
-                for (Variable var: lastReaders.keySet()) {
-                    if (var instanceof ObjectField) {
-                        assert seenObjects.contains(((ObjectField)var).getObjectId());
-                        assert !createdObjects.contains(((ObjectField)var).getObjectId());
-                    }
-                    if (var instanceof ArrayElement) {
-                        assert seenObjects.contains(((ArrayElement)var).getArrayId());
-                        assert !createdObjects.contains(((ArrayElement)var).getArrayId());
-                    }
-                    if (var instanceof StackEntry)
-                        assert frames.contains(((StackEntry)var).getFrame());
-                    if (var instanceof LocalVariable) {
-                        assert frames.contains(((LocalVariable)var).getFrame());
-                    }
-                }
-                for (Variable var: lastWriter.keySet()) {
-                    if (var instanceof ObjectField) {
-                        assert seenObjects.contains(((ObjectField)var).getObjectId());
-                        assert !createdObjects.contains(((ObjectField)var).getObjectId());
-                    }
-                    if (var instanceof ArrayElement) {
-                        assert seenObjects.contains(((ArrayElement)var).getArrayId());
-                        assert !createdObjects.contains(((ArrayElement)var).getArrayId());
-                    }
-                    // we do not store the last writer of a stack entry
-                    assert !(var instanceof StackEntry);
-                    if (var instanceof LocalVariable) {
-                        assert frames.contains(((LocalVariable)var).getFrame());
-                    }
-                }
-            }
-            */
+            for (DependencesVisitor vis: allVisitors)
+                vis.visitEnd(instance == null ? 0 : instance.getInstanceNr());
+        } finally {
+            if (iteratorThread != null)
+                iteratorThread.interrupt();
         }
-
-        cleanUpMaps(lastWriter, lastReaders, pendingDataDependenceVisitorsWriteAfterRead0, pendingDataDependenceVisitorsReadAfterWrite0);
-
-        Set<DependencesVisitor> allVisitors = new HashSet<DependencesVisitor>();
-        if (dataDependenceVisitorsReadAfterWrite0 != null)
-            allVisitors.addAll(Arrays.asList(dataDependenceVisitorsReadAfterWrite0));
-        if (dataDependenceVisitorsWriteAfterRead0 != null)
-            allVisitors.addAll(Arrays.asList(dataDependenceVisitorsWriteAfterRead0));
-        if (controlDependenceVisitors0 != null)
-            allVisitors.addAll(Arrays.asList(controlDependenceVisitors0));
-        if (instructionVisitors0 != null)
-            allVisitors.addAll(Arrays.asList(instructionVisitors0));
-        if (pendingDataDependenceVisitorsReadAfterWrite0 != null)
-            allVisitors.addAll(Arrays.asList(pendingDataDependenceVisitorsReadAfterWrite0));
-        if (pendingDataDependenceVisitorsWriteAfterRead0 != null)
-            allVisitors.addAll(Arrays.asList(pendingDataDependenceVisitorsWriteAfterRead0));
-        if (pendingControlDependenceVisitors0 != null)
-            allVisitors.addAll(Arrays.asList(pendingControlDependenceVisitors0));
-        if (methodEntryLeaveVisitors0 != null)
-            allVisitors.addAll(Arrays.asList(methodEntryLeaveVisitors0));
-        if (objectCreationVisitors0 != null)
-            allVisitors.addAll(Arrays.asList(objectCreationVisitors0));
-
-        for (DependencesVisitor vis: allVisitors)
-            vis.visitEnd(instance == null ? 0 : instance.getInstanceNr());
     }
 
     private static void cleanUpExecutionFrame(ExecutionFrame frame,
