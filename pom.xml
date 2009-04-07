@@ -158,7 +158,7 @@
         <dependency>
             <groupId>de.hammacher</groupId>
             <artifactId>utilities</artifactId>
-            <version>1.2.2</version>
+            <version>1.2.3</version>
         </dependency>
     </dependencies>
 
@@ -172,6 +172,11 @@
             <id>st-internal-snapshots</id>
             <name>internal snapshots deployed by the chair</name>
             <url>https://maven.st.cs.uni-saarland.de/nexus/content/repositories/internal-snapshots</url>
+        </repository>
+        <repository>
+            <id>st-thirdparty</id>
+            <name>3rd party libraries hosted at st.</name>
+            <url>https://maven.st.cs.uni-saarland.de/nexus/content/repositories/thirdparty/</url>
         </repository>
     </repositories>
 
@@ -384,7 +389,6 @@
         </plugins>
     </reporting>
 
-    <!-- See: http://wiki.st.cs.uni-sb.de/wiki/Maven_Archiva -->
     <distributionManagement>
         <repository>
             <id>st-internal-releases</id>
