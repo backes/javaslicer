@@ -351,8 +351,8 @@ public class TraceResult {
             while (it.hasNext()) {
                 /*
                 if (++nr % 10000000 == 0) {
-                    System.out.format("%10d: %s (%7.2f - %7.2f = %7.2f MB memory)%n",
-                        nr, new Date(),
+                    System.out.format("%4de6: %s (%7.2f - %7.2f = %7.2f MB memory)%n",
+                        nr / 10000000, new Date(),
                         1e-6*Runtime.getRuntime().totalMemory(),
                         1e-6*Runtime.getRuntime().freeMemory(),
                         1e-6*(Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory())

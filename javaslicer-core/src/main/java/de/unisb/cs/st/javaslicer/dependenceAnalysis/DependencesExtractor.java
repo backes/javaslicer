@@ -191,11 +191,13 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
      * does not have to be unique.
      *
      * @param javaThreadId identifies the thread whose trace should be analyzed
+     * @throws IllegalArgumentException if the trace contains no thread with this id
      */
     public void processBackwardTrace(final long javaThreadId) {
         final ThreadId id = this.trace.getThreadId(javaThreadId);
-        if (id != null)
-            processBackwardTrace(id);
+        if (id == null)
+            throw new IllegalArgumentException("No such thread id");
+        processBackwardTrace(id);
     }
 
     /**
@@ -214,11 +216,15 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
      *
      * @param threadId identifies the thread whose trace should be analyzed
      * @param multithreaded use an extra thread to traverse the trace
+     * @throws IllegalArgumentException if the trace contains no thread with this id
      */
     public void processBackwardTrace(ThreadId threadId, boolean multithreaded) {
 
         final BackwardTraceIterator<InstanceType> backwardInsnItr =
             this.trace.getBackwardIterator(threadId, null, this.instanceFactory);
+
+        if (backwardInsnItr == null)
+            throw new IllegalArgumentException("No such thread");
 
         // store the current set of visitors of each capability in an array for better
         // performance and faster empty-check (null reference if empty)
