@@ -215,7 +215,7 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
                             throw e;
                         } finally {
                             if (stampReady)
-                                AccumulatingParallelDependencesVisitor.this.freeOutstanding.release(stamp.getLength());
+                                AccumulatingParallelDependencesVisitor.this.freeOutstanding.release(100 + stamp.getLength());
                         }
                     }
                     assert this.currentExecutingThread.get() == executingThread;
@@ -573,7 +573,8 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
 
         checkException();
 
-        int permits = stamp.getLength();
+        // each stamp itself counts for 100 events
+        int permits = 100 + stamp.getLength();
         int numWorkers = this.workerThreads.size();
         if (numWorkers < this.maxNumWorkerThreads) {
             if (numWorkers == 0) {
