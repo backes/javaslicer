@@ -43,7 +43,7 @@ public class CFG2Dot {
 					String completeName = clazz.getName()+"."+mtd.getName()+mtd.getDesc();
 					if (mtdNamePattern.matcher(completeName).matches()) {
 						System.out.format("Exporting CFG of %s to %s...%n", completeName, dotExport);
-						ControlFlowGraph cfg = new ControlFlowGraph(mtd, new AbstractNodeFactory(), includeCatchEdges);
+						ControlFlowGraph cfg = new ControlFlowGraph(mtd, new AbstractNodeFactory(), includeCatchEdges, true);
 						Graph2Dot exporter = new Graph2Dot();
 	                    exporter.setGraphName("cfg");
 	                    exporter.setNodeShape("box");

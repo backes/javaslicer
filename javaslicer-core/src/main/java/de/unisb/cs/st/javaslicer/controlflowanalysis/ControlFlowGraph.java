@@ -1,5 +1,6 @@
 package de.unisb.cs.st.javaslicer.controlflowanalysis;
 
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -12,6 +13,7 @@ import org.objectweb.asm.Opcodes;
 import de.hammacher.util.Graph;
 import de.hammacher.util.UniqueQueue;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TryCatchBlock;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
@@ -28,12 +30,37 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.VarInst
  */
 public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
 
+
+    public static class InstrList extends AbstractList<InstrNode> {
+
+        private final InstrNode[] nodes;
+        private final int[] nonNullPositions;
+
+        public InstrList(InstrNode[] nodes, int[] nonNullPositions) {
+            this.nodes = nodes;
+            this.nonNullPositions = nonNullPositions;
+        }
+
+        @Override
+        public InstrNode get(int index) {
+            if (index < 0 || index >= this.nonNullPositions.length)
+                throw new IndexOutOfBoundsException();
+            return this.nodes[this.nonNullPositions[index]];
+        }
+
+        @Override
+        public int size() {
+            return this.nonNullPositions.length;
+        }
+
+    }
+
     /**
      * Representation of one node in the CFG.
      *
      * @author Clemens Hammacher
      */
-    public interface InstrNode extends Graph.Node<InstrNode> {
+    public static interface InstrNode extends Graph.Node<InstrNode> {
 
         /**
          * Returns the number of outgoing edges from this node.
@@ -77,7 +104,7 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
         private final Instruction instruction;
         private final ControlFlowGraph cfg;
 
-        public AbstractInstrNode(final ControlFlowGraph cfg, final Instruction instr) {
+        public AbstractInstrNode(ControlFlowGraph cfg, Instruction instr) {
             if (cfg == null || instr == null)
                 throw new NullPointerException();
             this.cfg = cfg;
@@ -118,14 +145,14 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
         }
 
         @Override
-        public boolean equals(final Object obj) {
+        public boolean equals(Object obj) {
             if (this == obj)
                 return true;
             if (obj == null)
                 return false;
             if (getClass() != obj.getClass())
                 return false;
-            final AbstractInstrNode other = (AbstractInstrNode) obj;
+            AbstractInstrNode other = (AbstractInstrNode) obj;
             if (!this.instruction.equals(other.instruction))
                 return false;
             return true;
@@ -162,6 +189,7 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
 
     private final ReadMethod method;
     protected final InstrNode[] instructionNodes;
+    private int[] nonNullPositions;
 
     /**
      * Computes the <b>control flow graph</b> for one method, using the usual
@@ -169,7 +197,7 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
      *
      * @param method the method for which the CFG is computed
      */
-    public ControlFlowGraph(final ReadMethod method) {
+    public ControlFlowGraph(ReadMethod method) {
         this(method, new AbstractNodeFactory());
     }
 
@@ -179,8 +207,8 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
      * @param method the method for which the CFG is computed
      * @param nodeFactory the factory that creates the nodes of the CFG
      */
-    public ControlFlowGraph(final ReadMethod method, final NodeFactory nodeFactory) {
-        this(method, nodeFactory, false);
+    public ControlFlowGraph (ReadMethod method, NodeFactory nodeFactory) {
+        this(method, nodeFactory, false, false);
     }
 
     /**
@@ -191,21 +219,22 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
      * @param addTryCatchEdges controls whether an edge should be inserted from each
      *                         instruction within a try block to the first instruction
      *                         in the catch block
+     * @param excludeLabels if <code>true</code>, all LabelMarkers are excluded from the
+     *                      CFG
      */
-    public ControlFlowGraph(final ReadMethod method, final NodeFactory nodeFactory,
-            boolean addTryCatchEdges) {
+    public ControlFlowGraph (ReadMethod method, NodeFactory nodeFactory,
+            boolean addTryCatchEdges, boolean excludeLabels) {
         this.method = method;
         this.instructionNodes = new InstrNode[method.getInstructionNumberEnd() - method.getInstructionNumberStart()];
-        for (final Instruction instr: method.getInstructions()) {
-            getInstrNode(instr, nodeFactory);
+        for (Instruction instr: method.getInstructions()) {
+            getInstrNode(instr, nodeFactory, excludeLabels);
         }
         // now add the edges from try blocks to catch/finally blocks
-        // TODO find out for each bytecode instruction which exceptions they can throw
         if (addTryCatchEdges) {
             for (TryCatchBlock tcb: method.getTryCatchBlocks()) {
-                InstrNode tcbHandler = getInstrNode(tcb.getHandler(), nodeFactory);
+                InstrNode tcbHandler = getNode(tcb.getHandler());
                 for (Instruction inst = tcb.getStart(); inst != null && inst != tcb.getEnd(); inst = inst.getNext()) {
-                    InstrNode instrNode = getInstrNode(inst, nodeFactory);
+                    InstrNode instrNode = getNode(inst);
                     instrNode.addSuccessor(tcbHandler);
                     tcbHandler.addPredecessor(instrNode);
                 }
@@ -236,36 +265,49 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
      * If the instruction is not contained in the method that this CFG corresponds
      * to, then <code>null</code> is returned.
      *
+     * If the CFG was created with <b>excludeLabels</b> and the given instruction is a label,
+     * then node for the next non-label instruction is returned.
+     *
      * @param instr the {@link Instruction} for which the node is requested
      * @return the node corresponding to the given {@link Instruction}, or
      *         <code>null</code> if the instruction is not contained in the method of this CFG
      */
-    public InstrNode getNode(final Instruction instr) {
+    public InstrNode getNode(Instruction instr) {
         int idx = instr.getIndex() - this.method.getInstructionNumberStart();
-        if (idx >= 0 && idx < this.instructionNodes.length)
-            return this.instructionNodes[idx];
+        if (idx >= 0 && idx < this.instructionNodes.length) {
+            InstrNode instrNode = this.instructionNodes[idx];
+            if (instrNode == null && idx < this.method.getInstructionNumberEnd()) {
+                assert instr.getType() == InstructionType.LABEL;
+                instrNode = this.instructionNodes[idx++];
+            }
+            return instrNode;
+        }
         return null;
     }
 
-    protected InstrNode getInstrNode(final Instruction instruction,
-            final NodeFactory nodeFactory) {
+    protected InstrNode getInstrNode(Instruction instruction,
+            NodeFactory nodeFactory, boolean excludeLabels) {
         int idx = instruction.getIndex() - this.method.getInstructionNumberStart();
-        final InstrNode node = this.instructionNodes[idx];
-        if (node != null)
+        InstrNode node = this.instructionNodes[idx];
+        if (node != null || (excludeLabels && instruction.getType() == InstructionType.LABEL))
             return node;
 
         InstrNode newNode = nodeFactory.createNode(this, instruction);
         this.instructionNodes[idx] = newNode;
         for (Instruction succ: getSuccessors(instruction)) {
-            InstrNode succNode = getInstrNode(succ, nodeFactory);
-            newNode.addSuccessor(succNode);
-            succNode.addPredecessor(newNode);
+            InstrNode succNode = getInstrNode(succ, nodeFactory, excludeLabels);
+            if (succNode != null) {
+                newNode.addSuccessor(succNode);
+                succNode.addPredecessor(newNode);
+            } else {
+                assert succ.getType() == InstructionType.LABEL;
+            }
         }
         return newNode;
     }
 
-    private static Collection<Instruction> getSuccessors(final Instruction instruction) {
-        final int opcode = instruction.getOpcode();
+    private static Collection<Instruction> getSuccessors(Instruction instruction) {
+        int opcode = instruction.getOpcode();
         Instruction nextInstruction = instruction.getNext();
         switch (instruction.getType()) {
         case JUMP:
@@ -278,18 +320,18 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
                     nextInstruction);
         case LOOKUPSWITCH:
         {
-            final LookupSwitchInstruction lsi = (LookupSwitchInstruction) instruction;
-            final Instruction[] successors = new AbstractInstruction[lsi.getHandlers().size()+1];
+            LookupSwitchInstruction lsi = (LookupSwitchInstruction) instruction;
+            Instruction[] successors = new AbstractInstruction[lsi.getHandlers().size()+1];
             successors[0] = lsi.getDefaultHandler();
             int i = 1;
-            for (final LabelMarker lm: lsi.getHandlers().values())
+            for (LabelMarker lm: lsi.getHandlers().values())
                 successors[i++] = lm;
             return Arrays.asList(successors);
         }
         case TABLESWITCH:
         {
-            final TableSwitchInstruction tsi = (TableSwitchInstruction) instruction;
-            final Instruction[] successors = new AbstractInstruction[tsi.getHandlers().length+1];
+            TableSwitchInstruction tsi = (TableSwitchInstruction) instruction;
+            Instruction[] successors = new AbstractInstruction[tsi.getHandlers().length+1];
             successors[0] = tsi.getDefaultHandler();
             System.arraycopy(tsi.getHandlers(), 0, successors, 1, tsi.getHandlers().length);
             return Arrays.asList(successors);
@@ -306,10 +348,10 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
             break;
         case VAR:
             if (opcode == Opcodes.RET) {
-                final List<JumpInstruction> callingInstructions = getJsrInstructions((VarInstruction) instruction);
-                final Instruction[] successors = new AbstractInstruction[callingInstructions.size()];
+                List<JumpInstruction> callingInstructions = getJsrInstructions((VarInstruction) instruction);
+                Instruction[] successors = new AbstractInstruction[callingInstructions.size()];
                 int i = 0;
-                for (final JumpInstruction instr: callingInstructions)
+                for (JumpInstruction instr: callingInstructions)
                     successors[i++] = instr.getNext();
                 return Arrays.asList(successors);
             }
@@ -328,15 +370,15 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
     /**
      * Returns all <code>jsr</code> instructions that may end up in the given <code>ret</code> instructions.
      */
-    private static List<JumpInstruction> getJsrInstructions(final VarInstruction retInstruction) {
+    private static List<JumpInstruction> getJsrInstructions(VarInstruction retInstruction) {
         assert retInstruction.getOpcode() == Opcodes.RET;
-        final List<JumpInstruction> list = new ArrayList<JumpInstruction>();
-        for (final AbstractInstruction instr: retInstruction.getMethod().getInstructions()) {
+        List<JumpInstruction> list = new ArrayList<JumpInstruction>();
+        for (AbstractInstruction instr: retInstruction.getMethod().getInstructions()) {
             if (instr.getOpcode() == Opcodes.JSR) {
-                final Queue<Instruction> queue = new UniqueQueue<Instruction>();
+                Queue<Instruction> queue = new UniqueQueue<Instruction>();
                 queue.add(((JumpInstruction)instr).getLabel());
                 while (!queue.isEmpty()) {
-                    final Instruction instr2 = queue.poll();
+                    Instruction instr2 = queue.poll();
                     if (instr2.getOpcode() == Opcodes.RET) {
                         if (instr2 == retInstruction) {
                             list.add((JumpInstruction)instr);
@@ -351,8 +393,20 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
         return list;
     }
 
-    public Collection<InstrNode> getNodes() {
-        return Collections.unmodifiableList(Arrays.asList(this.instructionNodes));
+    public List<InstrNode> getNodes() {
+        if (this.nonNullPositions == null) {
+            int numNonNull = 0;
+            int[] newNonNullPositions = new int[this.instructionNodes.length];
+            for (int i = 0; i < this.instructionNodes.length; ++i) {
+                if (this.instructionNodes[i] != null) {
+                    newNonNullPositions[numNonNull++] = i;
+                }
+            }
+            this.nonNullPositions = new int[numNonNull];
+            System.arraycopy(newNonNullPositions, 0, this.nonNullPositions, 0, numNonNull);
+
+        }
+        return new InstrList(this.instructionNodes, this.nonNullPositions);
     }
 
 }
