@@ -47,7 +47,7 @@ public class CFG2Dot {
 						Graph2Dot exporter = new Graph2Dot();
 	                    exporter.setGraphName("cfg");
 	                    exporter.setNodeShape("box");
-	                    exporter.addGraphAttribute("rankdir", "TB");
+	                    exporter.setGraphAttribute("rankdir", "TB");
 						exporter.export(cfg, new File(dotExport));
 						return;
 					}
