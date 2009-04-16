@@ -391,7 +391,7 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
     }
 
     @SuppressWarnings("unchecked")
-    private void finish(boolean interruptWorkers, boolean waitForWorkers) throws InterruptedException {
+    private void finish(final boolean interruptWorkers, boolean waitForWorkers) throws InterruptedException {
         if (interruptWorkers) {
             for (Thread t: this.workerThreads)
                 t.interrupt();
@@ -403,8 +403,9 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         if (waitForWorkers) {
             for (Thread t: this.workerThreads)
                 t.join();
-            for (DependencesVisitor<? super InstanceType> vis : this.visitors.keySet())
-                vis.interrupted();
+            if (interruptWorkers)
+                for (DependencesVisitor<? super InstanceType> vis : this.visitors.keySet())
+                    vis.interrupted();
         } else {
             final Thread[] workerThreads0 = this.workerThreads.toArray(new Thread[this.workerThreads.size()]);
             final DependencesVisitor<? super InstanceType>[] visitors0 = this.visitors.keySet().toArray(
@@ -415,8 +416,9 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
                     try {
                         for (Thread t: workerThreads0)
                             t.join();
-                        for (DependencesVisitor<? super InstanceType> vis : visitors0)
-                            vis.interrupted();
+                        if (interruptWorkers)
+                            for (DependencesVisitor<? super InstanceType> vis : visitors0)
+                                vis.interrupted();
                     } catch (InterruptedException e) {
                         // ignore
                     }
