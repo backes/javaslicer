@@ -19,53 +19,57 @@ public class FilteringDependencesVisitor<InstanceType> implements
     }
 
     public void discardPendingDataDependence(InstanceType from,
-            Variable var, DataDependenceType type) {
+            Variable var, DataDependenceType type) throws InterruptedException {
         if (this.filter.filter(from))
             this.visitor.discardPendingDataDependence(from, var, type);
     }
 
-    public void visitControlDependence(InstanceType from, InstanceType to) {
+    public void visitControlDependence(InstanceType from, InstanceType to) throws InterruptedException {
         if (this.filter.filter(from) && this.filter.filter(to))
             this.visitor.visitControlDependence(from, to);
     }
 
     public void visitDataDependence(InstanceType from,
-            InstanceType to, Variable var, DataDependenceType type) {
+            InstanceType to, Variable var, DataDependenceType type) throws InterruptedException {
         if (this.filter.filter(from) && this.filter.filter(to))
             this.visitor.visitDataDependence(from, to, var, type);
     }
 
-    public void visitEnd(long numInstances) {
+    public void visitEnd(long numInstances) throws InterruptedException {
         this.visitor.visitEnd(numInstances);
     }
 
-    public void visitInstructionExecution(InstanceType instance) {
+    public void visitInstructionExecution(InstanceType instance) throws InterruptedException {
         if (this.filter.filter(instance))
             this.visitor.visitInstructionExecution(instance);
     }
 
-    public void visitMethodEntry(ReadMethod method) {
+    public void visitMethodEntry(ReadMethod method) throws InterruptedException {
         this.visitor.visitMethodEntry(method);
     }
 
-    public void visitMethodLeave(ReadMethod method) {
+    public void visitMethodLeave(ReadMethod method) throws InterruptedException {
         this.visitor.visitMethodLeave(method);
     }
 
-    public void visitObjectCreation(long objectId, InstanceType instrInstance) {
+    public void visitObjectCreation(long objectId, InstanceType instrInstance) throws InterruptedException {
         if (this.filter.filter(instrInstance))
             this.visitor.visitObjectCreation(objectId, instrInstance);
     }
 
-    public void visitPendingControlDependence(InstanceType from) {
+    public void visitPendingControlDependence(InstanceType from) throws InterruptedException {
         if (this.filter.filter(from))
             this.visitor.visitPendingControlDependence(from);
     }
 
     public void visitPendingDataDependence(InstanceType from, Variable var,
-            DataDependenceType type) {
+            DataDependenceType type) throws InterruptedException {
         if (this.filter.filter(from))
             this.visitor.visitPendingDataDependence(from, var, type);
+    }
+
+    public void interrupted() throws InterruptedException {
+        this.visitor.interrupted();
     }
 
 }

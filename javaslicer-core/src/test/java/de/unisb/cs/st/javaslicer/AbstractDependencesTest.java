@@ -117,7 +117,7 @@ public abstract class AbstractDependencesTest {
     }
 
     protected void compareDependences(final Dependence[] expectedDependences,
-            final String traceFilename, final String threadName, final InstructionFilter instrFilter) throws IOException, URISyntaxException {
+            final String traceFilename, final String threadName, final InstructionFilter instrFilter) throws IOException, URISyntaxException, InterruptedException {
         final File traceFile = new File(AbstractSlicingTest.class.getResource(traceFilename).toURI());
 
         final TraceResult res = TraceResult.readFrom(traceFile);

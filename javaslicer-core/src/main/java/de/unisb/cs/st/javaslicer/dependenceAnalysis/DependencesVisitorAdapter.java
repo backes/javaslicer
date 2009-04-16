@@ -55,4 +55,8 @@ public abstract class DependencesVisitorAdapter<InstanceType> implements Depende
         // null
     }
 
+    public void interrupted() throws InterruptedException {
+        // null
+    }
+
 }

@@ -54,18 +54,18 @@ public class DependenceExtractorTest extends DependencesVisitorAdapter<Instructi
     }
 
     @Test
-    public void testPendingSymmetrieOnMethod1() throws URISyntaxException, IOException {
+    public void testPendingSymmetrieOnMethod1() throws URISyntaxException, IOException, InterruptedException {
         final File traceFile = new File(AbstractSlicingTest.class.getResource("/traces/method1").toURI());
         test(traceFile);
     }
 
     @Test @Ignore
-    public void testPendingSymmetrieOnPmd() throws IOException {
+    public void testPendingSymmetrieOnPmd() throws IOException, InterruptedException {
         final File traceFile = new File("/Users/clemens/Studium/Bachelor-Thesis/SVN/java-slicer/javaslicer-tracer/dacapo_uncomp/jython.trace");
         test(traceFile);
     }
 
-    private void test(final File traceFile) throws IOException {
+    private void test(final File traceFile) throws IOException, InterruptedException {
         TraceResult traceResult = new TraceResult(traceFile);
 
         DependencesExtractor<InstructionInstance> extractor = DependencesExtractor.forTrace(traceResult);

@@ -1,7 +1,6 @@
 package de.unisb.cs.st.javaslicer.dependenceAnalysis;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -191,9 +190,10 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
      * does not have to be unique.
      *
      * @param javaThreadId identifies the thread whose trace should be analyzed
+     * @throws InterruptedException if the thread was interrupted during traversal
      * @throws IllegalArgumentException if the trace contains no thread with this id
      */
-    public void processBackwardTrace(final long javaThreadId) {
+    public void processBackwardTrace(final long javaThreadId) throws InterruptedException {
         final ThreadId id = this.trace.getThreadId(javaThreadId);
         if (id == null)
             throw new IllegalArgumentException("No such thread id");
@@ -203,9 +203,10 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
     /**
      * Calls {@link #processBackwardTrace(ThreadId, boolean)} with multithreaded == false
      *
+     * @throws InterruptedException if the thread was interrupted during traversal
      * @see #processBackwardTrace(ThreadId, boolean)
      */
-    public void processBackwardTrace(ThreadId threadId) {
+    public void processBackwardTrace(ThreadId threadId) throws InterruptedException {
         processBackwardTrace(threadId, false);
     }
 
@@ -216,9 +217,10 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
      *
      * @param threadId identifies the thread whose trace should be analyzed
      * @param multithreaded use an extra thread to traverse the trace
+     * @throws InterruptedException if the thread was interrupted during traversal
      * @throws IllegalArgumentException if the trace contains no thread with this id
      */
-    public void processBackwardTrace(ThreadId threadId, boolean multithreaded) {
+    public void processBackwardTrace(ThreadId threadId, boolean multithreaded) throws InterruptedException {
 
         final BackwardTraceIterator<InstanceType> backwardInsnItr =
             this.trace.getBackwardIterator(threadId, null, this.instanceFactory);
@@ -228,55 +230,57 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
 
         // store the current set of visitors of each capability in an array for better
         // performance and faster empty-check (null reference if empty)
-        final DependencesVisitor<InstanceType>[] dataDependenceVisitorsReadAfterWrite0 = this.dataDependenceVisitorsReadAfterWrite.isEmpty()
+        final DependencesVisitor<? super InstanceType>[] dataDependenceVisitorsReadAfterWrite0 = this.dataDependenceVisitorsReadAfterWrite.isEmpty()
             ? null : this.dataDependenceVisitorsReadAfterWrite.toArray(
                 newDependencesVisitorArray(this.dataDependenceVisitorsReadAfterWrite.size()));
-        final DependencesVisitor<InstanceType>[] dataDependenceVisitorsWriteAfterRead0 = this.dataDependenceVisitorsWriteAfterRead.isEmpty()
+        final DependencesVisitor<? super InstanceType>[] dataDependenceVisitorsWriteAfterRead0 = this.dataDependenceVisitorsWriteAfterRead.isEmpty()
             ? null : this.dataDependenceVisitorsWriteAfterRead.toArray(
                 newDependencesVisitorArray(this.dataDependenceVisitorsWriteAfterRead.size()));
-        final DependencesVisitor<InstanceType>[] controlDependenceVisitors0 = this.controlDependenceVisitors.isEmpty()
+        final DependencesVisitor<? super InstanceType>[] controlDependenceVisitors0 = this.controlDependenceVisitors.isEmpty()
             ? null : this.controlDependenceVisitors.toArray(
                 newDependencesVisitorArray(this.controlDependenceVisitors.size()));
-        final DependencesVisitor<InstanceType>[] instructionVisitors0 = this.instructionVisitors.isEmpty()
+        final DependencesVisitor<? super InstanceType>[] instructionVisitors0 = this.instructionVisitors.isEmpty()
             ? null : this.instructionVisitors.toArray(
                 newDependencesVisitorArray(this.instructionVisitors.size()));
-        final DependencesVisitor<InstanceType>[] pendingDataDependenceVisitorsReadAfterWrite0 = this.pendingDataDependenceVisitorsReadAfterWrite.isEmpty()
+        final DependencesVisitor<? super InstanceType>[] pendingDataDependenceVisitorsReadAfterWrite0 = this.pendingDataDependenceVisitorsReadAfterWrite.isEmpty()
             ? null : this.pendingDataDependenceVisitorsReadAfterWrite.toArray(
                 newDependencesVisitorArray(this.pendingDataDependenceVisitorsReadAfterWrite.size()));
-        final DependencesVisitor<InstanceType>[] pendingDataDependenceVisitorsWriteAfterRead0 = this.pendingDataDependenceVisitorsWriteAfterRead.isEmpty()
+        final DependencesVisitor<? super InstanceType>[] pendingDataDependenceVisitorsWriteAfterRead0 = this.pendingDataDependenceVisitorsWriteAfterRead.isEmpty()
             ? null : this.pendingDataDependenceVisitorsWriteAfterRead.toArray(
                 newDependencesVisitorArray(this.pendingDataDependenceVisitorsWriteAfterRead.size()));
-        final DependencesVisitor<InstanceType>[] pendingControlDependenceVisitors0 = this.pendingControlDependenceVisitors.isEmpty()
+        final DependencesVisitor<? super InstanceType>[] pendingControlDependenceVisitors0 = this.pendingControlDependenceVisitors.isEmpty()
             ? null : this.pendingControlDependenceVisitors.toArray(
                 newDependencesVisitorArray(this.pendingControlDependenceVisitors.size()));
-        final DependencesVisitor<InstanceType>[] methodEntryLeaveVisitors0 = this.methodEntryLeaveVisitors.isEmpty()
+        final DependencesVisitor<? super InstanceType>[] methodEntryLeaveVisitors0 = this.methodEntryLeaveVisitors.isEmpty()
             ? null : this.methodEntryLeaveVisitors.toArray(
                 newDependencesVisitorArray(this.methodEntryLeaveVisitors.size()));
-        final DependencesVisitor<InstanceType>[] objectCreationVisitors0 = this.objectCreationVisitors.isEmpty()
+        final DependencesVisitor<? super InstanceType>[] objectCreationVisitors0 = this.objectCreationVisitors.isEmpty()
             ? null : this.objectCreationVisitors.toArray(
                 newDependencesVisitorArray(this.objectCreationVisitors.size()));
+
+        @SuppressWarnings("unchecked")
+        DependencesVisitor<? super InstanceType>[] allVisitors = union(
+            dataDependenceVisitorsReadAfterWrite0,
+            dataDependenceVisitorsWriteAfterRead0,
+            controlDependenceVisitors0,
+            instructionVisitors0,
+            pendingDataDependenceVisitorsReadAfterWrite0,
+            pendingDataDependenceVisitorsWriteAfterRead0,
+            pendingControlDependenceVisitors0,
+            methodEntryLeaveVisitors0,
+            objectCreationVisitors0);
 
         final IntegerMap<Set<Instruction>> controlDependences = new IntegerMap<Set<Instruction>>();
 
         final ArrayStack<ExecutionFrame<InstanceType>> frames = new ArrayStack<ExecutionFrame<InstanceType>>();
         ExecutionFrame<InstanceType> currentFrame = null;
 
-        for (final ReadMethod method: backwardInsnItr.getInitialStackMethods()) {
-            currentFrame = new ExecutionFrame<InstanceType>();
-            currentFrame.method = method;
-            currentFrame.interruptedControlFlow = true;
-            frames.push(currentFrame);
-            if (methodEntryLeaveVisitors0 != null)
-                for (final DependencesVisitor<InstanceType> vis: methodEntryLeaveVisitors0)
-                    vis.visitMethodLeave(method);
-        }
-
         final Iterator<InstanceType> instanceIterator;
         Thread iteratorThread = null;
+        final AtomicReference<Throwable> iteratorException = new AtomicReference<Throwable>(null);
         if (multithreaded) {
             final BlockwiseSynchronizedBuffer<InstanceType> buffer = new BlockwiseSynchronizedBuffer<InstanceType>(1<<16, 1<<20);
             final InstanceType firstInstance = backwardInsnItr.hasNext() ? backwardInsnItr.next() : null;
-            final AtomicReference<Throwable> iteratorException = new AtomicReference<Throwable>(null);
             iteratorThread = new Thread("Trace iterator") {
                 @Override
                 public void run() {
@@ -284,13 +288,13 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                         while (backwardInsnItr.hasNext())
                             buffer.put(backwardInsnItr.next());
                     } catch (Throwable t) {
-                        iteratorException.set(t);
+                        iteratorException.compareAndSet(null, t);
                     } finally {
                         try {
                             buffer.put(firstInstance); // to signal that this is the end of the trace
                             buffer.flush();
                         } catch (InterruptedException e) {
-                            throw new RuntimeException("This private thread should never get interrupted", e);
+                            iteratorException.compareAndSet(null, e);
                         }
                     }
                 }
@@ -302,28 +306,19 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
 
                 public boolean hasNext() {
                     if (this.next == null) {
-                        boolean interrupted = false;
                         while (true) {
                             try {
                                 this.next = buffer.take();
                                 if (this.next == firstInstance) {
                                     this.next = null;
-                                    Throwable t = iteratorException.get();
-                                    if (t instanceof RuntimeException)
-                                        throw (RuntimeException)t;
-                                    else if (t != null) {
-                                        throw new TracerException(
-                                            "Iterator should not throw anything but RuntimeExceptions",
-                                            t);
-                                    }
                                 }
                                 break;
                             } catch (InterruptedException e) {
-                                interrupted = true;
+                                // this.next stays null
+                                assert this.next == null;
+                                Thread.currentThread().interrupt();
                             }
                         }
-                        if (interrupted)
-                            Thread.currentThread().interrupt();
                     }
                     return this.next != null;
                 }
@@ -359,9 +354,24 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
         Instruction instruction = null;
 
         try {
+
+            for (final ReadMethod method: backwardInsnItr.getInitialStackMethods()) {
+                currentFrame = new ExecutionFrame<InstanceType>();
+                currentFrame.method = method;
+                currentFrame.interruptedControlFlow = true;
+                frames.push(currentFrame);
+                if (methodEntryLeaveVisitors0 != null)
+                    for (final DependencesVisitor<? super InstanceType> vis: methodEntryLeaveVisitors0)
+                        vis.visitMethodLeave(method);
+            }
+
             while (instanceIterator.hasNext()) {
+
                 instance = instanceIterator.next();
                 instruction = instance.getInstruction();
+
+                if ((instance.getInstanceNr() & ((1<<16)-1)) == 0 && Thread.interrupted())
+                    throw new InterruptedException();
 
                 /*
                 if (instance.getInstanceNr() % 1000000 == 0) {
@@ -379,7 +389,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                         removedFrame = frames.pop();
                         assert removedFrame.method != null;
                         if (methodEntryLeaveVisitors0 != null)
-                            for (final DependencesVisitor<InstanceType> vis: methodEntryLeaveVisitors0)
+                            for (final DependencesVisitor<? super InstanceType> vis: methodEntryLeaveVisitors0)
                                 vis.visitMethodEntry(removedFrame.method);
                         currentFrame = frames.peek();
                     } else {
@@ -396,7 +406,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                         }
                         frames.push(newFrame);
                         if (methodEntryLeaveVisitors0 != null)
-                            for (final DependencesVisitor<InstanceType> vis: methodEntryLeaveVisitors0)
+                            for (final DependencesVisitor<? super InstanceType> vis: methodEntryLeaveVisitors0)
                                 vis.visitMethodLeave(newFrame.method);
                         currentFrame = newFrame;
                     }
@@ -411,7 +421,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                 } else if (currentFrame.finished || currentFrame.method != instruction.getMethod()) {
                     final ReadMethod newMethod = instruction.getMethod();
                     if (methodEntryLeaveVisitors0 != null)
-                        for (final DependencesVisitor<InstanceType> vis: methodEntryLeaveVisitors0) {
+                        for (final DependencesVisitor<? super InstanceType> vis: methodEntryLeaveVisitors0) {
                             vis.visitMethodEntry(currentFrame.method);
                             vis.visitMethodLeave(newMethod);
                         }
@@ -437,7 +447,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                         removedFrame, frames);
 
                 if (instructionVisitors0 != null)
-                    for (final DependencesVisitor<InstanceType> vis: instructionVisitors0)
+                    for (final DependencesVisitor<? super InstanceType> vis: instructionVisitors0)
                         vis.visitInstructionExecution(instance);
 
                 // the computation of control dependences only has to be performed
@@ -676,40 +686,52 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                 }
                 */
             }
+            Throwable t = iteratorException.get();
+            if (t != null) {
+                if (t instanceof RuntimeException)
+                    throw (RuntimeException)t;
+                if (t instanceof Error)
+                    throw (Error)t;
+                if (t instanceof InterruptedException)
+                    throw (InterruptedException)t;
+                throw new TracerException(
+                    "Iterator should not throw anything but RuntimeExceptions", t);
+            }
+
+            if (Thread.interrupted())
+                throw new InterruptedException();
 
             cleanUpMaps(lastWriter, lastReaders, pendingDataDependenceVisitorsWriteAfterRead0, pendingDataDependenceVisitorsReadAfterWrite0);
 
-            Set<DependencesVisitor<? super InstanceType>> allVisitors = new HashSet<DependencesVisitor<? super InstanceType>>();
-            if (dataDependenceVisitorsReadAfterWrite0 != null)
-                allVisitors.addAll(Arrays.asList(dataDependenceVisitorsReadAfterWrite0));
-            if (dataDependenceVisitorsWriteAfterRead0 != null)
-                allVisitors.addAll(Arrays.asList(dataDependenceVisitorsWriteAfterRead0));
-            if (controlDependenceVisitors0 != null)
-                allVisitors.addAll(Arrays.asList(controlDependenceVisitors0));
-            if (instructionVisitors0 != null)
-                allVisitors.addAll(Arrays.asList(instructionVisitors0));
-            if (pendingDataDependenceVisitorsReadAfterWrite0 != null)
-                allVisitors.addAll(Arrays.asList(pendingDataDependenceVisitorsReadAfterWrite0));
-            if (pendingDataDependenceVisitorsWriteAfterRead0 != null)
-                allVisitors.addAll(Arrays.asList(pendingDataDependenceVisitorsWriteAfterRead0));
-            if (pendingControlDependenceVisitors0 != null)
-                allVisitors.addAll(Arrays.asList(pendingControlDependenceVisitors0));
-            if (methodEntryLeaveVisitors0 != null)
-                allVisitors.addAll(Arrays.asList(methodEntryLeaveVisitors0));
-            if (objectCreationVisitors0 != null)
-                allVisitors.addAll(Arrays.asList(objectCreationVisitors0));
-
             for (DependencesVisitor<? super InstanceType> vis: allVisitors)
                 vis.visitEnd(instance == null ? 0 : instance.getInstanceNr());
+
+            if (Thread.interrupted())
+                throw new InterruptedException();
+        } catch (InterruptedException e) {
+            for (DependencesVisitor<? super InstanceType> vis: allVisitors)
+                vis.interrupted();
+            throw e;
         } finally {
             if (iteratorThread != null)
                 iteratorThread.interrupt();
         }
     }
 
+    private DependencesVisitor<? super InstanceType>[] union(
+            DependencesVisitor<? super InstanceType>[] ... visitors) {
+        Set<DependencesVisitor<? super InstanceType>> allVisitors =
+            new HashSet<DependencesVisitor<? super InstanceType>>();
+        for (DependencesVisitor<? super InstanceType>[] viss : visitors)
+            if (viss != null)
+                for (DependencesVisitor<? super InstanceType> vis : viss)
+                    allVisitors.add(vis);
+        return allVisitors.toArray(newDependencesVisitorArray(allVisitors.size()));
+    }
+
     @SuppressWarnings("unchecked")
-    private DependencesVisitor<InstanceType>[] newDependencesVisitorArray(int size) {
-        return (DependencesVisitor<InstanceType>[]) new DependencesVisitor<?>[size];
+    private DependencesVisitor<? super InstanceType>[] newDependencesVisitorArray(int size) {
+        return (DependencesVisitor<? super InstanceType>[]) new DependencesVisitor<?>[size];
     }
 
     private void cleanUpExecutionFrame(ExecutionFrame<InstanceType> frame,
@@ -718,7 +740,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
             DependencesVisitor<? super InstanceType>[] pendingDataDependenceVisitorsWriteAfterRead0,
             DependencesVisitor<? super InstanceType>[] pendingDataDependenceVisitorsReadAfterWrite0,
             DependencesVisitor<? super InstanceType>[] dataDependenceVisitorsWriteAfterRead0,
-            DependencesVisitor<? super InstanceType>[] dataDependenceVisitorsReadAfterWrite0) {
+            DependencesVisitor<? super InstanceType>[] dataDependenceVisitorsReadAfterWrite0) throws InterruptedException {
         for (Variable var: frame.getAllVariables()) {
             // lastWriter does not contain stack entries
             if (!(var instanceof StackEntry)) {
@@ -744,7 +766,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
     private void cleanUpMaps(Map<Variable, InstanceType> lastWriter,
             Map<Variable, List<InstanceType>> lastReaders,
             DependencesVisitor<? super InstanceType>[] pendingDataDependenceVisitorsWriteAfterRead0,
-            DependencesVisitor<? super InstanceType>[] pendingDataDependenceVisitorsReadAfterWrite0) {
+            DependencesVisitor<? super InstanceType>[] pendingDataDependenceVisitorsReadAfterWrite0) throws InterruptedException {
         if (pendingDataDependenceVisitorsWriteAfterRead0 != null) {
             for (Entry<Variable, InstanceType> e: lastWriter.entrySet()) {
                 Variable var = e.getKey();

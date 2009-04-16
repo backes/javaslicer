@@ -22,7 +22,7 @@ public interface DependencesVisitor<InstanceType> {
      * @param numInstances the total number of instances that have been visited
      *                     during the tracersal of the trace
      */
-    void visitEnd(long numInstances);
+    void visitEnd(long numInstances) throws InterruptedException;
 
     /**
      * Gets called if a (dynamic) data dependence has been determined.
@@ -33,7 +33,7 @@ public interface DependencesVisitor<InstanceType> {
      * @param type the type of the data dependence (read after write / write after read)
      */
     void visitDataDependence(InstanceType from, InstanceType to,
-            Variable var, DataDependenceType type);
+            Variable var, DataDependenceType type) throws InterruptedException;
 
     /**
      * Gets called if a dynamic occurence of a control dependence has been determined.
@@ -42,14 +42,14 @@ public interface DependencesVisitor<InstanceType> {
      * @param to the &quot;target&quot; of the control dependence, i.e. the instruction
      *           that controls the execution of <code>from</code>
      */
-    void visitControlDependence(InstanceType from, InstanceType to);
+    void visitControlDependence(InstanceType from, InstanceType to)  throws InterruptedException;
 
     /**
      * Gets called for every instruction in the execution trace.
      *
      * @param instance the instruction instance that has just been visited
      */
-    void visitInstructionExecution(InstanceType instance);
+    void visitInstructionExecution(InstanceType instance)  throws InterruptedException;
 
     /**
      * Gets called if there might be a data dependence that gets visited later.
@@ -71,7 +71,7 @@ public interface DependencesVisitor<InstanceType> {
      * @param var the variable through which the dependence exists
      * @param type the type of the data dependence (read after write / write after read)
      */
-    void visitPendingDataDependence(InstanceType from, Variable var, DataDependenceType type);
+    void visitPendingDataDependence(InstanceType from, Variable var, DataDependenceType type)  throws InterruptedException;
 
     /**
      * Gets called if the instruction <code>from</code> has a control dependence that
@@ -80,7 +80,7 @@ public interface DependencesVisitor<InstanceType> {
      *
      * @param from the instruction instance that has a control dependence
      */
-    void visitPendingControlDependence(InstanceType from);
+    void visitPendingControlDependence(InstanceType from)  throws InterruptedException;
 
     /**
      * Gets called if all data dependences on the specific variable <code>var</code>
@@ -90,14 +90,14 @@ public interface DependencesVisitor<InstanceType> {
      * @param var the variable through which the dependence exists
      * @param type the type of the data dependence (read after write / write after read)
      */
-    void discardPendingDataDependence(InstanceType from, Variable var, DataDependenceType type);
+    void discardPendingDataDependence(InstanceType from, Variable var, DataDependenceType type)  throws InterruptedException;
 
     /**
      * Gets called each time a new method in entered.
      *
      * @param method the method that is entered
      */
-    void visitMethodEntry(ReadMethod method);
+    void visitMethodEntry(ReadMethod method)  throws InterruptedException;
 
     /**
      * Gets called each time a method is left.
@@ -107,7 +107,7 @@ public interface DependencesVisitor<InstanceType> {
      *
      * @param method the method that is left
      */
-    void visitMethodLeave(ReadMethod method);
+    void visitMethodLeave(ReadMethod method)  throws InterruptedException;
 
     /**
      * Gets called if an instruction (NEW, NEWARRAY, ANEWARRAY, MULTIANEWARRAY) creates an object.
@@ -115,6 +115,13 @@ public interface DependencesVisitor<InstanceType> {
      * @param objectId the identity of the object which is being created
      * @param instrInstance the instruction instance which created the object
      */
-    void visitObjectCreation(long objectId, InstanceType instrInstance);
+    void visitObjectCreation(long objectId, InstanceType instrInstance)  throws InterruptedException;
+
+    /**
+     * Gets called if the traversal of the trace was interrupted (by Thread.interrupt()).
+     *
+     * The visitor can do necessary clean-up work in this method.
+     */
+    void interrupted() throws InterruptedException;
 
 }

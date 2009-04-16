@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -97,9 +98,11 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
          *
          * @param visitor
          * @return <code>true</code> if this was the last visitor on which the stamp had to be executed
+         * @throws InterruptedException if any of the workers was interrupted
          */
-        public boolean replay(DependencesVisitor<? super InstanceType> visitor) {
-            // TODO check if this is necessary
+        public boolean replay(DependencesVisitor<? super InstanceType> visitor) throws InterruptedException {
+            // this synchronized is not there for locking (it is guaranteed that at most
+            // one Thread calls replay() at any time), but for memory-synchronization
             synchronized (visitor) {
                 int instructionPos = 0;
                 int methodPos = 0;
@@ -196,7 +199,7 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         }
 
         // executed by the worker threads:
-        public void execute(Thread executingThread) {
+        public void execute(Thread executingThread) throws InterruptedException {
             assert executingThread == Thread.currentThread();
             if (this.currentExecutingThread.compareAndSet(null, executingThread)) {
                 while (true) {
@@ -233,21 +236,11 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
             }
         }
 
-        public void finish() {
+        public void finish() throws InterruptedException {
             CountDownLatch latch = new CountDownLatch(1);
             this.waitForFinishLatch = latch;
             if (!this.stamps.isEmpty() || this.currentExecutingThread != null) {
-                boolean interrupted = false;
-                while (true) {
-                    try {
-                        latch.await();
-                        break;
-                    } catch (InterruptedException e) {
-                        interrupted = true;
-                    }
-                }
-                if (interrupted)
-                    Thread.currentThread().interrupt();
+                latch.await();
             }
         }
 
@@ -269,8 +262,6 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
                         break; // this is the signal for the worker thread to terminate
                     work.execute(currentThread);
                 }
-            } catch (InterruptedException e) {
-                throw new RuntimeException("Worker threads should never be interrupted", e);
             } catch (Throwable t) {
                 AccumulatingParallelDependencesVisitor.this.workerException.compareAndSet(null, t);
             }
@@ -330,7 +321,7 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         this.maxNumWorkerThreads = maxNumWorkerThreads;
     }
 
-    public boolean addVisitor(DependencesVisitor<? super InstanceType> visitor) {
+    public boolean addVisitor(DependencesVisitor<? super InstanceType> visitor) throws InterruptedException {
         if (this.visitors.containsKey(visitor))
             return false;
 
@@ -342,7 +333,7 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         return true;
     }
 
-    public boolean removeVisitor(DependencesVisitor<? super InstanceType> visitor, boolean waitForFinish) {
+    public boolean removeVisitor(DependencesVisitor<? super InstanceType> visitor, boolean waitForFinish) throws InterruptedException {
         if (!this.visitors.containsKey(visitor))
             return false;
 
@@ -399,35 +390,52 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
             stampLongs, stampVariables, this.visitors.size());
     }
 
-    private void finish() {
+    @SuppressWarnings("unchecked")
+    private void finish(boolean interruptWorkers, boolean waitForWorkers) throws InterruptedException {
+        if (interruptWorkers) {
+            for (Thread t: this.workerThreads)
+                t.interrupt();
+            this.outstandingWorkQueue.clear();
+        }
+
         this.outstandingWork.release(this.workerThreads.size());
 
-        boolean interrupted = false;
-        for (Thread t: this.workerThreads) {
-            while (true) {
-                try {
-                    t.join();
-                    break;
-                } catch (InterruptedException e) {
-                    interrupted = true;
+        if (waitForWorkers) {
+            for (Thread t: this.workerThreads)
+                t.join();
+            for (DependencesVisitor<? super InstanceType> vis : this.visitors.keySet())
+                vis.interrupted();
+        } else {
+            final Thread[] workerThreads0 = this.workerThreads.toArray(new Thread[this.workerThreads.size()]);
+            final DependencesVisitor<? super InstanceType>[] visitors0 = this.visitors.keySet().toArray(
+                (DependencesVisitor<? super InstanceType>[]) new DependencesVisitor<?>[this.visitors.size()]);
+            new Thread(AccumulatingParallelDependencesVisitor.class.getSimpleName() + " visitor finish") {
+                @Override
+                public void run() {
+                    try {
+                        for (Thread t: workerThreads0)
+                            t.join();
+                        for (DependencesVisitor<? super InstanceType> vis : visitors0)
+                            vis.interrupted();
+                    } catch (InterruptedException e) {
+                        // ignore
+                    }
                 }
-            }
+            }.start();
         }
-        if (interrupted)
-            Thread.currentThread().interrupt();
     }
 
-    public void visitEnd(long numInstances) {
+    public void visitEnd(long numInstances) throws InterruptedException {
         if (!this.visitors.isEmpty()) {
             this.events[this.eventCount++] = END;
             addLong(numInstances);
             flush();
         }
-        finish();
+        finish(false, true);
         checkException();
     }
 
-    public void visitInstructionExecution(InstanceType instance) {
+    public void visitInstructionExecution(InstanceType instance) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = INSTRUCTION_EXECUTION;
@@ -435,7 +443,7 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         checkFull();
     }
 
-    public void visitMethodEntry(ReadMethod method) {
+    public void visitMethodEntry(ReadMethod method) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = METHOD_ENTRY;
@@ -443,7 +451,7 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         checkFull();
     }
 
-    public void visitMethodLeave(ReadMethod method) {
+    public void visitMethodLeave(ReadMethod method) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = METHOD_LEAVE;
@@ -452,7 +460,7 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
     }
 
     public void visitObjectCreation(long objectId,
-            InstanceType instrInstance) {
+            InstanceType instrInstance) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = OBJECT_CREATION;
@@ -462,7 +470,7 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
     }
 
     public void visitDataDependence(InstanceType from,
-            InstanceType to, Variable var, DataDependenceType type) {
+            InstanceType to, Variable var, DataDependenceType type) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = type == DataDependenceType.READ_AFTER_WRITE
@@ -474,7 +482,7 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
     }
 
     public void visitPendingDataDependence(InstanceType from,
-            Variable var, DataDependenceType type) {
+            Variable var, DataDependenceType type) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = type == DataDependenceType.READ_AFTER_WRITE
@@ -485,7 +493,7 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
     }
 
     public void discardPendingDataDependence(InstanceType from,
-            Variable var, DataDependenceType type) {
+            Variable var, DataDependenceType type) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = type == DataDependenceType.READ_AFTER_WRITE
@@ -495,7 +503,7 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         checkFull();
     }
 
-    public void visitControlDependence(InstanceType from, InstanceType to) {
+    public void visitControlDependence(InstanceType from, InstanceType to) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = CONTROL_DEPENDENCE;
@@ -504,7 +512,7 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         checkFull();
     }
 
-    public void visitPendingControlDependence(InstanceType from) {
+    public void visitPendingControlDependence(InstanceType from) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = PENDING_CONTROL_DEPENDENCE;
@@ -548,13 +556,13 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         this.variables[this.variableCount++] = var;
     }
 
-    private void checkFull() {
+    private void checkFull() throws InterruptedException {
         if (this.eventCount == this.events.length) {
             flush();
         }
     }
 
-    private void flush() {
+    private void flush() throws InterruptedException {
         assert this.visitors.size() > 0;
         EventStamp<InstanceType> stamp = toStamp(); // resets all counters
 
@@ -582,7 +590,7 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
                 Thread newThread = this.threadFactory.newThread(new Worker());
                 this.workerThreads.add(newThread);
                 newThread.start();
-                this.freeOutstanding.acquireUninterruptibly(permits);
+                acquireAndCheckExceptions(permits);
             } else if (!this.freeOutstanding.tryAcquire(permits)) {
                 // create a new thread
                 Thread newThread = this.threadFactory.newThread(new Worker());
@@ -591,33 +599,39 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
                 // after the additional thread has started, we wait until the count
                 // of outstanding work drops to 50%, but at most 2 seconds
                 int limit = this.outstandingWork.availablePermits() / 2;
-                this.freeOutstanding.acquireUninterruptibly(permits);
+                acquireAndCheckExceptions(permits);
                 long maxWait = System.currentTimeMillis() + 2000;
-                try {
-                    while (System.currentTimeMillis() < maxWait &&
-                            this.outstandingWork.availablePermits() > limit) {
-                        Thread.sleep(10);
-                    }
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
+                while (System.currentTimeMillis() < maxWait &&
+                        this.outstandingWork.availablePermits() > limit)
+                    Thread.sleep(10);
             }
         } else {
-            this.freeOutstanding.acquireUninterruptibly(permits);
+            acquireAndCheckExceptions(permits);
         }
 
     }
 
-    private void checkException() {
+    private void acquireAndCheckExceptions(int permits) throws InterruptedException {
+        while (!this.freeOutstanding.tryAcquire(permits, 500, TimeUnit.MILLISECONDS))
+            checkException();
+    }
+
+    private void checkException() throws InterruptedException {
         Throwable workerEx = this.workerException.get();
         if (workerEx != null) {
-            finish();
+            finish(true, false);
             if (workerEx instanceof RuntimeException)
                 throw (RuntimeException)workerEx;
             if (workerEx instanceof Error)
                 throw (Error)workerEx;
+            if (workerEx instanceof InterruptedException)
+                throw (InterruptedException)workerEx;
             throw new RuntimeException(workerEx);
         }
+    }
+
+    public void interrupted() throws InterruptedException {
+        finish(true, false);
     }
 
 }
