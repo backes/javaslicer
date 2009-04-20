@@ -246,9 +246,21 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
      * Returns the root of this CFG, which is just the Node corresponding to the
      * first instruction of this CFG's method, or null if the method contains no
      * instructions.
+     *
+     * If the CFG was created with <b>excludeLabels</b> and the first instruction is a label,
+     * then the node for the first non-label instruction is returned.
      */
     public InstrNode getRootNode() {
-        return this.instructionNodes.length == 0 ? null : this.instructionNodes[0];
+    	// search for the first non-label node
+        int idx = 0;
+        if (idx < this.instructionNodes.length) {
+            InstrNode instrNode = this.instructionNodes[idx];
+            while (instrNode == null && idx < this.instructionNodes.length) {
+                instrNode = this.instructionNodes[idx++];
+            }
+            return instrNode;
+        }
+        return null;
     }
 
     /**
@@ -266,7 +278,7 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
      * to, then <code>null</code> is returned.
      *
      * If the CFG was created with <b>excludeLabels</b> and the given instruction is a label,
-     * then node for the next non-label instruction is returned.
+     * then the node for the next non-label instruction is returned.
      *
      * @param instr the {@link Instruction} for which the node is requested
      * @return the node corresponding to the given {@link Instruction}, or
@@ -276,7 +288,7 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
         int idx = instr.getIndex() - this.method.getInstructionNumberStart();
         if (idx >= 0 && idx < this.instructionNodes.length) {
             InstrNode instrNode = this.instructionNodes[idx];
-            if (instrNode == null && idx < this.method.getInstructionNumberEnd()) {
+            while (instrNode == null && idx < this.instructionNodes.length) {
                 assert instr.getType() == InstructionType.LABEL;
                 instrNode = this.instructionNodes[idx++];
             }
