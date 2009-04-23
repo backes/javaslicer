@@ -307,13 +307,15 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
         InstrNode newNode = nodeFactory.createNode(this, instruction);
         this.instructionNodes[idx] = newNode;
         for (Instruction succ: getSuccessors(instruction)) {
-            InstrNode succNode = getInstrNode(succ, nodeFactory, excludeLabels);
-            if (succNode != null) {
-                newNode.addSuccessor(succNode);
-                succNode.addPredecessor(newNode);
-            } else {
-                assert succ.getType() == InstructionType.LABEL;
+            if (excludeLabels) {
+                while (succ != null && succ.getType() == InstructionType.LABEL)
+                    succ = succ.getNext();
+                if (succ == null)
+                    break;
             }
+            InstrNode succNode = getInstrNode(succ, nodeFactory, excludeLabels);
+            newNode.addSuccessor(succNode);
+            succNode.addPredecessor(newNode);
         }
         return newNode;
     }
