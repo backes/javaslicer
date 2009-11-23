@@ -112,8 +112,13 @@ public class TraceResult {
             }
         }
 
+        // TODO this check does not hold if an error occured during instrumenting one class.
+        //      in this case, the error was reported, but the instrumentation went on.
+        //      so it should be possible to read this trace file...
+        /*
         if (written != numInstructions)
             throw new IOException("Omitted some instruction indexes.");
+        */
 
         return instructions;
     }
