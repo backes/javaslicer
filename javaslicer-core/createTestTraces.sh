@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TRACER=../javaslicer-tracer/tracer.jar
+TRACER=../javaslicer-tracer/target/tracer.jar
 CLASSPATH=target/test-classes
 SOURCEDIR=src/test/java/de/unisb/cs/st/javaslicer/tracedCode
 PACKAGE=de.unisb.cs.st.javaslicer.tracedCode
