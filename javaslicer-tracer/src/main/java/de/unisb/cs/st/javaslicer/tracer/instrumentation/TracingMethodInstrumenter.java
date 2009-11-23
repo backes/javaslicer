@@ -900,7 +900,6 @@ public class TracingMethodInstrumenter implements Opcodes {
             final AbstractInstruction instruction = new TypeInstruction(this.readMethod, insn.getOpcode(),
                 this.currentLine, insn.desc, newObjectIdSeqIndex);
             if (!this.instructionIterator.hasNext() || this.instructionIterator.next().getOpcode() != DUP) {
-                Object foo = this.instructionIterator.previous();
                 throw new TracerException("Bytecode of method "+this.classNode.name+"."+this.methodNode.name+
                     " has unsupported form. Maybe it was compiled for JRE < 1.5?");
             }

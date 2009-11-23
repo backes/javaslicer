@@ -32,6 +32,7 @@ import org.objectweb.asm.util.TraceMethodVisitor;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Field;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
+import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.ThreadTracer;
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
 
@@ -133,9 +134,12 @@ public class Transformer implements ClassFileTransformer {
             if (isExcluded(javaClassName))
                 return null;
             return transform0(className, javaClassName, classfileBuffer);
-        } catch (final Throwable t) {
-            System.err.println("Error transforming class " + className + ":");
-            t.printStackTrace(System.err);
+        } catch (TracerException e) {
+            System.err.println("Error transforming class " + className + ": " + e.getMessage());
+            return null;
+        } catch (RuntimeException e) {
+            System.err.println("Uncatched error while transforming class " + className + ":");
+            e.printStackTrace(System.err);
             return null;
         } finally {
             if (this.tracer.debug) {
