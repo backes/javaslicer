@@ -521,7 +521,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                             || dataDependenceVisitorsWriteAfterRead0 != null
                             || pendingDataDependenceVisitorsWriteAfterRead0 != null) {
                         for (final Variable definedVariable: dynInfo.getDefinedVariables()) {
-                            if (!(definedVariable instanceof StackEntry)) {
+                            if (!(definedVariable instanceof StackEntry<?>)) {
                                 // we ignore WAR dependences over the stack!
                                 if (pendingDataDependenceVisitorsWriteAfterRead0 != null) {
                                     // for each defined variable, we have a pending WAR dependence
@@ -574,7 +574,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                             pendingDataDependenceVisitorsReadAfterWrite0 != null) {
                         for (final Variable usedVariable: dynInfo.getUsedVariables()) {
                             // if we have WAR visitors, we inform them about a new dependence
-                            if (dataDependenceVisitorsWriteAfterRead0 != null && !(usedVariable instanceof StackEntry)) {
+                            if (dataDependenceVisitorsWriteAfterRead0 != null && !(usedVariable instanceof StackEntry<?>)) {
                                 InstanceType lastWriterInst = lastWriter.get(usedVariable);
 
                                 // avoid self-loops in the DDG (e.g. for IINC, which reads and writes to the same variable)
@@ -743,7 +743,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
             DependencesVisitor<? super InstanceType>[] dataDependenceVisitorsReadAfterWrite0) throws InterruptedException {
         for (Variable var: frame.getAllVariables()) {
             // lastWriter does not contain stack entries
-            if (!(var instanceof StackEntry)) {
+            if (!(var instanceof StackEntry<?>)) {
                 if (pendingDataDependenceVisitorsWriteAfterRead0 != null) {
                     InstanceType inst = lastWriter.remove(var);
                     if (inst != null)
@@ -770,7 +770,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
         if (pendingDataDependenceVisitorsWriteAfterRead0 != null) {
             for (Entry<Variable, InstanceType> e: lastWriter.entrySet()) {
                 Variable var = e.getKey();
-                assert !(var instanceof StackEntry);
+                assert !(var instanceof StackEntry<?>);
                 for (DependencesVisitor<? super InstanceType> vis: pendingDataDependenceVisitorsWriteAfterRead0)
                     vis.discardPendingDataDependence(e.getValue(), var, DataDependenceType.WRITE_AFTER_READ);
             }

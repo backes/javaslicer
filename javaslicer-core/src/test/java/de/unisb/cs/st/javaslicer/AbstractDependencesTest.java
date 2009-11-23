@@ -95,7 +95,7 @@ public abstract class AbstractDependencesTest {
         @Override
         public void visitDataDependence(final InstructionInstance from, final InstructionInstance to,
                 final Variable var, final DataDependenceType type) {
-            if (var instanceof StackEntry)
+            if (var instanceof StackEntry<?>)
                 return;
             if (!this.instrFilter.filterInstance(from) || !this.instrFilter.filterInstance(to))
                 return;

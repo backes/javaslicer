@@ -80,11 +80,11 @@ public class MethodInvokationVariableUsages<InstanceType> implements DynamicInfo
     public Collection<Variable> getUsedVariables(final Variable definedVariable) {
         // if we have no information about the executed method, we assume that all parameters had an influence on the outcome
         if (this.removedFrame == null) {
-            assert definedVariable instanceof StackEntry; // stack entry in the "old" frame (return value)
+            assert definedVariable instanceof StackEntry<?>; // stack entry in the "old" frame (return value)
             return getUsedVariables();
         }
 
-        assert definedVariable instanceof LocalVariable; // local variable in the new frame
+        assert definedVariable instanceof LocalVariable<?>; // local variable in the new frame
         int varIndex = ((LocalVariable<?>)definedVariable).getVarIndex();
         assert varIndex < this.paramCount;
         // it has been defined by the stack entry in the old frame at the corresponding position
