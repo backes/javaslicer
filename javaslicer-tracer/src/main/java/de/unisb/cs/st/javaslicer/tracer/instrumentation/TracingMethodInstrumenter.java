@@ -59,6 +59,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.SimpleI
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.TableSwitchInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.TypeInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.VarInstruction;
+import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.ThreadTracer;
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
 import de.unisb.cs.st.javaslicer.tracer.TracingThreadTracer;
@@ -898,6 +899,12 @@ public class TracingMethodInstrumenter implements Opcodes {
             final int newObjectIdSeqIndex = this.tracer.newLongTraceSequence();
             final AbstractInstruction instruction = new TypeInstruction(this.readMethod, insn.getOpcode(),
                 this.currentLine, insn.desc, newObjectIdSeqIndex);
+            if (!this.instructionIterator.hasNext() || this.instructionIterator.next().getOpcode() != DUP) {
+                Object foo = this.instructionIterator.previous();
+                throw new TracerException("Bytecode of method "+this.classNode.name+"."+this.methodNode.name+
+                    " has unsupported form. Maybe it was compiled for JRE < 1.5?");
+            }
+            this.instructionIterator.previous();
             this.instructionIterator.add(new InsnNode(DUP));
             ++this.outstandingInitializations;
             // modified code of registerInstruction():
