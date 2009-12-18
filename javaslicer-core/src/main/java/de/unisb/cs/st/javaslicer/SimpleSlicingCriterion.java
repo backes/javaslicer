@@ -93,7 +93,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
             if ((SimpleSlicingCriterion.this.occurence != null &&
                     this.seenOccurences == SimpleSlicingCriterion.this.occurence)
                 || instructionInstance.getInstruction().getMethod() != SimpleSlicingCriterion.this.method
-                || instructionInstance.getInstruction().getLineNumber() != SimpleSlicingCriterion.this.lineNumber) {
+                || (SimpleSlicingCriterion.this.lineNumber == null || instructionInstance.getInstruction().getLineNumber() != SimpleSlicingCriterion.this.lineNumber)) {
                 if (this.beingInRun[instrStackDepth-1]) {
                     this.beingInRun[instrStackDepth-1] = false;
                     this.lastMatch = null;
@@ -250,7 +250,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
         if (foundMethod.getName().equals(methodName)) {
             for (ReadMethod m; mid >= 0 && (m=methods.get(mid)).getName().equals(methodName); --mid) {
                 for (final AbstractInstruction instr: m.getInstructions()) {
-                    if (instr.getLineNumber() == lineNumber)
+                    if (lineNumber == null || instr.getLineNumber() == lineNumber)
                         return m;
                 }
             }
