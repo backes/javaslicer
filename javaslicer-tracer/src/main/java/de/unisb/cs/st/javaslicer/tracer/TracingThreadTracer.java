@@ -338,10 +338,12 @@ public class TracingThreadTracer implements ThreadTracer {
         if (this.paused > 0)
             return;
 
-        if (DEBUG_TRACE_FILE && this.threadId == 1) {
-            pauseTracing();
-            debugFile.println(instructionIndex);
-            resumeTracing();
+        if (DEBUG_TRACE_FILE) {
+            if (this.threadId == 1) {
+                pauseTracing();
+                debugFile.println(instructionIndex);
+                resumeTracing();
+            }
         }
 
         this.lastInstructionIndex = instructionIndex;

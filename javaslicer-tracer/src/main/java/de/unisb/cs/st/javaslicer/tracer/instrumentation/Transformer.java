@@ -235,10 +235,7 @@ public class Transformer implements ClassFileTransformer {
                 fields.add(new Field(f.name, f.desc, f.access, readClass));
             }
 
-            //final boolean computeFrames = COMPUTE_FRAMES || Arrays.asList(this.pauseTracingClasses).contains(Type.getObjectType(className).getClassName());
-            final boolean computeFrames = COMPUTE_FRAMES;
-
-            writer = new FixedClassWriter(computeFrames ? ClassWriter.COMPUTE_FRAMES : ClassWriter.COMPUTE_MAXS);
+            writer = new FixedClassWriter(COMPUTE_FRAMES ? ClassWriter.COMPUTE_FRAMES : ClassWriter.COMPUTE_MAXS);
 
             final ClassVisitor output = this.tracer.check ? new CheckClassAdapter(writer) : writer;
 
@@ -254,7 +251,7 @@ public class Transformer implements ClassFileTransformer {
 
             new IdentifiableInstrumenter(readClass, this.tracer).transform(classNode);
 
-            classNode.accept(computeFrames ? new JSRInliner(output) : output);
+            classNode.accept(COMPUTE_FRAMES ? new JSRInliner(output) : output);
 
             readClass.setInstructionNumberEnd(AbstractInstruction.getNextIndex());
 
