@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TRACER=../javaslicer-tracer/target/tracer.jar
+TRACER=../javaslicer-tracer/target/assembly/tracer.jar
 CLASSPATH=target/test-classes
 SOURCEDIR=src/test/java/de/unisb/cs/st/javaslicer/tracedCode
 PACKAGE=de.unisb.cs.st.javaslicer.tracedCode
@@ -15,7 +15,8 @@ for file in $SOURCEDIR/*.java; do
 	CLASS=${CLASS%.java}
 	TARGETFILE=`echo $CLASS | awk '{ print tolower($0);}'`
 	echo -e "\n\nRunning $CLASS..."
-  STARTTIME=`date +%s`
+	STARTTIME=`date +%s`
+	echo executing: java -javaagent:$TRACER=tracefile:$TARGETDIR/$TARGETFILE -ea -esa -cp $CLASSPATH $PACKAGE.$CLASS $DEFAULT_ARGUMENT
 	if ! java -javaagent:$TRACER=tracefile:$TARGETDIR/$TARGETFILE -ea -esa -cp $CLASSPATH $PACKAGE.$CLASS $DEFAULT_ARGUMENT; then
 		echo ERROR
 		exit 1
