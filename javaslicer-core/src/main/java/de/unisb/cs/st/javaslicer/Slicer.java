@@ -233,7 +233,7 @@ public class Slicer implements Opcodes {
                         final ExecutionFrame<InstructionInstance> newFrame = new ExecutionFrame<InstructionInstance>();
                         // assertion: if the current frame catched an exception, then the new frame
                         // must have thrown it
-                        assert currentFrame.atCatchBlockStart == null
+                        assert currentFrame == null || currentFrame.atCatchBlockStart == null
                             || instruction == instruction.getMethod().getAbnormalTerminationLabel();
                         newFrame.method = instruction.getMethod();
                         if (instruction == newFrame.method.getAbnormalTerminationLabel()) {
