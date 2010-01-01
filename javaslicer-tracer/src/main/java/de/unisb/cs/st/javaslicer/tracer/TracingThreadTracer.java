@@ -21,7 +21,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 import de.hammacher.util.maps.IntegerMap;
 import de.unisb.cs.st.javaslicer.common.TraceSequenceTypes.Type;
@@ -245,7 +244,7 @@ public class TracingThreadTracer implements ThreadTracer {
     private int stackSize = 0;
     private int[] methodStack = new int[16];
 
-	private final AtomicLong numCrossedLabels = new AtomicLong(0);
+	private long numCrossedLabels = 0;
 
     protected static final PrintWriter debugFile;
     static {
@@ -327,8 +326,11 @@ public class TracingThreadTracer implements ThreadTracer {
         }
     }
 
-    public void traceLastInstructionIndex(final int traceSequenceIndex) {
-    	this.numCrossedLabels.incrementAndGet();
+    public synchronized void traceLastInstructionIndex(final int traceSequenceIndex) {
+        if (this.paused > 0)
+            return;
+
+    	this.numCrossedLabels++;
         traceInt(this.lastInstructionIndex, traceSequenceIndex);
     }
 
@@ -370,13 +372,13 @@ public class TracingThreadTracer implements ThreadTracer {
         }
     }
 
-    public void writeOut(final DataOutputStream out) throws IOException {
+    public synchronized void writeOut(final DataOutputStream out) throws IOException {
         finish();
         out.writeLong(this.threadId);
         out.writeUTF(this.threadName);
         this.writeOutThread.writeOut(out);
         out.writeInt(this.lastInstructionIndex);
-        out.writeLong(this.numCrossedLabels.get());
+        out.writeLong(this.numCrossedLabels);
         out.writeInt(this.stackSize);
         for (int i = 0; i < this.stackSize; ++i)
             out.writeInt(this.methodStack[i]);
