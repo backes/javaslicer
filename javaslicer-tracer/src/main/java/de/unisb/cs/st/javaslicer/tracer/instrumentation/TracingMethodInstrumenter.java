@@ -695,7 +695,19 @@ public class TracingMethodInstrumenter implements Opcodes {
             break;
 
         // stack manipulation:
-        case POP: case POP2: case DUP: case DUP_X1: case DUP_X2: case DUP2: case DUP2_X1: case DUP2_X2: case SWAP:
+        case POP: case POP2: case DUP: case DUP2:
+            type = InstructionType.SAFE;
+            break;
+
+        case DUP_X1: case DUP_X2: case DUP2_X1: case DUP2_X2: case SWAP:
+            // i would like to throw an error here, since this stack manipulation is problematic.
+            // but unfortunately, it is used in bytecode of the standard api on linux and mac, version 1.6.17.
+//            if (this.tracer.debug) {
+//                Transformer.printMethod(System.err, this.methodNode);
+//                System.err.println("Error at instruction " + this.instructionIterator.previousIndex());
+//            }
+//            throw new TracerException("Method "+this.classNode.name+"."+this.methodNode.name+
+//                " uses unsupported stack manipulation. Maybe it was compiled for JRE < 1.5?");
             type = InstructionType.SAFE;
             break;
 
@@ -899,12 +911,52 @@ public class TracingMethodInstrumenter implements Opcodes {
             final int newObjectIdSeqIndex = this.tracer.newLongTraceSequence();
             final AbstractInstruction instruction = new TypeInstruction(this.readMethod, insn.getOpcode(),
                 this.currentLine, insn.desc, newObjectIdSeqIndex);
-            if (!this.instructionIterator.hasNext() || this.instructionIterator.next().getOpcode() != DUP) {
+            if (!this.instructionIterator.hasNext()) {
+                if (this.tracer.debug)
+                    Transformer.printMethod(System.err, this.methodNode);
                 throw new TracerException("Bytecode of method "+this.classNode.name+"."+this.methodNode.name+
                     " has unsupported form. Maybe it was compiled for JRE < 1.5?");
+            } else if (this.instructionIterator.next().getOpcode() != DUP) {
+                this.instructionIterator.previous();
+                AbstractInsnNode dup_x1 = this.instructionIterator.next();
+                AbstractInsnNode swap = null;
+                AbstractInsnNode init = null;
+
+                boolean matches = false;
+                if (dup_x1.getOpcode() == DUP_X1 && this.instructionIterator.hasNext()) {
+                    swap = this.instructionIterator.next();
+                    if (swap.getOpcode() == SWAP && this.instructionIterator.hasNext()) {
+                        init = this.instructionIterator.next();
+                        if (init.getOpcode() == INVOKESPECIAL) {
+                            MethodInsnNode mtdInvokation = (MethodInsnNode) init;
+                            Type[] args = Type.getArgumentTypes(mtdInvokation.desc);
+                            if ("<init>".equals(mtdInvokation.name) &&
+                                    args.length == 1 && args[0].getSort() == Type.OBJECT) {
+                                matches = true;
+                            }
+                        }
+                    }
+                }
+
+                if (matches) {
+                    // add another DUP_X1 after the existing one
+                    this.instructionIterator.previous(); this.instructionIterator.previous();
+                    this.instructionIterator.add(new InsnNode(DUP_X1));
+//                    if (this.tracer.debug) {
+//                        System.err.println("Added DUP_X1 at position " + this.instructionIterator.previousIndex() + "!");
+//                        Transformer.printMethod(System.err, this.methodNode);
+//                    }
+                    this.instructionIterator.next(); // next instruction visited would be the <init> call
+                } else {
+                    if (this.tracer.debug)
+                        Transformer.printMethod(System.err, this.methodNode);
+                    throw new TracerException("Bytecode of method "+this.classNode.name+"."+this.methodNode.name+
+                        " has unsupported form. Maybe it was compiled for JRE < 1.5?");
+                }
+            } else {
+                this.instructionIterator.previous();
+                this.instructionIterator.add(new InsnNode(DUP));
             }
-            this.instructionIterator.previous();
-            this.instructionIterator.add(new InsnNode(DUP));
             ++this.outstandingInitializations;
             // modified code of registerInstruction():
             this.readMethod.addInstruction(instruction);

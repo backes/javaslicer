@@ -304,6 +304,29 @@ public class Transformer implements ClassFileTransformer {
         return true;
     }
 
+    public static void printMethod(PrintStream out, MethodNode method) {
+        final TraceMethodVisitor mv = new TraceMethodVisitor();
+
+        out.println(method.name + method.desc);
+        for (int j = 0; j < method.instructions.size(); ++j) {
+            method.instructions.get(j).accept(mv);
+
+            final StringBuffer s = new StringBuffer();
+            while (s.length() < method.maxStack + method.maxLocals + 1) {
+                s.append(' ');
+            }
+            out.print(Integer.toString(j + 100000).substring(1));
+            out.print(" " + s + " : " + mv.text.get(j));
+        }
+        for (int j = 0; j < method.tryCatchBlocks.size(); ++j) {
+            ((TryCatchBlockNode) method.tryCatchBlocks.get(j)).accept(mv);
+            out.print(" " + mv.text.get(method.instructions.size()+j));
+        }
+        out.println(" MAXSTACK " + method.maxStack);
+        out.println(" MAXLOCALS " + method.maxLocals);
+        out.println();
+    }
+
     private static void printMethod(final Analyzer a, final PrintStream out, final MethodNode method) {
         final Frame[] frames = a.getFrames();
 
