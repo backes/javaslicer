@@ -48,12 +48,12 @@ public class Slicer implements Opcodes {
     private final Simulator<InstructionInstance> simulator;
     private final List<ProgressMonitor> progressMonitors = new ArrayList<ProgressMonitor>(1);
 
-    public Slicer(final TraceResult trace) {
+    public Slicer(TraceResult trace) {
         this.trace = trace;
         this.simulator = new Simulator<InstructionInstance>(trace);
     }
 
-    public static void main(final String[] args) {
+    public static void main(String[] args) {
         Options options = createOptions();
         CommandLineParser parser = new GnuParser();
         CommandLine cmdLine;
@@ -82,7 +82,7 @@ public class Slicer implements Opcodes {
         if (cmdLine.hasOption('t')) {
             try {
                 threadId = Long.parseLong(cmdLine.getOptionValue('t'));
-            } catch (final NumberFormatException e) {
+            } catch (NumberFormatException e) {
                 System.err.println("Illegal thread id: " + cmdLine.getOptionValue('t'));
                 System.exit(-1);
             }
@@ -91,7 +91,7 @@ public class Slicer implements Opcodes {
         TraceResult trace;
         try {
             trace = TraceResult.readFrom(traceFile);
-        } catch (final IOException e) {
+        } catch (IOException e) {
             System.err.format("Could not read the trace file \"%s\": %s%n", traceFile, e);
             System.exit(-1);
             return;
@@ -100,20 +100,20 @@ public class Slicer implements Opcodes {
         SlicingCriterion sc = null;
         try {
             sc = readSlicingCriteria(slicingCriterionString, trace.getReadClasses());
-        } catch (final IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
             System.err.println("Error parsing slicing criterion: " + e.getMessage());
             System.exit(-1);
             return;
         }
 
-        final List<ThreadId> threads = trace.getThreads();
+        List<ThreadId> threads = trace.getThreads();
         if (threads.size() == 0) {
             System.err.println("The trace file contains no tracing information.");
             System.exit(-1);
         }
 
         ThreadId tracing = null;
-        for (final ThreadId t: threads) {
+        for (ThreadId t: threads) {
             if (threadId == null) {
                 if ("main".equals(t.getThreadName()) && (tracing == null || t.getJavaThreadId() < tracing.getJavaThreadId()))
                     tracing = t;
@@ -129,18 +129,18 @@ public class Slicer implements Opcodes {
             return;
         }
 
-        final long startTime = System.nanoTime();
+        long startTime = System.nanoTime();
         Slicer slicer = new Slicer(trace);
         if (cmdLine.hasOption("--progress"))
             slicer.addProgressMonitor(new ConsoleProgressMonitor());
-        final Set<Instruction> slice = slicer.getDynamicSlice(tracing, sc.getInstance());
-        final long endTime = System.nanoTime();
+        Set<Instruction> slice = slicer.getDynamicSlice(tracing, sc.getInstance());
+        long endTime = System.nanoTime();
 
-        final List<Instruction> sliceList = new ArrayList<Instruction>(slice);
+        List<Instruction> sliceList = new ArrayList<Instruction>(slice);
         Collections.sort(sliceList);
 
         System.out.println("The dynamic slice for criterion " + sc + ":");
-        for (final Instruction insn: sliceList) {
+        for (Instruction insn: sliceList) {
             System.out.format((Locale)null, "%s.%s:%d %s%n",
                     insn.getMethod().getReadClass().getName(),
                     insn.getMethod().getName(),
@@ -155,7 +155,7 @@ public class Slicer implements Opcodes {
         this.progressMonitors .add(progressMonitor);
     }
 
-    public static SlicingCriterion readSlicingCriteria(final String string, final List<ReadClass> readClasses)
+    public static SlicingCriterion readSlicingCriteria(String string, List<ReadClass> readClasses)
             throws IllegalArgumentException {
         CompoundSlicingCriterion crit = null;
         int oldPos = 0;
@@ -163,14 +163,14 @@ public class Slicer implements Opcodes {
             int bracketPos = string.indexOf('{', oldPos);
             int commaPos = string.indexOf(',', oldPos);
             while (bracketPos != -1 && bracketPos < commaPos) {
-                final int closeBracketPos = string.indexOf('}', bracketPos+1);
+                int closeBracketPos = string.indexOf('}', bracketPos+1);
                 if (closeBracketPos == -1)
                     throw new IllegalArgumentException("Couldn't find matching '}'");
                 bracketPos = string.indexOf('{', closeBracketPos+1);
                 commaPos = string.indexOf(',', closeBracketPos+1);
             }
 
-            final SlicingCriterion newCrit = SimpleSlicingCriterion.parse(
+            SlicingCriterion newCrit = SimpleSlicingCriterion.parse(
                     string.substring(oldPos, commaPos == -1 ? string.length() : commaPos),
                     readClasses);
             oldPos = commaPos+1;
@@ -188,15 +188,15 @@ public class Slicer implements Opcodes {
         }
     }
 
-    public Set<Instruction> getDynamicSlice(final ThreadId threadId, final SlicingCriterion.SlicingCriterionInstance slicingCriterion) {
-        final BackwardTraceIterator<InstructionInstance> backwardInsnItr = this.trace.getBackwardIterator(threadId, null);
+    public Set<Instruction> getDynamicSlice(ThreadId threadId, SlicingCriterion.SlicingCriterionInstance slicingCriterion) {
+        BackwardTraceIterator<InstructionInstance> backwardInsnItr = this.trace.getBackwardIterator(threadId, null);
 
-        final IntegerMap<Set<Instruction>> controlDependences = new IntegerMap<Set<Instruction>>();
+        IntegerMap<Set<Instruction>> controlDependences = new IntegerMap<Set<Instruction>>();
 
-        final ArrayStack<ExecutionFrame<InstructionInstance>> frames = new ArrayStack<ExecutionFrame<InstructionInstance>>();
+        ArrayStack<ExecutionFrame<InstructionInstance>> frames = new ArrayStack<ExecutionFrame<InstructionInstance>>();
 
-        final Set<Variable> interestingVariables = new HashSet<Variable>();
-        final Set<Instruction> dynamicSlice = new HashSet<Instruction>();
+        Set<Variable> interestingVariables = new HashSet<Variable>();
+        Set<Instruction> dynamicSlice = new HashSet<Instruction>();
 
         ExecutionFrame<InstructionInstance> currentFrame = null;
         for (ReadMethod method: backwardInsnItr.getInitialStackMethods()) {
@@ -206,17 +206,16 @@ public class Slicer implements Opcodes {
             frames.push(currentFrame);
         }
 
-
         for (ProgressMonitor mon : this.progressMonitors)
             mon.start(backwardInsnItr);
         try {
             while (backwardInsnItr.hasNext()) {
-                final InstructionInstance instance = backwardInsnItr.next();
-                final Instruction instruction = instance.getInstruction();
+                InstructionInstance instance = backwardInsnItr.next();
+                Instruction instruction = instance.getInstruction();
 
                 ExecutionFrame<InstructionInstance> removedFrame = null;
                 boolean removedFrameIsInteresting = false;
-                final int stackDepth = instance.getStackDepth();
+                int stackDepth = instance.getStackDepth();
                 assert stackDepth > 0;
 
                 if (frames.size() != stackDepth) {
@@ -230,7 +229,7 @@ public class Slicer implements Opcodes {
                         currentFrame = frames.peek();
                     } else {
                         assert frames.size() == stackDepth-1;
-                        final ExecutionFrame<InstructionInstance> newFrame = new ExecutionFrame<InstructionInstance>();
+                        ExecutionFrame<InstructionInstance> newFrame = new ExecutionFrame<InstructionInstance>();
                         // assertion: if the current frame catched an exception, then the new frame
                         // must have thrown it
                         assert currentFrame == null || currentFrame.atCatchBlockStart == null
@@ -259,7 +258,7 @@ public class Slicer implements Opcodes {
                     currentFrame.finished = true;
                 currentFrame.lastInstruction = instruction;
 
-                final DynamicInformation dynInfo = this.simulator.simulateInstruction(instance, currentFrame,
+                DynamicInformation dynInfo = this.simulator.simulateInstruction(instance, currentFrame,
                         removedFrame, frames);
 
                 if (removedFrameIsInteresting) {
@@ -280,7 +279,7 @@ public class Slicer implements Opcodes {
                     }
                 }
 
-                final boolean isExceptionsThrowingInstance = currentFrame.throwsException &&
+                boolean isExceptionsThrowingInstance = currentFrame.throwsException &&
                     (instruction.getType() != InstructionType.LABEL || !((LabelMarker)instruction).isAdditionalLabel());
                 if ((currentFrame.interestingInstructions != null && !currentFrame.interestingInstructions.isEmpty())
                         || isExceptionsThrowingInstance) {
@@ -299,7 +298,7 @@ public class Slicer implements Opcodes {
                         // in this case, we have an additional control dependence from the catching to
                         // the throwing instruction
                         for (int i = stackDepth-2; i >= 0; --i) {
-                            final ExecutionFrame<InstructionInstance> f = frames.get(i);
+                            ExecutionFrame<InstructionInstance> f = frames.get(i);
                             if (f.atCatchBlockStart != null) {
                                 if (f.interestingInstructions != null &&
                                         f.interestingInstructions.contains(f.atCatchBlockStart.getInstruction())) {
@@ -325,7 +324,7 @@ public class Slicer implements Opcodes {
                 }
 
                 if (!interestingVariables.isEmpty()) {
-                    for (final Variable definedVariable: dynInfo.getDefinedVariables()) {
+                    for (Variable definedVariable: dynInfo.getDefinedVariables()) {
                         if (interestingVariables.contains(definedVariable)) {
                             if (currentFrame.interestingInstructions == null)
                                 currentFrame.interestingInstructions = new HashSet<Instruction>();
@@ -352,17 +351,17 @@ public class Slicer implements Opcodes {
         return dynamicSlice;
     }
 
-    private void computeControlDependences(final ReadMethod method, final IntegerMap<Set<Instruction>> controlDependences) {
-        final Map<Instruction, Set<Instruction>> deps = ControlFlowAnalyser.getInstance().getInvControlDependences(method);
-        for (final Entry<Instruction, Set<Instruction>> entry: deps.entrySet()) {
-            final int index = entry.getKey().getIndex();
+    private void computeControlDependences(ReadMethod method, IntegerMap<Set<Instruction>> controlDependences) {
+        Map<Instruction, Set<Instruction>> deps = ControlFlowAnalyser.getInstance().getInvControlDependences(method);
+        for (Entry<Instruction, Set<Instruction>> entry: deps.entrySet()) {
+            int index = entry.getKey().getIndex();
             assert !controlDependences.containsKey(index);
             controlDependences.put(index, entry.getValue());
         }
     }
 
-    private static <T> Set<T> intersect(final Set<T> set1,
-            final Set<T> set2) {
+    private static <T> Set<T> intersect(Set<T> set1,
+            Set<T> set2) {
         if (set1.isEmpty() || set2.isEmpty())
             return Collections.emptySet();
 
@@ -377,7 +376,7 @@ public class Slicer implements Opcodes {
         }
 
         Set<T> intersection = null;
-        for (final T obj: smallerSet) {
+        for (T obj: smallerSet) {
             if (biggerSet.contains(obj)) {
                 if (intersection == null)
                     intersection = new HashSet<T>();
