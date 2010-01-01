@@ -3,6 +3,7 @@ package de.unisb.cs.st.javaslicer;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -13,6 +14,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.objectweb.asm.Opcodes;
 
 import de.hammacher.util.ArrayStack;
@@ -46,34 +54,38 @@ public class Slicer implements Opcodes {
     }
 
     public static void main(final String[] args) {
+        Options options = createOptions();
+        CommandLineParser parser = new GnuParser();
+        CommandLine cmdLine;
 
-        boolean showProgress = false;
-
-        int argPos = 0;
-
-        while (argPos < args.length) {
-            if ("--progress".equals(args[argPos])) {
-                showProgress = true;
-            } else {
-                // no more options
-                break;
-            }
-            ++argPos;
+        try {
+            cmdLine = parser.parse(options, args, true);
+        } catch (ParseException e) {
+            System.err.println("Error parsing the command line arguments: " + e.getMessage());
+            return;
         }
 
-        if (argPos >= args.length) {
-            printUsage(System.err);
+        if (cmdLine.hasOption('h')) {
+            printHelp(options, System.out);
+            System.exit(0);
+        }
+
+        String[] additionalArgs = cmdLine.getArgs();
+        if (additionalArgs.length != 2) {
+            printHelp(options, System.err);
             System.exit(-1);
         }
+        File traceFile = new File(additionalArgs[0]);
+        String slicingCriterionString = additionalArgs[1];
 
-        final File traceFile = new File(args[argPos++]);
-
-    	Long threadId = null;
-        try {
-            threadId = Long.valueOf(args[argPos]);
-            ++argPos;
-        } catch (final NumberFormatException e) {
-            // ignore
+        Long threadId = null;
+        if (cmdLine.hasOption('t')) {
+            try {
+                threadId = Long.parseLong(cmdLine.getOptionValue('t'));
+            } catch (final NumberFormatException e) {
+                System.err.println("Illegal thread id: " + cmdLine.getOptionValue('t'));
+                System.exit(-1);
+            }
         }
 
         TraceResult trace;
@@ -86,12 +98,8 @@ public class Slicer implements Opcodes {
         }
 
         SlicingCriterion sc = null;
-        if (argPos >= args.length) {
-            printUsage(System.err);
-            System.exit(-1);
-        }
         try {
-            sc = readSlicingCriteria(args[argPos], trace.getReadClasses());
+            sc = readSlicingCriteria(slicingCriterionString, trace.getReadClasses());
         } catch (final IllegalArgumentException e) {
             System.err.println("Error parsing slicing criterion: " + e.getMessage());
             System.exit(-1);
@@ -123,7 +131,7 @@ public class Slicer implements Opcodes {
 
         final long startTime = System.nanoTime();
         Slicer slicer = new Slicer(trace);
-        if (showProgress)
+        if (cmdLine.hasOption("--progress"))
             slicer.addProgressMonitor(new ConsoleProgressMonitor());
         final Set<Instruction> slice = slicer.getDynamicSlice(tracing, sc.getInstance());
         final long endTime = System.nanoTime();
@@ -145,12 +153,6 @@ public class Slicer implements Opcodes {
 
     private void addProgressMonitor(ProgressMonitor progressMonitor) {
         this.progressMonitors .add(progressMonitor);
-    }
-
-    private static void printUsage(PrintStream out) {
-        out.println("Usage: java [<javaoptions>] " + Slicer.class.getName()
-                + " [<sliceroptions>] <trace file> [<threadId>] <loc>[(<occ>)]:<var>[,<loc>[(<occ>)]:<var>]*");
-        out.println("  where <sliceroptions> can be a combination of");
     }
 
     public static SlicingCriterion readSlicingCriteria(final String string, final List<ReadClass> readClasses)
@@ -196,8 +198,14 @@ public class Slicer implements Opcodes {
         final Set<Variable> interestingVariables = new HashSet<Variable>();
         final Set<Instruction> dynamicSlice = new HashSet<Instruction>();
 
-        ExecutionFrame<InstructionInstance> currentFrame = new ExecutionFrame<InstructionInstance>();
-        frames.push(currentFrame);
+        ExecutionFrame<InstructionInstance> currentFrame = null;
+        for (ReadMethod method: backwardInsnItr.getInitialStackMethods()) {
+            currentFrame = new ExecutionFrame<InstructionInstance>();
+            currentFrame.method = method;
+            currentFrame.interruptedControlFlow = true;
+            frames.push(currentFrame);
+        }
+
 
         for (ProgressMonitor mon : this.progressMonitors)
             mon.start(backwardInsnItr);
@@ -380,6 +388,28 @@ public class Slicer implements Opcodes {
         if (intersection == null)
             return Collections.emptySet();
         return intersection;
+    }
+
+    @SuppressWarnings("static-access")
+    private static Options createOptions() {
+        Options options = new Options();
+        options.addOption(OptionBuilder.isRequired(false).withArgName("threadid").hasArg(true).
+            withDescription("thread id to select for slicing (default: main thread)").withLongOpt("threadid").create('t'));
+        options.addOption(OptionBuilder.isRequired(false).hasArg(false).
+            withDescription("show progress while computing the dynamic slice").withLongOpt("progress").create('p'));
+        options.addOption(OptionBuilder.isRequired(false).hasArg(false).
+            withDescription("print this help and exit").withLongOpt("help").create('h'));
+        return options;
+    }
+
+    private static void printHelp(Options options, PrintStream out) {
+        out.println("Usage: " + Slicer.class.getSimpleName() + " [<options>] <file> <slicing criterion>");
+        out.println("where <file> is the input trace file, and <options> may be one or more of");
+        out.println("      <slicing criterion> has the form <loc>[(<occ>)]:<var>[,<loc>[(<occ>)]:<var>]*");
+        out.println("      <options> may be one or more of");
+        HelpFormatter formatter = new HelpFormatter();
+        PrintWriter pw = new PrintWriter(out, true);
+        formatter.printOptions(pw, 120, options, 5, 3);
     }
 
 }
