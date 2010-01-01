@@ -4,6 +4,8 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.io.PushbackInputStream;
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -12,6 +14,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.zip.GZIPInputStream;
+
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 
 import de.hammacher.util.MultiplexedFileReader;
 import de.hammacher.util.StringCacheInput;
@@ -25,6 +35,8 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
+import de.unisb.cs.st.javaslicer.common.progress.ConsoleProgressMonitor;
+import de.unisb.cs.st.javaslicer.common.progress.ProgressMonitor;
 
 public class TraceResult {
 
@@ -294,17 +306,36 @@ public class TraceResult {
     }
 
     public static void main(final String[] args) {
-        if (args.length < 1 || args.length > 2) {
-            System.err.println("Usage: java " + TraceResult.class.getName() + " <file> [<threadId>]");
+        Options options = createOptions();
+        CommandLineParser parser = new GnuParser();
+        CommandLine cmdLine;
+
+        try {
+            cmdLine = parser.parse(options, args, true);
+        } catch (ParseException e) {
+            System.err.println("Error parsing the command line arguments: " + e.getMessage());
+            return;
+        }
+
+        if (cmdLine.hasOption('h')) {
+            printHelp(options, System.out);
+            System.exit(0);
+        }
+
+        String[] additionalArgs = cmdLine.getArgs();
+        if (additionalArgs.length != 1) {
+            System.err.println("Error: No input file given.");
+            printHelp(options, System.err);
             System.exit(-1);
         }
-        final File traceFile = new File(args[0]);
+
+        final File traceFile = new File(additionalArgs[0]);
         Long threadToTrace = null;
-        if (args.length > 1) {
+        if (cmdLine.hasOption('t')) {
             try {
-                threadToTrace = Long.valueOf(args[1]);
+                threadToTrace = Long.parseLong(cmdLine.getOptionValue('t'));
             } catch (final NumberFormatException e) {
-                System.err.println("Second parameter indicates the thread id to trace. Must be an integer.");
+                System.err.println("Illegal thread id: " + cmdLine.getOptionValue('t'));
                 System.exit(-1);
             }
         }
@@ -349,45 +380,75 @@ public class TraceResult {
         System.out.format("%15d: %s%n", tracing.getJavaThreadId(), tracing.getThreadName());
 
         try {
-            System.out.println();
-            System.out.println("The backward trace:");
-            final BackwardTraceIterator<AbstractInstructionInstance> it = tr.getBackwardIterator(tracing,
-                InstanceFilter.AdditionalLabelFilter.instance, new AbstractInstructionInstanceFactory());
-            long nr = 0;
-            final String format = "%8d: %-100s -> %3d %7d %s%n";
-            System.out.format("%8s  %-100s    %3s %7s %s%n",
-                    "Nr", "Location", "Dep", "OccNr", "Instruction");
-            while (it.hasNext()) {
-                /*
-                if (++nr % 10000000 == 0) {
-                    System.out.format("%4de6: %s (%7.2f - %7.2f = %7.2f MB memory)%n",
-                        nr / 1000000, new Date(),
-                        1e-6*Runtime.getRuntime().totalMemory(),
-                        1e-6*Runtime.getRuntime().freeMemory(),
-                        1e-6*(Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory())
-                        );
+            if (cmdLine.hasOption("length")) {
+                final BackwardTraceIterator<AbstractInstructionInstance> it = tr.getBackwardIterator(tracing,
+                    InstanceFilter.AdditionalLabelFilter.instance, new AbstractInstructionInstanceFactory());
+                ProgressMonitor monitor = null;
+                if (cmdLine.hasOption("--progress")) {
+                    monitor = new ConsoleProgressMonitor(System.out, "Computing trace length", true, 100, true);
+                    monitor.start(it);
                 }
-                it.next();
-                */
+                try {
+                    while (it.hasNext())
+                        it.next();
+                } finally {
+                    if (monitor != null)
+                        monitor.end();
+                }
 
-                final InstructionInstance inst = it.next();
-                final ReadMethod method = inst.getInstruction().getMethod();
-                final ReadClass class0 = method.getReadClass();
-                System.out.format(format, nr++, class0.getName()+"."
-                        +method.getName()+":"+inst.getInstruction().getLineNumber(),
-                        inst.getStackDepth(),
-                        inst.getOccurrenceNumber(), inst.toString());
+                System.out.format("%nNumber of instructions: %d  (+ %d additional = %d total instructions)%nReady%n",
+                        it.getNumInstructions(), it.getNumFilteredInstructions(),
+                        it.getNumInstructions() + it.getNumFilteredInstructions());
+            } else {
+                System.out.println();
+                System.out.println("The backward trace:");
+                BackwardTraceIterator<AbstractInstructionInstance> it = tr.getBackwardIterator(tracing,
+                    InstanceFilter.AdditionalLabelFilter.instance, new AbstractInstructionInstanceFactory());
+                long nr = 0;
+                String format = "%8d: %-100s -> %3d %7d %s%n";
+                System.out.format("%8s  %-100s    %3s %7s %s%n",
+                        "Nr", "Location", "Dep", "OccNr", "Instruction");
+                while (it.hasNext()) {
+                    InstructionInstance inst = it.next();
+                    ReadMethod method = inst.getInstruction().getMethod();
+                    ReadClass class0 = method.getReadClass();
+                    System.out.format(format, nr++, class0.getName()+"."
+                            +method.getName()+":"+inst.getInstruction().getLineNumber(),
+                            inst.getStackDepth(),
+                            inst.getOccurrenceNumber(), inst.toString());
+                }
+
+                System.out.format("%nNumber of instructions: %d  (+ %d additional = %d total instructions)%nReady%n",
+                        it.getNumInstructions(), it.getNumFilteredInstructions(),
+                        it.getNumInstructions() + it.getNumFilteredInstructions());
             }
-
-            System.out.format("%nNumber of instructions: %d  (+ %d additional = %d total instructions)%nReady%n",
-                    it.getNumInstructions(), it.getNumFilteredInstructions(),
-                    it.getNumInstructions() + it.getNumFilteredInstructions());
-
         } catch (final TracerException e) {
             System.err.print("Error while tracing: ");
             e.printStackTrace(System.err);
             System.exit(-1);
         }
+    }
+
+    @SuppressWarnings("static-access")
+    private static Options createOptions() {
+        Options options = new Options();
+        options.addOption(OptionBuilder.isRequired(false).withArgName("threadid").hasArg(true).
+            withDescription("thread id to select for trace output (default: main thread)").withLongOpt("threadid").create('t'));
+        options.addOption(OptionBuilder.isRequired(false).hasArg(false).
+            withDescription("do only output the trace length").withLongOpt("length").create('l'));
+        options.addOption(OptionBuilder.isRequired(false).hasArg(false).
+            withDescription("show progress while computing the trace length (only affectfull together with --length)").withLongOpt("progress").create('p'));
+        options.addOption(OptionBuilder.isRequired(false).hasArg(false).
+            withDescription("print this help and exit").withLongOpt("help").create('h'));
+        return options;
+    }
+
+    private static void printHelp(Options options, PrintStream out) {
+        out.println("Usage: " + TraceResult.class.getSimpleName() + " [<options>] <file>");
+        out.println("where <file> is the input trace file, and <options> may be one or more of");
+        HelpFormatter formatter = new HelpFormatter();
+        PrintWriter pw = new PrintWriter(out, true);
+        formatter.printOptions(pw, HelpFormatter.DEFAULT_WIDTH, options, 5, 3);
     }
 
     public ThreadId getThreadId(final long javaThreadId) {

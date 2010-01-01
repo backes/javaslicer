@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer.progress;
+package de.unisb.cs.st.javaslicer.common.progress;
 
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterator;
 

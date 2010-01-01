@@ -80,7 +80,7 @@ public class TracingClassInstrumenter implements Opcodes {
             System.err.format("WARNING: instrumented method \"%s.%s%s\" is larger than 64k bytes. undoing instrumentation.%n",
                 this.readClass.getName(), readMethod.getName(), readMethod.getDesc());
             if (oldMethod == null) {
-                System.err.println("ERROR: uninstrumented method had less than 2000 instructions, so we did not keep it...");
+                System.err.println("ERROR: uninstrumented method had less than 2000 instructions, so we cannot roll back the instrumentation...");
             } else {
                 System.err.format("#instructions old: %d; #instructions new: %d; size new: %d%n",
                     oldMethod.instructions.size(), method.instructions.size(), byteCodeSize);
