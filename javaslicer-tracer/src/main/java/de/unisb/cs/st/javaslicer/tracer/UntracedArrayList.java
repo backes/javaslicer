@@ -29,8 +29,6 @@ public class UntracedArrayList<E> implements List<E> {
 
     /**
      * The size of the ArrayList (the number of elements it contains).
-     *
-     * @serial
      */
     protected int size;
 

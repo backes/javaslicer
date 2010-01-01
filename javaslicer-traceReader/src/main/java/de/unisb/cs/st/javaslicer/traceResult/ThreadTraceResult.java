@@ -90,7 +90,9 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
      *
      * @param filter   a filter to ignore certain instruction instances.
      *                 may be <code>null</code>.
-     * @param instanceFactory
+     * @param instanceFactory a factory which is used to create the instruction instance objects.
+     *                        may be used to return special objects which can be annotated by the user
+     *                        of this function.
      * @return an iterator that iterates backwards through the execution trace.
      *         the iterator extends {@link Iterator} over {@link InstructionInstance}.
      */
@@ -105,8 +107,9 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
      * This iteration is usually much more expensive (especially with respect to memory
      * consumption) than the Iterator returned by {@link #getBackwardIterator(InstanceFilter, InstructionInstanceFactory)}.
      * So whenever you just need to iterate backwards, you should use that backward iterator.
-     * @param instanceFactory
-     *
+     * @param instanceFactory a factory which is used to create the instruction instance objects.
+     *                        may be used to return special objects which can be annotated by the user
+     *                        of this function.
      * @return an iterator that is able to iterate in any direction through the execution trace.
      *         the iterator extends {@link ListIterator} over {@link InstructionInstance}.
      */

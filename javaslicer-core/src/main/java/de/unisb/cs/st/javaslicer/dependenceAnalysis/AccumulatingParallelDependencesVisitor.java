@@ -96,7 +96,6 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         /**
          * Replay this stamp on a visitor.
          *
-         * @param visitor
          * @return <code>true</code> if this was the last visitor on which the stamp had to be executed
          * @throws InterruptedException if any of the workers was interrupted
          */

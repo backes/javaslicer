@@ -40,8 +40,8 @@ public class ConsoleProgressMonitor implements ProgressMonitor {
     /**
      * Creates a {@link ConsoleProgressMonitor} which outputs to System.out
      * every 0.1 seconds and tries to overwrite previous output using '\r'.
-     * See {@link #ConsoleProgressMonitor(PrintStream, String, boolean)} for more options.
-     * @see #ConsoleProgressMonitor(PrintStream, String, boolean)
+     * Use {@link #ConsoleProgressMonitor(PrintStream, String, boolean, int)} if you need more options.
+     * @see #ConsoleProgressMonitor(PrintStream, String, boolean, int)
      */
     public ConsoleProgressMonitor() {
         this(System.out);
@@ -50,8 +50,8 @@ public class ConsoleProgressMonitor implements ProgressMonitor {
     /**
      * Creates a {@link ConsoleProgressMonitor} which outputs to the given PrintStream
      * every 0.1 seconds and tries to overwrite previous output using '\r'.
-     * See {@link #ConsoleProgressMonitor(PrintStream, String, boolean)} for more options.
-     * @see #ConsoleProgressMonitor(PrintStream, String, boolean)
+     * Use {@link #ConsoleProgressMonitor(PrintStream, String, boolean, int)} if you need more options.
+     * @see #ConsoleProgressMonitor(PrintStream, String, boolean, int)
      */
     public ConsoleProgressMonitor(PrintStream outputStream) {
         this(outputStream, null, true, 100);

@@ -188,7 +188,9 @@ public class TraceResult {
      *
      * @param threadId the identifier of the thread whose execution trace
      *                 iterator is requested
-     * @param instanceFactory
+     * @param instanceFactory a factory which is used to create the instruction instance objects.
+     *                        may be used to return special objects which can be annotated by the user
+     *                        of this function.
      * @return an iterator that is able to iterate in any direction through the execution trace.
      *         the iterator extends {@link ListIterator} over {@link InstructionInstance}.
      */
@@ -207,7 +209,9 @@ public class TraceResult {
      *
      * @param javaThreadId the java thread id of the thread whose execution trace
      *                     iterator is requested
-     * @param instanceFactory
+     * @param instanceFactory a factory which is used to create the instruction instance objects.
+     *                        may be used to return special objects which can be annotated by the user
+     *                        of this function.
      * @return an iterator that is able to iterate in any direction through the execution trace.
      *         the iterator extends {@link ListIterator} over {@link InstructionInstance}.
      */
