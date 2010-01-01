@@ -131,7 +131,14 @@ public class ConsoleProgressMonitor implements ProgressMonitor {
                 sb.append(this.title).append(": ");
             }
             if (finished) {
-                sb.append("finished             \n");
+                int numWS = 11 /* for percentage */ + 2 /* to be safe */;
+                if (this.showApproxTimeRemaining)
+                    numWS += 22;
+                int oldLen = sb.length();
+                sb.append("finished");
+                while (sb.length() - oldLen < numWS)
+                    sb.append(' ');
+                sb.append('\n');
             } else {
                 sb.append(deziPercentDone/10).append('.').append(deziPercentDone%10).append("% done");
                 if (this.showApproxTimeRemaining) {
