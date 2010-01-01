@@ -448,7 +448,7 @@ public class TraceResult {
         out.println("where <file> is the input trace file, and <options> may be one or more of");
         HelpFormatter formatter = new HelpFormatter();
         PrintWriter pw = new PrintWriter(out, true);
-        formatter.printOptions(pw, HelpFormatter.DEFAULT_WIDTH, options, 5, 3);
+        formatter.printOptions(pw, 120, options, 5, 3);
     }
 
     public ThreadId getThreadId(final long javaThreadId) {

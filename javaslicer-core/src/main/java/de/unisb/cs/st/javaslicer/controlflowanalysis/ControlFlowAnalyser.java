@@ -85,6 +85,7 @@ public class ControlFlowAnalyser {
         return invControlDeps;
     }
 
+    // TODO this method is way too slow (sometimes needs minutes to finish!)
     private void computeReachableNodes(final ControlFlowGraph cfg) {
         final Queue<InstrNode> queue = new UniqueQueue<InstrNode>(true);
         for (final Instruction instr: cfg.getMethod().getInstructions())

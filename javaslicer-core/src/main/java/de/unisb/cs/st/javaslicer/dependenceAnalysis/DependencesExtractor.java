@@ -355,13 +355,13 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
 
         try {
 
-            for (final ReadMethod method: backwardInsnItr.getInitialStackMethods()) {
+            for (ReadMethod method: backwardInsnItr.getInitialStackMethods()) {
                 currentFrame = new ExecutionFrame<InstanceType>();
                 currentFrame.method = method;
                 currentFrame.interruptedControlFlow = true;
                 frames.push(currentFrame);
                 if (methodEntryLeaveVisitors0 != null)
-                    for (final DependencesVisitor<? super InstanceType> vis: methodEntryLeaveVisitors0)
+                    for (DependencesVisitor<? super InstanceType> vis: methodEntryLeaveVisitors0)
                         vis.visitMethodLeave(method);
             }
 
@@ -380,7 +380,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                 */
 
                 ExecutionFrame<InstanceType> removedFrame = null;
-                final int stackDepth = instance.getStackDepth();
+                int stackDepth = instance.getStackDepth();
                 assert stackDepth > 0;
 
                 if (frames.size() != stackDepth) {

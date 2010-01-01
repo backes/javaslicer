@@ -156,7 +156,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
     public static SlicingCriterion parse(final String string, final List<ReadClass> readClasses) throws IllegalArgumentException {
         final Matcher matcher = slicingCriterionPattern.matcher(string);
         if (!matcher.matches())
-            throw new IllegalArgumentException("Slicing could not be parsed: " + string);
+            throw new IllegalArgumentException("Slicing criterion could not be parsed: " + string);
 
         final String className = matcher.group(1);
         final String methodName = matcher.group(2);
@@ -231,7 +231,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
 
         final ReadClass foundClass = readClasses.get(mid);
         if (!className.equals(foundClass.getName()))
-            throw new IllegalArgumentException("Class does not exist: " + className);
+            throw new IllegalArgumentException("Class does not occure in the trace: " + className);
 
         final ArrayList<ReadMethod> methods = foundClass.getMethods();
         left = 0;
@@ -257,8 +257,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
             throw new IllegalArgumentException("Found no method with name " + methodName +
                     " in class " + className + " which contains line number " + lineNumber);
         }
-        throw new IllegalArgumentException("Method does not exist: " + className + "." + methodName);
-
+        throw new IllegalArgumentException("Method \"" + methodName + "\" does not exist in class \"" + className + "\"");
     }
 
     private static final Pattern variableDefinitionPattern = Pattern.compile(
