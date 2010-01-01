@@ -9,7 +9,7 @@
     <name>Parent of all JAVASLICER components</name>
     <description>A tool for dynamic slicing on Java bytecode.</description>
 
-    <version>0.5-SNAPSHOT</version>
+    <version>1.0.1</version>
     <packaging>pom</packaging>
     <url>http://www.st.cs.uni-sb.de/</url>
     <inceptionYear>2008</inceptionYear>
@@ -158,7 +158,7 @@
         <dependency>
             <groupId>de.hammacher</groupId>
             <artifactId>utilities</artifactId>
-            <version>1.2.4</version>
+            <version>1.2.7</version>
         </dependency>
     </dependencies>
 
