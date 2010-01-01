@@ -20,13 +20,13 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceFactory;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterator;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantIntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantLongTraceSequence;
 
 public class BackwardTraceIterator<InstanceType extends InstructionInstance>
-        implements Iterator<InstanceType>, TraceIterationInformationProvider {
+        implements Iterator<InstanceType>, TraceIterator {
 
     public static final boolean WRITE_ITERATION_DEBUG_FILE = false;
 
@@ -44,6 +44,9 @@ public class BackwardTraceIterator<InstanceType extends InstructionInstance>
     private long instancesCount = 0;
     private long filteredInstancesCount = 0;
     private final PrintWriter debugFileWriter;
+
+    // to approximate the percentage done
+	private long numCrossedLabels = 0;
 
     public BackwardTraceIterator(final ThreadTraceResult threadTraceResult,
             final InstanceFilter<? super InstanceType> filter,
@@ -183,6 +186,14 @@ public class BackwardTraceIterator<InstanceType extends InstructionInstance>
 
     public long getNumFilteredInstructions() {
         return this.filteredInstancesCount;
+    }
+
+	public void incNumCrossedLabels() {
+		++this.numCrossedLabels;
+	}
+
+	public double getPercentageDone() {
+    	return this.threadTraceResult.numCrossedLabels == 0 ? 0 : this.numCrossedLabels / this.threadTraceResult.numCrossedLabels;
     }
 
 }

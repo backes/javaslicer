@@ -7,14 +7,13 @@ import java.util.List;
 import org.junit.Test;
 
 import de.unisb.cs.st.javaslicer.AbstractSlicingTest;
-import de.unisb.cs.st.javaslicer.IllegalParameterException;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 
 
 public class BranchesTest1 extends AbstractSlicingTest {
 
     @Test
-    public void testAll() throws IllegalParameterException, IOException, URISyntaxException {
+    public void testAll() throws IllegalArgumentException, IOException, URISyntaxException {
         final List<Instruction> slice = getSlice("/traces/branches1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:17:{a,b,c,d,e,f}");
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:7 ALOAD 0",
@@ -81,7 +80,7 @@ public class BranchesTest1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void test17() throws IllegalParameterException, IOException, URISyntaxException {
+    public void test17() throws IllegalArgumentException, IOException, URISyntaxException {
         final List<Instruction> slice = getSlice("/traces/branches1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:17");
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:7 ALOAD 0",
@@ -108,7 +107,7 @@ public class BranchesTest1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void testD() throws IllegalParameterException, IOException, URISyntaxException {
+    public void testD() throws IllegalArgumentException, IOException, URISyntaxException {
         final List<Instruction> slice = getSlice("/traces/branches1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:11:{d}");
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:7 ALOAD 0",

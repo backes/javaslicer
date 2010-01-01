@@ -14,7 +14,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceF
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceInfo;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterator;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 
@@ -99,7 +99,7 @@ public class ArrayInstruction extends AbstractInstruction {
 
     @Override
     public <InstanceType> InstanceType getNextInstance(
-            TraceIterationInformationProvider infoProv, int stackDepth, long instanceNr,
+            TraceIterator infoProv, int stackDepth, long instanceNr,
             InstructionInstanceFactory<InstanceType> instanceFactory)
             throws TracerException {
 

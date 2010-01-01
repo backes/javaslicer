@@ -21,10 +21,10 @@ public interface Instruction extends Comparable<Instruction> {
 
     int getLineNumber();
 
-    int getBackwardInstructionIndex(final TraceIterationInformationProvider infoProv);
+    int getBackwardInstructionIndex(final TraceIterator infoProv);
 
     // for internal use only!
-    <InstanceType> InstanceType getNextInstance(final TraceIterationInformationProvider infoProv,
+    <InstanceType> InstanceType getNextInstance(final TraceIterator infoProv,
             int stackDepth, long instanceNr, InstructionInstanceFactory<InstanceType> instanceFactory)
         throws TracerException;
 

@@ -10,7 +10,7 @@ import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.hammacher.util.streams.OptimizedDataOutputStream;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterator;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
 
 
@@ -71,7 +71,8 @@ public class LabelMarker extends AbstractInstruction {
     }
 
     @Override
-    public int getBackwardInstructionIndex(final TraceIterationInformationProvider infoProv) {
+    public int getBackwardInstructionIndex(final TraceIterator infoProv) {
+    	infoProv.incNumCrossedLabels();
         return infoProv.getNextInteger(this.traceSeqIndex);
     }
 

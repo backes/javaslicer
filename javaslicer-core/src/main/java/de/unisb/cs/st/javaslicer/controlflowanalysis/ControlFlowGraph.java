@@ -10,8 +10,8 @@ import java.util.Queue;
 
 import org.objectweb.asm.Opcodes;
 
-import de.hammacher.util.Graph;
 import de.hammacher.util.UniqueQueue;
+import de.hammacher.util.graph.Graph;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;

@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import de.hammacher.util.Graph2Dot;
+import de.hammacher.util.graph.Graph2Dot;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowGraph.AbstractNodeFactory;
@@ -44,7 +44,7 @@ public class CFG2Dot {
 					if (mtdNamePattern.matcher(completeName).matches()) {
 						System.out.format("Exporting CFG of %s to %s...%n", completeName, dotExport);
 						ControlFlowGraph cfg = new ControlFlowGraph(mtd, new AbstractNodeFactory(), includeCatchEdges, true);
-						Graph2Dot exporter = new Graph2Dot();
+						Graph2Dot<ControlFlowGraph.InstrNode> exporter = new Graph2Dot<ControlFlowGraph.InstrNode>();
 	                    exporter.setGraphName("cfg");
 	                    exporter.setNodeShape("box");
 	                    exporter.setGraphAttribute("rankdir", "TB");

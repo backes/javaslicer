@@ -153,10 +153,10 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
     private static final Pattern slicingCriterionPattern = Pattern.compile(
             "([^:{}]+)\\.([^:{}]+?)(?::(-?\\d+))?(?:\\((\\d+)\\))?(?::\\{(.*?)\\})?");
 
-    public static SlicingCriterion parse(final String string, final List<ReadClass> readClasses) throws IllegalParameterException {
+    public static SlicingCriterion parse(final String string, final List<ReadClass> readClasses) throws IllegalArgumentException {
         final Matcher matcher = slicingCriterionPattern.matcher(string);
         if (!matcher.matches())
-            throw new IllegalParameterException("Slicing could not be parsed: " + string);
+            throw new IllegalArgumentException("Slicing could not be parsed: " + string);
 
         final String className = matcher.group(1);
         final String methodName = matcher.group(2);
@@ -168,14 +168,14 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
             try {
                 lineNumber = Integer.valueOf(lineNumberStr);
             } catch (final NumberFormatException e) {
-                throw new IllegalParameterException("Expected line number, found '"+lineNumberStr+"'");
+                throw new IllegalArgumentException("Expected line number, found '"+lineNumberStr+"'");
             }
         Long occurence = null;
         if (occurenceStr != null)
             try {
                 occurence = Long.valueOf(occurenceStr);
             } catch (final NumberFormatException e) {
-                throw new IllegalParameterException("Expected occurrence number, found '"+occurenceStr+"'");
+                throw new IllegalArgumentException("Expected occurrence number, found '"+occurenceStr+"'");
             }
 
         final ReadMethod method = findMethod(readClasses, className, methodName, lineNumber);
@@ -215,7 +215,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
     }
 
     private static ReadMethod findMethod(final List<ReadClass> readClasses, final String className, final String methodName,
-            final Integer lineNumber) throws IllegalParameterException {
+            final Integer lineNumber) {
         // binary search
         int left = 0;
         int right = readClasses.size();
@@ -231,7 +231,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
 
         final ReadClass foundClass = readClasses.get(mid);
         if (!className.equals(foundClass.getName()))
-            throw new IllegalParameterException("Class does not exist: " + className);
+            throw new IllegalArgumentException("Class does not exist: " + className);
 
         final ArrayList<ReadMethod> methods = foundClass.getMethods();
         left = 0;
@@ -254,10 +254,10 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
                         return m;
                 }
             }
-            throw new IllegalParameterException("Found no method with name " + methodName +
+            throw new IllegalArgumentException("Found no method with name " + methodName +
                     " in class " + className + " which contains line number " + lineNumber);
         }
-        throw new IllegalParameterException("Method does not exist: " + className + "." + methodName);
+        throw new IllegalArgumentException("Method does not exist: " + className + "." + methodName);
 
     }
 
@@ -265,16 +265,16 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
         "\\s*(?:([a-zA-Z_][a-zA-Z0-9_\\-]*)" // local variable
             + ")\\s*");
 
-    private static Collection<CriterionVariable> parseVariables(final ReadMethod method, final String variables) throws IllegalParameterException {
+    private static Collection<CriterionVariable> parseVariables(final ReadMethod method, final String variables) throws IllegalArgumentException {
         final String[] parts = variables.split(",");
         final List<CriterionVariable> varList = new ArrayList<CriterionVariable>();
         for (final String part: parts) {
             final Matcher matcher = variableDefinitionPattern.matcher(part);
             if (!matcher.matches())
-                throw new IllegalParameterException("Illegal variable definition: " + part);
+                throw new IllegalArgumentException("Illegal variable definition: " + part);
             final String localVarStr = matcher.group(1);
             if (localVarStr == null)
-                throw new IllegalParameterException("Illegal variable definition: " + part);
+                throw new IllegalArgumentException("Illegal variable definition: " + part);
 
             int localVarIndex = -1;
             for (final LocalVariable var: method.getLocalVariables()) {
@@ -284,7 +284,7 @@ public class SimpleSlicingCriterion implements SlicingCriterion {
                 }
             }
             if (localVarIndex == -1)
-                throw new IllegalParameterException("Local variable '"+localVarStr+"' not found in method "
+                throw new IllegalArgumentException("Local variable '"+localVarStr+"' not found in method "
                         + method.getReadClass().getName()+"."+method.getName());
             varList.add(new LocalVariableCriterion(method, localVarIndex));
         }

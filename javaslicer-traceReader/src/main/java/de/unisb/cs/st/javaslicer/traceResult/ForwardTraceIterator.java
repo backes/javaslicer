@@ -10,13 +10,13 @@ import de.hammacher.util.maps.IntegerToLongMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceFactory;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterationInformationProvider;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterator;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantIntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantLongTraceSequence;
 
 public class ForwardTraceIterator<InstanceType extends InstructionInstance>
-        implements Iterator<InstructionInstance>, TraceIterationInformationProvider {
+        implements Iterator<InstructionInstance>, TraceIterator {
 
     private long backwardInstrNr;
     private int nextIndex;
@@ -32,6 +32,9 @@ public class ForwardTraceIterator<InstanceType extends InstructionInstance>
     private final IntegerMap<ListIterator<Integer>> integerSequenceIterators;
     private final IntegerMap<ListIterator<Long>> longSequenceIterators;
     private final InstructionInstanceFactory<? extends InstanceType> instanceFactory;
+
+    // for progress approximation
+	private long numCrossedLabels = 0;
 
     public ForwardTraceIterator(ThreadTraceResult threadTraceResult,
             ForwardIterationInformation forwInfo, InstructionInstanceFactory<? extends InstanceType> instanceFactory) {
@@ -113,6 +116,14 @@ public class ForwardTraceIterator<InstanceType extends InstructionInstance>
         if (!it.hasNext())
             throw new TracerException("corrupted data (cannot trace backwards)");
         return it.next();
+    }
+
+	public void incNumCrossedLabels() {
+		++this.numCrossedLabels;
+	}
+
+	public double getPercentageDone() {
+    	return this.threadTraceResult.numCrossedLabels == 0 ? 0 : this.numCrossedLabels / this.threadTraceResult.numCrossedLabels;
     }
 
 }

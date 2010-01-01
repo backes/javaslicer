@@ -22,6 +22,7 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
     private final ThreadId id;
     protected final IntegerMap<ConstantTraceSequence> sequences;
     protected final int lastInstructionIndex;
+    protected final long numCrossedLabels;
     protected final int lastStackDepth;
     protected final ReadMethod[] lastStackMethods;
 
@@ -33,9 +34,10 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
 
     public ThreadTraceResult(final long threadId, final String threadName,
             final IntegerMap<ConstantTraceSequence> sequences, final int lastInstructionIndex,
-            final TraceResult traceResult, final int lastStackDepth, ReadMethod[] lastStackMethods) {
+            long numCrossedLabels, final TraceResult traceResult, final int lastStackDepth, ReadMethod[] lastStackMethods) {
         this.id = new ThreadId(threadId, threadName);
         this.sequences = sequences;
+        this.numCrossedLabels = numCrossedLabels;
         this.lastInstructionIndex = lastInstructionIndex;
         this.traceResult = traceResult;
         this.lastStackDepth = lastStackDepth;
@@ -55,19 +57,20 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
     }
 
     public static ThreadTraceResult readFrom(final DataInputStream in, final TraceResult traceResult, final MultiplexedFileReader file) throws IOException {
-        final long threadId = in.readLong();
-        final String name = in.readUTF();
-        final ConstantThreadTraces threadTraces = ConstantThreadTraces.readFrom(in);
+        long threadId = in.readLong();
+        String name = in.readUTF();
+        ConstantThreadTraces threadTraces = ConstantThreadTraces.readFrom(in);
         int numSequences = in.readInt();
-        final IntegerMap<ConstantTraceSequence> sequences = new IntegerMap<ConstantTraceSequence>(numSequences*4/3+1);
+        IntegerMap<ConstantTraceSequence> sequences = new IntegerMap<ConstantTraceSequence>(numSequences*4/3+1);
         while (numSequences-- > 0) {
-            final int nr = in.readInt();
-            final ConstantTraceSequence seq = threadTraces.readSequence(in, file);
+            int nr = in.readInt();
+            ConstantTraceSequence seq = threadTraces.readSequence(in, file);
             if (sequences.put(nr, seq) != null)
                 throw new IOException("corrupted data");
         }
-        final int lastInstructionIndex = in.readInt();
-        final int lastStackDepth = in.readInt();
+        int lastInstructionIndex = in.readInt();
+        long numCrossedLabels = in.readLong();
+        int lastStackDepth = in.readInt();
         ReadMethod[] lastStackMethods = new ReadMethod[lastStackDepth];
         for (int i = 0; i < lastStackDepth; ++i) {
             Instruction instr = traceResult.getInstruction(in.readInt());
@@ -75,7 +78,7 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
                 throw new IOException("corrupted data");
             lastStackMethods[i] = instr .getMethod();
         }
-        return new ThreadTraceResult(threadId, name, sequences, lastInstructionIndex, traceResult, lastStackDepth, lastStackMethods);
+        return new ThreadTraceResult(threadId, name, sequences, lastInstructionIndex, numCrossedLabels, traceResult, lastStackDepth, lastStackMethods);
     }
 
     /**

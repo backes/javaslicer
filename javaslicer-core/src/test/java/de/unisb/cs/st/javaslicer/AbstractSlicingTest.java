@@ -71,7 +71,7 @@ public abstract class AbstractSlicingTest {
     }
 
     protected static List<Instruction> getSlice(final String traceFilename, final String thread, final String criterion)
-            throws IllegalParameterException, IOException, URISyntaxException {
+            throws IllegalArgumentException, IOException, URISyntaxException {
         final File traceFile = new File(AbstractSlicingTest.class.getResource(traceFilename).toURI());
         final TraceResult trace = TraceResult.readFrom(traceFile);
 

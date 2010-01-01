@@ -45,7 +45,8 @@ public interface InstanceFilter<InstanceType> {
     }
 
     /**
-     * Returns true if the instance should be filtered out
+     * Returns <code>true</code> if the instance should be filtered out.
+     * <code>false</code> to accept.
      */
     boolean filterInstance(InstanceType instance);
 
