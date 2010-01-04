@@ -13,7 +13,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 public class MethodTest1 extends AbstractSlicingTest {
 
     @Test
-    public void testAll() throws IllegalArgumentException, IOException, URISyntaxException {
+    public void testAll() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
         final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:11:{a,b,c,d,e}");
         checkSlice(slice, new String[] {
                  "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:7 ALOAD 0",
@@ -55,7 +55,7 @@ public class MethodTest1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void testAa() throws IllegalArgumentException, IOException, URISyntaxException {
+    public void testAa() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
         final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:12:{a}");
         checkSlice(slice, new String[] {
                  "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:7 ALOAD 0",
@@ -70,7 +70,7 @@ public class MethodTest1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void testAb() throws IllegalArgumentException, IOException, URISyntaxException {
+    public void testAb() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
         final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:7:{a}");
         checkSlice(slice, new String[] {
                  "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:7 ALOAD 0",
@@ -85,7 +85,7 @@ public class MethodTest1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void testC() throws IllegalArgumentException, IOException, URISyntaxException {
+    public void testC() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
         final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:12:{c}");
         checkSlice(slice, new String[] {
                  "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:7 ALOAD 0",
@@ -105,7 +105,7 @@ public class MethodTest1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void testD() throws IllegalArgumentException, IOException, URISyntaxException {
+    public void testD() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
         final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:12:{d}");
         checkSlice(slice, new String[] {
                  "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:7 ALOAD 0",
@@ -129,7 +129,7 @@ public class MethodTest1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void testE() throws IllegalArgumentException, IOException, URISyntaxException {
+    public void testE() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
         final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:12:{e}");
         checkSlice(slice, new String[] {
                  "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:7 ALOAD 0",

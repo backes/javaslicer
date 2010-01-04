@@ -59,11 +59,11 @@ public class MethodInvokationVariableUsages<InstanceType> implements DynamicInfo
         this.removedFrame = removedFrame;
     }
 
-    public Collection<? extends Variable> getDefinedVariables() {
+    public Collection<Variable> getDefinedVariables() {
         // if we have no removedFrame, then the defined variable is the return value.
         // it is sufficient to take the lower variable of double sized values (long & double).
         if (this.removedFrame == null)
-            return this.hasReturn ? Collections.singleton(this.execFrame.getStackEntry(this.stackOffset)) : EMPTY_VARIABLE_SET;
+            return this.hasReturn ? Collections.<Variable>singleton(this.execFrame.getStackEntry(this.stackOffset)) : EMPTY_VARIABLE_SET;
 
         // if the method has no parameters (and is static), then we can just return an empty set
         return this.paramCount == 0 ? EMPTY_VARIABLE_SET : new DefinedVariables();

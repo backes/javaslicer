@@ -39,7 +39,7 @@ public class LocalVariable<InstanceType> implements Variable {
 
     @Override
     public int hashCode() {
-        return this.frame.hashCode() + this.varIndex;
+        return 31*this.frame.hashCode() + this.varIndex;
     }
 
     @Override
@@ -51,9 +51,9 @@ public class LocalVariable<InstanceType> implements Variable {
         if (getClass() != obj.getClass())
             return false;
         final LocalVariable<?> other = (LocalVariable<?>) obj;
-        if (!this.frame.equals(other.frame))
-            return false;
         if (this.varIndex != other.varIndex)
+            return false;
+        if (!this.frame.equals(other.frame))
             return false;
         return true;
     }

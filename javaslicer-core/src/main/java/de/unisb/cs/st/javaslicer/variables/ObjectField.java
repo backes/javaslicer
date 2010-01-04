@@ -27,7 +27,7 @@ public class ObjectField implements Variable {
     @Override
     public int hashCode() {
         // the fieldName strings are internalized, so we can use identity comparison
-        return this.fieldName.hashCode() + (int)this.objectId;
+        return 31*this.fieldName.hashCode() + (int)this.objectId;
     }
 
     @Override
@@ -39,13 +39,13 @@ public class ObjectField implements Variable {
         if (getClass() != obj.getClass())
             return false;
         final ObjectField other = (ObjectField) obj;
+        if (this.objectId != other.objectId)
+            return false;
         // the fieldName strings are internalized, so we can use identity comparison
         if (this.fieldName != other.fieldName) {
             assert this.fieldName != null && !this.fieldName.equals(other.fieldName);
             return false;
         }
-        if (this.objectId != other.objectId)
-            return false;
         return true;
     }
 

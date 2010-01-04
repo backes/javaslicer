@@ -1,5 +1,7 @@
 package de.unisb.cs.st.javaslicer.dependenceAnalysis;
 
+import java.util.Collection;
+
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
@@ -11,11 +13,6 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
  * @author Clemens Hammacher
  */
 public interface DependencesVisitor<InstanceType> {
-
-    public static enum DataDependenceType {
-        READ_AFTER_WRITE,
-        WRITE_AFTER_READ,
-    }
 
     /**
      * Gets called when the {@link DependencesExtractor} finished tracersing the trace.
@@ -29,11 +26,14 @@ public interface DependencesVisitor<InstanceType> {
      *
      * @param from the instruction that depends on another
      * @param to the &quot;target&quot; of the data dependence
-     * @param var the variable through which the dependence exists
+     * @param fromVars the set of variables used to produce the value of <code>toVar</code>
+     *        (possibly empty, e.g. for LDC or ICONST).
+     *        WARNING: this parameter is only set for read after write dependencies, not for write after read dependencies (there it is <code>null</code>)!!
+     * @param toVar the variable through which the dependence exists (was written by <code>to</code> and read by <code>from</code>)
      * @param type the type of the data dependence (read after write / write after read)
      */
     void visitDataDependence(InstanceType from, InstanceType to,
-            Variable var, DataDependenceType type) throws InterruptedException;
+            Collection<Variable> fromVars, Variable toVar, DataDependenceType type) throws InterruptedException;
 
     /**
      * Gets called if a dynamic occurence of a control dependence has been determined.
@@ -42,27 +42,27 @@ public interface DependencesVisitor<InstanceType> {
      * @param to the &quot;target&quot; of the control dependence, i.e. the instruction
      *           that controls the execution of <code>from</code>
      */
-    void visitControlDependence(InstanceType from, InstanceType to)  throws InterruptedException;
+    void visitControlDependence(InstanceType from, InstanceType to) throws InterruptedException;
 
     /**
      * Gets called for every instruction in the execution trace.
      *
      * @param instance the instruction instance that has just been visited
      */
-    void visitInstructionExecution(InstanceType instance)  throws InterruptedException;
+    void visitInstructionExecution(InstanceType instance) throws InterruptedException;
 
     /**
      * Gets called if there might be a data dependence that gets visited later.
      *
      * If the type is {@link DataDependenceType#READ_AFTER_WRITE}, then most probably
-     * {@link #visitDataDependence(Object, Object, Variable, DataDependenceType)}
+     * {@link #visitDataDependence(Object, Object, Collection, Variable, DataDependenceType)}
      * gets called exactly one (may also be that it is not called in some cases), but
      * definitively, at some later point
      * {@link #discardPendingDataDependence(Object, Variable, DataDependenceType)}
      * is called.
      *
      * If the type is {@link DataDependenceType#WRITE_AFTER_READ}, then
-     * {@link #visitDataDependence(Object, Object, Variable, DataDependenceType)}
+     * {@link #visitDataDependence(Object, Object, Collection, Variable, DataDependenceType)}
      * may get called one or several times, and finally
      * {@link #discardPendingDataDependence(Object, Variable, DataDependenceType)}
      * is called.
@@ -71,7 +71,7 @@ public interface DependencesVisitor<InstanceType> {
      * @param var the variable through which the dependence exists
      * @param type the type of the data dependence (read after write / write after read)
      */
-    void visitPendingDataDependence(InstanceType from, Variable var, DataDependenceType type)  throws InterruptedException;
+    void visitPendingDataDependence(InstanceType from, Variable var, DataDependenceType type) throws InterruptedException;
 
     /**
      * Gets called if the instruction <code>from</code> has a control dependence that
@@ -80,7 +80,7 @@ public interface DependencesVisitor<InstanceType> {
      *
      * @param from the instruction instance that has a control dependence
      */
-    void visitPendingControlDependence(InstanceType from)  throws InterruptedException;
+    void visitPendingControlDependence(InstanceType from) throws InterruptedException;
 
     /**
      * Gets called if all data dependences on the specific variable <code>var</code>
@@ -90,24 +90,27 @@ public interface DependencesVisitor<InstanceType> {
      * @param var the variable through which the dependence exists
      * @param type the type of the data dependence (read after write / write after read)
      */
-    void discardPendingDataDependence(InstanceType from, Variable var, DataDependenceType type)  throws InterruptedException;
+    void discardPendingDataDependence(InstanceType from, Variable var, DataDependenceType type) throws InterruptedException;
 
     /**
-     * Gets called each time a new method in entered.
+     * Gets called each time a new method in entered. If the trace is iterated backwards,
+     * this means that we already processed all instructions of this method.
      *
      * @param method the method that is entered
+     * @param stackDepth the stack depth of the entered method.
      */
-    void visitMethodEntry(ReadMethod method)  throws InterruptedException;
+    void visitMethodEntry(ReadMethod method, int stackDepth) throws InterruptedException;
 
     /**
      * Gets called each time a method is left.
      *
-     * Because the trace is processed backwards, a {@link #visitMethodEntry(ReadMethod)} is called
+     * Because the trace is processed backwards, a {@link #visitMethodEntry(ReadMethod, int)} is called
      * later.
      *
      * @param method the method that is left
+     * @param stackDepth the stack depth of the left method.
      */
-    void visitMethodLeave(ReadMethod method)  throws InterruptedException;
+    void visitMethodLeave(ReadMethod method, int stackDepth) throws InterruptedException;
 
     /**
      * Gets called if an instruction (NEW, NEWARRAY, ANEWARRAY, MULTIANEWARRAY) creates an object.
@@ -115,7 +118,7 @@ public interface DependencesVisitor<InstanceType> {
      * @param objectId the identity of the object which is being created
      * @param instrInstance the instruction instance which created the object
      */
-    void visitObjectCreation(long objectId, InstanceType instrInstance)  throws InterruptedException;
+    void visitObjectCreation(long objectId, InstanceType instrInstance) throws InterruptedException;
 
     /**
      * Gets called if the traversal of the trace was interrupted (by Thread.interrupt()).

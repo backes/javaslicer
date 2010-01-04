@@ -17,7 +17,7 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
  *
  * @author Clemens Hammacher
  */
-public class SwapVariableUsages<InstanceType> extends AbstractList<StackEntry<InstanceType>>
+public class SwapVariableUsages<InstanceType> extends AbstractList<Variable>
         implements DynamicInformation, RandomAccess {
 
     private StackEntry<InstanceType> lowerStackEntry;
@@ -34,21 +34,21 @@ public class SwapVariableUsages<InstanceType> extends AbstractList<StackEntry<In
         return Collections.emptyMap();
     }
 
-    public Collection<? extends Variable> getDefinedVariables() {
+    public Collection<Variable> getDefinedVariables() {
         return this;
     }
 
-    public Collection<? extends Variable> getUsedVariables() {
+    public Collection<Variable> getUsedVariables() {
         return this;
     }
 
-    public Collection<? extends Variable> getUsedVariables(
+    public Collection<Variable> getUsedVariables(
             Variable definedVariable) {
         if (definedVariable == this.lowerStackEntry) {
-            return Collections.singleton(this.upperStackEntry);
+            return Collections.<Variable>singleton(this.upperStackEntry);
         } else {
             assert definedVariable == this.upperStackEntry;
-            return Collections.singleton(this.lowerStackEntry);
+            return Collections.<Variable>singleton(this.lowerStackEntry);
         }
     }
 

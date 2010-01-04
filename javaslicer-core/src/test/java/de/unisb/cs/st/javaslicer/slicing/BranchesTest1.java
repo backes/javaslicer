@@ -13,7 +13,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 public class BranchesTest1 extends AbstractSlicingTest {
 
     @Test
-    public void testAll() throws IllegalArgumentException, IOException, URISyntaxException {
+    public void testAll() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
         final List<Instruction> slice = getSlice("/traces/branches1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:17:{a,b,c,d,e,f}");
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:7 ALOAD 0",
@@ -80,8 +80,8 @@ public class BranchesTest1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void test17() throws IllegalArgumentException, IOException, URISyntaxException {
-        final List<Instruction> slice = getSlice("/traces/branches1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:17");
+    public void test17() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+        final List<Instruction> slice = getSlice("/traces/branches1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:17:{b,c,false0}");
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:7 ALOAD 0",
                 "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:7 ICONST_0",
@@ -107,7 +107,7 @@ public class BranchesTest1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void testD() throws IllegalArgumentException, IOException, URISyntaxException {
+    public void testD() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
         final List<Instruction> slice = getSlice("/traces/branches1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:11:{d}");
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Branches1.main:7 ALOAD 0",

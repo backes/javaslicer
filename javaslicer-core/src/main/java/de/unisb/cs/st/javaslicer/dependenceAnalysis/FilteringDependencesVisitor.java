@@ -1,5 +1,7 @@
 package de.unisb.cs.st.javaslicer.dependenceAnalysis;
 
+import java.util.Collection;
+
 import de.hammacher.util.Filter;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.variables.Variable;
@@ -29,10 +31,10 @@ public class FilteringDependencesVisitor<InstanceType> implements
             this.visitor.visitControlDependence(from, to);
     }
 
-    public void visitDataDependence(InstanceType from,
-            InstanceType to, Variable var, DataDependenceType type) throws InterruptedException {
+    public void visitDataDependence(InstanceType from, InstanceType to,
+            Collection<Variable> fromVars, Variable toVar, DataDependenceType type) throws InterruptedException {
         if (this.filter.filter(from) && this.filter.filter(to))
-            this.visitor.visitDataDependence(from, to, var, type);
+            this.visitor.visitDataDependence(from, to, fromVars, toVar, type);
     }
 
     public void visitEnd(long numInstances) throws InterruptedException {
@@ -44,12 +46,14 @@ public class FilteringDependencesVisitor<InstanceType> implements
             this.visitor.visitInstructionExecution(instance);
     }
 
-    public void visitMethodEntry(ReadMethod method) throws InterruptedException {
-        this.visitor.visitMethodEntry(method);
+    public void visitMethodEntry(ReadMethod method, int stackDepth)
+            throws InterruptedException {
+        this.visitor.visitMethodEntry(method, stackDepth);
     }
 
-    public void visitMethodLeave(ReadMethod method) throws InterruptedException {
-        this.visitor.visitMethodLeave(method);
+    public void visitMethodLeave(ReadMethod method, int stackDepth)
+            throws InterruptedException {
+        this.visitor.visitMethodLeave(method, stackDepth);
     }
 
     public void visitObjectCreation(long objectId, InstanceType instrInstance) throws InterruptedException {

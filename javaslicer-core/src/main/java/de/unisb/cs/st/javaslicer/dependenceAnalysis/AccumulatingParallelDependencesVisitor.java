@@ -1,6 +1,8 @@
 package de.unisb.cs.st.javaslicer.dependenceAnalysis;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +73,7 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         private final InstanceType[] instructionInstances;
         private final ReadMethod[] methods;
         private final long[] longs;
+        private final int[] ints;
         private final Variable[] variables;
         private volatile int remainingVisits;
 
@@ -80,11 +83,12 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
 
         public EventStamp(byte[] events,
                 InstanceType[] instructionInstances,
-                ReadMethod[] methods, long[] longs, Variable[] variables, int numVisitors) {
+                ReadMethod[] methods, long[] longs, int[] ints, Variable[] variables, int numVisitors) {
             this.events = events;
             this.instructionInstances = instructionInstances;
             this.methods = methods;
             this.longs = longs;
+            this.ints = ints;
             this.variables = variables;
             this.remainingVisits = numVisitors;
         }
@@ -106,11 +110,13 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
                 int instructionPos = 0;
                 int methodPos = 0;
                 int longPos = 0;
+                int intPos = 0;
                 int variablePos = 0;
                 byte[] events0 = this.events;
                 InstanceType[] instructionInstances0 = this.instructionInstances;
                 ReadMethod[] methods0 = this.methods;
                 long[] longs0 = this.longs;
+                int[] ints0 = this.ints;
                 Variable[] variables0 = this.variables;
                 int numEvents = events0.length;
                 for (int eventPos = 0; eventPos < numEvents; ++eventPos) {
@@ -119,22 +125,37 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
                             visitor.visitInstructionExecution(instructionInstances0[instructionPos++]);
                             break;
                         case METHOD_ENTRY:
-                            visitor.visitMethodEntry(methods0[methodPos++]);
+                            visitor.visitMethodEntry(methods0[methodPos++], ints0[intPos++]);
                             break;
                         case METHOD_LEAVE:
-                            visitor.visitMethodLeave(methods0[methodPos++]);
+                            visitor.visitMethodLeave(methods0[methodPos++], ints0[intPos++]);
                             break;
                         case OBJECT_CREATION:
                             visitor.visitObjectCreation(longs0[longPos++], instructionInstances0[instructionPos++]);
                             break;
-                        case DATA_DEPENDENCE_RAW:
+                        case DATA_DEPENDENCE_RAW: {
+                            List<Variable> fromVars;
+                            int numVars = ints0[intPos++];
+                            if (numVars == 0) {
+                                fromVars = Collections.emptyList();
+                            } else {
+                                if (numVars == 1) {
+                                    fromVars = Collections.singletonList(variables0[variablePos++]);
+                                } else {
+                                    fromVars = new ArrayList<Variable>(numVars);
+                                    do {
+                                        fromVars.add(variables0[variablePos++]);
+                                    } while (--numVars != 0);
+                                }
+                            }
                             visitor.visitDataDependence(instructionInstances0[instructionPos++],
-                                instructionInstances0[instructionPos++], variables0[variablePos++],
+                                instructionInstances0[instructionPos++], fromVars, variables0[variablePos++],
                                 DataDependenceType.READ_AFTER_WRITE);
                             break;
+                        }
                         case DATA_DEPENDENCE_WAR:
                             visitor.visitDataDependence(instructionInstances0[instructionPos++],
-                                instructionInstances0[instructionPos++], variables0[variablePos++],
+                                instructionInstances0[instructionPos++], null, variables0[variablePos++],
                                 DataDependenceType.WRITE_AFTER_READ);
                             break;
                         case PENDING_DATA_DEPENDENCE_RAW:
@@ -292,6 +313,8 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
     private int methodCount = 0;
     private long[] longs = new long[1];
     private int longCount = 0;
+    private int[] ints = new int[1];
+    private int intCount = 0;
     private Variable[] variables = new Variable[1];
     private int variableCount = 0;
 
@@ -378,6 +401,13 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
             this.longCount = 0;
         }
 
+        int[] stampInts = null;
+        if (this.intCount > 0) {
+            stampInts = new int[this.intCount];
+            System.arraycopy(this.ints, 0, stampInts, 0, this.intCount);
+            this.intCount = 0;
+        }
+
         Variable[] stampVariables = null;
         if (this.variableCount > 0) {
             stampVariables = new Variable[this.variableCount];
@@ -386,7 +416,7 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         }
 
         return new EventStamp<InstanceType>(stampEvents, stampInstructionInstances, stampMethods,
-            stampLongs, stampVariables, this.visitors.size());
+            stampLongs, stampInts, stampVariables, this.visitors.size());
     }
 
     @SuppressWarnings("unchecked")
@@ -444,19 +474,21 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         checkFull();
     }
 
-    public void visitMethodEntry(ReadMethod method) throws InterruptedException {
+    public void visitMethodEntry(ReadMethod method, int stackDepth) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = METHOD_ENTRY;
         addMethod(method);
+        addInt(stackDepth);
         checkFull();
     }
 
-    public void visitMethodLeave(ReadMethod method) throws InterruptedException {
+    public void visitMethodLeave(ReadMethod method, int stackDepth) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = METHOD_LEAVE;
         addMethod(method);
+        addInt(stackDepth);
         checkFull();
     }
 
@@ -470,15 +502,23 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         checkFull();
     }
 
-    public void visitDataDependence(InstanceType from,
-            InstanceType to, Variable var, DataDependenceType type) throws InterruptedException {
+    public void visitDataDependence(InstanceType from, InstanceType to,
+            Collection<Variable> fromVars, Variable toVar, DataDependenceType type) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
-        this.events[this.eventCount++] = type == DataDependenceType.READ_AFTER_WRITE
-            ? DATA_DEPENDENCE_RAW : DATA_DEPENDENCE_WAR;
+        if (type == DataDependenceType.READ_AFTER_WRITE) {
+            this.events[this.eventCount++] = DATA_DEPENDENCE_RAW;
+            int fromSize = fromVars.size();
+            addInt(fromSize);
+            if (fromSize != 0)
+                for (Variable var : fromVars)
+                    addVariable(var);
+        } else {
+            this.events[this.eventCount++] = DATA_DEPENDENCE_WAR;
+        }
         addInstruction(from);
         addInstruction(to);
-        addVariable(var);
+        addVariable(toVar);
         checkFull();
     }
 
@@ -546,6 +586,15 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
             System.arraycopy(old, 0, this.longs, 0, this.longCount);
         }
         this.longs[this.longCount++] = value;
+    }
+
+    private void addInt(int value) {
+        if (this.intCount == this.ints.length) {
+            int[] old = this.ints;
+            this.ints = new int[2 * this.intCount];
+            System.arraycopy(old, 0, this.ints, 0, this.intCount);
+        }
+        this.ints[this.intCount++] = value;
     }
 
     private void addVariable(Variable var) {

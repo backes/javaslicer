@@ -16,8 +16,8 @@ public class StackManipulation<InstanceType> implements DynamicInformation {
     private Collection<Variable> usedVars = null;
     private final Map<Long, Collection<Variable>> createdObjects;
 
-    public StackManipulation(final ExecutionFrame<InstanceType> frame, final int read, final int write,
-            final int stackOffset, final Map<Long, Collection<Variable>> createdObjects) {
+    public StackManipulation(ExecutionFrame<InstanceType> frame, int read, int write,
+            int stackOffset, Map<Long, Collection<Variable>> createdObjects) {
         this.frame = frame;
         this.read = read;
         this.write = write;
@@ -25,11 +25,11 @@ public class StackManipulation<InstanceType> implements DynamicInformation {
         this.createdObjects = createdObjects;
     }
 
-    public Collection<? extends Variable> getDefinedVariables() {
+    public Collection<Variable> getDefinedVariables() {
         if (this.write == 0)
             return Collections.emptySet();
 
-        final Collection<Variable> definedVars;
+        Collection<Variable> definedVars;
         if (this.write == 1) {
             definedVars = Collections.singleton((Variable)this.frame.getStackEntry(this.stackOffset));
         } else {
@@ -40,7 +40,7 @@ public class StackManipulation<InstanceType> implements DynamicInformation {
         return definedVars;
     }
 
-    public Collection<? extends Variable> getUsedVariables() {
+    public Collection<Variable> getUsedVariables() {
         if (this.usedVars != null)
             return this.usedVars;
 
@@ -55,7 +55,7 @@ public class StackManipulation<InstanceType> implements DynamicInformation {
         return this.usedVars;
     }
 
-    public Collection<? extends Variable> getUsedVariables(final Variable definedVariable) {
+    public Collection<Variable> getUsedVariables(Variable definedVariable) {
         return getUsedVariables();
     }
 

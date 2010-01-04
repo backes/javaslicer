@@ -40,9 +40,9 @@ public class StackEntry<InstanceType> implements Variable {
         if (getClass() != obj.getClass())
             return false;
         final StackEntry<?> other = (StackEntry<?>) obj;
-        if (!this.frame.equals(other.frame))
-            return false;
         if (this.index != other.index)
+            return false;
+        if (!this.frame.equals(other.frame))
             return false;
         return true;
     }

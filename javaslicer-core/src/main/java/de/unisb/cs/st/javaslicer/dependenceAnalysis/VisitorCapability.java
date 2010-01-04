@@ -1,7 +1,6 @@
 package de.unisb.cs.st.javaslicer.dependenceAnalysis;
 
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesVisitor.DataDependenceType;
 
 public enum VisitorCapability {
 
@@ -13,20 +12,20 @@ public enum VisitorCapability {
 
     /**
      * enables invokations of
-     * {@link DependencesVisitor#visitDataDependence(Object, Object, de.unisb.cs.st.javaslicer.variables.Variable, DataDependenceType)}
+     * {@link DependencesVisitor#visitDataDependence(Object, Object, java.util.Collection, de.unisb.cs.st.javaslicer.variables.Variable, DataDependenceType)}
      * with {@link DataDependenceType#READ_AFTER_WRITE}
      */
     DATA_DEPENDENCES_READ_AFTER_WRITE,
     /**
      * enables invokations of
-     * {@link DependencesVisitor#visitDataDependence(Object, Object, de.unisb.cs.st.javaslicer.variables.Variable, DataDependenceType)}
+     * {@link DependencesVisitor#visitDataDependence(Object, Object, java.util.Collection, de.unisb.cs.st.javaslicer.variables.Variable, DataDependenceType)}
      * with {@link DataDependenceType#WRITE_AFTER_READ}
      */
     DATA_DEPENDENCES_WRITE_AFTER_READ,
 
     /**
      * enables invokations of
-     * {@link DependencesVisitor#visitDataDependence(Object, Object, de.unisb.cs.st.javaslicer.variables.Variable, DataDependenceType)}
+     * {@link DependencesVisitor#visitDataDependence(Object, Object, java.util.Collection, de.unisb.cs.st.javaslicer.variables.Variable, DataDependenceType)}
      * with {@link DataDependenceType#READ_AFTER_WRITE}
      */
     CONTROL_DEPENDENCES,
@@ -65,8 +64,8 @@ public enum VisitorCapability {
 
     /**
      * enables invokations of
-     * {@link DependencesVisitor#visitMethodEntry(ReadMethod)} and
-     * {@link DependencesVisitor#visitMethodLeave(ReadMethod)}
+     * {@link DependencesVisitor#visitMethodEntry(ReadMethod, int)} and
+     * {@link DependencesVisitor#visitMethodLeave(ReadMethod, int)}
      */
     METHOD_ENTRY_LEAVE,
 

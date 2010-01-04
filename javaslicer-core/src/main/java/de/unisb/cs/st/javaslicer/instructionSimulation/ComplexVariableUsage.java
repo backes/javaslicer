@@ -25,15 +25,15 @@ public class ComplexVariableUsage implements DynamicInformation {
         return true;
     }
 
-    public Collection<? extends Variable> getDefinedVariables() {
+    public Collection<Variable> getDefinedVariables() {
         return this.definedVariablesAndDependences.keySet();
     }
 
-    public Collection<? extends Variable> getUsedVariables() {
+    public Collection<Variable> getUsedVariables() {
         return this.allUsedVariables;
     }
 
-    public Collection<? extends Variable> getUsedVariables(final Variable definedVariable) {
+    public Collection<Variable> getUsedVariables(final Variable definedVariable) {
         assert this.definedVariablesAndDependences.containsKey(definedVariable);
         return this.definedVariablesAndDependences.get(definedVariable);
     }

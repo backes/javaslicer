@@ -1,11 +1,9 @@
 package de.unisb.cs.st.javaslicer;
 
-import java.util.Collection;
+import java.util.List;
 
-import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
-import de.unisb.cs.st.javaslicer.instructionSimulation.ExecutionFrame;
-import de.unisb.cs.st.javaslicer.variables.Variable;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable;
 
 /**
  * Interface for a slicing criterion.
@@ -20,9 +18,13 @@ public interface SlicingCriterion {
 
         boolean matches(InstructionInstance instructionInstance);
 
-        Collection<Variable> getInterestingVariables(ExecutionFrame<InstructionInstance> execFrame);
+        boolean hasLocalVariables();
 
-        Collection<Instruction> getInterestingInstructions(ExecutionFrame<InstructionInstance> currentFrame);
+        List<LocalVariable> getLocalVariables();
+
+        boolean matchAllData();
+
+        long getOccurenceNumber();
 
     }
 

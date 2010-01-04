@@ -24,8 +24,8 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
+import de.unisb.cs.st.javaslicer.common.progress.ProgressMonitor;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
-import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesVisitor.DataDependenceType;
 import de.unisb.cs.st.javaslicer.instructionSimulation.DynamicInformation;
 import de.unisb.cs.st.javaslicer.instructionSimulation.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.instructionSimulation.Simulator;
@@ -61,6 +61,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
     private final Set<DependencesVisitor<? super InstanceType>> objectCreationVisitors = new HashSet<DependencesVisitor<? super InstanceType>>();
 
     private final InstructionInstanceFactory<? extends InstanceType> instanceFactory;
+    private final Set<ProgressMonitor> progressMonitors = new HashSet<ProgressMonitor>(2);
 
 
     /**
@@ -88,13 +89,12 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
     /**
      * Constructs a {@link DependencesExtractor} for a given trace and a user-definable instance factory.
      *
-     * NOTE: The second constructor without an instance factory is implemented as static method, see
-     * {@link #forTrace(TraceResult)}.
+     * NOTE: Please use the static methods to construct a DependencesExtractor.
      *
      * @param trace the trace that this DependencesExtracter should traverse
      * @param instanceFactory the factory to create the instruction instances
      */
-    public DependencesExtractor(TraceResult trace, InstructionInstanceFactory<? extends InstanceType> instanceFactory) {
+    private DependencesExtractor(TraceResult trace, InstructionInstanceFactory<? extends InstanceType> instanceFactory) {
         this.trace = trace;
         this.simulator = new Simulator<InstanceType>(trace);
         this.instanceFactory = instanceFactory;
@@ -112,9 +112,9 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
      *                     methods are called on the visitor)
      * @return <code>true</code> if the visitor was registered with any new capability
      */
-    public boolean registerVisitor(final DependencesVisitor<? super InstanceType> visitor, final VisitorCapability... capabilities) {
+    public boolean registerVisitor(DependencesVisitor<? super InstanceType> visitor, VisitorCapability... capabilities) {
         boolean change = false;
-        for (final VisitorCapability cap: capabilities) {
+        for (VisitorCapability cap: capabilities) {
             switch (cap) {
             case DATA_DEPENDENCES_ALL:
                 change |= this.dataDependenceVisitorsReadAfterWrite.add(visitor);
@@ -166,7 +166,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
      * @param visitor the {@link DependencesVisitor} to unregister
      * @return <code>true</code> if the visitor was registered with any capabilities
      */
-    public boolean unregisterVisitor(final DependencesVisitor<InstanceType> visitor) {
+    public boolean unregisterVisitor(DependencesVisitor<InstanceType> visitor) {
         boolean change = false;
         change |= this.dataDependenceVisitorsReadAfterWrite.remove(visitor);
         change |= this.dataDependenceVisitorsWriteAfterRead.remove(visitor);
@@ -193,8 +193,8 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
      * @throws InterruptedException if the thread was interrupted during traversal
      * @throws IllegalArgumentException if the trace contains no thread with this id
      */
-    public void processBackwardTrace(final long javaThreadId) throws InterruptedException {
-        final ThreadId id = this.trace.getThreadId(javaThreadId);
+    public void processBackwardTrace(long javaThreadId) throws InterruptedException {
+        ThreadId id = this.trace.getThreadId(javaThreadId);
         if (id == null)
             throw new IllegalArgumentException("No such thread id");
         processBackwardTrace(id);
@@ -270,12 +270,12 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
             methodEntryLeaveVisitors0,
             objectCreationVisitors0);
 
-        final IntegerMap<Set<Instruction>> controlDependences = new IntegerMap<Set<Instruction>>();
+        IntegerMap<Set<Instruction>> controlDependences = new IntegerMap<Set<Instruction>>();
 
-        final ArrayStack<ExecutionFrame<InstanceType>> frames = new ArrayStack<ExecutionFrame<InstanceType>>();
+        ArrayStack<ExecutionFrame<InstanceType>> frames = new ArrayStack<ExecutionFrame<InstanceType>>();
         ExecutionFrame<InstanceType> currentFrame = null;
 
-        final Iterator<InstanceType> instanceIterator;
+        Iterator<InstanceType> instanceIterator;
         Thread iteratorThread = null;
         final AtomicReference<Throwable> iteratorException = new AtomicReference<Throwable>(null);
         if (multithreaded) {
@@ -341,9 +341,9 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
         }
 
         // the lastWriter is needed for WAR data dependences
-        final Map<Variable, InstanceType> lastWriter = new HashMap<Variable, InstanceType>();
+        Map<Variable, InstanceType> lastWriter = new HashMap<Variable, InstanceType>();
         // lastReaders are needed for RAW data dependences
-        final Map<Variable, List<InstanceType>> lastReaders = new HashMap<Variable, List<InstanceType>>();
+        Map<Variable, List<InstanceType>> lastReaders = new HashMap<Variable, List<InstanceType>>();
 
         /*
         HashSet<Long> createdObjects = new HashSet<Long>();
@@ -352,6 +352,9 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
 
         InstanceType instance = null;
         Instruction instruction = null;
+
+        for (ProgressMonitor mon : this.progressMonitors)
+            mon.start(backwardInsnItr);
 
         try {
 
@@ -362,7 +365,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                 frames.push(currentFrame);
                 if (methodEntryLeaveVisitors0 != null)
                     for (DependencesVisitor<? super InstanceType> vis: methodEntryLeaveVisitors0)
-                        vis.visitMethodLeave(method);
+                        vis.visitMethodLeave(method, frames.size());
             }
 
             while (instanceIterator.hasNext()) {
@@ -389,13 +392,13 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                         removedFrame = frames.pop();
                         assert removedFrame.method != null;
                         if (methodEntryLeaveVisitors0 != null)
-                            for (final DependencesVisitor<? super InstanceType> vis: methodEntryLeaveVisitors0)
-                                vis.visitMethodEntry(removedFrame.method);
+                            for (DependencesVisitor<? super InstanceType> vis: methodEntryLeaveVisitors0)
+                                vis.visitMethodEntry(removedFrame.method, stackDepth+1);
                         currentFrame = frames.peek();
                     } else {
                         // in all steps, the stackDepth can change by at most 1
                         assert frames.size() == stackDepth-1;
-                        final ExecutionFrame<InstanceType> newFrame = new ExecutionFrame<InstanceType>();
+                        ExecutionFrame<InstanceType> newFrame = new ExecutionFrame<InstanceType>();
                         // assertion: if the current frame catched an exception, then the new frame
                         // must have thrown it
                         assert currentFrame == null || currentFrame.atCatchBlockStart == null
@@ -406,8 +409,8 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                         }
                         frames.push(newFrame);
                         if (methodEntryLeaveVisitors0 != null)
-                            for (final DependencesVisitor<? super InstanceType> vis: methodEntryLeaveVisitors0)
-                                vis.visitMethodLeave(newFrame.method);
+                            for (DependencesVisitor<? super InstanceType> vis: methodEntryLeaveVisitors0)
+                                vis.visitMethodLeave(newFrame.method, stackDepth);
                         currentFrame = newFrame;
                     }
                 }
@@ -419,11 +422,11 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                     assert currentFrame.returnValue == null;
                     currentFrame.method = instruction.getMethod();
                 } else if (currentFrame.finished || currentFrame.method != instruction.getMethod()) {
-                    final ReadMethod newMethod = instruction.getMethod();
+                    ReadMethod newMethod = instruction.getMethod();
                     if (methodEntryLeaveVisitors0 != null)
-                        for (final DependencesVisitor<? super InstanceType> vis: methodEntryLeaveVisitors0) {
-                            vis.visitMethodEntry(currentFrame.method);
-                            vis.visitMethodLeave(newMethod);
+                        for (DependencesVisitor<? super InstanceType> vis: methodEntryLeaveVisitors0) {
+                            vis.visitMethodEntry(currentFrame.method, stackDepth);
+                            vis.visitMethodLeave(newMethod, stackDepth);
                         }
                     cleanUpExecutionFrame(currentFrame, lastReaders, lastWriter,
                         pendingDataDependenceVisitorsWriteAfterRead0, pendingDataDependenceVisitorsReadAfterWrite0,
@@ -443,11 +446,11 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                 }
                 */
 
-                final DynamicInformation dynInfo = this.simulator.simulateInstruction(instance, currentFrame,
+                DynamicInformation dynInfo = this.simulator.simulateInstruction(instance, currentFrame,
                         removedFrame, frames);
 
                 if (instructionVisitors0 != null)
-                    for (final DependencesVisitor<? super InstanceType> vis: instructionVisitors0)
+                    for (DependencesVisitor<? super InstanceType> vis: instructionVisitors0)
                         vis.visitInstructionExecution(instance);
 
                 // the computation of control dependences only has to be performed
@@ -459,7 +462,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                         instrControlDependences = controlDependences.get(instruction.getIndex());
                         assert instrControlDependences != null;
                     }
-                    final boolean isExceptionsThrowingInstruction = currentFrame.throwsException &&
+                    boolean isExceptionsThrowingInstruction = currentFrame.throwsException &&
                         (instruction.getType() != InstructionType.LABEL || !((LabelMarker)instruction).isAdditionalLabel());
                     // get all interesting instructions, that are dependent on the current one
                     Set<InstanceType> dependantInterestingInstances = currentFrame.interestingInstances == null
@@ -470,7 +473,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                         // in this case, we have an additional control dependence from the catching to
                         // the throwing instruction
                         for (int i = stackDepth-2; i >= 0; --i) {
-                            final ExecutionFrame<InstanceType> f = frames.get(i);
+                            ExecutionFrame<InstanceType> f = frames.get(i);
                             if (f.atCatchBlockStart != null) {
                                 if (f.interestingInstances != null && f.interestingInstances.contains(f.atCatchBlockStart)) {
                                     if (dependantInterestingInstances.isEmpty())
@@ -483,8 +486,8 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                         }
                     }
                     if (!dependantInterestingInstances.isEmpty()) {
-                        for (final InstanceType depend: dependantInterestingInstances) {
-                            for (final DependencesVisitor<? super InstanceType> vis: this.controlDependenceVisitors) {
+                        for (InstanceType depend: dependantInterestingInstances) {
+                            for (DependencesVisitor<? super InstanceType> vis: this.controlDependenceVisitors) {
                                 vis.visitControlDependence(depend, instance);
                             }
                         }
@@ -500,13 +503,13 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                     if (currentFrame.interestingInstances == null)
                         currentFrame.interestingInstances = new HashSet<InstanceType>();
                     currentFrame.interestingInstances.add(instance);
-                    for (final DependencesVisitor<? super InstanceType> vis: pendingControlDependenceVisitors0)
+                    for (DependencesVisitor<? super InstanceType> vis: pendingControlDependenceVisitors0)
                         vis.visitPendingControlDependence(instance);
                 }
 
                 if (!dynInfo.getDefinedVariables().isEmpty()) {
                     /*
-                    for (final Variable definedVariable: dynInfo.getDefinedVariables()) {
+                    for (Variable definedVariable: dynInfo.getDefinedVariables()) {
                         if (definedVariable instanceof ObjectField) {
                             seenObjects.add(((ObjectField)definedVariable).getObjectId());
                             assert !createdObjects.contains(((ObjectField)definedVariable).getObjectId());
@@ -520,14 +523,14 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                     if (dataDependenceVisitorsReadAfterWrite0 != null
                             || dataDependenceVisitorsWriteAfterRead0 != null
                             || pendingDataDependenceVisitorsWriteAfterRead0 != null) {
-                        for (final Variable definedVariable: dynInfo.getDefinedVariables()) {
+                        for (Variable definedVariable: dynInfo.getDefinedVariables()) {
                             if (!(definedVariable instanceof StackEntry<?>)) {
                                 // we ignore WAR dependences over the stack!
                                 if (pendingDataDependenceVisitorsWriteAfterRead0 != null) {
                                     // for each defined variable, we have a pending WAR dependence
                                     // if the lastWriter is not null, we first discard old pending dependences
                                     InstanceType varLastWriter = lastWriter.put(definedVariable, instance);
-                                    for (final DependencesVisitor<? super InstanceType> vis: pendingDataDependenceVisitorsWriteAfterRead0) {
+                                    for (DependencesVisitor<? super InstanceType> vis: pendingDataDependenceVisitorsWriteAfterRead0) {
                                         if (varLastWriter != null)
                                             vis.discardPendingDataDependence(varLastWriter, definedVariable, DataDependenceType.WRITE_AFTER_READ);
                                         vis.visitPendingDataDependence(instance, definedVariable, DataDependenceType.WRITE_AFTER_READ);
@@ -540,14 +543,17 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                             // if we have RAW visitors, we need to analyse the lastReaders
                             if (dataDependenceVisitorsReadAfterWrite0 != null
                                     || pendingDataDependenceVisitorsReadAfterWrite0 != null) {
-                                final List<InstanceType> readers = lastReaders.remove(definedVariable);
+                                List<InstanceType> readers = lastReaders.remove(definedVariable);
                                 if (readers != null)
-                                    for (final InstanceType reader: readers) {
-                                        if (dataDependenceVisitorsReadAfterWrite0 != null)
-                                            for (final DependencesVisitor<? super InstanceType> vis: dataDependenceVisitorsReadAfterWrite0)
-                                                vis.visitDataDependence(reader, instance, definedVariable, DataDependenceType.READ_AFTER_WRITE);
+                                    for (InstanceType reader: readers) {
+                                        if (dataDependenceVisitorsReadAfterWrite0 != null) {
+                                            Collection<Variable> usedVariables =
+                                                    dynInfo.getUsedVariables(definedVariable);
+                                            for (DependencesVisitor<? super InstanceType> vis: dataDependenceVisitorsReadAfterWrite0)
+                                                vis.visitDataDependence(reader, instance, usedVariables, definedVariable, DataDependenceType.READ_AFTER_WRITE);
+                                        }
                                         if (pendingDataDependenceVisitorsReadAfterWrite0 != null)
-                                            for (final DependencesVisitor<? super InstanceType> vis: pendingDataDependenceVisitorsReadAfterWrite0)
+                                            for (DependencesVisitor<? super InstanceType> vis: pendingDataDependenceVisitorsReadAfterWrite0)
                                                 vis.discardPendingDataDependence(reader, definedVariable, DataDependenceType.READ_AFTER_WRITE);
                                     }
                             }
@@ -557,7 +563,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
 
                 if (!dynInfo.getUsedVariables().isEmpty()) {
                     /*
-                    for (final Variable usedVariable: dynInfo.getUsedVariables()) {
+                    for (Variable usedVariable: dynInfo.getUsedVariables()) {
                         if (usedVariable instanceof ObjectField) {
                             seenObjects.add(((ObjectField)usedVariable).getObjectId());
                             assert !createdObjects.contains(((ObjectField)usedVariable).getObjectId());
@@ -572,15 +578,15 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                     if (dataDependenceVisitorsWriteAfterRead0 != null ||
                             dataDependenceVisitorsReadAfterWrite0 != null ||
                             pendingDataDependenceVisitorsReadAfterWrite0 != null) {
-                        for (final Variable usedVariable: dynInfo.getUsedVariables()) {
+                        for (Variable usedVariable: dynInfo.getUsedVariables()) {
                             // if we have WAR visitors, we inform them about a new dependence
                             if (dataDependenceVisitorsWriteAfterRead0 != null && !(usedVariable instanceof StackEntry<?>)) {
                                 InstanceType lastWriterInst = lastWriter.get(usedVariable);
 
                                 // avoid self-loops in the DDG (e.g. for IINC, which reads and writes to the same variable)
                                 if (lastWriterInst != null && lastWriterInst != instance) {
-                                    for (final DependencesVisitor<? super InstanceType> vis: dataDependenceVisitorsWriteAfterRead0)
-                                        vis.visitDataDependence(lastWriterInst, instance, usedVariable, DataDependenceType.WRITE_AFTER_READ);
+                                    for (DependencesVisitor<? super InstanceType> vis: dataDependenceVisitorsWriteAfterRead0)
+                                        vis.visitDataDependence(lastWriterInst, instance, null, usedVariable, DataDependenceType.WRITE_AFTER_READ);
                                 }
                             }
 
@@ -595,7 +601,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                                 readers.add(instance);
                                 // for each used variable, we have a pending RAW dependence
                                 if (pendingDataDependenceVisitorsReadAfterWrite0 != null) {
-                                    for (final DependencesVisitor<? super InstanceType> vis: pendingDataDependenceVisitorsReadAfterWrite0)
+                                    for (DependencesVisitor<? super InstanceType> vis: pendingDataDependenceVisitorsReadAfterWrite0)
                                         vis.visitPendingDataDependence(instance, usedVariable, DataDependenceType.READ_AFTER_WRITE);
                                 }
                             }
@@ -603,19 +609,19 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                     }
                 }
 
-                for (final Entry<Long, Collection<Variable>> e: dynInfo.getCreatedObjects().entrySet()) {
+                for (Entry<Long, Collection<Variable>> e: dynInfo.getCreatedObjects().entrySet()) {
                     /*
                     boolean added = createdObjects.add(e.getKey());
                     assert added;
                     */
 
-                    for (final Variable var: e.getValue()) {
+                    for (Variable var: e.getValue()) {
                         assert var instanceof ObjectField || var instanceof ArrayElement;
                         // clean up lastWriter if we have any WAR visitors
                         if (pendingDataDependenceVisitorsWriteAfterRead0 != null) {
                             InstanceType inst;
                             if ((inst = lastWriter.remove(var)) != null)
-                                for (final DependencesVisitor<? super InstanceType> vis: pendingDataDependenceVisitorsWriteAfterRead0)
+                                for (DependencesVisitor<? super InstanceType> vis: pendingDataDependenceVisitorsWriteAfterRead0)
                                     vis.discardPendingDataDependence(inst, var, DataDependenceType.WRITE_AFTER_READ);
                         } else if (dataDependenceVisitorsWriteAfterRead0 != null)
                             lastWriter.remove(var);
@@ -624,18 +630,18 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                             List<InstanceType> instList;
                             if ((instList = lastReaders.remove(var)) != null) {
                                 if (dataDependenceVisitorsReadAfterWrite0 != null)
-                                    for (final DependencesVisitor<? super InstanceType> vis: dataDependenceVisitorsReadAfterWrite0)
-                                        for (final InstanceType instrInst: instList)
-                                            vis.visitDataDependence(instrInst, instance, var, DataDependenceType.READ_AFTER_WRITE);
+                                    for (DependencesVisitor<? super InstanceType> vis: dataDependenceVisitorsReadAfterWrite0)
+                                        for (InstanceType instrInst: instList)
+                                            vis.visitDataDependence(instrInst, instance, Collections.<Variable>emptySet(), var, DataDependenceType.READ_AFTER_WRITE);
                                 if (pendingDataDependenceVisitorsReadAfterWrite0 != null)
-                                    for (final DependencesVisitor<? super InstanceType> vis: pendingDataDependenceVisitorsReadAfterWrite0)
-                                        for (final InstanceType instrInst: instList)
+                                    for (DependencesVisitor<? super InstanceType> vis: pendingDataDependenceVisitorsReadAfterWrite0)
+                                        for (InstanceType instrInst: instList)
                                             vis.discardPendingDataDependence(instrInst, var, DataDependenceType.READ_AFTER_WRITE);
                             }
                         }
                     }
                     if (objectCreationVisitors0 != null)
-                        for (final DependencesVisitor<? super InstanceType> vis: objectCreationVisitors0)
+                        for (DependencesVisitor<? super InstanceType> vis: objectCreationVisitors0)
                             vis.visitObjectCreation(e.getKey(), instance);
                 }
 
@@ -715,6 +721,8 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
         } finally {
             if (iteratorThread != null)
                 iteratorThread.interrupt();
+            for (ProgressMonitor mon : this.progressMonitors)
+                mon.end();
         }
     }
 
@@ -747,7 +755,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                 if (pendingDataDependenceVisitorsWriteAfterRead0 != null) {
                     InstanceType inst = lastWriter.remove(var);
                     if (inst != null)
-                        for (final DependencesVisitor<? super InstanceType> vis: pendingDataDependenceVisitorsWriteAfterRead0)
+                        for (DependencesVisitor<? super InstanceType> vis: pendingDataDependenceVisitorsWriteAfterRead0)
                             vis.discardPendingDataDependence(inst, var, DataDependenceType.WRITE_AFTER_READ);
                 } else if (dataDependenceVisitorsWriteAfterRead0 != null)
                     lastWriter.remove(var);
@@ -755,8 +763,8 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
             if (pendingDataDependenceVisitorsReadAfterWrite0 != null) {
                 List<InstanceType> instList = lastReaders.remove(var);
                 if (instList != null)
-                    for (final DependencesVisitor<? super InstanceType> vis: pendingDataDependenceVisitorsReadAfterWrite0)
-                        for (final InstanceType instrInst: instList)
+                    for (DependencesVisitor<? super InstanceType> vis: pendingDataDependenceVisitorsReadAfterWrite0)
+                        for (InstanceType instrInst: instList)
                             vis.discardPendingDataDependence(instrInst, var, DataDependenceType.READ_AFTER_WRITE);
             } else if (dataDependenceVisitorsReadAfterWrite0 != null)
                 lastReaders.remove(var);
@@ -820,6 +828,14 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
             assert !controlDependences.containsKey(index);
             controlDependences.put(index, entry.getValue());
         }
+    }
+
+    public void addProgressMonitor(ProgressMonitor progressMonitor) {
+        this.progressMonitors.add(progressMonitor);
+    }
+
+    public void removeProgressMonitor(ProgressMonitor progressMonitor) {
+        this.progressMonitors.remove(progressMonitor);
     }
 
 }

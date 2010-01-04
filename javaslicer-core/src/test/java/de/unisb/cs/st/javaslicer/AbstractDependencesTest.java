@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -16,6 +17,7 @@ import de.hammacher.util.DiffPrint;
 import de.hammacher.util.Diff.change;
 import de.unisb.cs.st.javaslicer.AbstractDependencesTest.Dependence.Type;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
+import de.unisb.cs.st.javaslicer.dependenceAnalysis.DataDependenceType;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesExtractor;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesVisitorAdapter;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.VisitorCapability;
@@ -93,9 +95,11 @@ public abstract class AbstractDependencesTest {
         }
 
         @Override
-        public void visitDataDependence(final InstructionInstance from, final InstructionInstance to,
-                final Variable var, final DataDependenceType type) {
-            if (var instanceof StackEntry<?>)
+        public void visitDataDependence(InstructionInstance from,
+                InstructionInstance to, Collection<Variable> fromVars,
+                Variable toVar, DataDependenceType type)
+                throws InterruptedException {
+            if (toVar instanceof StackEntry<?>)
                 return;
             if (!this.instrFilter.filterInstance(from) || !this.instrFilter.filterInstance(to))
                 return;
