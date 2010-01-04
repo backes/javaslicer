@@ -4,8 +4,8 @@ cd `dirname $0`
 WORKINGDIR=`pwd`
 ASSEMBLY_DIR=$WORKINGDIR/assembly
 
-mkdir -p $ASSEMBLY_DIR
-rm -f $ASSEMBLY_DIR/*.jar
+mkdir -p "$ASSEMBLY_DIR"
+rm -f "$ASSEMBLY_DIR"/*.jar
 
 projects=()
 hasAssembly=()
@@ -43,7 +43,7 @@ echo "Pass 1: run install on all projects:"
 for ((i=0; i<num_projects; ++i)); do
   project=${projects[$i]}
   echo -n "  - "$project"...  "
-  cd $WORKINGDIR/$project
+  cd "$WORKINGDIR/$project"
   if mvn -o -Dmaven.test.skip=true install >/dev/null 2>&1; then
     echo success
   else
@@ -61,7 +61,7 @@ for ((i=0; i<num_projects; ++i)); do
   fi
   project=${projects[$i]}
   echo "  - "$project" ("$TARGET")..."
-  cd $WORKINGDIR/$project
+  cd "$WORKINGDIR/$project"
   output=()
   TMPFILE=`mktemp /tmp/assembly_XXXXXX`
   if ! mvn -o $TARGET >$TMPFILE 2>&1; then
@@ -75,7 +75,7 @@ for ((i=0; i<num_projects; ++i)); do
   for jar in target/assembly/*.jar; do
     if [[ -e $jar ]]; then
       echo "Copying $jar to $ASSEMBLY_DIR directory."
-      cp $jar $ASSEMBLY_DIR
+      cp $jar "$ASSEMBLY_DIR"
     fi
   done
 done
