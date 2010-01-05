@@ -7,9 +7,11 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -75,7 +77,7 @@ public abstract class AbstractSlicingTest {
         File traceFile = new File(AbstractSlicingTest.class.getResource(traceFilename).toURI());
         TraceResult trace = TraceResult.readFrom(traceFile);
 
-        List<SlicingCriterion> sc = Slicer.readSlicingCriteria(criterion, trace.getReadClasses());
+        List<SlicingCriterion> sc = SlicingCriterion.parseAll(criterion, trace.getReadClasses());
 
         ThreadId threadId = null;
         for (ThreadId t: trace.getThreads()) {
@@ -87,34 +89,35 @@ public abstract class AbstractSlicingTest {
 
         assertTrue("Thread not found", threadId != null);
 
-        Set<Instruction> slice = new Slicer(trace).getDynamicSlice(threadId, sc, true);
+        Set<Instruction> slice = new TreeSet<Instruction>(new Slicer(trace).getDynamicSlice(threadId, sc, true));
 
-        // TODO fix the DirectSlicer s.t. it works like the Slicer again, and then reactivate this
-//        List<SlicingCriterion> sc2 = DirectSlicer.readSlicingCriteria(criterion, trace.getReadClasses());
-//        Set<Instruction> slice2 = new DirectSlicer(trace).getDynamicSlice(threadId, sc2);
-//
-//        Instruction[] arr1 = slice.toArray(new Instruction[0]);
-//        Instruction[] arr2 = slice2.toArray(new Instruction[0]);
-//        Arrays.sort(arr1);
-//        Arrays.sort(arr2);
-//
-//        Diff differ = new Diff(arr1, arr2);
-//        change diff = differ.diff_2(false);
-//        if (diff != null) {
-//            StringWriter sw = new StringWriter();
-//            sw.append("both slicing methods should yield the same result!\ndiff:\n\n");
-//            DiffPrint.NormalPrint pr = new DiffPrint.NormalPrint(arr1, arr2);
-//            pr.setOutput(sw);
-//            pr.print_script(diff);
-//            Assert.fail(sw.toString());
-//        }
-//        assertTrue("diff should already have checked this: both slicing methods should yield the same result",
-//            new HashSet<Instruction>(slice).equals(new HashSet<Instruction>(slice2)));
+        Set<Instruction> slice2 = new TreeSet<Instruction>(new DirectSlicer(trace).getDynamicSlice(threadId, sc));
 
-        List<Instruction> sliceList = new ArrayList<Instruction>(slice);
-        Collections.sort(sliceList);
+        SliceEntry[] arr1 = new SliceEntry[slice.size()];
+        Iterator<Instruction> sliceIt = slice.iterator();
+        for (int i = 0; i < slice.size(); ++i) {
+            arr1[i] = instrToSliceEntry(sliceIt.next());
+        }
+        SliceEntry[] arr2 = new SliceEntry[slice2.size()];
+        Iterator<Instruction> sliceIt2 = slice2.iterator();
+        for (int i = 0; i < slice2.size(); ++i) {
+            arr2[i] = instrToSliceEntry(sliceIt2.next());
+        }
 
-        return sliceList;
+        Diff differ = new Diff(arr1, arr2);
+        change diff = differ.diff_2(false);
+        if (diff != null) {
+            StringWriter sw = new StringWriter();
+            sw.append("both slicing methods should yield the same result!\ndiff:\n\n");
+            DiffPrint.SimplestPrint pr = new DiffPrint.SimplestPrint(arr1, arr2);
+            pr.setOutput(sw);
+            pr.print_script(diff);
+            Assert.fail(sw.toString());
+        }
+        assertTrue("diff should already have checked this: both slicing methods should yield the same result",
+            new HashSet<Instruction>(slice).equals(new HashSet<Instruction>(slice2)));
+
+        return new ArrayList<Instruction>(slice);
     }
 
     private static Pattern sliceEntryPattern = Pattern.compile("^([^ ]+):([0-9]+) (.*)$");
@@ -126,11 +129,7 @@ public abstract class AbstractSlicingTest {
     protected static void checkSlice(String prefix, List<Instruction> slice, String[] expected) {
         SliceEntry[] gotEntries = new SliceEntry[slice.size()];
         for (int i = 0; i < slice.size(); ++i) {
-            Instruction instr = slice.get(i);
-            gotEntries[i] = new SliceEntry(
-                    instr.getMethod().getReadClass().getName()+"."+instr.getMethod().getName(),
-                    Integer.toString(instr.getLineNumber()),
-                    instr.toString());
+            gotEntries[i] = instrToSliceEntry(slice.get(i));
         }
 
         SliceEntry[] expectedEntries = new SliceEntry[expected.length];
@@ -153,32 +152,17 @@ public abstract class AbstractSlicingTest {
                     System.getProperty("line.separator"));
         }
 
-        DiffPrint.Base diffPrinter = new DiffPrint.Base(expectedEntries, gotEntries) {
-            @Override
-            protected void print_hunk(change hunk) {
-                /* Determine range of line numbers involved in each file. */
-                analyze_hunk(hunk);
-                if (this.deletes == 0 && this.inserts == 0)
-                    return;
-
-                /* Print the lines that were expected but did not occur. */
-                if (this.deletes != 0)
-                    for (int i = this.first0; i <= this.last0; i++) {
-                        SliceEntry exp = (SliceEntry) this.file0[i];
-                        print_1_line("- ", exp);
-                    }
-
-                /* Print the lines that the second file has. */
-                if (this.inserts != 0)
-                    for (int i = this.first1; i <= this.last1; i++) {
-                        SliceEntry exp = (SliceEntry) this.file1[i];
-                        print_1_line("+ ", exp);
-                    }
-            }
-        };
+        DiffPrint.SimplestPrint diffPrinter = new DiffPrint.SimplestPrint(expectedEntries, gotEntries);
         diffPrinter.setOutput(output);
         diffPrinter.print_script(diff);
 
         Assert.fail(output.toString());
+    }
+
+    private static SliceEntry instrToSliceEntry(Instruction instr) {
+        return new SliceEntry(
+                instr.getMethod().getReadClass().getName()+"."+instr.getMethod().getName(),
+                Integer.toString(instr.getLineNumber()),
+                instr.toString());
     }
 }

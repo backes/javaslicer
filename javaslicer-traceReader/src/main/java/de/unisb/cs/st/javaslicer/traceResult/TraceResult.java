@@ -112,10 +112,8 @@ public class TraceResult {
             if (c.getInstructionNumberEnd() > numInstructions)
                 numInstructions = c.getInstructionNumberEnd();
         final Instruction[] instructions = new Instruction[numInstructions];
-        int written = 0;
         for (final ReadClass c: classes) {
             for (final ReadMethod m: c.getMethods()) {
-                written += m.getInstructions().size();
                 for (final AbstractInstruction instr: m.getInstructions()) {
                     if (instructions[instr.getIndex()] != null)
                         throw new IOException("Same instruction index given twice.");
@@ -123,14 +121,6 @@ public class TraceResult {
                 }
             }
         }
-
-        // TODO this check does not hold if an error occured during instrumenting one class.
-        //      in this case, the error was reported, but the instrumentation went on.
-        //      so it should be possible to read this trace file...
-        /*
-        if (written != numInstructions)
-            throw new IOException("Omitted some instruction indexes.");
-        */
 
         return instructions;
     }

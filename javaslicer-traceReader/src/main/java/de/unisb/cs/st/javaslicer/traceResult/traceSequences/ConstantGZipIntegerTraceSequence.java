@@ -37,7 +37,6 @@ public class ConstantGZipIntegerTraceSequence implements ConstantIntegerTraceSeq
     }
 
     public ListIterator<Integer> iterator() {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException();
     }
 

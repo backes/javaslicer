@@ -34,7 +34,6 @@ public class MultiANewArrayInstruction extends AbstractInstruction {
             this.newObjectIdentifiers = newObjects;
         }
 
-        // TODO this is unsafe
         public long[] getNewObjectIdentifiers() {
             return this.newObjectIdentifiers;
         }

@@ -32,9 +32,9 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
         = new SoftReference<ForwardIterationInformation>(null);
     private final Object forwardIterationInfoLock = new Object();
 
-    public ThreadTraceResult(final long threadId, final String threadName,
-            final IntegerMap<ConstantTraceSequence> sequences, final int lastInstructionIndex,
-            long numCrossedLabels, final TraceResult traceResult, final int lastStackDepth, ReadMethod[] lastStackMethods) {
+    public ThreadTraceResult(long threadId, String threadName,
+            IntegerMap<ConstantTraceSequence> sequences, int lastInstructionIndex,
+            long numCrossedLabels, TraceResult traceResult, int lastStackDepth, ReadMethod[] lastStackMethods) {
         this.id = new ThreadId(threadId, threadName);
         this.sequences = sequences;
         this.numCrossedLabels = numCrossedLabels;
@@ -56,7 +56,7 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
         return getId().getThreadName();
     }
 
-    public static ThreadTraceResult readFrom(final DataInputStream in, final TraceResult traceResult, final MultiplexedFileReader file) throws IOException {
+    public static ThreadTraceResult readFrom(DataInputStream in, TraceResult traceResult, MultiplexedFileReader file) throws IOException {
         long threadId = in.readLong();
         String name = in.readUTF();
         ConstantThreadTraces threadTraces = ConstantThreadTraces.readFrom(in);
@@ -131,14 +131,14 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
         long instrCount = 0;
         long[] jumpInstrNrs = new long[16];
         int[] jumps = new int[16];
-        byte[] stackDepthChange = new byte[16];
+        int[] stackDepthChange = new int[16];
 
-        final BackwardTraceIterator<AbstractInstructionInstance> backwardIt = getBackwardIterator(null, new AbstractInstructionInstanceFactory());
+        BackwardTraceIterator<AbstractInstructionInstance> backwardIt = getBackwardIterator(null, new AbstractInstructionInstanceFactory());
         int lastIndex = 0;
         int curStackDepth = 1;
         while (backwardIt.hasNext()) {
-            final InstructionInstance instr = backwardIt.next();
-            final int index = instr.getInstruction().getIndex();
+            InstructionInstance instr = backwardIt.next();
+            int index = instr.getInstruction().getIndex();
             if (index != lastIndex-1 && instrCount > 1) {
                 if (numJumps == jumpInstrNrs.length) {
                     long[] newJumpInstrNrs = new long[2*numJumps];
@@ -147,15 +147,14 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
                     int[] newJumps = new int[2*numJumps];
                     System.arraycopy(jumps, 0, newJumps, 0, numJumps);
                     jumps = newJumps;
-                    byte[] newStackDepthChange = new byte[2*numJumps];
+                    int[] newStackDepthChange = new int[2*numJumps];
                     System.arraycopy(stackDepthChange, 0, newStackDepthChange, 0, numJumps);
                     stackDepthChange = newStackDepthChange;
                 }
                 jumpInstrNrs[numJumps] = instrCount;
                 jumps[numJumps] = lastIndex - index;
-                // TODO can the stack depth change by more than 256??
-                final int newStackDepth = instr.getStackDepth();
-                stackDepthChange[numJumps] = (byte) (curStackDepth - newStackDepth);
+                int newStackDepth = instr.getStackDepth();
+                stackDepthChange[numJumps] = curStackDepth - newStackDepth;
                 ++numJumps;
                 curStackDepth = newStackDepth;
             }
@@ -170,7 +169,7 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
             int[] newJumps = new int[numJumps];
             System.arraycopy(jumps, 0, newJumps, 0, numJumps);
             jumps = newJumps;
-            byte[] newStackDepthChange = new byte[numJumps];
+            int[] newStackDepthChange = new int[numJumps];
             System.arraycopy(stackDepthChange, 0, newStackDepthChange, 0, numJumps);
             stackDepthChange = newStackDepthChange;
         }
@@ -178,11 +177,11 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
         return new ForwardIterationInformation(instrCount, lastIndex, jumpInstrNrs, jumps, stackDepthChange);
     }
 
-    public Instruction findInstruction(final int instructionIndex) {
+    public Instruction findInstruction(int instructionIndex) {
         return this.traceResult.getInstruction(instructionIndex);
     }
 
-    public int compareTo(final ThreadTraceResult o) {
+    public int compareTo(ThreadTraceResult o) {
         return this.getId().compareTo(o.getId());
     }
 

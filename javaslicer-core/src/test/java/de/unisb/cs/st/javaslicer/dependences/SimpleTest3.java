@@ -23,7 +23,7 @@ public class SimpleTest3 extends AbstractDependencesTest {
         final Dependence[] expectedDependences = new Dependence[] {
                 new Dependence("Simple3.java:10", "Simple3.java:9",  Type.RAW),
                 new Dependence("Simple3.java:11", "Simple3.java:9",  Type.RAW),
-                new Dependence("Simple3.java:12", "Simple3.java:10",  Type.WAR),
+                new Dependence("Simple3.java:12", "Simple3.java:10", Type.WAR),
                 new Dependence("Simple3.java:12", "Simple3.java:11", Type.WAR),
                 new Dependence("Simple3.java:14", "Simple3.java:13", Type.RAW),
         };

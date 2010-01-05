@@ -29,7 +29,6 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.common.progress.ConsoleProgressMonitor;
@@ -110,7 +109,7 @@ public class DirectSlicer implements Opcodes {
 
         List<SlicingCriterion> sc = null;
         try {
-            sc = readSlicingCriteria(slicingCriterionString, trace.getReadClasses());
+            sc = SlicingCriterion.parseAll(slicingCriterionString, trace.getReadClasses());
         } catch (IllegalArgumentException e) {
             System.err.println("Error parsing slicing criterion: " + e.getMessage());
             System.exit(-1);
@@ -163,34 +162,7 @@ public class DirectSlicer implements Opcodes {
     }
 
     private void addProgressMonitor(ProgressMonitor progressMonitor) {
-        this.progressMonitors .add(progressMonitor);
-    }
-
-    public static List<SlicingCriterion> readSlicingCriteria(String string, List<ReadClass> readClasses)
-            throws IllegalArgumentException {
-        List<SlicingCriterion> crit = new ArrayList<SlicingCriterion>(2);
-        int oldPos = 0;
-        while (true) {
-            int bracketPos = string.indexOf('{', oldPos);
-            int commaPos = string.indexOf(',', oldPos);
-            while (bracketPos != -1 && bracketPos < commaPos) {
-                int closeBracketPos = string.indexOf('}', bracketPos+1);
-                if (closeBracketPos == -1)
-                    throw new IllegalArgumentException("Couldn't find matching '}'");
-                bracketPos = string.indexOf('{', closeBracketPos+1);
-                commaPos = string.indexOf(',', closeBracketPos+1);
-            }
-
-            SlicingCriterion newCrit = SimpleSlicingCriterion.parse(
-                    string.substring(oldPos, commaPos == -1 ? string.length() : commaPos),
-                    readClasses);
-            oldPos = commaPos+1;
-
-            crit.add(newCrit);
-
-            if (commaPos == -1)
-                return crit;
-        }
+        this.progressMonitors.add(progressMonitor);
     }
 
     public Set<Instruction> getDynamicSlice(ThreadId threadId, List<SlicingCriterion> sc) {
@@ -225,6 +197,9 @@ public class DirectSlicer implements Opcodes {
         for (ProgressMonitor mon : this.progressMonitors)
             mon.start(backwardInsnItr);
         try {
+            @SuppressWarnings("unchecked")
+            Set<Variable>[] matchedCriterionVariables = (Set<Variable>[]) new Set<?>[8];
+
             while (backwardInsnItr.hasNext()) {
                 InstructionInstance instance = backwardInsnItr.next();
                 Instruction instruction = instance.getInstruction();
@@ -287,9 +262,21 @@ public class DirectSlicer implements Opcodes {
                     currentFrame.interestingInstructions.add(instruction);
                 }
 
+                if (matchedCriterionVariables.length <= stackDepth) {
+                    @SuppressWarnings("unchecked")
+                    Set<Variable>[] newMatchedCriterionVariables =
+                        (Set<Variable>[]) new Set<?>[2*Math.max(stackDepth, matchedCriterionVariables.length)];
+                    System.arraycopy(matchedCriterionVariables, 0, newMatchedCriterionVariables, 0, matchedCriterionVariables.length);
+                    matchedCriterionVariables = newMatchedCriterionVariables;
+                }
                 for (SlicingCriterionInstance crit : slicingCriteria) {
                     if (crit.matches(instance)) {
-                        if (crit.hasLocalVariables()) {
+                        if (matchedCriterionVariables[stackDepth] == null)
+                            matchedCriterionVariables[stackDepth] = new HashSet<Variable>();
+                        if (crit.matchAllData()) {
+                            matchedCriterionVariables[stackDepth].removeAll(dynInfo.getDefinedVariables());
+                            matchedCriterionVariables[stackDepth].addAll(dynInfo.getUsedVariables());
+                        } else if (crit.hasLocalVariables()) {
                             for (LocalVariable var : crit.getLocalVariables())
                                 interestingVariables.add(new de.unisb.cs.st.javaslicer.variables.LocalVariable<InstructionInstance>(currentFrame, var.getIndex()));
                         } else {
@@ -297,6 +284,9 @@ public class DirectSlicer implements Opcodes {
                                 currentFrame.interestingInstructions = new HashSet<Instruction>();
                             currentFrame.interestingInstructions.add(instance.getInstruction());
                         }
+                    } else if (matchedCriterionVariables[stackDepth] != null) {
+                        interestingVariables.addAll(matchedCriterionVariables[stackDepth]);
+                        matchedCriterionVariables[stackDepth] = null;
                     }
                 }
 

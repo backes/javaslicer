@@ -30,7 +30,6 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceF
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceInfo;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.VarInstruction;
@@ -130,7 +129,7 @@ public class Slicer implements Opcodes {
 
         List<SlicingCriterion> sc = null;
         try {
-            sc = readSlicingCriteria(slicingCriterionString, trace.getReadClasses());
+            sc = SlicingCriterion.parseAll(slicingCriterionString, trace.getReadClasses());
         } catch (IllegalArgumentException e) {
             System.err.println("Error parsing slicing criterion: " + e.getMessage());
             System.exit(-1);
@@ -193,34 +192,6 @@ public class Slicer implements Opcodes {
     private void addProgressMonitor(ProgressMonitor progressMonitor) {
         this.progressMonitors .add(progressMonitor);
     }
-
-    public static List<SlicingCriterion> readSlicingCriteria(String string,
-            List<ReadClass> readClasses) throws IllegalArgumentException {
-        List<SlicingCriterion> crit = new ArrayList<SlicingCriterion>(2);
-        int oldPos = 0;
-        while (true) {
-            int bracketPos = string.indexOf('{', oldPos);
-            int commaPos = string.indexOf(',', oldPos);
-            while (bracketPos != -1 && bracketPos < commaPos) {
-                int closeBracketPos = string.indexOf('}', bracketPos + 1);
-                if (closeBracketPos == -1)
-                    throw new IllegalArgumentException(
-                            "Couldn't find matching '}'");
-                bracketPos = string.indexOf('{', closeBracketPos + 1);
-                commaPos = string.indexOf(',', closeBracketPos + 1);
-            }
-
-            SlicingCriterion newCrit = SimpleSlicingCriterion.parse(string.substring(oldPos,
-                        commaPos == -1 ? string.length() : commaPos), readClasses);
-            oldPos = commaPos + 1;
-
-            crit.add(newCrit);
-
-            if (commaPos == -1)
-                return crit;
-        }
-    }
-
 
     public Set<Instruction> getDynamicSlice(ThreadId threadId, final List<SlicingCriterion> sc, boolean multithreaded) throws InterruptedException {
         DependencesExtractor<SlicerInstance> depExtractor = DependencesExtractor.forTrace(this.trace, SlicerInstanceFactory.instance);

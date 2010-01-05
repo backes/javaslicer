@@ -37,7 +37,6 @@ public class ConstantGzipLongTraceSequence implements ConstantLongTraceSequence 
     }
 
     public ListIterator<Long> iterator() {
-        // TODO Auto-generated method stub
         throw new UnsupportedOperationException();
     }
 

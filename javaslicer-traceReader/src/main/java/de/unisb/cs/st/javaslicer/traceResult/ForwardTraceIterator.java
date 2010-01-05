@@ -25,7 +25,7 @@ public class ForwardTraceIterator<InstanceType extends InstructionInstance>
     private int nextJumpNr;
     private final long[] jumpInstrNrs;
     private final int[] jumps;
-    private final byte[] stackDepthChanges;
+    private final int[] stackDepthChanges;
 
     private final IntegerToLongMap occurrences;
     private final ThreadTraceResult threadTraceResult;
@@ -62,8 +62,8 @@ public class ForwardTraceIterator<InstanceType extends InstructionInstance>
         --this.backwardInstrNr;
 
         while (true) {
-            final Instruction instr = this.threadTraceResult.findInstruction(this.nextIndex);
-            final InstructionInstance inst = instr.getNextInstance(this, this.stackDepth, this.backwardInstrNr, this.instanceFactory);
+            Instruction instr = this.threadTraceResult.findInstruction(this.nextIndex);
+            InstructionInstance inst = instr.getNextInstance(this, this.stackDepth, this.backwardInstrNr, this.instanceFactory);
             if (inst == null) {
                 ++this.nextIndex;
                 continue;
@@ -93,7 +93,7 @@ public class ForwardTraceIterator<InstanceType extends InstructionInstance>
         if (it == null) {
             try {
                 it = ((ConstantLongTraceSequence)this.threadTraceResult.sequences.get(seqIndex)).iterator();
-            } catch (final IOException e) {
+            } catch (IOException e) {
                 throw new TracerException(e);
             }
             this.longSequenceIterators.put(seqIndex, it);
@@ -108,7 +108,7 @@ public class ForwardTraceIterator<InstanceType extends InstructionInstance>
         if (it == null) {
             try {
                 it = ((ConstantIntegerTraceSequence)this.threadTraceResult.sequences.get(seqIndex)).iterator();
-            } catch (final IOException e) {
+            } catch (IOException e) {
                 throw new TracerException(e);
             }
             this.integerSequenceIterators.put(seqIndex, it);

@@ -7,12 +7,12 @@ public class ForwardIterationInformation {
     public final int firstInstrIndex;
     public final long[] jumpInstrNrs;
     public final int[] jumps;
-    public final byte[] stackDepthChanges;
+    public final int[] stackDepthChanges;
 
-    public ForwardIterationInformation(final long instrCount,
-            final int firstInstrIndex,
-            final long[] jumpInstrNrs, final int[] jumps,
-            final byte[] stackDepthChanges) {
+    public ForwardIterationInformation(long instrCount,
+            int firstInstrIndex,
+            long[] jumpInstrNrs, int[] jumps,
+            int[] stackDepthChanges) {
         this.instrCount = instrCount;
         this.firstInstrIndex = firstInstrIndex;
         this.jumpInstrNrs = jumpInstrNrs;
