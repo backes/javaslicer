@@ -219,7 +219,7 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
      * @param addTryCatchEdges controls whether an edge should be inserted from each
      *                         instruction within a try block to the first instruction
      *                         in the catch block
-     * @param excludeLabels if <code>true</code>, all LabelMarkers are excluded from the
+     * @param excludeLabels if <code>true</code>, all Labels and goto instruction are excluded from the
      *                      CFG
      */
     public ControlFlowGraph (ReadMethod method, NodeFactory nodeFactory,
@@ -232,7 +232,10 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
         // now add the edges from try blocks to catch/finally blocks
         if (addTryCatchEdges) {
             for (TryCatchBlock tcb: method.getTryCatchBlocks()) {
-                InstrNode tcbHandler = getNode(tcb.getHandler());
+                LabelMarker handler = tcb.getHandler();
+                Instruction nonLabel = excludeLabels ? followLabelsAndGotos(handler) : handler;
+                assert nonLabel != null;
+				InstrNode tcbHandler = getNode(nonLabel);
                 for (Instruction inst = tcb.getStart(); inst != null && inst != tcb.getEnd(); inst = inst.getNext()) {
                     InstrNode instrNode = getNode(inst);
                     instrNode.addSuccessor(tcbHandler);
@@ -297,23 +300,33 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
         return null;
     }
 
+    private Instruction followLabelsAndGotos(Instruction instr) {
+    	Instruction nonLabel = instr;
+    	while (nonLabel != null) {
+    		if (nonLabel.getType() == InstructionType.LABEL) {
+    			nonLabel = nonLabel.getNext();
+    		} else if (nonLabel.getOpcode() == Opcodes.GOTO) {
+				nonLabel = ((JumpInstruction) nonLabel).getLabel().getNext();
+    		} else
+    			break;
+    	}
+    	return nonLabel;
+    }
+
     protected InstrNode getInstrNode(Instruction instruction,
             NodeFactory nodeFactory, boolean excludeLabels) {
         int idx = instruction.getIndex() - this.method.getInstructionNumberStart();
         InstrNode node = this.instructionNodes[idx];
-        if (node != null || (excludeLabels && instruction.getType() == InstructionType.LABEL))
+        if (node != null || (excludeLabels && (instruction.getType() == InstructionType.LABEL || instruction.getOpcode() == Opcodes.GOTO)))
             return node;
 
         InstrNode newNode = nodeFactory.createNode(this, instruction);
         this.instructionNodes[idx] = newNode;
         for (Instruction succ: getSuccessors(instruction)) {
-            if (excludeLabels) {
-                while (succ != null && succ.getType() == InstructionType.LABEL)
-                    succ = succ.getNext();
-                if (succ == null)
-                    break;
-            }
-            InstrNode succNode = getInstrNode(succ, nodeFactory, excludeLabels);
+        	Instruction nonLabel = excludeLabels ? followLabelsAndGotos(succ) : succ;
+        	if (nonLabel == null)
+        		continue;
+            InstrNode succNode = getInstrNode(nonLabel, nodeFactory, excludeLabels);
             newNode.addSuccessor(succNode);
             succNode.addPredecessor(newNode);
         }

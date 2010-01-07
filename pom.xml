@@ -115,6 +115,7 @@
         <module>javaslicer-common</module>
         <module>javaslicer-tracer</module>
         <module>javaslicer-traceReader</module>
+        <module>javaslicer-jung</module>
     </modules>
 
     <dependencyManagement>

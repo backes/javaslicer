@@ -56,12 +56,15 @@ public class Slicer implements Opcodes {
         public Variable interestingVariable = null;
         public Set<Variable> moreInterestingVariables = null;
 
+        public Set<SlicerInstance> predecessors; // only set on labels
+
         public int criterionDistance;
 
         public SlicerInstance(AbstractInstruction instr, long occurenceNumber,
                 int stackDepth, long instanceNr,
                 InstructionInstanceInfo additionalInfo) {
             super(instr, occurenceNumber, stackDepth, instanceNr, additionalInfo);
+            this.criterionDistance = Integer.MAX_VALUE;
         }
 
     }
@@ -196,8 +199,8 @@ public class Slicer implements Opcodes {
         System.out.format((Locale)null, "Computation took %.2f seconds.%n", 1e-9*(endTime-startTime));
     }
 
-    private void addProgressMonitor(ProgressMonitor progressMonitor) {
-        this.progressMonitors .add(progressMonitor);
+    public void addProgressMonitor(ProgressMonitor progressMonitor) {
+        this.progressMonitors.add(progressMonitor);
     }
 
     public void addSliceVisitor(SliceVisitor sliceVisitor) {
@@ -308,12 +311,27 @@ public class Slicer implements Opcodes {
                 if (from.onDynamicSlice) {
                     Instruction insn = to.getInstruction();
                     if (insn.getType() == InstructionType.LABEL) {
-                        to.criterionDistance = from.criterionDistance;
+                    	if (to.predecessors == null)
+                			to.predecessors = new HashSet<SlicerInstance>(4);
+                    	else if (to.predecessors.size() == 1)
+                			to.predecessors = new HashSet<SlicerInstance>(to.predecessors);
+                    	to.predecessors.add(from);
+                    	if (from.criterionDistance < to.criterionDistance)
+                    		to.criterionDistance = from.criterionDistance;
+                    } else if (from.predecessors != null) {
+                    	for (SlicerInstance pred : from.predecessors) {
+	                        int distance = pred.criterionDistance+1;
+	                        for (SliceVisitor vis : this.sliceVisitorsArray)
+	                            vis.visitSliceDependence(pred, to, null, distance);
+	                    	if (distance < to.criterionDistance)
+	                    		to.criterionDistance = distance;
+                    	}
                     } else {
                         int distance = from.criterionDistance+1;
                         for (SliceVisitor vis : this.sliceVisitorsArray)
-                            vis.visitSliceDependence(from, to, distance);
-                        to.criterionDistance = distance;
+                            vis.visitSliceDependence(from, to, null, distance);
+                    	if (distance < to.criterionDistance)
+                    		to.criterionDistance = distance;
                     }
                     to.onDynamicSlice = true;
                     // since "to" controls the execution of "from", we want to track all data dependences of "to" to find out why it took this decision
@@ -334,34 +352,32 @@ public class Slicer implements Opcodes {
                                 from.interestingVariable.equals(toVar) || // the interestingVariable must be the one we are just visiting
                                 (from.moreInterestingVariables != null && from.moreInterestingVariables.contains(toVar)))))) { // or it must be in the set of more variables
                     Instruction insn = to.getInstruction();
-                    if (insn.getType() == InstructionType.LABEL) {
-                        to.criterionDistance = from.criterionDistance;
+                    assert insn.getType() != InstructionType.LABEL;
+                    if (from.onlyIfAfterCriterion) {
+                        to.criterionDistance = 0;
+                        for (SliceVisitor vis : this.sliceVisitorsArray)
+                            vis.visitMatchedInstance(to);
                     } else {
-                        if (from.onlyIfAfterCriterion) {
-                            to.criterionDistance = 0;
-                            for (SliceVisitor vis : this.sliceVisitorsArray)
-                                vis.visitMatchedInstance(to);
-                        } else {
-                            int distance = from.criterionDistance+1;
-                            to.criterionDistance = distance;
-                            for (SliceVisitor vis : this.sliceVisitorsArray)
-                                vis.visitSliceDependence(from, to, distance);
+                        int distance = from.criterionDistance+1;
+                    	if (distance < to.criterionDistance)
+                    		to.criterionDistance = distance;
+                        for (SliceVisitor vis : this.sliceVisitorsArray)
+                            vis.visitSliceDependence(from, to, toVar, distance);
+                    }
+                    if (!fromVars.isEmpty()) {
+                        Iterator<Variable> varIt = fromVars.iterator();
+                        assert varIt.hasNext() : "Iterator of a non-empty collection should have at least one element";
+                        Variable first = varIt.next();
+                        if (to.interestingVariable == null || to.interestingVariable.equals(first)) {
+                            to.interestingVariable = first;
+                            first = varIt.hasNext() ? varIt.next() : null;
                         }
-                        if (!fromVars.isEmpty()) {
-                            Iterator<Variable> varIt = fromVars.iterator();
-                            assert varIt.hasNext() : "Iterator of a non-empty collection should have at least one element";
-                            Variable first = varIt.next();
-                            if (to.interestingVariable == null || to.interestingVariable.equals(first)) {
-                                to.interestingVariable = first;
-                                first = varIt.hasNext() ? varIt.next() : null;
-                            }
-                            if (first != null) {
-                                if (to.moreInterestingVariables == null)
-                                    to.moreInterestingVariables = new HashSet<Variable>(8);
-                                to.moreInterestingVariables.add(first);
-                                while (varIt.hasNext())
-                                    to.moreInterestingVariables.add(varIt.next());
-                            }
+                        if (first != null) {
+                            if (to.moreInterestingVariables == null)
+                                to.moreInterestingVariables = new HashSet<Variable>(8);
+                            to.moreInterestingVariables.add(first);
+                            while (varIt.hasNext())
+                                to.moreInterestingVariables.add(varIt.next());
                         }
                     }
                     to.onDynamicSlice = true;
@@ -400,7 +416,7 @@ public class Slicer implements Opcodes {
 
     private static void printHelp(Options options, PrintStream out) {
         out.println("Usage: " + Slicer.class.getSimpleName() + " [<options>] <file> <slicing criterion>");
-        out.println("where <file> is the input trace file, and <options> may be one or more of");
+        out.println("where <file> is the input trace file");
         out.println("      <slicing criterion> has the form <loc>[(<occ>)]:<var>[,<loc>[(<occ>)]:<var>]*");
         out.println("      <options> may be one or more of");
         HelpFormatter formatter = new HelpFormatter();

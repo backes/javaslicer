@@ -55,14 +55,7 @@ public class AbstractInstructionInstance implements InstructionInstance {
 
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + (int) (this.instanceNr ^ (this.instanceNr >>> 32));
-        result = prime * result + this.instruction.hashCode();
-        result = prime * result + (int) (this.occurenceNumber ^ (this.occurenceNumber >>> 32));
-        result = prime * result + this.stackDepth;
-        result = prime * result + (this.additionalInfo == null ? 0 : this.additionalInfo.hashCode());
-        return result;
+    	return (int) this.instanceNr;
     }
 
     @Override
@@ -100,8 +93,9 @@ public class AbstractInstructionInstance implements InstructionInstance {
         String infoStr = this.additionalInfo.toString();
         if (infoStr == null || infoStr.length() == 0)
             return instrStr;
-        return new StringBuilder(instrStr.length() + infoStr.length() + 1).
-            append(instrStr).append(' ').append(infoStr).toString();
+        int occLen = this.occurenceNumber < 10000 ? 4 : this.occurenceNumber < 10000000000l ? 10 : 20;
+        return new StringBuilder(instrStr.length() + infoStr.length() + occLen + 3).
+            append(instrStr).append('(').append(this.occurenceNumber).append(") ").append(infoStr).toString();
     }
 
     public int compareTo(InstructionInstance o) {

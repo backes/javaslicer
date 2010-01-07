@@ -6,9 +6,11 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import de.hammacher.util.graph.Graph2Dot;
+import de.hammacher.util.graph.NodeLabelProvider;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowGraph.AbstractNodeFactory;
+import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowGraph.InstrNode;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
 
 public class CFG2Dot {
@@ -44,10 +46,15 @@ public class CFG2Dot {
 					if (mtdNamePattern.matcher(completeName).matches()) {
 						System.out.format("Exporting CFG of %s to %s...%n", completeName, dotExport);
 						ControlFlowGraph cfg = new ControlFlowGraph(mtd, new AbstractNodeFactory(), includeCatchEdges, true);
-						Graph2Dot<ControlFlowGraph.InstrNode> exporter = new Graph2Dot<ControlFlowGraph.InstrNode>();
+						Graph2Dot<InstrNode> exporter = new Graph2Dot<InstrNode>();
 	                    exporter.setGraphName("cfg");
 	                    exporter.setNodeShape("box");
 	                    exporter.setGraphAttribute("rankdir", "TB");
+	                    exporter.setNodeLabelProvider(new NodeLabelProvider<InstrNode>() {
+							public String getNodeLabel(InstrNode node) {
+								return node.getInstruction().toString() + "\n" + node.getInstruction().getLineNumber();
+							}
+						});
 						exporter.export(cfg, new File(dotExport));
 						return;
 					}

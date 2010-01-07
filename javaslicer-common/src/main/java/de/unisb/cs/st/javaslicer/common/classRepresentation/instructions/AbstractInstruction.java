@@ -200,7 +200,15 @@ public abstract class AbstractInstruction implements Instruction {
         if (getClass() != obj.getClass())
             return false;
         AbstractInstruction other = (AbstractInstruction) obj;
-        return this.index == other.index;
+        if (this.index != other.index)
+        	return false;
+        if (this.opcode != other.opcode)
+        	return false;
+        if (this.lineNumber != other.lineNumber)
+        	return false;
+        if (!this.method.equals(other.method))
+        	return false;
+        return true;
     }
 
 }

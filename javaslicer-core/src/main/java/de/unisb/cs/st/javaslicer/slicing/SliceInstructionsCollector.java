@@ -7,6 +7,7 @@ import java.util.Set;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
+import de.unisb.cs.st.javaslicer.variables.Variable;
 
 
 public class SliceInstructionsCollector implements SliceVisitor {
@@ -18,7 +19,7 @@ public class SliceInstructionsCollector implements SliceVisitor {
     }
 
     public void visitSliceDependence(InstructionInstance from,
-            InstructionInstance to, int distance) {
+    		InstructionInstance to, Variable variable, int distance) {
         assert from.getInstruction().getType() == InstructionType.LABEL ||
             this.dynamicSlice.contains(from.getInstruction());
         this.dynamicSlice.add(to.getInstruction());
