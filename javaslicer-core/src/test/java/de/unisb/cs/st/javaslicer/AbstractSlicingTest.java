@@ -20,6 +20,10 @@ import de.hammacher.util.Diff;
 import de.hammacher.util.DiffPrint;
 import de.hammacher.util.Diff.change;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.slicing.DirectSlicer;
+import de.unisb.cs.st.javaslicer.slicing.SliceInstructionsCollector;
+import de.unisb.cs.st.javaslicer.slicing.Slicer;
+import de.unisb.cs.st.javaslicer.slicing.SlicingCriterion;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
 
@@ -89,7 +93,11 @@ public abstract class AbstractSlicingTest {
 
         assertTrue("Thread not found", threadId != null);
 
-        Set<Instruction> slice = new TreeSet<Instruction>(new Slicer(trace).getDynamicSlice(threadId, sc, true));
+        Slicer slicer = new Slicer(trace);
+        SliceInstructionsCollector collector = new SliceInstructionsCollector();
+        slicer.addSliceVisitor(collector);
+        slicer.process(threadId, sc, true);
+        Set<Instruction> slice = new TreeSet<Instruction>(collector.getDynamicSlice());
 
         Set<Instruction> slice2 = new TreeSet<Instruction>(new DirectSlicer(trace).getDynamicSlice(threadId, sc));
 

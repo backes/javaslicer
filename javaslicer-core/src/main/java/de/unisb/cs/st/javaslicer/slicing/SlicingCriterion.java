@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer;
+package de.unisb.cs.st.javaslicer.slicing;
 
 import java.util.ArrayList;
 import java.util.Collections;

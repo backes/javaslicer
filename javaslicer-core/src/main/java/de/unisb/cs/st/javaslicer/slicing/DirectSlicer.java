@@ -1,4 +1,4 @@
-package de.unisb.cs.st.javaslicer;
+package de.unisb.cs.st.javaslicer.slicing;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,7 +24,6 @@ import org.objectweb.asm.Opcodes;
 
 import de.hammacher.util.ArrayStack;
 import de.hammacher.util.maps.IntegerMap;
-import de.unisb.cs.st.javaslicer.SlicingCriterion.SlicingCriterionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
@@ -37,6 +36,7 @@ import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.instructionSimulation.DynamicInformation;
 import de.unisb.cs.st.javaslicer.instructionSimulation.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.instructionSimulation.Simulator;
+import de.unisb.cs.st.javaslicer.slicing.SlicingCriterion.SlicingCriterionInstance;
 import de.unisb.cs.st.javaslicer.traceResult.BackwardTraceIterator;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;

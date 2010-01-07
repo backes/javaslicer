@@ -1,10 +1,11 @@
-package de.unisb.cs.st.javaslicer;
+package de.unisb.cs.st.javaslicer.slicing;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -23,7 +24,6 @@ import org.apache.commons.cli.ParseException;
 import org.objectweb.asm.Opcodes;
 
 import de.hammacher.util.maps.IntegerMap;
-import de.unisb.cs.st.javaslicer.SlicingCriterion.SlicingCriterionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceFactory;
@@ -39,6 +39,7 @@ import de.unisb.cs.st.javaslicer.dependenceAnalysis.DataDependenceType;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesExtractor;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesVisitorAdapter;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.VisitorCapability;
+import de.unisb.cs.st.javaslicer.slicing.SlicingCriterion.SlicingCriterionInstance;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.variables.Variable;
@@ -54,6 +55,8 @@ public class Slicer implements Opcodes {
         public boolean onlyIfAfterCriterion = false;
         public Variable interestingVariable = null;
         public Set<Variable> moreInterestingVariables = null;
+
+        public int criterionDistance;
 
         public SlicerInstance(AbstractInstruction instr, long occurenceNumber,
                 int stackDepth, long instanceNr,
@@ -78,6 +81,7 @@ public class Slicer implements Opcodes {
 
     private final TraceResult trace;
     private final List<ProgressMonitor> progressMonitors = new ArrayList<ProgressMonitor>(1);
+    private final List<SliceVisitor> sliceVisitors = new ArrayList<SliceVisitor>(1);
 
     public Slicer(TraceResult trace) {
         this.trace = trace;
@@ -171,21 +175,24 @@ public class Slicer implements Opcodes {
             multithreaded = Runtime.getRuntime().availableProcessors() > 1;
         }
 
-        Set<Instruction> slice = slicer.getDynamicSlice(tracing, sc, multithreaded);
+        SliceInstructionsCollector collector = new SliceInstructionsCollector();
+        slicer.addSliceVisitor(collector);
+        slicer.process(tracing, sc, multithreaded);
+        Set<Instruction> slice = collector.getDynamicSlice();
         long endTime = System.nanoTime();
 
-        List<Instruction> sliceList = new ArrayList<Instruction>(slice);
-        Collections.sort(sliceList);
+        Instruction[] sliceArray = slice.toArray(new Instruction[slice.size()]);
+        Arrays.sort(sliceArray);
 
         System.out.println("The dynamic slice for criterion " + sc + ":");
-        for (Instruction insn: sliceList) {
+        for (Instruction insn: sliceArray) {
             System.out.format((Locale)null, "%s.%s:%d %s%n",
                     insn.getMethod().getReadClass().getName(),
                     insn.getMethod().getName(),
                     insn.getLineNumber(),
                     insn.toString());
         }
-        System.out.format((Locale)null, "%nSlice consists of %d bytecode instructions.%n", sliceList.size());
+        System.out.format((Locale)null, "%nSlice consists of %d bytecode instructions.%n", sliceArray.length);
         System.out.format((Locale)null, "Computation took %.2f seconds.%n", 1e-9*(endTime-startTime));
     }
 
@@ -193,18 +200,22 @@ public class Slicer implements Opcodes {
         this.progressMonitors .add(progressMonitor);
     }
 
-    public Set<Instruction> getDynamicSlice(ThreadId threadId, final List<SlicingCriterion> sc, boolean multithreaded) throws InterruptedException {
+    public void addSliceVisitor(SliceVisitor sliceVisitor) {
+        this.sliceVisitors.add(sliceVisitor);
+    }
+
+    public void process(ThreadId threadId, final List<SlicingCriterion> sc, boolean multithreaded) throws InterruptedException {
         DependencesExtractor<SlicerInstance> depExtractor = DependencesExtractor.forTrace(this.trace, SlicerInstanceFactory.instance);
         for (ProgressMonitor mon : this.progressMonitors)
             depExtractor.addProgressMonitor(mon);
 
-        final Set<Instruction> dynamicSlice = new HashSet<Instruction>();
-
+        final List<SliceVisitor> sliceVisitors0 = Slicer.this.sliceVisitors;
         depExtractor.registerVisitor(new DependencesVisitorAdapter<SlicerInstance>() {
             private final List<SlicingCriterionInstance> slicingCritInst = instantiateSlicingCriteria(sc);
             @SuppressWarnings("unchecked")
             private IntegerMap<Object>[] interestingLocalVariables = (IntegerMap<Object>[]) new IntegerMap<?>[0];
             private long[] critOccurenceNumbers = new long[2]; // 0 if not in a criterion
+            private final SliceVisitor[] sliceVisitorsArray = sliceVisitors0.toArray(new SliceVisitor[sliceVisitors0.size()]);
 
             private List<SlicingCriterionInstance> instantiateSlicingCriteria(
                     List<SlicingCriterion> criteria) {
@@ -258,8 +269,10 @@ public class Slicer implements Opcodes {
                             } else {
                                 Instruction insn = instance.getInstruction();
                                 if (insn.getType() != InstructionType.LABEL)
-                                    dynamicSlice.add(insn);
+                                    for (SliceVisitor vis : this.sliceVisitorsArray)
+                                        vis.visitMatchedInstance(instance);
                                 instance.onDynamicSlice = true;
+                                instance.criterionDistance = 0;
                             }
                         }
                     } else if (this.critOccurenceNumbers[stackDepth] != 0) {
@@ -279,10 +292,12 @@ public class Slicer implements Opcodes {
                         this.interestingLocalVariables[stackDepth].remove(varInsn.getLocalVarIndex());
                         if (this.interestingLocalVariables[stackDepth].isEmpty())
                             this.interestingLocalVariables[stackDepth] = null;
-                        dynamicSlice.add(instance.getInstruction());
+                        for (SliceVisitor vis : this.sliceVisitorsArray)
+                            vis.visitMatchedInstance(instance);
                         instance.onDynamicSlice = true;
                         // and we want to know where the data comes from...
                         instance.allDataInteresting = true;
+                        instance.criterionDistance = 0;
                     }
                 }
             }
@@ -292,8 +307,14 @@ public class Slicer implements Opcodes {
                     SlicerInstance to) {
                 if (from.onDynamicSlice) {
                     Instruction insn = to.getInstruction();
-                    if (insn.getType() != InstructionType.LABEL)
-                        dynamicSlice.add(insn);
+                    if (insn.getType() == InstructionType.LABEL) {
+                        to.criterionDistance = from.criterionDistance;
+                    } else {
+                        int distance = from.criterionDistance+1;
+                        for (SliceVisitor vis : this.sliceVisitorsArray)
+                            vis.visitSliceDependence(from, to, distance);
+                        to.criterionDistance = distance;
+                    }
                     to.onDynamicSlice = true;
                     // since "to" controls the execution of "from", we want to track all data dependences of "to" to find out why it took this decision
                     to.allDataInteresting = true;
@@ -313,8 +334,19 @@ public class Slicer implements Opcodes {
                                 from.interestingVariable.equals(toVar) || // the interestingVariable must be the one we are just visiting
                                 (from.moreInterestingVariables != null && from.moreInterestingVariables.contains(toVar)))))) { // or it must be in the set of more variables
                     Instruction insn = to.getInstruction();
-                    if (insn.getType() != InstructionType.LABEL) {
-                        dynamicSlice.add(insn);
+                    if (insn.getType() == InstructionType.LABEL) {
+                        to.criterionDistance = from.criterionDistance;
+                    } else {
+                        if (from.onlyIfAfterCriterion) {
+                            to.criterionDistance = 0;
+                            for (SliceVisitor vis : this.sliceVisitorsArray)
+                                vis.visitMatchedInstance(to);
+                        } else {
+                            int distance = from.criterionDistance+1;
+                            to.criterionDistance = distance;
+                            for (SliceVisitor vis : this.sliceVisitorsArray)
+                                vis.visitSliceDependence(from, to, distance);
+                        }
                         if (!fromVars.isEmpty()) {
                             Iterator<Variable> varIt = fromVars.iterator();
                             assert varIt.hasNext() : "Iterator of a non-empty collection should have at least one element";
@@ -349,8 +381,6 @@ public class Slicer implements Opcodes {
            VisitorCapability.METHOD_ENTRY_LEAVE);
 
         depExtractor.processBackwardTrace(threadId, multithreaded);
-
-        return dynamicSlice;
     }
 
     @SuppressWarnings("static-access")
