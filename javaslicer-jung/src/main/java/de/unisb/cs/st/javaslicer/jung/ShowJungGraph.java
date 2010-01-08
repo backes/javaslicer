@@ -54,7 +54,7 @@ import edu.uci.ics.jung.visualization.control.DefaultModalGraphMouse;
 import edu.uci.ics.jung.visualization.control.ModalGraphMouse.Mode;
 import edu.uci.ics.jung.visualization.renderers.Renderer.VertexLabel.Position;
 
-public class ShowJungGraph implements Opcodes {
+public class ShowJungGraph {
 
     private final TraceResult trace;
     private final List<ProgressMonitor> progressMonitors = new ArrayList<ProgressMonitor>(1);

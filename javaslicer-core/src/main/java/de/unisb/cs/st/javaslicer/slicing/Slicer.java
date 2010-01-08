@@ -44,7 +44,7 @@ import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
-public class Slicer implements Opcodes {
+public class Slicer {
 
     private static class SlicerInstance extends AbstractInstructionInstance {
 
@@ -287,11 +287,11 @@ public class Slicer implements Opcodes {
                         instance.getInstruction().getType() == InstructionType.VAR) {
                     VarInstruction varInsn = (VarInstruction) instance.getInstruction();
                     if (this.interestingLocalVariables[stackDepth].containsKey(varInsn.getLocalVarIndex()) &&
-                            (varInsn.getOpcode() == ISTORE ||
-                             varInsn.getOpcode() == ASTORE ||
-                             varInsn.getOpcode() == LSTORE ||
-                             varInsn.getOpcode() == FSTORE ||
-                             varInsn.getOpcode() == DSTORE)) {
+                            (varInsn.getOpcode() == Opcodes.ISTORE ||
+                             varInsn.getOpcode() == Opcodes.ASTORE ||
+                             varInsn.getOpcode() == Opcodes.LSTORE ||
+                             varInsn.getOpcode() == Opcodes.FSTORE ||
+                             varInsn.getOpcode() == Opcodes.DSTORE)) {
                         this.interestingLocalVariables[stackDepth].remove(varInsn.getLocalVarIndex());
                         if (this.interestingLocalVariables[stackDepth].isEmpty())
                             this.interestingLocalVariables[stackDepth] = null;
