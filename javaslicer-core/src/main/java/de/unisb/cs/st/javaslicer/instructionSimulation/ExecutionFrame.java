@@ -65,6 +65,12 @@ public class ExecutionFrame<InstanceType> {
     public boolean interruptedControlFlow = false;
 
     /**
+     * <code>true</code> iff this frame was aborted abnormally (NOT by a RETURN
+     * instruction)
+     */
+    public boolean abnormalTermination = false;
+
+    /**
      * holds the stack entry whose value was used as the return value of
      * the method
      */

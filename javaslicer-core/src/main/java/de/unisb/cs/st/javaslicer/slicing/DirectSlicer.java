@@ -222,7 +222,7 @@ public class DirectSlicer implements Opcodes {
                             || instruction == instruction.getMethod().getAbnormalTerminationLabel();
                         newFrame.method = instruction.getMethod();
                         if (instruction == newFrame.method.getAbnormalTerminationLabel()) {
-                            newFrame.throwsException = newFrame.interruptedControlFlow = true;
+                            newFrame.throwsException = newFrame.interruptedControlFlow = newFrame.abnormalTermination = true;
                         }
                         frames.push(newFrame);
                         currentFrame = newFrame;

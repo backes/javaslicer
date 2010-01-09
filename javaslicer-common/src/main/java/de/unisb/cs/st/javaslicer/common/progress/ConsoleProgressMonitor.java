@@ -115,7 +115,7 @@ public class ConsoleProgressMonitor implements ProgressMonitor {
             long timeNanos = System.nanoTime();
             double newPercentPerSecond = (percentageDone - this.lastPercentageDone) / (timeNanos - this.lastNanos) * 1e9;
             this.lastNanos = timeNanos;
-            double influence = Math.max(1 / (this.numApprox - 9), 0.001);
+            double influence = Math.max(1 / (this.numApprox - 9), 0.01);
             approxPercentPerSecond = (1. - influence) * this.lastApproxPercentPerSecond + influence * newPercentPerSecond;
         }
         int lastDeziPercentDone = (int) Math.round(10. * this.lastPercentageDone);
@@ -138,6 +138,8 @@ public class ConsoleProgressMonitor implements ProgressMonitor {
                     sb.append(' ');
                 sb.append('\n');
             } else {
+                if (deziPercentDone < 100)
+                    sb.append(' ');
                 sb.append(deziPercentDone/10).append('.').append(deziPercentDone%10).append("% done");
                 if (this.showApproxTimeRemaining) {
                     sb.append(", time left: ");

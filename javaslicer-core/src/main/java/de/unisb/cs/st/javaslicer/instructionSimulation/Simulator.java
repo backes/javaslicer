@@ -51,13 +51,13 @@ public class Simulator<InstanceType extends InstructionInstance> {
 
     private final TraceResult traceResult;
 
-    public Simulator(final TraceResult traceResult) {
+    public Simulator(TraceResult traceResult) {
         this.traceResult = traceResult;
     }
 
-    public DynamicInformation simulateInstruction(final InstructionInstance inst,
-            final ExecutionFrame<InstanceType> executionFrame, final ExecutionFrame<InstanceType> removedFrame,
-            final ArrayStack<ExecutionFrame<InstanceType>> allFrames) {
+    public DynamicInformation simulateInstruction(InstructionInstance inst,
+            ExecutionFrame<InstanceType> executionFrame, ExecutionFrame<InstanceType> removedFrame,
+            ArrayStack<ExecutionFrame<InstanceType>> allFrames) {
         switch (inst.getInstruction().getType()) {
         case ARRAY:
             return simulateArrayInstruction(inst, executionFrame);
@@ -82,7 +82,7 @@ public class Simulator<InstanceType extends InstructionInstance> {
             return DynamicInformation.EMPTY;
         case LDC:
             // writes 1 or 2, but we only trace the lower variable
-            final int stackOffset = (((LdcInstruction)inst.getInstruction()).constantIsLong())
+            int stackOffset = (((LdcInstruction)inst.getInstruction()).constantIsLong())
                 ? executionFrame.operandStack.addAndGet(-2)
                 : executionFrame.operandStack.decrementAndGet();
             return new SimpleVariableUsage(Collections.<Variable>emptySet(), new StackEntrySet<InstanceType>(executionFrame, stackOffset, 1));
@@ -109,14 +109,14 @@ public class Simulator<InstanceType extends InstructionInstance> {
         }
     }
 
-    private DynamicInformation simulateMultiANewArrayInsn(final InstructionInstance inst,
-            final ExecutionFrame<InstanceType> executionFrame) {
+    private DynamicInformation simulateMultiANewArrayInsn(InstructionInstance inst,
+            ExecutionFrame<InstanceType> executionFrame) {
         assert inst.getInstruction().getType() == InstructionType.MULTIANEWARRAY;
         MultiANewArrayInstrInstanceInfo info = (MultiANewArrayInstrInstanceInfo) inst.getAdditionalInfo();
 
-        final LongMap<Collection<Variable>> createdObjects = new LongMap<Collection<Variable>>();
-        for (final long createdObj: info.getNewObjectIdentifiers()) {
-            final IntHolder h = this.maxArrayElem.remove(createdObj);
+        LongMap<Collection<Variable>> createdObjects = new LongMap<Collection<Variable>>();
+        for (long createdObj: info.getNewObjectIdentifiers()) {
+            IntHolder h = this.maxArrayElem.remove(createdObj);
             createdObjects.put(createdObj, new ArrayElementsList(
                     h == null ? 0 : (h.get()+1), createdObj));
         }
@@ -126,26 +126,26 @@ public class Simulator<InstanceType extends InstructionInstance> {
             createdObjects);
     }
 
-    private DynamicInformation simulateNewarrayInsn(final InstructionInstance inst,
-            final ExecutionFrame<InstanceType> frame) {
+    private DynamicInformation simulateNewarrayInsn(InstructionInstance inst,
+            ExecutionFrame<InstanceType> frame) {
         assert inst.getInstruction().getType() == InstructionType.NEWARRAY;
         NewArrayInstrInstanceInfo info = (NewArrayInstrInstanceInfo) inst.getAdditionalInfo();
-        final IntHolder h = this.maxArrayElem.remove(info.getNewObjectIdentifier());
-        final StackEntry<InstanceType> stackEntry = frame.getStackEntry(frame.operandStack.get()-1);
-        final Collection<Variable> stackEntryColl = Collections.singleton((Variable)stackEntry);
-        final Map<Long, Collection<Variable>> createdObjects =
+        IntHolder h = this.maxArrayElem.remove(info.getNewObjectIdentifier());
+        StackEntry<InstanceType> stackEntry = frame.getStackEntry(frame.operandStack.get()-1);
+        Collection<Variable> stackEntryColl = Collections.singleton((Variable)stackEntry);
+        Map<Long, Collection<Variable>> createdObjects =
             Collections.singletonMap(info.getNewObjectIdentifier(),
                 (Collection<Variable>)new ArrayElementsList(h == null ? 0 : (h.get()+1),
                                           info.getNewObjectIdentifier()));
         return new SimpleVariableUsage(stackEntryColl, stackEntryColl, createdObjects);
     }
 
-    private DynamicInformation simulateTypeInsn(final InstructionInstance inst, final ExecutionFrame<InstanceType> frame) {
+    private DynamicInformation simulateTypeInsn(InstructionInstance inst, ExecutionFrame<InstanceType> frame) {
         assert inst.getInstruction().getType() == InstructionType.TYPE;
         TypeInstrInstanceInfo info = (TypeInstrInstanceInfo) inst.getAdditionalInfo();
         switch (inst.getInstruction().getOpcode()) {
         case Opcodes.NEW:
-            final Collection<Variable> definedVariables = Collections.singleton(
+            Collection<Variable> definedVariables = Collections.singleton(
                 (Variable)frame.getStackEntry(frame.operandStack.decrementAndGet()));
             return new SimpleVariableUsage(DynamicInformation.EMPTY_VARIABLE_SET,
                 definedVariables,
@@ -153,9 +153,9 @@ public class Simulator<InstanceType extends InstructionInstance> {
                     getAllFields(((TypeInstruction)inst.getInstruction()).getJavaClassName(),
                         info.getNewObjectIdentifier())));
         case Opcodes.ANEWARRAY:
-            final int stackSize = frame.operandStack.get()-1;
-            final IntHolder h = this.maxArrayElem.remove(info.getNewObjectIdentifier());
-            final Collection<Variable> stackEntryColl = Collections.singleton((Variable)frame.getStackEntry(stackSize));
+            int stackSize = frame.operandStack.get()-1;
+            IntHolder h = this.maxArrayElem.remove(info.getNewObjectIdentifier());
+            Collection<Variable> stackEntryColl = Collections.singleton((Variable)frame.getStackEntry(stackSize));
             return new SimpleVariableUsage(stackEntryColl, stackEntryColl,
                 Collections.singletonMap(info.getNewObjectIdentifier(),
                     (Collection<Variable>)new ArrayElementsList(h == null ? 0 : (h.get()+1), info.getNewObjectIdentifier())));
@@ -169,18 +169,18 @@ public class Simulator<InstanceType extends InstructionInstance> {
         }
     }
 
-    private Collection<Variable> getAllFields(final String className, final long objId) {
+    private Collection<Variable> getAllFields(String className, long objId) {
         String[] cachedFields = this.fieldsCache.get(className);
         if (cachedFields == null) {
-            final HashSet<String> allFields = new HashSet<String>();
+            HashSet<String> allFields = new HashSet<String>();
             String tmpClassName = className;
             while (tmpClassName != null) {
-                final ReadClass clazz = this.traceResult.findReadClass(tmpClassName);
+                ReadClass clazz = this.traceResult.findReadClass(tmpClassName);
                 if (clazz == null) {
                     //assert "java.lang.Object".equals(tmpClassName);
                     break;
                 }
-                for (final Field field: clazz.getFields())
+                for (Field field: clazz.getFields())
                     allFields.add(field.getName());
                 tmpClassName = clazz.getSuperClassName();
             }
@@ -190,7 +190,7 @@ public class Simulator<InstanceType extends InstructionInstance> {
         return new ObjectFieldList(objId, cachedFields);
     }
 
-    private DynamicInformation simulateJumpInsn(final JumpInstruction instruction, final ExecutionFrame<InstanceType> frame) {
+    private DynamicInformation simulateJumpInsn(JumpInstruction instruction, ExecutionFrame<InstanceType> frame) {
         switch (instruction.getOpcode()) {
         case IFEQ: case IFNE: case IFLT: case IFGE: case IFGT: case IFLE:
         case IFNULL: case IFNONNULL:
@@ -218,8 +218,8 @@ public class Simulator<InstanceType extends InstructionInstance> {
         }
     }
 
-    private DynamicInformation simulateArrayInstruction(final InstructionInstance inst,
-            final ExecutionFrame<InstanceType> frame) {
+    private DynamicInformation simulateArrayInstruction(InstructionInstance inst,
+            ExecutionFrame<InstanceType> frame) {
         assert inst.getInstruction().getType() == InstructionType.ARRAY;
         ArrayInstrInstanceInfo arrInfo = (ArrayInstrInstanceInfo) inst.getAdditionalInfo();
         long arrayId = arrInfo.getArrayId();
@@ -263,18 +263,23 @@ public class Simulator<InstanceType extends InstructionInstance> {
         }
     }
 
-    private DynamicInformation simulateMethodInsn(final MethodInvocationInstruction inst,
-            final ExecutionFrame<InstanceType> executionFrame, final ExecutionFrame<InstanceType> removedFrame) {
+    // eclipse's null pointer checks are not strong enough to see that
+    // removedFrameMatches --> removedFrame != null
+    @SuppressWarnings("null")
+    private DynamicInformation simulateMethodInsn(MethodInvocationInstruction inst,
+            ExecutionFrame<InstanceType> executionFrame, ExecutionFrame<InstanceType> removedFrame) {
         int paramCount = inst.getOpcode() == INVOKESTATIC ? 0 : 1;
         for (int param = inst.getParameterCount()-1; param >= 0; --param)
             paramCount += inst.parameterIsLong(param) ? 2 : 1;
-        final byte returnedSize = executionFrame.atCatchBlockStart == null ? inst.getReturnedSize() : 0;
-        boolean hasReturn = returnedSize != 0;
-        final boolean hasRemovedFrame = removedFrame != null
+        boolean removedFrameMatches = removedFrame != null
             && inst.getMethodName().equals(removedFrame.method.getName())
-            && inst.getMethodDesc().equals(removedFrame.method.getDesc())
-            && (!hasReturn || removedFrame.returnValue != null);
-        final int parametersStackOffset = (paramCount == returnedSize
+            && inst.getMethodDesc().equals(removedFrame.method.getDesc());
+        assert removedFrame != null || removedFrameMatches;
+        byte returnedSize = removedFrameMatches && removedFrame.abnormalTermination ? 0 : inst.getReturnedSize();
+        boolean hasReturn = returnedSize != 0;
+        boolean hasRemovedFrame = removedFrameMatches &&
+            (!hasReturn || removedFrame.returnValue != null);
+        int parametersStackOffset = (paramCount == returnedSize
             ? executionFrame.operandStack.get()
             : executionFrame.operandStack.getAndAdd(paramCount-returnedSize)) - returnedSize;
 
@@ -282,12 +287,12 @@ public class Simulator<InstanceType extends InstructionInstance> {
                 paramCount, hasReturn, executionFrame, hasRemovedFrame ? removedFrame : null);
     }
 
-    private DynamicInformation simulateFieldInstruction(final InstructionInstance instance, final ExecutionFrame<InstanceType> frame) {
+    private DynamicInformation simulateFieldInstruction(InstructionInstance instance, ExecutionFrame<InstanceType> frame) {
         assert instance.getInstruction().getType() == InstructionType.FIELD;
         FieldInstrInstanceInfo info = (FieldInstrInstanceInfo) instance.getAdditionalInfo();
         int stackOffset;
         Variable lowerVar;
-        final FieldInstruction instruction = (FieldInstruction) instance.getInstruction();
+        FieldInstruction instruction = (FieldInstruction) instance.getInstruction();
         switch (instruction.getOpcode()) {
         case GETFIELD:
             // read 1, write 1 or 2 (we only trace the lower one of 2)
@@ -323,7 +328,7 @@ public class Simulator<InstanceType extends InstructionInstance> {
         }
     }
 
-    private DynamicInformation simulateVarInstruction(final VarInstruction inst, final ExecutionFrame<InstanceType> frame) {
+    private DynamicInformation simulateVarInstruction(VarInstruction inst, ExecutionFrame<InstanceType> frame) {
         switch (inst.getOpcode()) {
         case ILOAD: case FLOAD: case ALOAD:
             // read 0, write 1 stack entry
@@ -356,8 +361,8 @@ public class Simulator<InstanceType extends InstructionInstance> {
         }
     }
 
-    private DynamicInformation simulateSimpleInsn(final InstructionInstance inst, final ExecutionFrame<InstanceType> frame,
-            final ArrayStack<ExecutionFrame<InstanceType>> allFrames) {
+    private DynamicInformation simulateSimpleInsn(InstructionInstance inst, ExecutionFrame<InstanceType> frame,
+            ArrayStack<ExecutionFrame<InstanceType>> allFrames) {
         switch (inst.getInstruction().getOpcode()) {
         case DUP:
             int stackHeight = frame.operandStack.decrementAndGet();
@@ -459,7 +464,7 @@ public class Simulator<InstanceType extends InstructionInstance> {
             // first search the frame where the exception is catched
             ExecutionFrame<InstanceType> catchingFrame = null;
             for (int i = inst.getStackDepth()-2; i >= 0; --i) {
-                final ExecutionFrame<InstanceType> f = allFrames.get(i);
+                ExecutionFrame<InstanceType> f = allFrames.get(i);
                 if (f.atCatchBlockStart != null) {
                     catchingFrame = f;
                     break;
@@ -537,14 +542,14 @@ public class Simulator<InstanceType extends InstructionInstance> {
         }
     }
 
-    private DynamicInformation stackManipulation(final ExecutionFrame<InstanceType> frame, final int read,
-            final int write) {
+    private DynamicInformation stackManipulation(ExecutionFrame<InstanceType> frame, int read,
+            int write) {
         return stackManipulation(frame, read, write, Collections.<Long, Collection<Variable>>emptyMap());
     }
 
-    private DynamicInformation stackManipulation(final ExecutionFrame<InstanceType> frame, final int read,
-            final int write, final Map<Long, Collection<Variable>> createdObjects) {
-        final int stackOffset = (read == write ? frame.operandStack.get() : frame.operandStack.getAndAdd(read - write)) - write;
+    private DynamicInformation stackManipulation(ExecutionFrame<InstanceType> frame, int read,
+            int write, Map<Long, Collection<Variable>> createdObjects) {
+        int stackOffset = (read == write ? frame.operandStack.get() : frame.operandStack.getAndAdd(read - write)) - write;
         return new StackManipulation<InstanceType>(frame, read, write, stackOffset, createdObjects);
     }
 
