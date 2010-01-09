@@ -274,7 +274,6 @@ public class Simulator<InstanceType extends InstructionInstance> {
         boolean removedFrameMatches = removedFrame != null
             && inst.getMethodName().equals(removedFrame.method.getName())
             && inst.getMethodDesc().equals(removedFrame.method.getDesc());
-        assert removedFrame != null || removedFrameMatches;
         byte returnedSize = removedFrameMatches && removedFrame.abnormalTermination ? 0 : inst.getReturnedSize();
         boolean hasReturn = returnedSize != 0;
         boolean hasRemovedFrame = removedFrameMatches &&
