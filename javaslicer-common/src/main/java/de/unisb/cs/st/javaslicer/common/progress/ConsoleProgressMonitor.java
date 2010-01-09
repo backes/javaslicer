@@ -3,18 +3,16 @@ package de.unisb.cs.st.javaslicer.common.progress;
 import java.io.PrintStream;
 import java.util.Formatter;
 
-import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterator;
-
 
 public class ConsoleProgressMonitor implements ProgressMonitor {
 
     private final class ConsoleProgressOutput extends Thread {
 
-        private final TraceIterator iterator;
+        private final ProgressInformationProvider progressInfoProvider;
 
-        public ConsoleProgressOutput(TraceIterator iterator) {
+        public ConsoleProgressOutput(ProgressInformationProvider progressInfoProv) {
             super("console progress output");
-            this.iterator = iterator;
+            this.progressInfoProvider = progressInfoProv;
         }
 
         @Override
@@ -22,7 +20,7 @@ public class ConsoleProgressMonitor implements ProgressMonitor {
             try {
                 while (true) {
                     Thread.sleep(ConsoleProgressMonitor.this.intervalMillis);
-                    output(this.iterator.getNumCrossedLabels(), this.iterator.getTotalNumCrossedLabels(), true, false);
+                    output(this.progressInfoProvider.getPercentageDone(), true, false);
                 }
             } catch (InterruptedException e) {
                 // ok
@@ -38,8 +36,8 @@ public class ConsoleProgressMonitor implements ProgressMonitor {
 
     private ConsoleProgressOutput outputThread = null;
 
-    private double lastNumCrossedLabels;
-    private double lastApproxLabelsPerSecond;
+    private double lastPercentageDone;
+    private double lastApproxPercentPerSecond;
     private long lastNanos;
     private long numApprox;
 
@@ -84,15 +82,15 @@ public class ConsoleProgressMonitor implements ProgressMonitor {
         this.showApproxTimeRemaining = showApproxTimeRemaining;
     }
 
-    public void start(TraceIterator iterator) {
+    public void start(ProgressInformationProvider progressInfoProv) {
         if (this.outputThread != null)
             this.outputThread.interrupt();
         this.numApprox = 0;
-        this.lastApproxLabelsPerSecond = 0;
-        this.lastNumCrossedLabels = 0;
+        this.lastApproxPercentPerSecond = 0;
+        this.lastPercentageDone = 0;
         this.lastNanos = System.nanoTime();
-        output(0, iterator.getTotalNumCrossedLabels(), false, false);
-        this.outputThread = new ConsoleProgressOutput(iterator);
+        output(0, false, false);
+        this.outputThread = new ConsoleProgressOutput(progressInfoProv);
         this.outputThread.start();
     }
 
@@ -105,27 +103,27 @@ public class ConsoleProgressMonitor implements ProgressMonitor {
             Thread.currentThread().interrupt();
         }
         this.outputThread = null;
-        output(1, 1, true, true);
+        output(100, true, true);
         if (!this.overwriteOutput)
             this.outputStream.println();
     }
 
-    protected void output(long currentNumCrossedLabels, long totalNumCrossedLabels, boolean onlyIfChanged, boolean finished) {
-        int deziPercentDone = (int) Math.round(1000. * currentNumCrossedLabels / totalNumCrossedLabels);
-        double approxLabelsPerSecond = 0;
-        if (this.showApproxTimeRemaining && currentNumCrossedLabels != 0 && ++this.numApprox >= 10) {
+    protected void output(double percentageDone, boolean onlyIfChanged, boolean finished) {
+        int deziPercentDone = (int) Math.round(10. * percentageDone);
+        double approxPercentPerSecond = 0;
+        if (this.showApproxTimeRemaining && percentageDone != 0 && ++this.numApprox >= 10) {
             long timeNanos = System.nanoTime();
-            double newLabelsPerSecond = (currentNumCrossedLabels - this.lastNumCrossedLabels) / (timeNanos - this.lastNanos) * 1e9;
+            double newPercentPerSecond = (percentageDone - this.lastPercentageDone) / (timeNanos - this.lastNanos) * 1e9;
             this.lastNanos = timeNanos;
             double influence = Math.max(1 / (this.numApprox - 9), 0.001);
-            approxLabelsPerSecond = (1. - influence) * this.lastApproxLabelsPerSecond + influence * newLabelsPerSecond;
+            approxPercentPerSecond = (1. - influence) * this.lastApproxPercentPerSecond + influence * newPercentPerSecond;
         }
-        int lastDeziPercentDone = (int) Math.round(1000. * this.lastNumCrossedLabels / totalNumCrossedLabels);
-        int approxSecondsRemaining = (int) ((totalNumCrossedLabels - currentNumCrossedLabels) / approxLabelsPerSecond);
-        int lastApproxSecondsRemaining = (int) ((totalNumCrossedLabels - this.lastNumCrossedLabels) / this.lastApproxLabelsPerSecond);
+        int lastDeziPercentDone = (int) Math.round(10. * this.lastPercentageDone);
+        int approxSecondsRemaining = (int) ((100. - percentageDone) / approxPercentPerSecond);
+        int lastApproxSecondsRemaining = (int) ((100. - this.lastPercentageDone) / this.lastApproxPercentPerSecond);
         if (!onlyIfChanged ||
                 deziPercentDone != lastDeziPercentDone ||
-                approxLabelsPerSecond != lastApproxSecondsRemaining) {
+                approxPercentPerSecond != lastApproxSecondsRemaining) {
             StringBuilder sb = new StringBuilder();
             if (this.title != null) {
                 sb.append(this.title).append(": ");
@@ -143,7 +141,7 @@ public class ConsoleProgressMonitor implements ProgressMonitor {
                 sb.append(deziPercentDone/10).append('.').append(deziPercentDone%10).append("% done");
                 if (this.showApproxTimeRemaining) {
                     sb.append(", time left: ");
-                    if (approxLabelsPerSecond == 0) {
+                    if (approxPercentPerSecond == 0) {
                         sb.append("unknown");
                     } else {
                         int minutesRemaining = approxSecondsRemaining / 60;
@@ -160,8 +158,8 @@ public class ConsoleProgressMonitor implements ProgressMonitor {
             this.outputStream.print(sb);
             this.outputStream.flush();
         }
-        this.lastApproxLabelsPerSecond = approxLabelsPerSecond;
-        this.lastNumCrossedLabels = currentNumCrossedLabels;
+        this.lastApproxPercentPerSecond = approxPercentPerSecond;
+        this.lastPercentageDone = percentageDone;
     }
 
 }

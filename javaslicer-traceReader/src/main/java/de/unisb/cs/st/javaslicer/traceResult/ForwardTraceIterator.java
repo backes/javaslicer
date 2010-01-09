@@ -126,12 +126,4 @@ public class ForwardTraceIterator<InstanceType extends InstructionInstance>
         return this.threadTraceResult.numCrossedLabels == 0 ? 0 : (100. * this.numCrossedLabels / this.threadTraceResult.numCrossedLabels);
     }
 
-    public long getNumCrossedLabels() {
-        return this.numCrossedLabels;
-    }
-
-    public long getTotalNumCrossedLabels() {
-        return this.threadTraceResult.numCrossedLabels;
-    }
-
 }

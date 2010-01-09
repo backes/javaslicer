@@ -17,8 +17,4 @@ public interface TraceIterator {
      */
 	void incNumCrossedLabels();
 
-	double getPercentageDone();
-	long getNumCrossedLabels();
-	long getTotalNumCrossedLabels();
-
 }

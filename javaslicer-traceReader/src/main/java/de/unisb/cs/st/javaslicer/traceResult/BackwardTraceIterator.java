@@ -22,11 +22,12 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceF
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterator;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
+import de.unisb.cs.st.javaslicer.common.progress.ProgressInformationProvider;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantIntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantLongTraceSequence;
 
 public class BackwardTraceIterator<InstanceType extends InstructionInstance>
-        implements Iterator<InstanceType>, TraceIterator {
+        implements Iterator<InstanceType>, TraceIterator, ProgressInformationProvider {
 
     public static final boolean WRITE_ITERATION_DEBUG_FILE = false;
 
@@ -194,14 +195,6 @@ public class BackwardTraceIterator<InstanceType extends InstructionInstance>
 
 	public double getPercentageDone() {
     	return this.threadTraceResult.numCrossedLabels == 0 ? 0 : (100. * this.numCrossedLabels / this.threadTraceResult.numCrossedLabels);
-    }
-
-    public long getNumCrossedLabels() {
-        return this.numCrossedLabels;
-    }
-
-    public long getTotalNumCrossedLabels() {
-        return this.threadTraceResult.numCrossedLabels;
     }
 
 }

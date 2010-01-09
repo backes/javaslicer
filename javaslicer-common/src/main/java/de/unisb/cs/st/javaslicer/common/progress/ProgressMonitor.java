@@ -1,6 +1,5 @@
 package de.unisb.cs.st.javaslicer.common.progress;
 
-import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterator;
 
 
 public interface ProgressMonitor {
@@ -10,9 +9,10 @@ public interface ProgressMonitor {
      * The progress monitor can then asynchronously check the percentage done, and
      * process this information.
      *
-     * @param iterator the iterator which is started to iterate
+     * @param progressInfoProv an object from which the current percentage done can be
+     *                         retrieved
      */
-    public void start(TraceIterator iterator);
+    public void start(ProgressInformationProvider progressInfoProv);
 
     /**
      * Notifies this progress monitor that trace iteration has finished.

@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import de.hammacher.util.ArrayStack;
@@ -24,6 +25,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
+import de.unisb.cs.st.javaslicer.common.progress.ProgressInformationProvider;
 import de.unisb.cs.st.javaslicer.common.progress.ProgressMonitor;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.instructionSimulation.DynamicInformation;
@@ -276,17 +278,28 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
         ExecutionFrame<InstanceType> currentFrame = null;
 
         Iterator<InstanceType> instanceIterator;
+        ProgressInformationProvider progressInfoProv;
         Thread iteratorThread = null;
         final AtomicReference<Throwable> iteratorException = new AtomicReference<Throwable>(null);
         if (multithreaded) {
+            final AtomicLong percentPerInstance = this.progressMonitors.isEmpty()
+                ? null
+                : new AtomicLong(Double.doubleToLongBits(0)); // this AtomicLong holds a double value!!
+
             final BlockwiseSynchronizedBuffer<InstanceType> buffer = new BlockwiseSynchronizedBuffer<InstanceType>(1<<16, 1<<20);
             final InstanceType firstInstance = backwardInsnItr.hasNext() ? backwardInsnItr.next() : null;
             iteratorThread = new Thread("Trace iterator") {
                 @Override
                 public void run() {
                     try {
-                        while (backwardInsnItr.hasNext())
+                        int num = 0;
+                        while (backwardInsnItr.hasNext()) {
                             buffer.put(backwardInsnItr.next());
+                            if ((++num & ((1<<16)-1)) == 0 && percentPerInstance != null) {
+                                double percentPerInstance0 = backwardInsnItr.getPercentageDone() / num;
+                                percentPerInstance.set(Double.doubleToLongBits(percentPerInstance0));
+                            }
+                        }
                     } catch (Throwable t) {
                         iteratorException.compareAndSet(null, t);
                     } finally {
@@ -300,6 +313,9 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                 }
             };
             iteratorThread.start();
+            final AtomicLong numInstancesSeen = percentPerInstance == null
+                ? null
+                : new AtomicLong(0);
             instanceIterator = new Iterator<InstanceType>() {
 
                 private InstanceType next = firstInstance;
@@ -328,6 +344,8 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                         throw new NoSuchElementException();
                     InstanceType ret = this.next;
                     this.next = null;
+                    if (numInstancesSeen != null)
+                        numInstancesSeen.incrementAndGet();
                     return ret;
                 }
 
@@ -336,8 +354,17 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                 }
 
             };
+            progressInfoProv = percentPerInstance == null
+                ? null
+                : new ProgressInformationProvider() {
+                    public double getPercentageDone() {
+                        return Double.longBitsToDouble(percentPerInstance.get()) *
+                                numInstancesSeen.get();
+                    }
+                };
         } else {
             instanceIterator = backwardInsnItr;
+            progressInfoProv = backwardInsnItr;
         }
 
         // the lastWriter is needed for WAR data dependences
@@ -354,7 +381,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
         Instruction instruction = null;
 
         for (ProgressMonitor mon : this.progressMonitors)
-            mon.start(backwardInsnItr);
+            mon.start(progressInfoProv);
 
         try {
 
