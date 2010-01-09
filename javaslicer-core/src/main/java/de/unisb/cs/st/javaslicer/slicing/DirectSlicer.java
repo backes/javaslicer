@@ -205,7 +205,6 @@ public class DirectSlicer implements Opcodes {
                 Instruction instruction = instance.getInstruction();
 
                 ExecutionFrame<InstructionInstance> removedFrame = null;
-                boolean removedFrameIsInteresting = false;
                 int stackDepth = instance.getStackDepth();
                 assert stackDepth > 0;
 
@@ -213,10 +212,6 @@ public class DirectSlicer implements Opcodes {
                     if (frames.size() > stackDepth) {
                         assert frames.size() == stackDepth+1;
                         removedFrame = frames.pop();
-                        if (removedFrame.interestingInstances != null && !removedFrame.interestingInstructions.isEmpty()) {
-                            // ok, we have a control dependence since the method was called by (or for) this instruction
-                            removedFrameIsInteresting = true;
-                        }
                         currentFrame = frames.peek();
                     } else {
                         assert frames.size() == stackDepth-1;
@@ -254,9 +249,13 @@ public class DirectSlicer implements Opcodes {
                 DynamicInformation dynInfo = this.simulator.simulateInstruction(instance, currentFrame,
                         removedFrame, frames);
 
-                if (removedFrameIsInteresting) {
-                    // checking if this is the instr. that called the method is impossible
-                    dynamicSlice.add(instruction);
+                if (removedFrame != null &&
+                        removedFrame.interestingInstructions != null &&
+                        !removedFrame.interestingInstructions.isEmpty()) {
+                    // ok, we have a control dependence since the method was called by (or for) this instruction
+                    // checking if this is the instr. that directly called the method is impossible
+                    if (instruction.getType() != InstructionType.LABEL)
+                        dynamicSlice.add(instruction);
                     if (currentFrame.interestingInstructions == null)
                         currentFrame.interestingInstructions = new HashSet<Instruction>();
                     currentFrame.interestingInstructions.add(instruction);
@@ -283,6 +282,8 @@ public class DirectSlicer implements Opcodes {
                             if (currentFrame.interestingInstructions == null)
                                 currentFrame.interestingInstructions = new HashSet<Instruction>();
                             currentFrame.interestingInstructions.add(instance.getInstruction());
+                            if (instruction.getType() != InstructionType.LABEL)
+                                dynamicSlice.add(instruction);
                         }
                     } else if (matchedCriterionVariables[stackDepth] != null) {
                         interestingVariables.addAll(matchedCriterionVariables[stackDepth]);

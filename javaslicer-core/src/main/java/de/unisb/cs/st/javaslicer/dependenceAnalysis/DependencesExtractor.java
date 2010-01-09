@@ -483,6 +483,21 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                 // the computation of control dependences only has to be performed
                 // if there are any controlDependenceVisitors
                 if (controlDependenceVisitors0 != null) {
+                    if (removedFrame != null &&
+                            removedFrame.interestingInstances != null &&
+                            !removedFrame.interestingInstances.isEmpty()) {
+                        // ok, we have a control dependence since the method was called by (or for) this instruction
+                        // checking if this is the instr. that directly called the method is impossible
+                        for (InstanceType depend : removedFrame.interestingInstances) {
+                            for (DependencesVisitor<? super InstanceType> vis: this.controlDependenceVisitors) {
+                                vis.visitControlDependence(depend, instance);
+                            }
+                        }
+                        if (currentFrame.interestingInstances == null)
+                            currentFrame.interestingInstances = new HashSet<InstanceType>();
+                        currentFrame.interestingInstances.add(instance);
+                    }
+
                     Set<Instruction> instrControlDependences = controlDependences.get(instruction.getIndex());
                     if (instrControlDependences == null) {
                         computeControlDependences(instruction.getMethod(), controlDependences);

@@ -32,6 +32,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.VarInstruction;
 import de.unisb.cs.st.javaslicer.common.progress.ConsoleProgressMonitor;
 import de.unisb.cs.st.javaslicer.common.progress.ProgressMonitor;
@@ -334,8 +335,22 @@ public class Slicer {
                     		to.criterionDistance = distance;
                     }
                     to.onDynamicSlice = true;
-                    // since "to" controls the execution of "from", we want to track all data dependences of "to" to find out why it took this decision
-                    to.allDataInteresting = true;
+                    // since "to" controls the execution of "from", we want to track all data dependences of "to"
+                    // to find out why it took this decision
+                    // exception: method invocations; here we only want to track why the method was executed,
+                    // but not the data that it consumed
+                    if (to.getInstruction().getType() != InstructionType.METHODINVOCATION) {
+                        // besides method invocations, there are only 3 possibilities of control dependences:
+                        // - "to" is a condition jump or a switch, which directly controls the execution of "from"
+                        // - "to" is the label of a catch block (and "from" an instruction within the catch block)
+                        // - "from" is the label of a catch block (which depends on the throwing instance)
+                        assert to.getInstruction().getType() == InstructionType.JUMP ||
+                            to.getInstruction().getType() == InstructionType.LOOKUPSWITCH ||
+                            to.getInstruction().getType() == InstructionType.TABLESWITCH ||
+                            (from.getInstruction().getType() == InstructionType.LABEL && ((LabelMarker)from.getInstruction()).isCatchBlock()) ||
+                            (to.getInstruction().getType() == InstructionType.LABEL && ((LabelMarker)to.getInstruction()).isCatchBlock());
+                        to.allDataInteresting = true;
+                    }
                 }
             }
 
@@ -385,7 +400,7 @@ public class Slicer {
             }
 
             @Override
-            public void visitMethodEntry(ReadMethod method, int stackDepth)
+            public void visitMethodLeave(ReadMethod method, int stackDepth)
                     throws InterruptedException {
                 if (this.interestingLocalVariables.length > stackDepth &&
                         this.interestingLocalVariables[stackDepth] != null) {
