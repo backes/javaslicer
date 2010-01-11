@@ -1,16 +1,15 @@
 package de.unisb.cs.st.javaslicer.jung;
 
-import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
 
-public class SliceEdge {
+public class SliceEdge<VertexType> {
 
-	private final InstructionInstance start;
-	private final InstructionInstance end;
+	private final VertexType start;
+	private final VertexType end;
 	private final Variable variable;
 
-	public SliceEdge(InstructionInstance start, InstructionInstance end,
+	public SliceEdge(VertexType start, VertexType end,
 			Variable variable) {
 		if (start == null || end == null)
 			throw new NullPointerException("start node and end node must not be null");
@@ -19,11 +18,11 @@ public class SliceEdge {
 		this.variable = variable;
 	}
 
-	public InstructionInstance getStart() {
+	public VertexType getStart() {
 		return this.start;
 	}
 
-	public InstructionInstance getEnd() {
+	public VertexType getEnd() {
 		return this.end;
 	}
 
@@ -49,12 +48,15 @@ public class SliceEdge {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		SliceEdge other = (SliceEdge) obj;
+		SliceEdge<?> other = (SliceEdge<?>) obj;
 		if (!this.end.equals(other.end))
 			return false;
 		if (!this.start.equals(other.start))
 			return false;
-		if (!this.variable.equals(other.variable))
+		if (this.variable == null) {
+			if (other.variable != null)
+				return false;
+		} else if (!this.variable.equals(other.variable))
 			return false;
 		return true;
 	}

@@ -46,7 +46,7 @@ import de.unisb.cs.st.javaslicer.variables.ObjectField;
 import de.unisb.cs.st.javaslicer.variables.StackEntry;
 import de.unisb.cs.st.javaslicer.variables.StaticField;
 import de.unisb.cs.st.javaslicer.variables.Variable;
-import edu.uci.ics.jung.algorithms.layout.DAGLayout;
+import edu.uci.ics.jung.algorithms.layout.KKLayout;
 import edu.uci.ics.jung.algorithms.layout.Layout;
 import edu.uci.ics.jung.graph.DirectedGraph;
 import edu.uci.ics.jung.visualization.VisualizationViewer;
@@ -54,17 +54,31 @@ import edu.uci.ics.jung.visualization.control.DefaultModalGraphMouse;
 import edu.uci.ics.jung.visualization.control.ModalGraphMouse.Mode;
 import edu.uci.ics.jung.visualization.renderers.Renderer.VertexLabel.Position;
 
-public class ShowJungGraph {
+/**
+ * This class implements a main method which creates a graph showing the dependences
+ * leading to the dynamic slice, and visualizes it.
+ *
+ * @author Clemens Hammacher
+ *
+ * @param <VertexType> the type of the vertices in the graph
+ */
+public class ShowJungGraph<VertexType> {
 
-    private final TraceResult trace;
+	private final TraceResult trace;
     private final List<ProgressMonitor> progressMonitors = new ArrayList<ProgressMonitor>(1);
     private final List<SliceVisitor> sliceVisitors = new ArrayList<SliceVisitor>(1);
 
-    public ShowJungGraph(TraceResult trace) {
+    private Transformer<InstructionInstance, VertexType> vertexTransformer;
+	private Transformer<VertexType, String> vertexLabelTransformer;
+	private Transformer<VertexType, String> vertexTooltipTransformer;
+	private int maxLevel;
+
+    public ShowJungGraph(TraceResult trace, Transformer<InstructionInstance, VertexType> vertexTransformer) {
         this.trace = trace;
+        this.vertexTransformer = vertexTransformer;
     }
 
-    public static void main(String[] args) throws InterruptedException {
+	public static void main(String[] args) throws InterruptedException {
         Options options = createOptions();
         CommandLineParser parser = new GnuParser();
         CommandLine cmdLine;
@@ -140,8 +154,83 @@ public class ShowJungGraph {
             return;
         }
 
+        Transformer<InstructionInstance, Object> transformer;
+    	Transformer<Object, String> vertexLabelTransformer;
+    	Transformer<Object, String> vertexTooltipTransformer;
+
+		String granularity = cmdLine.getOptionValue("granularity");
+		if (granularity == null || "instance".equals(granularity)) {
+			transformer = new Transformer<InstructionInstance, Object>() {
+				public InstructionInstance transform(InstructionInstance inst) {
+					return inst;
+				}
+			};
+			vertexLabelTransformer = new Transformer<Object, String>() {
+				public String transform(Object inst) {
+					return getShortInstructionText(((InstructionInstance) inst).getInstruction());
+				}
+			};
+			vertexTooltipTransformer = new Transformer<Object, String>() {
+				public String transform(Object inst) {
+					return getInstructionTooltip(((InstructionInstance) inst).getInstruction());
+				}
+			};
+		} else if ("instruction".equals(granularity)) {
+			transformer = new Transformer<InstructionInstance, Object>() {
+				public Instruction transform(InstructionInstance inst) {
+					return inst.getInstruction();
+				}
+			};
+			vertexLabelTransformer = new Transformer<Object, String>() {
+				public String transform(Object inst) {
+					return getShortInstructionText(((Instruction) inst));
+				}
+			};
+			vertexTooltipTransformer = new Transformer<Object, String>() {
+				public String transform(Object inst) {
+					return getInstructionTooltip(((Instruction) inst));
+				}
+			};
+		} else if ("line".equals(granularity)) {
+			transformer = new Transformer<InstructionInstance, Object>() {
+				public Line transform(InstructionInstance inst) {
+					return new Line(inst.getInstruction().getMethod(), inst.getInstruction().getLineNumber());
+				}
+			};
+			vertexLabelTransformer = new Transformer<Object, String>() {
+				public String transform(Object inst) {
+					Line line = (Line) inst;
+					return line.getMethod().getName() + ":" + line.getLineNr();
+				}
+			};
+			vertexTooltipTransformer = new Transformer<Object, String>() {
+				public String transform(Object inst) {
+					Line line = (Line) inst;
+					return "Line " + line.getLineNr() + " in method " + line.getMethod().getReadClass().getName() + "." + line.getMethod();
+				}
+			};
+		} else {
+			System.err.println("Illegal granularity specification: " + granularity);
+			System.exit(-1);
+			return;
+		}
+
+		int maxLevel = Integer.MAX_VALUE;
+		if (cmdLine.hasOption("maxlevel")) {
+			try {
+				maxLevel = Integer.parseInt(cmdLine.getOptionValue("maxlevel"));
+			} catch (NumberFormatException e) {
+				System.err.println("Argument to \"maxlevel\" must be an integer.");
+				System.exit(-1);
+				return;
+			}
+		}
+
         long startTime = System.nanoTime();
-        ShowJungGraph showGraph = new ShowJungGraph(trace);
+        ShowJungGraph<Object> showGraph = new ShowJungGraph<Object>(trace, transformer);
+        showGraph.setMaxLevel(maxLevel);
+        showGraph.setVertexLabelTransformer(vertexLabelTransformer);
+        showGraph.setVertexTooltipTransformer(vertexTooltipTransformer);
         if (cmdLine.hasOption("progress"))
             showGraph.addProgressMonitor(new ConsoleProgressMonitor());
         boolean multithreaded;
@@ -152,7 +241,7 @@ public class ShowJungGraph {
             multithreaded = Runtime.getRuntime().availableProcessors() > 1;
         }
 
-        DirectedGraph<InstructionInstance, SliceEdge> graph = showGraph.getGraph(tracing, sc, multithreaded);
+        DirectedGraph<Object, SliceEdge<Object>> graph = showGraph.getGraph(tracing, sc, multithreaded);
         long endTime = System.nanoTime();
 
         System.out.format((Locale)null, "%nSlice graph consists of %d nodes.%n", graph.getVertexCount());
@@ -161,25 +250,21 @@ public class ShowJungGraph {
         showGraph.displayGraph(graph);
     }
 
-    public void displayGraph(DirectedGraph<InstructionInstance, SliceEdge> graph) {
+    private void setMaxLevel(int maxLevel) {
+    	this.maxLevel = maxLevel;
+	}
+
+	public void displayGraph(DirectedGraph<VertexType, SliceEdge<VertexType>> graph) {
     	JFrame mainFrame = new JFrame("slice graph display");
     	mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-    	Layout<InstructionInstance, SliceEdge> layout = new DAGLayout<InstructionInstance, SliceEdge>(graph);
-		final VisualizationViewer<InstructionInstance, SliceEdge> viewer = new VisualizationViewer<InstructionInstance, SliceEdge>(layout);
+    	Layout<VertexType, SliceEdge<VertexType>> layout = new KKLayout<VertexType, SliceEdge<VertexType>>(graph);
+		final VisualizationViewer<VertexType, SliceEdge<VertexType>> viewer = new VisualizationViewer<VertexType, SliceEdge<VertexType>>(layout);
 
-		viewer.getRenderContext().setVertexLabelTransformer(new Transformer<InstructionInstance, String>() {
-			public String transform(InstructionInstance inst) {
-				return getShortInstanceText(inst);
-			}
-		});
-		viewer.setVertexToolTipTransformer(new Transformer<InstructionInstance, String>() {
-			public String transform(InstructionInstance inst) {
-				return getInstanceTooltip(inst);
-			}
-		});
-		viewer.getRenderContext().setEdgeLabelTransformer(new Transformer<SliceEdge, String>() {
-			public String transform(SliceEdge edge) {
+		viewer.getRenderContext().setVertexLabelTransformer(this.vertexLabelTransformer);
+		viewer.setVertexToolTipTransformer(this.vertexTooltipTransformer);
+		viewer.getRenderContext().setEdgeLabelTransformer(new Transformer<SliceEdge<VertexType>, String>() {
+			public String transform(SliceEdge<VertexType> edge) {
 				Variable var = edge.getVariable();
 				if (var instanceof ArrayElement) {
 					ArrayElement elem = (ArrayElement) var;
@@ -206,8 +291,8 @@ public class ShowJungGraph {
 				}
 			}
 		});
-		viewer.setEdgeToolTipTransformer(new Transformer<SliceEdge, String>() {
-			public String transform(SliceEdge edge) {
+		viewer.setEdgeToolTipTransformer(new Transformer<SliceEdge<VertexType>, String>() {
+			public String transform(SliceEdge<VertexType> edge) {
 				Variable var = edge.getVariable();
 				if (var instanceof ArrayElement) {
 					ArrayElement elem = (ArrayElement) var;
@@ -232,8 +317,8 @@ public class ShowJungGraph {
 				}
 			}
 		});
-		viewer.getRenderContext().setEdgeDrawPaintTransformer(new Transformer<SliceEdge, Paint>() {
-			public Paint transform(SliceEdge edge) {
+		viewer.getRenderContext().setEdgeDrawPaintTransformer(new Transformer<SliceEdge<VertexType>, Paint>() {
+			public Paint transform(SliceEdge<VertexType> edge) {
 				return edge.getVariable() == null
 					? Color.red
 					: Color.black;
@@ -241,10 +326,10 @@ public class ShowJungGraph {
 		});
 
 		viewer.getRenderer().getVertexLabelRenderer().setPosition(Position.CNTR);
-		viewer.getRenderContext().setVertexShapeTransformer(new Transformer<InstructionInstance, Shape>() {
-			public Shape transform(InstructionInstance inst) {
+		viewer.getRenderContext().setVertexShapeTransformer(new Transformer<VertexType, Shape>() {
+			public Shape transform(VertexType inst) {
 				Font font = viewer.getFont();
-				String text = getShortInstanceText(inst);
+				String text = viewer.getRenderContext().getVertexLabelTransformer().transform(inst);
 				FontRenderContext fontRenderContext = ((Graphics2D)viewer.getGraphics()).getFontRenderContext();
 				Rectangle2D bounds = font.getStringBounds(text, fontRenderContext);
 				return new RoundRectangle2D.Double(-.6*bounds.getWidth(), -.6*bounds.getHeight(), 1.2*bounds.getWidth(), 1.2*bounds.getHeight(), 8, 8);
@@ -253,8 +338,8 @@ public class ShowJungGraph {
 
 		viewer.setBackground(Color.white);
 
-		DefaultModalGraphMouse<InstructionInstance, SliceEdge> mouse =
-				new DefaultModalGraphMouse<InstructionInstance, SliceEdge>();
+		DefaultModalGraphMouse<InstructionInstance, SliceEdge<VertexType>> mouse =
+				new DefaultModalGraphMouse<InstructionInstance, SliceEdge<VertexType>>();
 		mouse.setMode(Mode.ANNOTATING);
 		viewer.setGraphMouse(mouse);
 
@@ -264,9 +349,9 @@ public class ShowJungGraph {
     	mainFrame.setVisible(true);
 	}
 
-	protected String getShortInstanceText(InstructionInstance inst) {
-		if (inst.getInstruction().getType() == InstructionType.METHODINVOCATION) {
-			MethodInvocationInstruction mtdInv = (MethodInvocationInstruction) inst.getInstruction();
+	protected static String getShortInstructionText(Instruction inst) {
+		if (inst.getType() == InstructionType.METHODINVOCATION) {
+			MethodInvocationInstruction mtdInv = (MethodInvocationInstruction) inst;
 	        String type;
 			switch (mtdInv.getOpcode()) {
 	        case Opcodes.INVOKEVIRTUAL:
@@ -291,13 +376,12 @@ public class ShowJungGraph {
 		return inst.toString();
 	}
 
-	protected String getInstanceTooltip(InstructionInstance inst) {
-		Instruction insn = inst.getInstruction();
+	protected static String getInstructionTooltip(Instruction insn) {
 		String location = insn.getMethod().getReadClass() +
 			"." + insn.getMethod() + ":" + insn.getLineNumber();
 
 		if (insn.getType() == InstructionType.METHODINVOCATION) {
-			return inst.toString() + " at " + location;
+			return insn.toString() + " at " + location;
 		}
 
 		return location;
@@ -311,9 +395,10 @@ public class ShowJungGraph {
         this.sliceVisitors.add(sliceVisitor);
     }
 
-    public DirectedGraph<InstructionInstance, SliceEdge> getGraph(ThreadId threadId, final List<SlicingCriterion> sc, boolean multithreaded) throws InterruptedException {
+    public DirectedGraph<VertexType, SliceEdge<VertexType>> getGraph(ThreadId threadId,
+    		final List<SlicingCriterion> sc, boolean multithreaded) throws InterruptedException {
 
-        CreateJungGraphSliceVisitor visitor = new CreateJungGraphSliceVisitor();
+        CreateJungGraphSliceVisitor<VertexType> visitor = new CreateJungGraphSliceVisitor<VertexType>(this.vertexTransformer, this.maxLevel);
 
         Slicer slicer = new Slicer(this.trace);
         for (ProgressMonitor mon : this.progressMonitors)
@@ -324,10 +409,25 @@ public class ShowJungGraph {
         return visitor.getGraph();
     }
 
-    protected String getSimpleClassName(String internalClassName) {
+    protected static String getSimpleClassName(String internalClassName) {
 		int lastSlashPos = internalClassName.lastIndexOf('/');
 		String simpleClassName = lastSlashPos == -1 ? internalClassName : internalClassName.substring(lastSlashPos+1);
 		return simpleClassName;
+	}
+
+	public void setVertexLabelTransformer(
+			Transformer<VertexType, String> vertexLabelTransformer) {
+		this.vertexLabelTransformer = vertexLabelTransformer;
+	}
+
+	public void setVertexTooltipTransformer(
+			Transformer<VertexType, String> vertexTooltipTransformer) {
+		this.vertexTooltipTransformer = vertexTooltipTransformer;
+	}
+
+	public void setVertexTransformer(
+			Transformer<InstructionInstance, VertexType> vertexTransformer) {
+		this.vertexTransformer = vertexTransformer;
 	}
 
 	@SuppressWarnings("static-access")
@@ -342,6 +442,12 @@ public class ShowJungGraph {
         options.addOption(OptionBuilder.isRequired(false).hasArg(true).withArgName("value").
             withDescription("process the trace in a multithreaded way (pass 'true' or '1' to enable, anything else to disable). Default is true iff we have more than one processor").
             withLongOpt("multithreaded").create('m'));
+        options.addOption(OptionBuilder.isRequired(false).hasArg(true).withArgName("instance|instruction|line").
+            withDescription("defines the granularity of the created graph. default is instance").
+            withLongOpt("granularity").create('g'));
+        options.addOption(OptionBuilder.isRequired(false).hasArg(true).withArgName("int").
+            withDescription("defines the maximum distance from the slicing criterion to visualize").
+            withLongOpt("maxlevel").create('l'));
         return options;
     }
 
