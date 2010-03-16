@@ -47,7 +47,7 @@ public class MethodInvokationVariableUsages<InstanceType> implements DynamicInfo
     protected final ExecutionFrame<InstanceType> execFrame;
     protected final ExecutionFrame<InstanceType> removedFrame;
     protected Collection<Variable> usedVariables;
-    protected final boolean hasReturn;
+    protected final boolean hasReturn; // did this method invocation return a value?
 
     public MethodInvokationVariableUsages(final int stackOffset, final int paramCount,
             boolean hasReturn, final ExecutionFrame<InstanceType> execFrame, final ExecutionFrame<InstanceType> removedFrame) {

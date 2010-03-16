@@ -17,6 +17,7 @@ import de.hammacher.util.streams.OptimizedDataInputStream;
 import de.hammacher.util.streams.OptimizedDataOutputStream;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
+import de.unisb.cs.st.javaslicer.common.util.UntracedArrayList;
 
 public class ReadMethod implements Comparable<ReadMethod> {
 
@@ -42,8 +43,8 @@ public class ReadMethod implements Comparable<ReadMethod> {
 
     }
 
-    private final ArrayList<AbstractInstruction> instructions = new ArrayList<AbstractInstruction>();
-    private final List<TryCatchBlock> tryCatchBlocks = new ArrayList<TryCatchBlock>();
+    private final UntracedArrayList<AbstractInstruction> instructions = new UntracedArrayList<AbstractInstruction>();
+    private final UntracedArrayList<TryCatchBlock> tryCatchBlocks = new UntracedArrayList<TryCatchBlock>();
     private final ReadClass readClass;
     private final int access;
     private final String name;

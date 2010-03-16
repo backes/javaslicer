@@ -94,7 +94,7 @@ public class ExecutionFrame<InstanceType> {
         return new LocalVariable<InstanceType>(this, index);
     }
 
-    public StackEntry<InstanceType> getStackEntry(final int index) {
+    public StackEntry<InstanceType> getStackEntry(int index) {
         if (index < 0) {
             assert this.interruptedControlFlow;
             this.minStackEntry = Math.min(this.minStackEntry, index);

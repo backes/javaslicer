@@ -32,6 +32,7 @@ import de.hammacher.util.maps.ConcurrentReferenceHashMap.ReferenceType;
 import de.unisb.cs.st.javaslicer.common.TraceSequenceTypes;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
+import de.unisb.cs.st.javaslicer.common.util.UntracedArrayList;
 import de.unisb.cs.st.javaslicer.tracer.instrumentation.TracingMethodInstrumenter;
 import de.unisb.cs.st.javaslicer.tracer.instrumentation.Transformer;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectIdentifier;

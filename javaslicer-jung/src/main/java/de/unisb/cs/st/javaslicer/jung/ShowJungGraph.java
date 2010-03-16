@@ -396,7 +396,7 @@ public class ShowJungGraph<VertexType> {
     }
 
     public DirectedGraph<VertexType, SliceEdge<VertexType>> getGraph(ThreadId threadId,
-    		final List<SlicingCriterion> sc, boolean multithreaded) throws InterruptedException {
+    		List<SlicingCriterion> sc, boolean multithreaded) throws InterruptedException {
 
         CreateJungGraphSliceVisitor<VertexType> visitor = new CreateJungGraphSliceVisitor<VertexType>(this.vertexTransformer, this.maxLevel);
 

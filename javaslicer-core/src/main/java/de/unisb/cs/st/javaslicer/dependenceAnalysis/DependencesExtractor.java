@@ -549,7 +549,8 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                         vis.visitPendingControlDependence(instance);
                 }
 
-                if (!dynInfo.getDefinedVariables().isEmpty()) {
+                Collection<Variable> definedVariables = dynInfo.getDefinedVariables();
+                if (!definedVariables.isEmpty()) {
                     /*
                     for (Variable definedVariable: dynInfo.getDefinedVariables()) {
                         if (definedVariable instanceof ObjectField) {
@@ -565,7 +566,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                     if (dataDependenceVisitorsReadAfterWrite0 != null
                             || dataDependenceVisitorsWriteAfterRead0 != null
                             || pendingDataDependenceVisitorsWriteAfterRead0 != null) {
-                        for (Variable definedVariable: dynInfo.getDefinedVariables()) {
+                        for (Variable definedVariable: definedVariables) {
                             if (!(definedVariable instanceof StackEntry<?>)) {
                                 // we ignore WAR dependences over the stack!
                                 if (pendingDataDependenceVisitorsWriteAfterRead0 != null) {
@@ -586,11 +587,12 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                             if (dataDependenceVisitorsReadAfterWrite0 != null
                                     || pendingDataDependenceVisitorsReadAfterWrite0 != null) {
                                 List<InstanceType> readers = lastReaders.remove(definedVariable);
-                                if (readers != null)
+                                if (readers != null) {
+                                    Collection<Variable> usedVariables = dataDependenceVisitorsReadAfterWrite0 != null
+                                        ? dynInfo.getUsedVariables(definedVariable)
+                                        : null;
                                     for (InstanceType reader: readers) {
                                         if (dataDependenceVisitorsReadAfterWrite0 != null) {
-                                            Collection<Variable> usedVariables =
-                                                    dynInfo.getUsedVariables(definedVariable);
                                             for (DependencesVisitor<? super InstanceType> vis: dataDependenceVisitorsReadAfterWrite0)
                                                 vis.visitDataDependence(reader, instance, usedVariables, definedVariable, DataDependenceType.READ_AFTER_WRITE);
                                         }
@@ -598,12 +600,14 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                                             for (DependencesVisitor<? super InstanceType> vis: pendingDataDependenceVisitorsReadAfterWrite0)
                                                 vis.discardPendingDataDependence(reader, definedVariable, DataDependenceType.READ_AFTER_WRITE);
                                     }
+                                }
                             }
                         }
                     }
                 }
 
-                if (!dynInfo.getUsedVariables().isEmpty()) {
+                Collection<Variable> usedVariables = dynInfo.getUsedVariables();
+                if (!usedVariables.isEmpty()) {
                     /*
                     for (Variable usedVariable: dynInfo.getUsedVariables()) {
                         if (usedVariable instanceof ObjectField) {
@@ -620,7 +624,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                     if (dataDependenceVisitorsWriteAfterRead0 != null ||
                             dataDependenceVisitorsReadAfterWrite0 != null ||
                             pendingDataDependenceVisitorsReadAfterWrite0 != null) {
-                        for (Variable usedVariable: dynInfo.getUsedVariables()) {
+                        for (Variable usedVariable: usedVariables) {
                             // if we have WAR visitors, we inform them about a new dependence
                             if (dataDependenceVisitorsWriteAfterRead0 != null && !(usedVariable instanceof StackEntry<?>)) {
                                 InstanceType lastWriterInst = lastWriter.get(usedVariable);
