@@ -44,7 +44,7 @@ public class SlicingCriterion {
             if ((SlicingCriterion.this.occurence != null &&
                     this.seenOccurences == SlicingCriterion.this.occurence.longValue())
                 || instructionInstance.getInstruction().getMethod() != SlicingCriterion.this.method
-                || (SlicingCriterion.this.lineNumber == null || instructionInstance.getInstruction().getLineNumber() != SlicingCriterion.this.lineNumber)) {
+                || (SlicingCriterion.this.lineNumber != null && instructionInstance.getInstruction().getLineNumber() != SlicingCriterion.this.lineNumber)) {
                 if (this.beingInRun[instrStackDepth-1]) {
                     this.beingInRun[instrStackDepth-1] = false;
                 }
@@ -211,11 +211,13 @@ public class SlicingCriterion {
 
         ReadClass foundClass = readClasses.get(mid);
         if (!className.equals(foundClass.getName()))
-            throw new IllegalArgumentException("Class does not occure in the trace: " + className);
+            throw new IllegalArgumentException("Class \"" + className + "\" does not occure in the trace.");
 
         ArrayList<ReadMethod> methods = foundClass.getMethods();
         left = 0;
         right = methods.size();
+        if (right == 0)
+            throw new IllegalArgumentException("Class \"" + className + "\" contains no methods.");
 
         // search for the *highest* method with that name!
         while ((mid = (left + right) / 2) != left) {
@@ -234,8 +236,11 @@ public class SlicingCriterion {
                         return m;
                 }
             }
-            throw new IllegalArgumentException("Found no method with name " + methodName +
-                    " in class " + className + " which contains line number " + lineNumber);
+            StringBuilder errorMsg = new StringBuilder(64);
+            errorMsg.append("Found no method with name ").append(methodName).append(" in class ").append(className);
+            if (lineNumber != null)
+                errorMsg.append(" which contains line number ").append(lineNumber);
+            throw new IllegalArgumentException(errorMsg.toString());
         }
         throw new IllegalArgumentException("Method \"" + methodName + "\" does not exist in class \"" + className + "\"");
     }
