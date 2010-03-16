@@ -9,7 +9,7 @@ import org.junit.Test;
 import de.unisb.cs.st.javaslicer.AbstractSlicingTest;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 
-public class ExceptionsTest2 extends AbstractSlicingTest {
+public class TestExceptions2 extends AbstractSlicingTest {
 
     @Test
     public void test24all() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {

@@ -10,7 +10,7 @@ import de.unisb.cs.st.javaslicer.AbstractSlicingTest;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 
 
-public class ExceptionsTest1 extends AbstractSlicingTest {
+public class TestExceptions1 extends AbstractSlicingTest {
 
     @Test
     public void test16c() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
