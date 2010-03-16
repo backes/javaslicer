@@ -93,9 +93,8 @@ public class AbstractInstructionInstance implements InstructionInstance {
         String infoStr = this.additionalInfo.toString();
         if (infoStr == null || infoStr.length() == 0)
             return instrStr;
-        int occLen = this.occurenceNumber < 10000 ? 4 : this.occurenceNumber < 10000000000l ? 10 : 20;
-        return new StringBuilder(instrStr.length() + infoStr.length() + occLen + 3).
-            append(instrStr).append('(').append(this.occurenceNumber).append(") ").append(infoStr).toString();
+        return new StringBuilder(instrStr.length() + infoStr.length()).
+            append(instrStr).append(infoStr).toString();
     }
 
     public int compareTo(InstructionInstance o) {

@@ -263,7 +263,7 @@ public class TraceResult {
     /**
      * Search for the {@link ReadClass} with the given class name.
      *
-     * @param name the class name to search for
+     * @param name the java class name to search for (e.g. java.lang.String)
      * @return the {@link ReadClass} with the given class name, or
      *         <code>null</code> if this TraceResult does not contain
      *         a ReadClass with that name
@@ -289,6 +289,35 @@ public class TraceResult {
         return found.getName().equals(name) ? found : null;
     }
 
+    /**
+     * Search for the {@link ReadClass} with the given internal class name.
+     *
+     * @param internalName the internal class name to search for (e.g. java/lang/String)
+     * @return the {@link ReadClass} with the given class name, or
+     *         <code>null</code> if this TraceResult does not contain
+     *         a ReadClass with that name
+     */
+    public ReadClass findReadClassByInternalName(String internalName) {
+        // binary search
+        int left = 0;
+        int right = this.readClasses.size();
+        int mid;
+
+        while ((mid = (left + right) / 2) != left) {
+            ReadClass midVal = this.readClasses.get(mid);
+            int cmp = midVal.getInternalClassName().compareTo(internalName);
+            if (cmp < 0)
+                left = mid;
+            else if (cmp == 0)
+                return midVal;
+            else
+                right = mid;
+        }
+
+        ReadClass found = this.readClasses.get(mid);
+        return found.getInternalClassName().equals(internalName) ? found : null;
+    }
+
     public Instruction getInstruction(final int index) {
         if (index < 0 || index >= this.instructions.length)
             return null;
@@ -311,6 +340,25 @@ public class TraceResult {
             printHelp(options, System.out);
             System.exit(0);
         }
+
+        InstanceFilter<InstructionInstance> filter;
+        if (cmdLine.hasOption("filter")) {
+        	if ("labels".equals(cmdLine.getOptionValue("filter"))) {
+        		filter = InstanceFilter.LabelFilter.instance;
+        	} else if ("additionals".equals(cmdLine.getOptionValue("filter"))) {
+        		filter = InstanceFilter.AdditionalLabelFilter.instance;
+        	} else if ("none".equals(cmdLine.getOptionValue("filter"))) {
+        		filter = null;
+        	} else {
+                System.err.println("Illegal argument for filter: " + cmdLine.getOptionValue("filter"));
+                return;
+        	}
+        } else {
+        	// default:
+        	filter = InstanceFilter.AdditionalLabelFilter.instance;
+        }
+
+        boolean warnUntracedMethods = cmdLine.hasOption("warn-untraced");
 
         String[] additionalArgs = cmdLine.getArgs();
         if (additionalArgs.length != 1) {
@@ -370,9 +418,9 @@ public class TraceResult {
         System.out.format("%15d: %s%n", tracing.getJavaThreadId(), tracing.getThreadName());
 
         try {
-            if (cmdLine.hasOption("length")) {
+			if (cmdLine.hasOption("length")) {
                 final BackwardTraceIterator<AbstractInstructionInstance> it = tr.getBackwardIterator(tracing,
-                    InstanceFilter.AdditionalLabelFilter.instance, new AbstractInstructionInstanceFactory());
+                    filter, new AbstractInstructionInstanceFactory());
                 ProgressMonitor monitor = null;
                 if (cmdLine.hasOption("--progress")) {
                     monitor = new ConsoleProgressMonitor(System.out, "Computing trace length", true, 100, true);
@@ -393,7 +441,7 @@ public class TraceResult {
                 System.out.println();
                 System.out.println("The backward trace:");
                 BackwardTraceIterator<AbstractInstructionInstance> it = tr.getBackwardIterator(tracing,
-                    InstanceFilter.AdditionalLabelFilter.instance, new AbstractInstructionInstanceFactory());
+                    filter, new AbstractInstructionInstanceFactory());
                 long nr = 0;
                 String format = "%8d: %-100s -> %3d %7d %s%n";
                 System.out.format("%8s  %-100s    %3s %7s %s%n",
@@ -430,6 +478,8 @@ public class TraceResult {
             withDescription("show progress while computing the trace length (only affectfull together with --length)").withLongOpt("progress").create('p'));
         options.addOption(OptionBuilder.isRequired(false).hasArg(false).
             withDescription("print this help and exit").withLongOpt("help").create('h'));
+        options.addOption(OptionBuilder.isRequired(false).withArgName("filter").hasArg(true).
+            withDescription("(none/labels/additionals) which instructions to filter out (default: additionals)").withLongOpt("filter").create('f'));
         return options;
     }
 

@@ -50,6 +50,10 @@ public class ReadClass implements Comparable<ReadClass> {
         return this.access;
     }
 
+    /**
+     * @return the Java class name of this class (e.g. java.lang.String)
+     * @see #getInternalClassName()
+     */
     public String getName() {
         return this.className;
     }
@@ -58,6 +62,10 @@ public class ReadClass implements Comparable<ReadClass> {
         this.instructionNumberEnd = instructionNumberEnd;
     }
 
+    /**
+     * @return the internal class name of this class (e.g. java/lang/String)
+     * @see #getName()
+     */
     public String getInternalClassName() {
         return this.internalClassName;
     }

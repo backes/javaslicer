@@ -8,7 +8,7 @@
  *
  */
 
-package de.unisb.cs.st.javaslicer.tracer;
+package de.unisb.cs.st.javaslicer.common.util;
 
 import java.util.AbstractList;
 import java.util.Collection;

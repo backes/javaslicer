@@ -61,15 +61,15 @@ public class MethodInvocationInstruction extends AbstractInstruction {
         this.returnedSize = returnType == org.objectweb.asm.Type.VOID_TYPE ? 0 : (byte) returnType.getSize();
     }
 
-    public String getInternalClassName() {
+    public String getInvokedInternalClassName() {
         return this.internalClassName;
     }
 
-    public String getMethodName() {
+    public String getInvokedMethodName() {
         return this.methodName;
     }
 
-    public String getMethodDesc() {
+    public String getInvokedMethodDesc() {
         return this.methodDesc;
     }
 

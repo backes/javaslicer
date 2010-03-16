@@ -371,7 +371,7 @@ public class ShowJungGraph<VertexType> {
 	            type = "--ERROR--";
 	        }
 
-			return type + ' ' + getSimpleClassName(mtdInv.getInternalClassName()) + '.' + mtdInv.getMethodName();
+			return type + ' ' + getSimpleClassName(mtdInv.getInvokedInternalClassName()) + '.' + mtdInv.getInvokedMethodName();
 		}
 		return inst.toString();
 	}

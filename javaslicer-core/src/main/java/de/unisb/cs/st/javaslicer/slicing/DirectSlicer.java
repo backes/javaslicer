@@ -244,7 +244,7 @@ public class DirectSlicer implements Opcodes {
 
                 if (instruction == instruction.getMethod().getMethodEntryLabel())
                     currentFrame.finished = true;
-                currentFrame.lastInstruction = instruction;
+                currentFrame.lastInstance = instance;
 
                 DynamicInformation dynInfo = this.simulator.simulateInstruction(instance, currentFrame,
                         removedFrame, frames);

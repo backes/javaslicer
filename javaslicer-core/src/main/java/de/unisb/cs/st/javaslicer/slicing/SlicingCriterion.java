@@ -115,7 +115,9 @@ public class SlicingCriterion {
             sb.append(':').append(this.lineNumber.intValue());
         if (this.occurence != null)
             sb.append('(').append(this.occurence.longValue()).append(')');
-        if (this.variables != null) {
+        if (this.matchAllData)
+            sb.append(":*");
+        else if (this.variables != null) {
             Iterator<LocalVariable> it = this.variables.iterator();
             sb.append(":{").append(it.next());
             while (it.hasNext())
@@ -268,8 +270,11 @@ public class SlicingCriterion {
                     continue outer;
                 }
             }
-            throw new IllegalArgumentException("Local variable '"+localVarStr+"' not found in method "
-                    + method.getReadClass().getName()+"."+method.getName());
+            StringBuilder errorMsg = new StringBuilder();
+            errorMsg.append("Local variable '").append(localVarStr).append("' not found in method ");
+            errorMsg.append(method.getReadClass().getName()).append(".").append(method.getName());
+            errorMsg.append(" The method contains the following local variables: ").append(method.getLocalVariables());
+            throw new IllegalArgumentException(errorMsg.toString());
         }
 
         return varList;

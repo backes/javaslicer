@@ -100,9 +100,7 @@ public class TableSwitchInstruction extends AbstractInstruction {
         final StringBuilder sb = new StringBuilder();
         sb.append("TABLESWITCH (");
         for (int i = 0; i < this.handlers.length; ++i) {
-            if (i > 0)
-                sb.append(", ");
-            sb.append(this.min+i).append(" => ").append(this.handlers[i]);
+            sb.append(this.min+i).append(" => ").append(this.handlers[i]).append(", ");
         }
         sb.append("* => ").append(this.defaultHandler);
         sb.append(')');

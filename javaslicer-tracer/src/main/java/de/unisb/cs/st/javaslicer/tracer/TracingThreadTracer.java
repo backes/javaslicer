@@ -7,7 +7,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -408,8 +407,11 @@ public class TracingThreadTracer implements ThreadTracer {
         if (this.paused > 0)
             return;
 
-        if (this.stackSize == this.methodStack.length)
-            this.methodStack = Arrays.copyOf(this.methodStack, 2*this.stackSize);
+        if (this.stackSize == this.methodStack.length) {
+        	int[] newMethodStack = new int[2*this.stackSize];
+        	System.arraycopy(this.methodStack, 0, newMethodStack, 0, this.stackSize);
+            this.methodStack = newMethodStack;
+        }
         this.methodStack[this.stackSize] = instructionIndex;
         ++this.stackSize;
 
@@ -430,9 +432,11 @@ public class TracingThreadTracer implements ThreadTracer {
         if (this.paused > 0)
             return;
 
-        if (this.uninitializedObjects == this.objectAllocationTraceSequence.length)
-            this.objectAllocationTraceSequence =
-                Arrays.copyOf(this.objectAllocationTraceSequence, 2*this.uninitializedObjects);
+        if (this.uninitializedObjects == this.objectAllocationTraceSequence.length) {
+        	int[] newArr = new int[2*this.uninitializedObjects];
+        	System.arraycopy(this.objectAllocationTraceSequence, 0, newArr, 0, this.uninitializedObjects);
+            this.objectAllocationTraceSequence = newArr;
+        }
         this.objectAllocationTraceSequence[this.uninitializedObjects++] = traceSequenceNr;
         assert traceSequenceNr != 0;
 

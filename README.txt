@@ -21,7 +21,7 @@ Then you can just view the complete trace, if you want so:
 Or you can run the dynamic slicer on it, and you should give the JVM some more memory:
 > java -Xmx2g -jar assembly/slicer.jar -p test.trace java.util.HashMap.clear:614
 
-The slicer give you a summary of the options available:
+The slicer gives you a summary of the options available:
 > java -jar assembly/slicer.jar
 
 The crucial part here is to define the slicing criterion. There are two options:
@@ -39,6 +39,10 @@ leave out the line number, but if you specify it, then the slicer slices for
 the values that the variables have in this line.
 If you want to slice for all local variables, then specify "*", i.e.
     java.util.HashMap.clear:614:*
+
+There are still problems with tracing for parameters. If you trace for a "local variable" which is a
+parameter that has not been written in the method, then the slice may be empty.
+This will propably be fixed some day.
 
 Note that in many cases, you have to quote the slicing criterion such that the shell does not try to expand it.
 

@@ -48,7 +48,16 @@ public class TracerAgent {
                 final String key = colonPos == -1 ? arg : arg.substring(0, colonPos);
                 final String value = colonPos == -1 ? null : arg.substring(colonPos+1);
 
-                if ("logfile".equalsIgnoreCase(key) || "tracefile".equalsIgnoreCase(key)) {
+                if ("help".equalsIgnoreCase(key) || "h".equalsIgnoreCase(key)) {
+                	String format = "%20s     %s%n";
+                	System.out.println("Use the java agent this way: java -javaagent:tracer.jar=<agentoption>,<agentoption>,... -jar program.jar <programoptions>");
+                	System.out.println("These are the available agent options:");
+                	System.out.format(format, "check", "(true/false): do check the instrumented bytecode using ASM validators");
+                	System.out.format(format, "compression", "(none/gzip/sequitur): select the compression algorithm for the trace file");
+                	System.out.format(format, "debug", "(true/false): do additional checks and verbose output");
+                	System.out.format(format, "help", "print this help");
+                	System.out.format(format, "tracefile", "the output destination for the trace file");
+                } else if ("logfile".equalsIgnoreCase(key) || "tracefile".equalsIgnoreCase(key)) {
                     if (value == null) {
                         System.err.println("ERROR: expecting value for \"logfile\" argument");
                         System.exit(1);

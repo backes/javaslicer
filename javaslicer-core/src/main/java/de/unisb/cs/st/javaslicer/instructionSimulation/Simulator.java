@@ -272,9 +272,9 @@ public class Simulator<InstanceType extends InstructionInstance> {
         for (int param = inst.getParameterCount()-1; param >= 0; --param)
             paramCount += inst.parameterIsLong(param) ? 2 : 1;
         boolean removedFrameMatches = removedFrame != null
-            && inst.getMethodName().equals(removedFrame.method.getName())
-            && inst.getMethodDesc().equals(removedFrame.method.getDesc());
-        byte returnedSize = removedFrameMatches && removedFrame.abnormalTermination ? 0 : inst.getReturnedSize();
+            && inst.getInvokedMethodName().equals(removedFrame.method.getName())
+            && inst.getInvokedMethodDesc().equals(removedFrame.method.getDesc());
+        byte returnedSize = (removedFrame != null && removedFrame.abnormalTermination) ? 0 : inst.getReturnedSize();
         boolean hasReturn = returnedSize != 0;
         boolean hasRemovedFrame = removedFrameMatches &&
             (!hasReturn || removedFrame.returnValue != null);
@@ -408,10 +408,11 @@ public class Simulator<InstanceType extends InstructionInstance> {
             ExecutionFrame<InstanceType> lowerFrame = null;
             if (inst.getStackDepth() >= 2) {
                 lowerFrame = allFrames.get(inst.getStackDepth()-2);
-                Instruction prev = lowerFrame.lastInstruction != null ? lowerFrame.lastInstruction.getPrevious() : null;
+                Instruction prev = lowerFrame.lastInstance != null ? lowerFrame.lastInstance.getInstruction().getPrevious() : null;
                 if (prev != null && prev instanceof MethodInvocationInstruction) {
                     MethodInvocationInstruction m = (MethodInvocationInstruction) prev;
-                    if (!m.getMethodName().equals(frame.method.getName()) || !m.getMethodDesc().equals(frame.method.getDesc())) {
+                    if (!m.getInvokedMethodName().equals(frame.method.getName()) ||
+                            !m.getInvokedMethodDesc().equals(frame.method.getDesc())) {
                         lowerFrame = null;
                     }
                 }
@@ -429,10 +430,11 @@ public class Simulator<InstanceType extends InstructionInstance> {
             lowerFrame = null;
             if (inst.getStackDepth() >= 2) {
                 lowerFrame = allFrames.get(inst.getStackDepth()-2);
-                Instruction prev = lowerFrame.lastInstruction != null ? lowerFrame.lastInstruction.getPrevious() : null;
+                Instruction prev = lowerFrame.lastInstance != null ? lowerFrame.lastInstance.getInstruction().getPrevious() : null;
                 if (prev != null && prev instanceof MethodInvocationInstruction) {
                     MethodInvocationInstruction m = (MethodInvocationInstruction) prev;
-                    if (!m.getMethodName().equals(frame.method.getName()) || !m.getMethodDesc().equals(frame.method.getDesc())) {
+                    if (!m.getInvokedMethodName().equals(frame.method.getName()) ||
+                            !m.getInvokedMethodDesc().equals(frame.method.getDesc())) {
                         lowerFrame = null;
                     }
                 }
@@ -466,6 +468,7 @@ public class Simulator<InstanceType extends InstructionInstance> {
                 ExecutionFrame<InstanceType> f = allFrames.get(i);
                 if (f.atCatchBlockStart != null) {
                     catchingFrame = f;
+                    f.interruptedControlFlow = true;
                     break;
                 }
             }

@@ -14,7 +14,6 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
 
 public class ExecutionFrame<InstanceType> {
 
-
     public class FrameVariableList extends AbstractList<Variable> {
 
         @Override
@@ -81,7 +80,7 @@ public class ExecutionFrame<InstanceType> {
      */
     public boolean finished = false;
 
-    public Instruction lastInstruction = null;
+    public InstanceType lastInstance = null;
 
     int maxStackEntry = -1;
     int maxLocalVariable = -1;
@@ -126,10 +125,10 @@ public class ExecutionFrame<InstanceType> {
         ExecutionFrame<?> other = (ExecutionFrame<?>) obj;
         if (this.frameNr != other.frameNr)
             return false;
-        if (this.lastInstruction == null) {
-            if (other.lastInstruction != null)
+        if (this.lastInstance == null) {
+            if (other.lastInstance != null)
                 return false;
-        } else if (!this.lastInstruction.equals(other.lastInstruction))
+        } else if (!this.lastInstance.equals(other.lastInstance))
             return false;
         if (this.method == null) {
             if (other.method != null)

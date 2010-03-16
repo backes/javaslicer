@@ -116,7 +116,7 @@ public abstract class AbstractSlicingTest {
         change diff = differ.diff_2(false);
         if (diff != null) {
             StringWriter sw = new StringWriter();
-            sw.append("both slicing methods should yield the same result!\ndiff:\n\n");
+            sw.append("both slicing methods should yield the same result!\ndiff (Slicer -> DirectSlicer):\n\n");
             DiffPrint.SimplestPrint pr = new DiffPrint.SimplestPrint(arr1, arr2);
             pr.setOutput(sw);
             pr.print_script(diff);
