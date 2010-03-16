@@ -60,6 +60,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
     private final Set<DependencesVisitor<? super InstanceType>> pendingDataDependenceVisitorsWriteAfterRead = new HashSet<DependencesVisitor<? super InstanceType>>();
     private final Set<DependencesVisitor<? super InstanceType>> pendingControlDependenceVisitors = new HashSet<DependencesVisitor<? super InstanceType>>();
     private final Set<DependencesVisitor<? super InstanceType>> methodEntryLeaveVisitors = new HashSet<DependencesVisitor<? super InstanceType>>();
+    private final Set<DependencesVisitor<? super InstanceType>> untracedMethodsVisitors = new HashSet<DependencesVisitor<? super InstanceType>>();
     private final Set<DependencesVisitor<? super InstanceType>> objectCreationVisitors = new HashSet<DependencesVisitor<? super InstanceType>>();
 
     private final InstructionInstanceFactory<? extends InstanceType> instanceFactory;
@@ -149,6 +150,9 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                 break;
             case METHOD_ENTRY_LEAVE:
                 change |= this.methodEntryLeaveVisitors.add(visitor);
+                break;
+            case UNTRACED_METHOD_CALLS:
+                change |= this.untracedMethodsVisitors.add(visitor);
                 break;
             case OBJECT_CREATION:
                 change |= this.objectCreationVisitors.add(visitor);
@@ -403,12 +407,6 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                 if ((instance.getInstanceNr() & ((1<<16)-1)) == 0 && Thread.interrupted())
                     throw new InterruptedException();
 
-                /*
-                if (instance.getInstanceNr() % 1000000 == 0) {
-                    System.out.format("%5de6: %s%n", instance.getInstanceNr() / 1000000, new Date());
-                }
-                */
-
                 ExecutionFrame<InstanceType> removedFrame = null;
                 int stackDepth = instance.getStackDepth();
                 assert stackDepth > 0;
@@ -461,11 +459,16 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                     currentFrame = new ExecutionFrame<InstanceType>();
                     currentFrame.method = newMethod;
                     frames.set(stackDepth-1, currentFrame);
+                } else if ((removedFrame != null) && (currentFrame.lastInstance != null) &&
+                           (currentFrame.lastInstance.getInstruction().getType() == InstructionType.METHODINVOCATION) &&
+                           (this.untracedMethodsVisitors != null)) {
+                    for (DependencesVisitor<? super InstanceType> vis: this.untracedMethodsVisitors)
+                        vis.visitUntracedMethodCall(currentFrame.lastInstance);
                 }
 
                 if (instruction == instruction.getMethod().getMethodEntryLabel())
                     currentFrame.finished = true;
-                currentFrame.lastInstruction = instruction;
+                currentFrame.lastInstance = instance;
 
                 /*
                 if (stackDepth == 1) {

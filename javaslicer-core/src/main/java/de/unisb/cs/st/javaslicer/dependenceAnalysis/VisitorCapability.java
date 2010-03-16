@@ -71,6 +71,12 @@ public enum VisitorCapability {
 
     /**
      * enables invokations of
+     * {@link DependencesVisitor#visitUntracedMethodCall(Object)}
+     */
+    UNTRACED_METHOD_CALLS,
+
+    /**
+     * enables invokations of
      * {@link DependencesVisitor#visitObjectCreation(long, Object)}
      */
     OBJECT_CREATION

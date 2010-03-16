@@ -67,4 +67,9 @@ public abstract class DependencesVisitorAdapter<InstanceType> implements Depende
         // null
     }
 
+    public void visitUntracedMethodCall(InstanceType instrInstance)
+            throws InterruptedException {
+        // null
+    }
+
 }

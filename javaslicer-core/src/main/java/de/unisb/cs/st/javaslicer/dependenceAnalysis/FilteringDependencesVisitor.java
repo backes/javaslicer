@@ -72,6 +72,11 @@ public class FilteringDependencesVisitor<InstanceType> implements
             this.visitor.visitPendingDataDependence(from, var, type);
     }
 
+    public void visitUntracedMethodCall(InstanceType instrInstance) throws InterruptedException {
+        if (this.filter.filter(instrInstance))
+            this.visitor.visitUntracedMethodCall(instrInstance);
+    }
+
     public void interrupted() throws InterruptedException {
         this.visitor.interrupted();
     }

@@ -1,5 +1,5 @@
 Manifest-Version: 1.0
 Can-Retransform-Classes: true
-Main-Class: de.unisb.cs.st.javaslicer.slicing.DirectSlicer
+Main-Class: de.unisb.cs.st.javaslicer.slicing.Slicer
 Premain-Class: de.unisb.cs.st.javaslicer.tracer.TracerAgent
 Boot-Class-Path: ./slicer.jar

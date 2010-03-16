@@ -67,6 +67,7 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
     private static final byte CONTROL_DEPENDENCE = 10;
     private static final byte PENDING_CONTROL_DEPENDENCE = 11;
     private static final byte END = 12;
+    private static final byte UNTRACED_CALL = 13;
 
     private static class EventStamp<InstanceType> {
         private final byte[] events;
@@ -183,6 +184,9 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
                             break;
                         case END:
                             visitor.visitEnd(longs0[longPos++]);
+                            break;
+                        case UNTRACED_CALL:
+                            visitor.visitUntracedMethodCall(instructionInstances0[instructionPos++]);
                             break;
                         default:
                             assert false;
@@ -558,6 +562,14 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
             return;
         this.events[this.eventCount++] = PENDING_CONTROL_DEPENDENCE;
         addInstruction(from);
+        checkFull();
+    }
+
+    public void visitUntracedMethodCall(InstanceType instrInstance) throws InterruptedException {
+        if (this.visitors.isEmpty())
+            return;
+        this.events[this.eventCount++] = UNTRACED_CALL;
+        addInstruction(instrInstance);
         checkFull();
     }
 

@@ -1,5 +1,7 @@
 package de.unisb.cs.st.javaslicer.slicing;
 
+import static org.objectweb.asm.Opcodes.INVOKESTATIC;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -33,6 +35,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.MethodInvocationInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.VarInstruction;
 import de.unisb.cs.st.javaslicer.common.progress.ConsoleProgressMonitor;
 import de.unisb.cs.st.javaslicer.common.progress.ProgressMonitor;
@@ -41,8 +44,10 @@ import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesExtractor;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesVisitorAdapter;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.VisitorCapability;
 import de.unisb.cs.st.javaslicer.slicing.SlicingCriterion.SlicingCriterionInstance;
+import de.unisb.cs.st.javaslicer.traceResult.PrintUniqueUntracedMethods;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
+import de.unisb.cs.st.javaslicer.traceResult.UntracedCallVisitor;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
 public class Slicer {
@@ -86,6 +91,7 @@ public class Slicer {
     private final TraceResult trace;
     private final List<ProgressMonitor> progressMonitors = new ArrayList<ProgressMonitor>(1);
     private final List<SliceVisitor> sliceVisitors = new ArrayList<SliceVisitor>(1);
+    private final List<UntracedCallVisitor> untracedCallVisitors = new ArrayList<UntracedCallVisitor>(1);
 
     public Slicer(TraceResult trace) {
         this.trace = trace;
@@ -179,8 +185,12 @@ public class Slicer {
             multithreaded = Runtime.getRuntime().availableProcessors() > 1;
         }
 
+        boolean warnUntracedMethods = cmdLine.hasOption("warn-untraced");
+
         SliceInstructionsCollector collector = new SliceInstructionsCollector();
         slicer.addSliceVisitor(collector);
+        if (warnUntracedMethods)
+            slicer.addUntracedCallVisitor(new PrintUniqueUntracedMethods());
         slicer.process(tracing, sc, multithreaded);
         Set<Instruction> slice = collector.getDynamicSlice();
         long endTime = System.nanoTime();
@@ -208,18 +218,30 @@ public class Slicer {
         this.sliceVisitors.add(sliceVisitor);
     }
 
+    public void addUntracedCallVisitor(UntracedCallVisitor untracedCallVisitor) {
+        this.untracedCallVisitors.add(untracedCallVisitor);
+    }
+
     public void process(ThreadId threadId, final List<SlicingCriterion> sc, boolean multithreaded) throws InterruptedException {
         DependencesExtractor<SlicerInstance> depExtractor = DependencesExtractor.forTrace(this.trace, SlicerInstanceFactory.instance);
         for (ProgressMonitor mon : this.progressMonitors)
             depExtractor.addProgressMonitor(mon);
 
+        VisitorCapability[] capabilities = { VisitorCapability.CONTROL_DEPENDENCES, VisitorCapability.DATA_DEPENDENCES_READ_AFTER_WRITE, VisitorCapability.INSTRUCTION_EXECUTIONS,
+                VisitorCapability.METHOD_ENTRY_LEAVE };
+
         final List<SliceVisitor> sliceVisitors0 = Slicer.this.sliceVisitors;
+        final List<UntracedCallVisitor> untracedCallVisitors0 = Slicer.this.untracedCallVisitors;
         depExtractor.registerVisitor(new DependencesVisitorAdapter<SlicerInstance>() {
             private final List<SlicingCriterionInstance> slicingCritInst = instantiateSlicingCriteria(sc);
             @SuppressWarnings("unchecked")
             private IntegerMap<Object>[] interestingLocalVariables = (IntegerMap<Object>[]) new IntegerMap<?>[0];
             private long[] critOccurenceNumbers = new long[2]; // 0 if not in a criterion
             private final SliceVisitor[] sliceVisitorsArray = sliceVisitors0.toArray(new SliceVisitor[sliceVisitors0.size()]);
+            private final UntracedCallVisitor[] untracedCallsVisitorsArray = untracedCallVisitors0.toArray(new UntracedCallVisitor[untracedCallVisitors0.size()]);
+
+            private ReadMethod enteredMethod;
+            private IntegerMap<Object> enteredMethodInterestingLocalVariables;
 
             private List<SlicingCriterionInstance> instantiateSlicingCriteria(
                     List<SlicingCriterion> criteria) {
@@ -243,6 +265,7 @@ public class Slicer {
                     System.arraycopy(this.critOccurenceNumbers, 0, newCritOccurenceNumbers, 0, this.critOccurenceNumbers.length);
                     this.critOccurenceNumbers = newCritOccurenceNumbers;
                 }
+                Instruction instruction = instance.getInstruction();
                 for (SlicingCriterionInstance crit : this.slicingCritInst) {
                     if (crit.matches(instance)) {
                         this.critOccurenceNumbers[stackDepth] = crit.getOccurenceNumber();
@@ -271,7 +294,7 @@ public class Slicer {
                                 for (LocalVariable i : localVariables)
                                     this.interestingLocalVariables[stackDepth].put(i.getIndex(), null);
                             } else {
-                                Instruction insn = instance.getInstruction();
+                                Instruction insn = instruction;
                                 if (insn.getType() != InstructionType.LABEL)
                                     for (SliceVisitor vis : this.sliceVisitorsArray)
                                         vis.visitMatchedInstance(instance);
@@ -284,26 +307,60 @@ public class Slicer {
                     }
                 }
                 if (this.interestingLocalVariables.length > stackDepth &&
-                        this.interestingLocalVariables[stackDepth] != null &&
-                        instance.getInstruction().getType() == InstructionType.VAR) {
-                    VarInstruction varInsn = (VarInstruction) instance.getInstruction();
-                    if (this.interestingLocalVariables[stackDepth].containsKey(varInsn.getLocalVarIndex()) &&
-                            (varInsn.getOpcode() == Opcodes.ISTORE ||
-                             varInsn.getOpcode() == Opcodes.ASTORE ||
-                             varInsn.getOpcode() == Opcodes.LSTORE ||
-                             varInsn.getOpcode() == Opcodes.FSTORE ||
-                             varInsn.getOpcode() == Opcodes.DSTORE)) {
-                        this.interestingLocalVariables[stackDepth].remove(varInsn.getLocalVarIndex());
-                        if (this.interestingLocalVariables[stackDepth].isEmpty())
-                            this.interestingLocalVariables[stackDepth] = null;
-                        for (SliceVisitor vis : this.sliceVisitorsArray)
-                            vis.visitMatchedInstance(instance);
-                        instance.onDynamicSlice = true;
-                        // and we want to know where the data comes from...
-                        instance.allDataInteresting = true;
-                        instance.criterionDistance = 0;
+                        this.interestingLocalVariables[stackDepth] != null) {
+                    switch (instruction.getOpcode()) {
+                        case Opcodes.ISTORE:
+                        case Opcodes.ASTORE:
+                        case Opcodes.LSTORE:
+                        case Opcodes.FSTORE:
+                        case Opcodes.DSTORE:
+                            VarInstruction varInsn = (VarInstruction) instruction;
+                            if (this.interestingLocalVariables[stackDepth].containsKey(varInsn.getLocalVarIndex())) {
+                                this.interestingLocalVariables[stackDepth].remove(varInsn.getLocalVarIndex());
+                                if (this.interestingLocalVariables[stackDepth].isEmpty())
+                                    this.interestingLocalVariables[stackDepth] = null;
+                                for (SliceVisitor vis : this.sliceVisitorsArray)
+                                    vis.visitMatchedInstance(instance);
+                                instance.onDynamicSlice = true;
+                                // and we want to know where the data comes from...
+                                instance.allDataInteresting = true;
+                                instance.criterionDistance = 0;
+                            }
+                            break;
+                        case Opcodes.INVOKEINTERFACE:
+                        case Opcodes.INVOKESPECIAL:
+                        case Opcodes.INVOKESTATIC:
+                        case Opcodes.INVOKEVIRTUAL:
+                            if (this.enteredMethod != null) {
+                                MethodInvocationInstruction mtdInvInsn = (MethodInvocationInstruction) instruction;
+                                int paramCount = instruction.getOpcode() == INVOKESTATIC ? 0 : 1;
+                                for (int param = mtdInvInsn.getParameterCount()-1; param >= 0; --param)
+                                    paramCount += mtdInvInsn.parameterIsLong(param) ? 2 : 1;
+                                boolean enteredMethodMatches = this.enteredMethod.getName().equals(mtdInvInsn.getInvokedMethodName())
+                                    && this.enteredMethod.getDesc().equals(mtdInvInsn.getInvokedMethodDesc());
+                                if (enteredMethodMatches) {
+                                    boolean localVarsMatched = false;
+                                    for (int varNr = 0; varNr < paramCount; ++varNr) {
+                                        if (this.interestingLocalVariables[stackDepth].containsKey(varNr)) {
+                                            this.interestingLocalVariables[stackDepth].remove(varNr);
+                                            if (this.interestingLocalVariables[stackDepth].isEmpty())
+                                                this.interestingLocalVariables[stackDepth] = null;
+                                            localVarsMatched = true;
+                                            instance.onDynamicSlice = true;
+                                            // and we want to know where the data comes from...
+                                            // TODO
+                                            instance.allDataInteresting = true;
+                                            instance.criterionDistance = 0;
+                                        }
+                                    }
+                                    if (localVarsMatched)
+                                        for (SliceVisitor vis : this.sliceVisitorsArray)
+                                            vis.visitMatchedInstance(instance);
+                                }
+                            }
                     }
                 }
+                this.enteredMethod = null;
             }
 
             @Override
@@ -408,8 +465,25 @@ public class Slicer {
                 }
             }
 
-        }, VisitorCapability.CONTROL_DEPENDENCES, VisitorCapability.DATA_DEPENDENCES_READ_AFTER_WRITE, VisitorCapability.INSTRUCTION_EXECUTIONS,
-           VisitorCapability.METHOD_ENTRY_LEAVE);
+            @Override
+            public void visitMethodEntry(ReadMethod method, int stackDepth)
+                    throws InterruptedException {
+                if (this.interestingLocalVariables.length > stackDepth &&
+                        this.interestingLocalVariables[stackDepth] != null) {
+                    this.enteredMethod = method;
+                    this.enteredMethodInterestingLocalVariables = this.interestingLocalVariables[stackDepth];
+                    this.interestingLocalVariables[stackDepth] = null;
+                }
+            }
+
+            @Override
+            public void visitUntracedMethodCall(SlicerInstance instrInstance)
+                    throws InterruptedException {
+                for (UntracedCallVisitor vis : this.untracedCallsVisitorsArray)
+                    vis.visitUntracedMethodCall(instrInstance);
+            }
+
+        }, capabilities);
 
         depExtractor.processBackwardTrace(threadId, multithreaded);
     }
@@ -426,6 +500,8 @@ public class Slicer {
         options.addOption(OptionBuilder.isRequired(false).hasArg(true).withArgName("value").
             withDescription("process the trace in a multithreaded way (pass 'true' or '1' to enable, anything else to disable). Default is true iff we have more than one processor").
             withLongOpt("multithreaded").create('m'));
+        options.addOption(OptionBuilder.isRequired(false).hasArg(false).
+            withDescription("warn once for each method which is called but not traced").withLongOpt("warn-untraced").create('u'));
         return options;
     }
 
