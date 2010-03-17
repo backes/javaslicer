@@ -4,21 +4,18 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.List;
 
-import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import de.unisb.cs.st.javaslicer.AbstractSlicingTest;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 
 
-@Ignore
 public class TestString1 extends AbstractSlicingTest {
 
     @Test
     public void testAll() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        Assert.fail();
-        final List<Instruction> slice = getSlice("/traces/simple2", "main", "de.unisb.cs.st.javaslicer.tracedCode.Simple2.main:11:{a,b,c,d,e}");
+        final List<Instruction> slice = getSlice("/traces/string1", "main", "de.unisb.cs.st.javaslicer.tracedCode.String1.main:*");
+        /*
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Simple2.main:7 ALOAD 0",
                 "de.unisb.cs.st.javaslicer.tracedCode.Simple2.main:7 ICONST_0",
@@ -45,6 +42,7 @@ public class TestString1 extends AbstractSlicingTest {
                 "de.unisb.cs.st.javaslicer.tracedCode.Simple2.main:11 IMUL",
                 "de.unisb.cs.st.javaslicer.tracedCode.Simple2.main:11 ISTORE 5",
             });
+        */
     }
 
 }

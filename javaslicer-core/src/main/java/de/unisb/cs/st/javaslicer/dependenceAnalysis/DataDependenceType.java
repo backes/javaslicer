@@ -1,6 +1,3 @@
-/**
- * 
- */
 package de.unisb.cs.st.javaslicer.dependenceAnalysis;
 
 public enum DataDependenceType {

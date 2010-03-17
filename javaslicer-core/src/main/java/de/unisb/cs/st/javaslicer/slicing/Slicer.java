@@ -228,7 +228,9 @@ public class Slicer {
             depExtractor.addProgressMonitor(mon);
 
         VisitorCapability[] capabilities = { VisitorCapability.CONTROL_DEPENDENCES, VisitorCapability.DATA_DEPENDENCES_READ_AFTER_WRITE, VisitorCapability.INSTRUCTION_EXECUTIONS,
-                VisitorCapability.METHOD_ENTRY_LEAVE };
+                VisitorCapability.METHOD_ENTRY_LEAVE, VisitorCapability.CONTROL_DEPENDENCES };
+        if (this.untracedCallVisitors.size() > 0)
+        	capabilities[capabilities.length-1] = VisitorCapability.UNTRACED_METHOD_CALLS;
 
         final List<SliceVisitor> sliceVisitors0 = Slicer.this.sliceVisitors;
         final List<UntracedCallVisitor> untracedCallVisitors0 = Slicer.this.untracedCallVisitors;

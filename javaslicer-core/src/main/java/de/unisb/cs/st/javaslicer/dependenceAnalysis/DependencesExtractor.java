@@ -459,11 +459,11 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                     currentFrame = new ExecutionFrame<InstanceType>();
                     currentFrame.method = newMethod;
                     frames.set(stackDepth-1, currentFrame);
-                } else if ((removedFrame != null) && (currentFrame.lastInstance != null) &&
-                           (currentFrame.lastInstance.getInstruction().getType() == InstructionType.METHODINVOCATION) &&
+                } else if ((removedFrame == null) &&
+                           (instruction.getType() == InstructionType.METHODINVOCATION) &&
                            (this.untracedMethodsVisitors != null)) {
                     for (DependencesVisitor<? super InstanceType> vis: this.untracedMethodsVisitors)
-                        vis.visitUntracedMethodCall(currentFrame.lastInstance);
+                        vis.visitUntracedMethodCall(instance);
                 }
 
                 if (instruction == instruction.getMethod().getMethodEntryLabel())
