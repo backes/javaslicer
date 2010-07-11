@@ -15,16 +15,13 @@ for file in $SOURCEDIR/*.java; do
 	CLASS=${CLASS%.java}
 	TARGETFILE=`echo $CLASS | awk '{ print tolower($0);}'`
 	TARGETPATH=$TARGETDIR/$TARGETFILE
-	if [[ $TARGETPATH -nt $file ]]; then
-		echo $TARGETFILE is up to date.
+	if [[ -e $TARGETPATH ]]; then
+		echo $TARGETFILE already exists.
 	else
 		echo -e "\n\nRunning $CLASS..."
 		STARTTIME=`date +%s`
 		echo executing: java -javaagent:$TRACER=tracefile:$TARGETPATH -ea -esa -cp $CLASSPATH $PACKAGE.$CLASS $DEFAULT_ARGUMENT
-		if ! java -javaagent:$TRACER=tracefile:$TARGETPATH,debug:true -ea -esa -cp $CLASSPATH $PACKAGE.$CLASS $DEFAULT_ARGUMENT; then
-			echo ERROR
-			exit 1
-		fi
+		java -javaagent:$TRACER=tracefile:$TARGETPATH -ea -esa -cp $CLASSPATH $PACKAGE.$CLASS $DEFAULT_ARGUMENT
 		ENDTIME=`date +%s`
 		echo "Realtime seconds: "$((ENDTIME - STARTTIME))
 	fi
