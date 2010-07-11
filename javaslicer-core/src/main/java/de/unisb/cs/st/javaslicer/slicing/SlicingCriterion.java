@@ -12,6 +12,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
+import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
 
 /**
  * Representation of a slicing criterion.
@@ -130,6 +131,32 @@ public class SlicingCriterion {
     private static final Pattern slicingCriterionPattern = Pattern.compile(
             "([^:{}]+)\\.([^:{}]+?)(?::(-?\\d+))?(?:\\((\\d+)\\))?(?::\\{(.*?)\\}|:(\\*))?");
 
+    /**
+     * Parses and returns a slicing criterion consisting of a class name, method name, line
+     * number (optional), occurence number (optional), and variable definitions (optional).
+     *
+     * The form of the given string to represent the slicing criterion is as follows:
+     * It always starts with a location in the form <i>fullyQualifiedClassName.methodName</i>,
+     * possibly followed by <i>:lineNumber</i>. If no line number is given, the criterion
+     * matches as soon as the first instruction of the specified method is executed, which
+     * would be the last instruction of the method when traversing the trace backwards.
+     *
+     * After the specification of the location, there can be given a set of local variables
+     * covered by the slicing criterion, in the form <i>:{var1,var2,var3}</i> where var1...var3
+     * must be the names of local variables occuring in the given method.
+     * To cover all local variables, you can also specify <i>:*</i>.
+     *
+     * In total, the slicing criterion could look like this:
+     * <ul><li> java.lang.String.indexOf:1768:{target,max} </li></ul>
+     *
+     * @param string the input string specifying a slicing criterion
+     * @param readClasses the list of all classes of the trace result (see {@link TraceResult#getReadClasses()})
+     * @return the parsed slicing criterion
+     * @throws IllegalArgumentException if a problem with the input string is encountered. this
+     *                                  could be that the overall form did not match, or that the
+     *                                  class, method, line number or local variable(s) did not
+     *                                  exist
+     */
     public static SlicingCriterion parse(String string, List<ReadClass> readClasses) throws IllegalArgumentException {
         Matcher matcher = slicingCriterionPattern.matcher(string);
         if (!matcher.matches())
@@ -167,6 +194,18 @@ public class SlicingCriterion {
         return new SlicingCriterion(method, lineNumber, occurence, variables, criterionMatchesAllData);
     }
 
+    /**
+     * Parses a sequence of comma separated slicing criterion, given in a string.
+     * See {@link #parse(String, List)}
+     *
+     * @param string the input string specifying the slicing criteria (at least one), comma separated
+     * @param readClasses the list of all classes of the trace result (see {@link TraceResult#getReadClasses()})
+     * @return a list of all slicing criteria parsed
+     * @throws IllegalArgumentException if a problem with the input string is encountered. this
+     *                                  could be that the overall form did not match, or that a
+     *                                  class, method, line number or local variable(s) did not
+     *                                  exist
+     */
     public static List<SlicingCriterion> parseAll(String string,
             List<ReadClass> readClasses) throws IllegalArgumentException {
         List<SlicingCriterion> crit = new ArrayList<SlicingCriterion>(2);
@@ -248,8 +287,7 @@ public class SlicingCriterion {
     }
 
     private static final Pattern variableDefinitionPattern = Pattern.compile(
-        "\\s*(?:([a-zA-Z_][a-zA-Z0-9_\\-]*)" // local variable
-            + ")\\s*");
+        "\\s*(?:([a-zA-Z_][a-zA-Z0-9_\\-]*))\\s*");
 
     private static List<LocalVariable> parseVariables(ReadMethod method, String variables) throws IllegalArgumentException {
         String[] parts = variables.split(",");
