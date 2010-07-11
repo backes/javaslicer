@@ -19,20 +19,20 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.ArrayInstruction.ArrayInstrInstanceInfo;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.FieldInstruction;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.FieldInstruction.FieldInstrInstanceInfo;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.IIncInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.JumpInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LdcInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.MethodInvocationInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.MultiANewArrayInstruction;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.TypeInstruction;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.VarInstruction;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.ArrayInstruction.ArrayInstrInstanceInfo;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.FieldInstruction.FieldInstrInstanceInfo;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.MultiANewArrayInstruction.MultiANewArrayInstrInstanceInfo;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.NewArrayInstruction.NewArrayInstrInstanceInfo;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.TypeInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.TypeInstruction.TypeInstrInstanceInfo;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.VarInstruction;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.variables.ArrayElement;
 import de.unisb.cs.st.javaslicer.variables.ObjectField;
@@ -274,16 +274,15 @@ public class Simulator<InstanceType extends InstructionInstance> {
         boolean removedFrameMatches = removedFrame != null
             && inst.getInvokedMethodName().equals(removedFrame.method.getName())
             && inst.getInvokedMethodDesc().equals(removedFrame.method.getDesc());
-        byte returnedSize = (removedFrame != null && removedFrame.abnormalTermination) ? 0 : inst.getReturnedSize();
+        // if we threw an exception, then we didn't produce a value on the stack
+        byte returnedSize = executionFrame.throwsException ? 0 : inst.getReturnedSize();
         boolean hasReturn = returnedSize != 0;
-        boolean hasRemovedFrame = removedFrameMatches &&
-            (!hasReturn || removedFrame.returnValue != null);
         int parametersStackOffset = (paramCount == returnedSize
             ? executionFrame.operandStack.get()
             : executionFrame.operandStack.getAndAdd(paramCount-returnedSize)) - returnedSize;
 
         return new MethodInvokationVariableUsages<InstanceType>(parametersStackOffset,
-                paramCount, hasReturn, executionFrame, hasRemovedFrame ? removedFrame : null);
+                paramCount, hasReturn, executionFrame, removedFrameMatches ? removedFrame : null);
     }
 
     private DynamicInformation simulateFieldInstruction(InstructionInstance instance, ExecutionFrame<InstanceType> frame) {
@@ -294,14 +293,19 @@ public class Simulator<InstanceType extends InstructionInstance> {
         FieldInstruction instruction = (FieldInstruction) instance.getInstruction();
         switch (instruction.getOpcode()) {
         case GETFIELD:
-            // read 1, write 1 or 2 (we only trace the lower one of 2)
-            stackOffset = instruction.isLongValue()
-                ? frame.operandStack.decrementAndGet()-1
-                : frame.operandStack.get()-1;
+        	assert ((info.getObjectId() == 0) == (frame.throwsException));
+            // read 1, write 1 or 2 (we only trace the lower one of 2), or write 0 on exception
+            stackOffset = frame.throwsException
+            	? frame.operandStack.getAndIncrement()
+                : instruction.isLongValue()
+                	? frame.operandStack.decrementAndGet()-1
+                	: frame.operandStack.get()-1;
             lowerVar = frame.getStackEntry(stackOffset);
+            if (frame.throwsException) {
+            	return new ReadSingleValueVariableUsage(lowerVar);
+            }
             return new SimpleVariableUsage(Arrays.asList(lowerVar,
-                        new ObjectField(info.getObjectId(), instruction.getFieldName())),
-                        lowerVar);
+                    new ObjectField(info.getObjectId(), instruction.getFieldName())), lowerVar);
         case GETSTATIC:
             // read 0, write 1 or 2 (we only trace the lower one of 2)
             stackOffset = instruction.isLongValue()
@@ -312,8 +316,14 @@ public class Simulator<InstanceType extends InstructionInstance> {
         case PUTFIELD:
             // read 2 or 3 (only trace 2), write 0
             stackOffset = frame.operandStack.getAndAdd(instruction.isLongValue() ? 3 : 2);
+        	// if we threw an instruction, then we did not write to the object field
+        	assert ((info.getObjectId() == 0) == (frame.throwsException));
+            if (frame.throwsException) {
+            	// on an exception, we only read the object reference
+            	return new ReadSingleValueVariableUsage(frame.getStackEntry(stackOffset));
+            }
             return new SimpleVariableUsage(new StackEntrySet<InstanceType>(frame, stackOffset, 2),
-                    new ObjectField(info.getObjectId(), instruction.getFieldName()));
+            	new ObjectField(info.getObjectId(), instruction.getFieldName()));
         case PUTSTATIC:
             // read 1 or 2 (only trace 1), write 0
             stackOffset = instruction.isLongValue()
@@ -461,21 +471,9 @@ public class Simulator<InstanceType extends InstructionInstance> {
             return stackManipulation(frame, 0, 2);
 
         case ATHROW:
-        {
-            // first search the frame where the exception is catched
-            ExecutionFrame<InstanceType> catchingFrame = null;
-            for (int i = inst.getStackDepth()-2; i >= 0; --i) {
-                ExecutionFrame<InstanceType> f = allFrames.get(i);
-                if (f.atCatchBlockStart != null) {
-                    catchingFrame = f;
-                    f.interruptedControlFlow = true;
-                    break;
-                }
-            }
+        	// the data dependence to the catching frame is modelled in DirectSlicer / DependencesExtractor
             return new SimpleVariableUsage(frame.getStackEntry(frame.operandStack.getAndIncrement()),
-                    catchingFrame == null ? DynamicInformation.EMPTY_VARIABLE_SET :
-                        Collections.singleton((Variable)catchingFrame.getStackEntry(catchingFrame.operandStack.get())));
-        }
+                    DynamicInformation.EMPTY_VARIABLE_SET);
 
         case MONITORENTER: case MONITOREXIT:
         case POP:

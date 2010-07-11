@@ -7,11 +7,12 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -216,10 +217,6 @@ public class DirectSlicer implements Opcodes {
                     } else {
                         assert frames.size() == stackDepth-1;
                         ExecutionFrame<InstructionInstance> newFrame = new ExecutionFrame<InstructionInstance>();
-                        // assertion: if the current frame catched an exception, then the new frame
-                        // must have thrown it
-                        assert currentFrame == null || currentFrame.atCatchBlockStart == null
-                            || instruction == instruction.getMethod().getAbnormalTerminationLabel();
                         newFrame.method = instruction.getMethod();
                         if (instruction == newFrame.method.getAbnormalTerminationLabel()) {
                             newFrame.throwsException = newFrame.interruptedControlFlow = newFrame.abnormalTermination = true;
@@ -230,6 +227,9 @@ public class DirectSlicer implements Opcodes {
                 }
 
                 assert currentFrame != null : "current frame must be set";
+
+                if (currentFrame.atCatchBlockStart != null)
+                	currentFrame.throwsException = true;
 
                 // it is possible that we see successive instructions of different methods,
                 // e.g. when called from native code
@@ -254,8 +254,7 @@ public class DirectSlicer implements Opcodes {
                         !removedFrame.interestingInstructions.isEmpty()) {
                     // ok, we have a control dependence since the method was called by (or for) this instruction
                     // checking if this is the instr. that directly called the method is impossible
-                    if (instruction.getType() != InstructionType.LABEL)
-                        dynamicSlice.add(instruction);
+                    dynamicSlice.add(instruction);
                     if (currentFrame.interestingInstructions == null)
                         currentFrame.interestingInstructions = new HashSet<Instruction>();
                     currentFrame.interestingInstructions.add(instruction);
@@ -282,8 +281,7 @@ public class DirectSlicer implements Opcodes {
                             if (currentFrame.interestingInstructions == null)
                                 currentFrame.interestingInstructions = new HashSet<Instruction>();
                             currentFrame.interestingInstructions.add(instance.getInstruction());
-                            if (instruction.getType() != InstructionType.LABEL)
-                                dynamicSlice.add(instruction);
+                            dynamicSlice.add(instruction);
                         }
                     } else if (matchedCriterionVariables[stackDepth] != null) {
                         interestingVariables.addAll(matchedCriterionVariables[stackDepth]);
@@ -308,8 +306,8 @@ public class DirectSlicer implements Opcodes {
                     if (isExceptionsThrowingInstance) {
                         currentFrame.throwsException = false;
                         // in this case, we have an additional control dependence from the catching to
-                        // the throwing instruction
-                        for (int i = stackDepth-2; i >= 0; --i) {
+                        // the throwing instruction, and a data dependence on the thrown instruction
+                        for (int i = stackDepth-1; i >= 0; --i) {
                             ExecutionFrame<InstructionInstance> f = frames.get(i);
                             if (f.atCatchBlockStart != null) {
                                 if (f.interestingInstructions != null &&
@@ -319,13 +317,26 @@ public class DirectSlicer implements Opcodes {
                                     else
                                         dependantInterestingInstructions.add(f.atCatchBlockStart.getInstruction());
                                 }
+                                f.atCatchBlockStart = null;
+
+                                // data dependence:
+                                // (the stack height has already been decremented when entering the catch block)
+                                Variable definedException = f.getStackEntry(f.operandStack.get());
+                                if (interestingVariables.contains(definedException)) {
+                                    if (currentFrame.interestingInstructions == null)
+                                        currentFrame.interestingInstructions = new HashSet<Instruction>();
+                                    currentFrame.interestingInstructions.add(instruction);
+                                    dynamicSlice.add(instruction);
+                                    interestingVariables.remove(definedException);
+                                    interestingVariables.addAll(dynInfo.getUsedVariables());
+                                }
+
                                 break;
                             }
                         }
                     }
                     if (!dependantInterestingInstructions.isEmpty()) {
-                        if (instruction.getType() != InstructionType.LABEL)
-                            dynamicSlice.add(instruction);
+                        dynamicSlice.add(instruction);
                         if (currentFrame.interestingInstructions == null)
                             currentFrame.interestingInstructions = new HashSet<Instruction>();
                         else
@@ -350,6 +361,7 @@ public class DirectSlicer implements Opcodes {
 
                 if (dynInfo.isCatchBlock()) {
                     currentFrame.atCatchBlockStart = instance;
+                    currentFrame.interruptedControlFlow = true;
                 } else if (currentFrame.atCatchBlockStart != null) {
                     currentFrame.atCatchBlockStart = null;
                 }
@@ -358,6 +370,12 @@ public class DirectSlicer implements Opcodes {
         } finally {
             for (ProgressMonitor mon : this.progressMonitors)
                 mon.end();
+        }
+
+        for (Iterator<Instruction> it = dynamicSlice.iterator(); it.hasNext(); ) {
+        	Instruction instr = it.next();
+        	if (instr.getType() == InstructionType.LABEL || instr.getOpcode() == Opcodes.GOTO)
+        		it.remove();
         }
 
         return dynamicSlice;

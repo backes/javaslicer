@@ -311,7 +311,7 @@ public class SlicingCriterion {
             StringBuilder errorMsg = new StringBuilder();
             errorMsg.append("Local variable '").append(localVarStr).append("' not found in method ");
             errorMsg.append(method.getReadClass().getName()).append(".").append(method.getName());
-            errorMsg.append(" The method contains the following local variables: ").append(method.getLocalVariables());
+            errorMsg.append(". The method contains the following local variables: ").append(method.getLocalVariables());
             throw new IllegalArgumentException(errorMsg.toString());
         }
 

@@ -97,8 +97,6 @@ public class ExecutionFrame<InstanceType> {
         if (index < 0) {
             assert this.interruptedControlFlow;
             this.minStackEntry = Math.min(this.minStackEntry, index);
-            this.maxStackEntry = Math.max(this.maxStackEntry, 0);
-            return new StackEntry<InstanceType>(this, 0);
         }
         this.maxStackEntry = Math.max(this.maxStackEntry, index);
         return new StackEntry<InstanceType>(this, index);

@@ -34,7 +34,6 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.MethodInvocationInstruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.VarInstruction;
 import de.unisb.cs.st.javaslicer.common.progress.ConsoleProgressMonitor;
@@ -62,7 +61,7 @@ public class Slicer {
         public Variable interestingVariable = null;
         public Set<Variable> moreInterestingVariables = null;
 
-        public Set<SlicerInstance> predecessors; // only set on labels
+        public Set<SlicerInstance> predecessors; // only set on labels and GOTOs
 
         public int criterionDistance;
 
@@ -281,6 +280,7 @@ public class Slicer {
                             instance.allDataInteresting = true;
                             instance.onlyIfAfterCriterion = true;
                             instance.onDynamicSlice = true; // it's not really on the dynamic slice, but we have to set this
+                            instance.criterionDistance = 0;
                         } else {
                             if (crit.hasLocalVariables()) {
                                 if (this.interestingLocalVariables.length <= stackDepth) {
@@ -370,48 +370,58 @@ public class Slicer {
                     SlicerInstance to) {
                 if (from.onDynamicSlice) {
                     Instruction insn = to.getInstruction();
-                    if (insn.getType() == InstructionType.LABEL) {
+                    if (insn.getType() == InstructionType.LABEL || insn.getOpcode() == Opcodes.GOTO) {
                     	if (to.predecessors == null)
-                			to.predecessors = new HashSet<SlicerInstance>(4);
-                    	else if (to.predecessors.size() == 1)
-                			to.predecessors = new HashSet<SlicerInstance>(to.predecessors);
-                    	to.predecessors.add(from);
+                			to.predecessors = Collections.singleton(from);
+                    	else {
+                    		if (to.predecessors.size() == 1)
+	                			to.predecessors = new HashSet<SlicerInstance>(to.predecessors);
+	                    	to.predecessors.add(from);
+                    	}
                     	if (from.criterionDistance < to.criterionDistance)
                     		to.criterionDistance = from.criterionDistance;
                     } else if (from.predecessors != null) {
+                    	assert (!from.predecessors.isEmpty());
                     	for (SlicerInstance pred : from.predecessors) {
 	                        int distance = pred.criterionDistance+1;
-	                        for (SliceVisitor vis : this.sliceVisitorsArray)
-	                            vis.visitSliceDependence(pred, to, null, distance);
+	                        delegateControlSliceDependence(pred, to, distance);
 	                    	if (distance < to.criterionDistance)
 	                    		to.criterionDistance = distance;
                     	}
                     } else {
                         int distance = from.criterionDistance+1;
-                        for (SliceVisitor vis : this.sliceVisitorsArray)
-                            vis.visitSliceDependence(from, to, null, distance);
+                        delegateControlSliceDependence(from, to, distance);
                     	if (distance < to.criterionDistance)
                     		to.criterionDistance = distance;
                     }
                     to.onDynamicSlice = true;
-                    // since "to" controls the execution of "from", we want to track all data dependences of "to"
-                    // to find out why it took this decision
-                    // exception: method invocations; here we only want to track why the method was executed,
-                    // but not the data that it consumed
-                    if (to.getInstruction().getType() != InstructionType.METHODINVOCATION) {
-                        // besides method invocations, there are only 3 possibilities of control dependences:
-                        // - "to" is a condition jump or a switch, which directly controls the execution of "from"
-                        // - "to" is the label of a catch block (and "from" an instruction within the catch block)
-                        // - "from" is the label of a catch block (which depends on the throwing instance)
-                        assert to.getInstruction().getType() == InstructionType.JUMP ||
-                            to.getInstruction().getType() == InstructionType.LOOKUPSWITCH ||
-                            to.getInstruction().getType() == InstructionType.TABLESWITCH ||
-                            (from.getInstruction().getType() == InstructionType.LABEL && ((LabelMarker)from.getInstruction()).isCatchBlock()) ||
-                            (to.getInstruction().getType() == InstructionType.LABEL && ((LabelMarker)to.getInstruction()).isCatchBlock());
-                        to.allDataInteresting = true;
-                    }
                 }
             }
+
+			private void delegateControlSliceDependence(SlicerInstance from,
+					SlicerInstance to, int distance) {
+
+				for (SliceVisitor vis : this.sliceVisitorsArray)
+				    vis.visitSliceDependence(from, to, null, distance);
+
+                // since "to" controls the execution of "from", we want to track all data dependences of "to"
+                // to find out why it took this decision
+                // exception: method invocations; here we only want to track why the method was executed,
+                // but not the data that it consumed
+				// important to check that "from" comes from inside the method which is called by "from"
+				boolean calledMethodDependence = false;
+				if (to.getInstruction().getType() == InstructionType.METHODINVOCATION) {
+					MethodInvocationInstruction mtdInv = (MethodInvocationInstruction) to.getInstruction();
+					ReadMethod calledMethod = from.getInstruction().getMethod();
+					if (mtdInv.getInvokedMethodName().equals(calledMethod.getName()) &&
+							mtdInv.getInvokedMethodDesc().equals(calledMethod.getDesc())) {
+						calledMethodDependence = true;
+					}
+				}
+                if (!calledMethodDependence) {
+                    to.allDataInteresting = true;
+                }
+			}
 
             @Override
             public void visitDataDependence(SlicerInstance from,

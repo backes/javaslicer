@@ -8,7 +8,6 @@ public class StackEntry<InstanceType> implements Variable {
     private final int index;
 
     public StackEntry(final ExecutionFrame<InstanceType> frame, final int index) {
-        assert index >= 0;
         this.frame = frame;
         this.index = index;
     }

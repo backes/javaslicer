@@ -8,11 +8,13 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+
+import org.objectweb.asm.Opcodes;
 
 import de.hammacher.util.ArrayStack;
 import de.hammacher.util.collections.BlockwiseSynchronizedBuffer;
@@ -424,10 +426,6 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                         // in all steps, the stackDepth can change by at most 1
                         assert frames.size() == stackDepth-1;
                         ExecutionFrame<InstanceType> newFrame = new ExecutionFrame<InstanceType>();
-                        // assertion: if the current frame catched an exception, then the new frame
-                        // must have thrown it
-                        assert currentFrame == null || currentFrame.atCatchBlockStart == null
-                            || instruction == instruction.getMethod().getAbnormalTerminationLabel();
                         newFrame.method = instruction.getMethod();
                         if (instruction == newFrame.method.getAbnormalTerminationLabel()) {
                             newFrame.throwsException = newFrame.interruptedControlFlow = newFrame.abnormalTermination = true;
@@ -470,6 +468,9 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                     currentFrame.finished = true;
                 currentFrame.lastInstance = instance;
 
+                if (currentFrame.atCatchBlockStart != null)
+                	currentFrame.throwsException = true;
+
                 /*
                 if (stackDepth == 1) {
                     System.out.format("%3d    %3d   %s%n", stepNr, currentFrame.operandStack.intValue(), instance);
@@ -508,7 +509,10 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                         assert instrControlDependences != null;
                     }
                     boolean isExceptionsThrowingInstruction = currentFrame.throwsException &&
-                        (instruction.getType() != InstructionType.LABEL || !((LabelMarker)instruction).isAdditionalLabel());
+                        (instruction.getType() != InstructionType.LABEL || !((LabelMarker)instruction).isAdditionalLabel()) &&
+                        (instruction.getOpcode() != Opcodes.GOTO);
+                    // assert: every ATHROW must be an exception throwing instance
+                    assert (instruction.getOpcode() != Opcodes.ATHROW || isExceptionsThrowingInstruction);
                     // get all interesting instructions, that are dependent on the current one
                     Set<InstanceType> dependantInterestingInstances = currentFrame.interestingInstances == null
                         ? Collections.<InstanceType>emptySet()
@@ -516,8 +520,9 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                     if (isExceptionsThrowingInstruction) {
                         currentFrame.throwsException = false;
                         // in this case, we have an additional control dependence from the catching to
-                        // the throwing instruction
-                        for (int i = stackDepth-2; i >= 0; --i) {
+                        // the throwing instruction, and a data dependence on the thrown instruction
+                        // TODO data dependence
+                        for (int i = stackDepth-1; i >= 0; --i) {
                             ExecutionFrame<InstanceType> f = frames.get(i);
                             if (f.atCatchBlockStart != null) {
                                 if (f.interestingInstances != null && f.interestingInstances.contains(f.atCatchBlockStart)) {
@@ -526,6 +531,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                                     else
                                         dependantInterestingInstances.add(f.atCatchBlockStart);
                                 }
+                                f.atCatchBlockStart = null;
                                 break;
                             }
                         }
