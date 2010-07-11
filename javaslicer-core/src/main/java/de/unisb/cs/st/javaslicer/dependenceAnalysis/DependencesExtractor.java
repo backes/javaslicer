@@ -30,6 +30,7 @@ import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.common.progress.ProgressInformationProvider;
 import de.unisb.cs.st.javaslicer.common.progress.ProgressMonitor;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
+import de.unisb.cs.st.javaslicer.instructionSimulation.AdditionalDataDependence;
 import de.unisb.cs.st.javaslicer.instructionSimulation.DynamicInformation;
 import de.unisb.cs.st.javaslicer.instructionSimulation.ExecutionFrame;
 import de.unisb.cs.st.javaslicer.instructionSimulation.Simulator;
@@ -532,6 +533,12 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                                         dependantInterestingInstances.add(f.atCatchBlockStart);
                                 }
                                 f.atCatchBlockStart = null;
+
+                                // data dependence:
+                                // (the stack height has already been decremented when entering the catch block)
+                                Variable definedException = f.getStackEntry(f.operandStack.get());
+                                dynInfo = AdditionalDataDependence.annotate(dynInfo, definedException, dynInfo.getUsedVariables());
+
                                 break;
                             }
                         }
