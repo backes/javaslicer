@@ -14,40 +14,31 @@ public class TestExceptions6 extends AbstractSlicingTest {
 	@Test
 	public void test() throws IllegalArgumentException, IOException,
 			URISyntaxException, InterruptedException {
-		final List<Instruction> slice = getSlice("/traces/exceptions6", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6.main:20:*");
+		final List<Instruction> slice = getSlice("/traces/exceptions6", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6.main:20:{y}");
 		checkSlice(
 			slice,
 			new String[] {
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:17 ACONST_NULL",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:17 ASTORE 1",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:19 ALOAD 1",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:19 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Exceptions2.useArrays([I[I)I",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:20 ASTORE 4",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:21 ALOAD 4",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:21 INVOKEVIRTUAL java/lang/NullPointerException.getMessage()Ljava/lang/String;",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:21 ASTORE 3",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.useArrays:31 ALOAD 0",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.useArrays:31 IFNONNULL L0",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.useArrays:32 NEW java/lang/NullPointerException",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.useArrays:32 DUP",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.useArrays:32 LDC \"a is null\"",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.useArrays:32 INVOKESPECIAL java/lang/NullPointerException.<init>(Ljava/lang/String;)V",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.useArrays:32 ATHROW",
-					"java.lang.Exception.<init>:41 ALOAD 0",
-					"java.lang.Exception.<init>:41 ALOAD 1",
-					"java.lang.Exception.<init>:41 INVOKESPECIAL java/lang/Throwable.<init>(Ljava/lang/String;)V",
-					"java.lang.NullPointerException.<init>:46 ALOAD 0",
-					"java.lang.NullPointerException.<init>:46 ALOAD 1",
-					"java.lang.NullPointerException.<init>:46 INVOKESPECIAL java/lang/RuntimeException.<init>(Ljava/lang/String;)V",
-					"java.lang.RuntimeException.<init>:43 ALOAD 0",
-					"java.lang.RuntimeException.<init>:43 ALOAD 1",
-					"java.lang.RuntimeException.<init>:43 INVOKESPECIAL java/lang/Exception.<init>(Ljava/lang/String;)V",
-					"java.lang.Throwable.<init>:197 ALOAD 0",
-					"java.lang.Throwable.<init>:197 ALOAD 1",
-					"java.lang.Throwable.<init>:197 PUTFIELD java/lang/Throwable.detailMessage Ljava/lang/String;",
-					"java.lang.Throwable.getMessage:253 ALOAD 0",
-					"java.lang.Throwable.getMessage:253 GETFIELD java/lang/Throwable.detailMessage Ljava/lang/String;",
-					"java.lang.Throwable.getMessage:253 ARETURN", });
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6.main:13 ICONST_3",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6.main:13 ISTORE 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6.main:15 IINC 1 3",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6.main:16 NEW de/unisb/cs/st/javaslicer/tracedCode/Exceptions6$MyException",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6.main:16 DUP",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6.main:16 SIPUSH 4711",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6.main:16 INVOKESPECIAL de/unisb/cs/st/javaslicer/tracedCode/Exceptions6$MyException.<init>(I)V",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6.main:17 ASTORE 2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6.main:18 ILOAD 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6.main:18 ALOAD 2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6.main:18 GETFIELD de/unisb/cs/st/javaslicer/tracedCode/Exceptions6$MyException.x I",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6.main:18 IADD",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6.main:18 ISTORE 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6.main:20 ILOAD 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6.main:20 ICONST_2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6.main:20 IMUL",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6.main:20 ISTORE 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6$MyException.<init>:8 ALOAD 0",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6$MyException.<init>:8 ILOAD 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions6$MyException.<init>:8 PUTFIELD de/unisb/cs/st/javaslicer/tracedCode/Exceptions6$MyException.x I",
+				});
 	}
 
 }

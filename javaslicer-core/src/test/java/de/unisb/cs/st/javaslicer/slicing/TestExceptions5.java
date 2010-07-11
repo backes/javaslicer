@@ -26,6 +26,8 @@ public class TestExceptions5 extends AbstractSlicingTest {
 				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:15 PUTFIELD de/unisb/cs/st/javaslicer/tracedCode/Exceptions5.x I",
 				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:17 IINC 1 2",
 				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:20 ALOAD 2",
+				    // TODO this should be removed by more precise tracing:
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:20 ICONST_2",
 				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:20 INVOKEVIRTUAL de/unisb/cs/st/javaslicer/tracedCode/Exceptions5.set(I)V",
 				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:22 IINC 1 3",
 				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:24 ILOAD 1",

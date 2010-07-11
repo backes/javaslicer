@@ -263,9 +263,6 @@ public class Simulator<InstanceType extends InstructionInstance> {
         }
     }
 
-    // eclipse's null pointer checks are not strong enough to see that
-    // removedFrameMatches --> removedFrame != null
-    @SuppressWarnings("null")
     private DynamicInformation simulateMethodInsn(MethodInvocationInstruction inst,
             ExecutionFrame<InstanceType> executionFrame, ExecutionFrame<InstanceType> removedFrame) {
         int paramCount = inst.getOpcode() == INVOKESTATIC ? 0 : 1;
@@ -280,6 +277,14 @@ public class Simulator<InstanceType extends InstructionInstance> {
         int parametersStackOffset = (paramCount == returnedSize
             ? executionFrame.operandStack.get()
             : executionFrame.operandStack.getAndAdd(paramCount-returnedSize)) - returnedSize;
+
+        // we have to handle two special cases:
+        // 1. this very instruction threw an exception (NPE because arg0 was null)
+        // 2. the called method threw an exception, but we do not know where since it was not traced
+
+        // unfortunately we cannot destinguish these cases...
+        // we overapproximate by taking all cases where we don't have a removedFrame, and we know that we throw an exception
+        // TODO do we actually have to do anything in these cases??
 
         return new MethodInvokationVariableUsages<InstanceType>(parametersStackOffset,
                 paramCount, hasReturn, executionFrame, removedFrameMatches ? removedFrame : null);
