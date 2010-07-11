@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
@@ -169,14 +169,9 @@
 
     <repositories>
         <repository>
-            <id>st-internal-releases</id>
+            <id>st-internal</id>
             <name>internal artifacts released by the chair</name>
-            <url>https://maven.st.cs.uni-saarland.de/nexus/content/repositories/internal-releases</url>
-        </repository>
-        <repository>
-            <id>st-internal-snapshots</id>
-            <name>internal snapshots deployed by the chair</name>
-            <url>https://maven.st.cs.uni-saarland.de/nexus/content/repositories/internal-snapshots</url>
+            <url>https://maven.st.cs.uni-saarland.de/nexus/content/groups/internal</url>
         </repository>
         <repository>
             <id>st-thirdparty</id>
