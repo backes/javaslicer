@@ -17,8 +17,8 @@ import java.util.regex.Pattern;
 
 import junit.framework.Assert;
 import de.hammacher.util.Diff;
-import de.hammacher.util.DiffPrint;
 import de.hammacher.util.Diff.change;
+import de.hammacher.util.DiffPrint;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.slicing.DirectSlicer;
 import de.unisb.cs.st.javaslicer.slicing.SliceInstructionsCollector;
@@ -116,10 +116,17 @@ public abstract class AbstractSlicingTest {
         change diff = differ.diff_2(false);
         if (diff != null) {
             StringWriter sw = new StringWriter();
-            sw.append("both slicing methods should yield the same result!\ndiff (Slicer -> DirectSlicer):\n\n");
+            sw.append("both slicing methods should yield the same result!\n" +
+            	"diff (Slicer -> DirectSlicer):\n\n");
             DiffPrint.SimplestPrint pr = new DiffPrint.SimplestPrint(arr1, arr2);
             pr.setOutput(sw);
             pr.print_script(diff);
+            sw.append("\n\nSlicer:\n");
+            for (SliceEntry s: arr1)
+            	sw.append(s.toString()).append("\n");
+            sw.append("\nDirectSlicer:\n");
+            for (SliceEntry s: arr2)
+            	sw.append(s.toString()).append("\n");
             Assert.fail(sw.toString());
         }
         assertTrue("diff should already have checked this: both slicing methods should yield the same result",
