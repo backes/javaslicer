@@ -163,20 +163,15 @@
         <dependency>
             <groupId>de.hammacher</groupId>
             <artifactId>utilities</artifactId>
-            <version>1.2.9</version>
+            <version>1.2.10</version>
         </dependency>
     </dependencies>
 
     <repositories>
         <repository>
-            <id>st-internal</id>
-            <name>internal artifacts released by the chair</name>
-            <url>https://maven.st.cs.uni-saarland.de/nexus/content/groups/internal</url>
-        </repository>
-        <repository>
-            <id>st-thirdparty</id>
-            <name>3rd party libraries hosted at st.</name>
-            <url>https://maven.st.cs.uni-saarland.de/nexus/content/repositories/thirdparty/</url>
+            <id>titania</id>
+            <name>the students' nexus server</name>
+            <url>http://titania.fs.uni-saarland.de/nexus/content/groups/public</url>
         </repository>
     </repositories>
 
