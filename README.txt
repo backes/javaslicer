@@ -4,7 +4,7 @@ Go to the javaslicer directory and run the assemble.sh script
 > cd javaslicer
 > ./assemble.sh
 
-This should create an assembly directory and copy runnable jars into it:
+This should have created an assembly directory and copy runnable jars into it:
 > ls -lh assembly
 slicer.jar     traceReader.jar   tracer.jar     visualize.jar
 
@@ -15,7 +15,7 @@ You can get a list of all options for the java agent:
 Create a trace file:
 > java -javaagent:assembly/tracer.jar=tracefile:test.trace -jar evaluation/dacapo-2006-10-MR2.jar -s small pmd
 
-Then you can just view the complete trace, if you want so:
+Then you can just view the complete trace, if you want so (warning: very large output!):
 > java -jar assembly/traceReader.jar test.trace
 
 Or you can run the dynamic slicer on it, and you should give the JVM some more memory:
