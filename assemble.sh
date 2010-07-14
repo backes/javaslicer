@@ -3,7 +3,6 @@
 cd `dirname $0`
 WORKINGDIR=`pwd`
 ASSEMBLY_DIR=$WORKINGDIR/assembly
-MAVEN_OPTS="$MAVEN_OPTS -Dmaven.test.skip=true"
 
 mkdir -p "$ASSEMBLY_DIR"
 rm -f "$ASSEMBLY_DIR"/*.jar
@@ -45,7 +44,7 @@ for ((i=0; i<num_projects; ++i)); do
   project=${projects[$i]}
   echo -n "  - "$project"...  "
   cd "$WORKINGDIR/$project"
-  if mvn -o -Dmaven.test.skip=true install >/dev/null 2>&1; then
+  if mvn -Dmaven.test.skip=true install >/dev/null 2>&1; then
     echo success
   else
     echo failure
@@ -65,7 +64,7 @@ for ((i=0; i<num_projects; ++i)); do
   cd "$WORKINGDIR/$project"
   output=()
   TMPFILE=`mktemp /tmp/assembly_XXXXXX`
-  if ! mvn -o -Dmaven.test.skip=true $TARGET >$TMPFILE 2>&1; then
+  if ! mvn -Dmaven.test.skip=true $TARGET >$TMPFILE 2>&1; then
     echo "failed!"
     echo
     cat $TMPFILE
