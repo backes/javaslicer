@@ -32,7 +32,7 @@ public class ConstantGZipIntegerTraceSequence implements ConstantIntegerTraceSeq
             return this.gzipped ? new GZippedBackwardIterator(this.file, this.streamIndex)
                 : new NoGzipBackwardIterator(this.file, this.streamIndex);
         } catch (final IOException e) {
-            return new EmptyIterator<Integer>();
+            return EmptyIterator.getInstance();
         }
     }
 

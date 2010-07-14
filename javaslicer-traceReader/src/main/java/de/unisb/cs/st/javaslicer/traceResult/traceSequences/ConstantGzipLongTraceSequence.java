@@ -32,7 +32,7 @@ public class ConstantGzipLongTraceSequence implements ConstantLongTraceSequence 
             return this.gzipped ? new GZippedBackwardIterator(this.file, this.streamIndex)
                 : new NoGzipBackwardIterator(this.file, this.streamIndex);
         } catch (final IOException e) {
-            return new EmptyIterator<Long>();
+            return EmptyIterator.getInstance();
         }
     }
 
