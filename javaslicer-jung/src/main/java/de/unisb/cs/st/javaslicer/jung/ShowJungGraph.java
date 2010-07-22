@@ -269,12 +269,12 @@ public class ShowJungGraph<VertexType> {
 				if (var instanceof ArrayElement) {
 					ArrayElement elem = (ArrayElement) var;
 					return "arr"+elem.getArrayId()+"["+elem.getArrayIndex()+"]";
-				} else if (var instanceof LocalVariable<?>) {
-					LocalVariable<?> localVar = (LocalVariable<?>) var;
+				} else if (var instanceof LocalVariable) {
+					LocalVariable localVar = (LocalVariable) var;
 					if (localVar.getVarName() != null)
 						return localVar.getVarName();
 					return "local" + localVar.getVarIndex();
-				} else if (var instanceof StackEntry<?>) {
+				} else if (var instanceof StackEntry) {
 					return "stack";
 				} else if (var instanceof ObjectField) {
 					ObjectField objField = (ObjectField) var;
@@ -297,12 +297,12 @@ public class ShowJungGraph<VertexType> {
 				if (var instanceof ArrayElement) {
 					ArrayElement elem = (ArrayElement) var;
 					return "Array element " + elem.getArrayIndex() + " of array #" + elem.getArrayId();
-				} else if (var instanceof LocalVariable<?>) {
-					LocalVariable<?> localVar = (LocalVariable<?>) var;
+				} else if (var instanceof LocalVariable) {
+					LocalVariable localVar = (LocalVariable) var;
 					if (localVar.getVarName() != null)
 						return "Local variable \"" + localVar.getVarName() + "\"";
 					return "Local variable #" + localVar.getVarIndex();
-				} else if (var instanceof StackEntry<?>) {
+				} else if (var instanceof StackEntry) {
 					return "Dependency over the operand stack";
 				} else if (var instanceof ObjectField) {
 					ObjectField objField = (ObjectField) var;
