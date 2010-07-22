@@ -37,7 +37,7 @@ public class SimulationEnvironment {
 					++firstLocalVar;
 				int firstStackEntry = 0;
 				if (firstLocalVar == localVars.length) {
-					while (firstStackEntry < stackEntries.length && stackEntries[firstLocalVar] == null)
+					while (firstStackEntry < stackEntries.length && stackEntries[firstStackEntry] == null)
 						++firstStackEntry;
 				}
 				this.posLocalVars = firstLocalVar;
