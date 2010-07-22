@@ -484,7 +484,7 @@ public class Simulator<InstanceType extends InstructionInstance> {
         case POP:
             return stackManipulation(frame, 1, 0);
 
-        case I2F: case F2I: case D2F: case I2B: case I2C: case I2S:
+        case I2F: case F2I: case I2B: case I2C: case I2S:
         case ARRAYLENGTH:
         case INEG: case FNEG:
             return stackManipulation(frame, 1, 1);
@@ -498,7 +498,7 @@ public class Simulator<InstanceType extends InstructionInstance> {
         case POP2:
             return stackManipulation(frame, 2, 0);
 
-        case L2I: case L2F: case D2I:
+        case L2I: case D2I: case L2F: case D2F:
             // these operations read two entries, but we only trace the lower one
             stackEntryColl = Collections.singleton(
                 (Variable)frame.getStackEntry(frame.operandStack.getAndIncrement() - 1));
