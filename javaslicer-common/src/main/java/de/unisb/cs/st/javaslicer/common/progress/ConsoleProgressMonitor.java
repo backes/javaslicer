@@ -115,7 +115,7 @@ public class ConsoleProgressMonitor implements ProgressMonitor {
             long timeNanos = System.nanoTime();
             double newPercentPerSecond = (percentageDone - this.lastPercentageDone) / (timeNanos - this.lastNanos) * 1e9;
             this.lastNanos = timeNanos;
-            double influence = Math.max(1 / (this.numApprox - 9), 0.01);
+            double influence = Math.max(1 / (this.numApprox - 9), 0.003);
             approxPercentPerSecond = (1. - influence) * this.lastApproxPercentPerSecond + influence * newPercentPerSecond;
         }
         int lastDeziPercentDone = (int) Math.round(10. * this.lastPercentageDone);
