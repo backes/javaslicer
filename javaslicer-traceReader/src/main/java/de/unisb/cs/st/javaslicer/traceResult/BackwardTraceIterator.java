@@ -126,10 +126,10 @@ public class BackwardTraceIterator<InstanceType extends InstructionInstance>
                 this.instancesCount, this.instanceFactory);
             assert instance != null;
 
+            ++this.instancesCount;
             if (this.filter != null && this.filter.filterInstance(instance)) {
                 ++this.filteredInstancesCount;
             } else {
-                ++this.instancesCount;
                 return instance;
             }
             index = backwardInstruction.getBackwardInstructionIndex(this);

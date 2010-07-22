@@ -24,8 +24,8 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 import de.hammacher.util.MultiplexedFileReader;
-import de.hammacher.util.StringCacheInput;
 import de.hammacher.util.MultiplexedFileReader.MultiplexInputStream;
+import de.hammacher.util.StringCacheInput;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstructionInstanceFactory;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
@@ -443,14 +443,14 @@ public class TraceResult {
                 BackwardTraceIterator<AbstractInstructionInstance> it = tr.getBackwardIterator(tracing,
                     filter, new AbstractInstructionInstanceFactory());
                 long nr = 0;
-                String format = "%8d: %-100s -> %3d %7d %s%n";
-                System.out.format("%8s  %-100s    %3s %7s %s%n",
-                        "Nr", "Location", "Dep", "OccNr", "Instruction");
+                String format = "%8d (%8d)  %-100s -> %3d %7d %s%n";
+                System.out.format("%19s  %-100s    %3s %7s %s%n",
+                        "Nr (  intern)", "Location", "Dep", "OccNr", "Instruction");
                 while (it.hasNext()) {
                     InstructionInstance inst = it.next();
                     ReadMethod method = inst.getInstruction().getMethod();
                     ReadClass class0 = method.getReadClass();
-                    System.out.format(format, nr++, class0.getName()+"."
+                    System.out.format(format, nr++, inst.getInstanceNr(), class0.getName()+"."
                             +method.getName()+":"+inst.getInstruction().getLineNumber(),
                             inst.getStackDepth(),
                             inst.getOccurrenceNumber(), inst.toString());
