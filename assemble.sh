@@ -39,12 +39,12 @@ fi
 
 echo
 
-echo "Pass 1: run install on all projects:"
+echo "Pass 1: run clean and install on all projects:"
 for ((i=0; i<num_projects; ++i)); do
   project=${projects[$i]}
   echo -n "  - "$project"...  "
   cd "$WORKINGDIR/$project"
-  if mvn -Dmaven.test.skip=true install >/dev/null 2>&1; then
+  if mvn -Dmaven.test.skip=true clean install >/dev/null 2>&1; then
     echo success
   else
     echo failure
