@@ -38,6 +38,7 @@ public class ConsoleProgressMonitor implements ProgressMonitor {
 
     private double lastPercentageDone;
     private double lastApproxPercentPerSecond;
+    private double lastApproxSecondsRemaining;
     private long lastNanos;
     private long numApprox;
 
@@ -111,19 +112,33 @@ public class ConsoleProgressMonitor implements ProgressMonitor {
     protected void output(double percentageDone, boolean onlyIfChanged, boolean finished) {
         int deziPercentDone = (int) Math.round(10. * percentageDone);
         double approxPercentPerSecond = 0;
+        double approxSecondsRemaining = 0;
         if (this.showApproxTimeRemaining && percentageDone != 0 && ++this.numApprox >= 10) {
             long timeNanos = System.nanoTime();
+            double influenceStart = 10. / this.numApprox;
+
             double newPercentPerSecond = (percentageDone - this.lastPercentageDone) / (timeNanos - this.lastNanos) * 1e9;
-            this.lastNanos = timeNanos;
-            double influence = Math.min(1, (percentageDone - this.lastPercentageDone) * 0.1);
+            double influencePercentage = Math.min(1, (percentageDone - this.lastPercentageDone) / 5); // roughly average over the last 5 percent
+            double influenceTime = Math.min(1, (this.lastNanos - timeNanos) / 60e9); // roughly average over the last minute
+            double influence = Math.max(influenceStart, Math.max(influencePercentage, influenceTime));
             approxPercentPerSecond = (1. - influence) * this.lastApproxPercentPerSecond + influence * newPercentPerSecond;
+            this.lastNanos = timeNanos;
+
+            double approxSecondsRemainingNow = ((100. - percentageDone) / approxPercentPerSecond);
+            if (approxSecondsRemainingNow <= 0.01)
+            	approxSecondsRemainingNow = 0.01;
+            double timeInfluenceTime = Math.min(1, (this.lastNanos - timeNanos) / 15e9); // roughly average over the last 15 seconds
+            double timeInfluenceRemaining = Math.min(1, 1.0 / approxSecondsRemainingNow); // more influence when we are about to finish
+            double timeInfluence = Math.max(influenceStart, Math.max(timeInfluenceTime, timeInfluenceRemaining));
+            approxSecondsRemaining = (1. - timeInfluence) * this.lastApproxSecondsRemaining + influence * approxSecondsRemainingNow;
         }
+
         int lastDeziPercentDone = (int) Math.round(10. * this.lastPercentageDone);
-        int approxSecondsRemaining = (int) ((100. - percentageDone) / approxPercentPerSecond);
-        int lastApproxSecondsRemaining = (int) ((100. - this.lastPercentageDone) / this.lastApproxPercentPerSecond);
+        int approxSecondsRemainingInt = (int) approxSecondsRemaining;
+        int lastApproxSecondsRemainingInt = (int) ((100. - this.lastPercentageDone) / this.lastApproxSecondsRemaining);
         if (!onlyIfChanged ||
                 deziPercentDone != lastDeziPercentDone ||
-                approxPercentPerSecond != lastApproxSecondsRemaining) {
+                approxSecondsRemainingInt != lastApproxSecondsRemainingInt) {
             StringBuilder sb = new StringBuilder();
             if (this.title != null) {
                 sb.append(this.title).append(": ");
@@ -146,12 +161,12 @@ public class ConsoleProgressMonitor implements ProgressMonitor {
                     if (approxPercentPerSecond == 0) {
                         sb.append("unknown");
                     } else {
-                        int minutesRemaining = approxSecondsRemaining / 60;
+                        int minutesRemaining = approxSecondsRemainingInt / 60;
                         int hoursRemaining = minutesRemaining / 60;
                         new Formatter(sb).format("%3d:%02d:%02d",
                             hoursRemaining,
                             minutesRemaining - 60*hoursRemaining,
-                            approxSecondsRemaining - 60*minutesRemaining);
+                            approxSecondsRemainingInt - 60*minutesRemaining);
                     }
                 }
                 sb.append("  "); // for changing number of hours
@@ -161,6 +176,7 @@ public class ConsoleProgressMonitor implements ProgressMonitor {
             this.outputStream.flush();
         }
         this.lastApproxPercentPerSecond = approxPercentPerSecond;
+        this.lastApproxSecondsRemaining = approxSecondsRemaining;
         this.lastPercentageDone = percentageDone;
     }
 
