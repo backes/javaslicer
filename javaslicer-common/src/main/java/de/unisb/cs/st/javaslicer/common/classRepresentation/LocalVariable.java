@@ -75,6 +75,8 @@ public class LocalVariable {
 
     public static LocalVariable readFrom(final DataInput in) throws IOException {
         final int index = in.readInt();
+        if (index == -1)
+        	return null;
         final String name = in.readUTF();
         final String desc = in.readUTF();
         return new LocalVariable(index, name, desc);

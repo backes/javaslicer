@@ -32,7 +32,7 @@ public class FilteringDependencesVisitor<InstanceType> implements
     }
 
     public void visitDataDependence(InstanceType from, InstanceType to,
-            Collection<Variable> fromVars, Variable toVar, DataDependenceType type) throws InterruptedException {
+            Collection<? extends Variable> fromVars, Variable toVar, DataDependenceType type) throws InterruptedException {
         if (this.filter.filter(from) && this.filter.filter(to))
             this.visitor.visitDataDependence(from, to, fromVars, toVar, type);
     }

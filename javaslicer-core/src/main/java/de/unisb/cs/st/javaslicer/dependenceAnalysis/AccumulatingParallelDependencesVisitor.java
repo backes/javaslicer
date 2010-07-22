@@ -78,8 +78,8 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         private final Variable[] variables;
         private volatile int remainingVisits;
 
-        @SuppressWarnings("unchecked")
-        private static final AtomicIntegerFieldUpdater<EventStamp> remainingVisitsUpdater =
+        @SuppressWarnings("rawtypes")
+		private static final AtomicIntegerFieldUpdater<EventStamp> remainingVisitsUpdater =
             AtomicIntegerFieldUpdater.newUpdater(EventStamp.class, "remainingVisits");
 
         public EventStamp(byte[] events,
@@ -507,7 +507,7 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
     }
 
     public void visitDataDependence(InstanceType from, InstanceType to,
-            Collection<Variable> fromVars, Variable toVar, DataDependenceType type) throws InterruptedException {
+            Collection<? extends Variable> fromVars, Variable toVar, DataDependenceType type) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
         if (type == DataDependenceType.READ_AFTER_WRITE) {

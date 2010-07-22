@@ -15,13 +15,13 @@ public interface DynamicInformation {
     public static final DynamicInformation EMPTY = new SimpleVariableUsage(EMPTY_VARIABLE_SET, EMPTY_VARIABLE_SET);
 
     // methods
-    public Collection<Variable> getUsedVariables();
+    public Collection<? extends Variable> getUsedVariables();
 
-    public Collection<Variable> getDefinedVariables();
+    public Collection<? extends Variable> getDefinedVariables();
 
-    public Collection<Variable> getUsedVariables(Variable definedVariable);
+    public Collection<? extends Variable> getUsedVariables(Variable definedVariable);
 
-    public Map<Long, Collection<Variable>> getCreatedObjects();
+    public Map<Long, Collection<? extends Variable>> getCreatedObjects();
 
     public boolean isCatchBlock();
 

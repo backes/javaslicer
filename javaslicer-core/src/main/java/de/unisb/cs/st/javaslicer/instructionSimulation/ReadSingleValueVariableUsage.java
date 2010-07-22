@@ -36,7 +36,7 @@ public class ReadSingleValueVariableUsage implements DynamicInformation {
         return "used:    "+this.usedVariable+System.getProperty("line.separator")
             +"defined: none";
     }
-    public Map<Long, Collection<Variable>> getCreatedObjects() {
+    public Map<Long, Collection<? extends Variable>> getCreatedObjects() {
         return Collections.emptyMap();
     }
 

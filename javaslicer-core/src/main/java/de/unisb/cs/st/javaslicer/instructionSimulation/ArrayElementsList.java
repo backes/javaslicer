@@ -3,10 +3,9 @@ package de.unisb.cs.st.javaslicer.instructionSimulation;
 import java.util.AbstractList;
 
 import de.unisb.cs.st.javaslicer.variables.ArrayElement;
-import de.unisb.cs.st.javaslicer.variables.Variable;
 
 
-public class ArrayElementsList extends AbstractList<Variable> {
+public class ArrayElementsList extends AbstractList<ArrayElement> {
 
     private final int numArrayElems;
     private final long arrayId;
@@ -17,7 +16,7 @@ public class ArrayElementsList extends AbstractList<Variable> {
     }
 
     @Override
-    public Variable get(final int index) {
+    public ArrayElement get(final int index) {
         if (index < 0 || index >= this.numArrayElems)
             throw new IndexOutOfBoundsException("index: " + index + "; size: " + size());
         return new ArrayElement(this.arrayId, index);

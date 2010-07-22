@@ -1,6 +1,7 @@
 package de.unisb.cs.st.javaslicer.tracer.instrumentation;
 
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -8,8 +9,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.commons.collections.Factory;
 import org.apache.commons.collections.map.LazyMap;
@@ -83,7 +84,8 @@ public class TracingMethodInstrumenter implements Opcodes {
             this.iterator = insnList.iterator(index);
         }
 
-        @SuppressWarnings("unchecked")
+        @Override
+		@SuppressWarnings("unchecked")
         public void add(final AbstractInsnNode e) {
             if (this.iterator.hasNext())
                 this.iterator.add(e);
@@ -93,35 +95,43 @@ public class TracingMethodInstrumenter implements Opcodes {
             }
         }
 
-        public boolean hasNext() {
+        @Override
+		public boolean hasNext() {
             return this.iterator.hasNext();
         }
 
-        public boolean hasPrevious() {
+        @Override
+		public boolean hasPrevious() {
             return this.iterator.hasPrevious();
         }
 
-        public AbstractInsnNode next() {
+        @Override
+		public AbstractInsnNode next() {
             return this.iterator.next();
         }
 
-        public int nextIndex() {
+        @Override
+		public int nextIndex() {
             return this.iterator.nextIndex();
         }
 
-        public AbstractInsnNode previous() {
+        @Override
+		public AbstractInsnNode previous() {
             return this.iterator.previous();
         }
 
-        public int previousIndex() {
+        @Override
+		public int previousIndex() {
             return this.iterator.previousIndex();
         }
 
-        public void remove() {
+        @Override
+		public void remove() {
             this.iterator.remove();
         }
 
-        public void set(final AbstractInsnNode e) {
+        @Override
+		public void set(final AbstractInsnNode e) {
             this.iterator.set(e);
         }
 
@@ -221,7 +231,8 @@ public class TracingMethodInstrumenter implements Opcodes {
         final InsnList oldInstructions = new InsnList();
         final Map<LabelNode, LabelNode> labelCopies = LazyMap.decorate(
                 new HashMap<LabelNode, LabelNode>(), new Factory() {
-                    public Object create() {
+                    @Override
+					public Object create() {
                         return new LabelNode();
                     }
                 });
@@ -249,10 +260,15 @@ public class TracingMethodInstrumenter implements Opcodes {
         }
 
         // store information about local variables in the ReadMethod object
+        List<LocalVariable> localVariables = new ArrayList<LocalVariable>();
         for (final Object o: this.methodNode.localVariables) {
             final LocalVariableNode localVar = (LocalVariableNode) o;
-            this.readMethod.getLocalVariables().add(new LocalVariable(localVar.index, localVar.name, localVar.desc));
+            while (localVariables.size() <= localVar.index)
+            	localVariables.add(null);
+			localVariables.set(localVar.index, new LocalVariable(localVar.index, localVar.name, localVar.desc));
         }
+        this.readMethod.setLocalVariables(localVariables.toArray(new LocalVariable[localVariables.size()]));
+        localVariables = null;
 
         // each method must start with a (dedicated) label:
         assert this.readMethod.getInstructions().isEmpty();
@@ -374,7 +390,8 @@ public class TracingMethodInstrumenter implements Opcodes {
 
             final Map<LabelNode, LabelNode> newMethodLabels = LazyMap.decorate(
                     new HashMap<LabelNode, LabelNode>(), new Factory() {
-                        public Object create() {
+                        @Override
+						public Object create() {
                             return new LabelNode();
                         }
                     });

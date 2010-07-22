@@ -3,9 +3,7 @@ package de.unisb.cs.st.javaslicer.common.classRepresentation;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
 
@@ -53,7 +51,7 @@ public class ReadMethod implements Comparable<ReadMethod> {
     private int instructionNumberEnd;
     private LabelMarker methodEntryLabel;
     private LabelMarker abnormalTerminationLabel;
-    private final ArrayList<LocalVariable> localVariables;
+    private LocalVariable[] localVariables;
 
     public ReadMethod(final ReadClass readClass, final int access, final String name, final String desc, final int instructionNumberStart) {
         this.readClass = readClass;
@@ -63,7 +61,7 @@ public class ReadMethod implements Comparable<ReadMethod> {
         this.instructionNumberStart = instructionNumberStart;
         // default: no instructions
         this.instructionNumberEnd = instructionNumberStart;
-        this.localVariables = new ArrayList<LocalVariable>();
+        this.localVariables = null;
     }
 
     public void addInstruction(final AbstractInstruction instruction) {
@@ -145,7 +143,17 @@ public class ReadMethod implements Comparable<ReadMethod> {
         this.abnormalTerminationLabel = abnormalTerminationLabel;
     }
 
-    public List<LocalVariable> getLocalVariables() {
+    /**
+     * Returns an array containing all local variables. Each local variable is contained at the
+     * position of it's index. If no debug information is available for some variables, then the array
+     * contains holes. Be aware of that!
+     *
+     * And please don't modify the array. I don't want to wrap it in an UnmodifiableList containing
+     * an ArrayList (from Arrays.asList()). For performance reasons I just return the bare array.
+     *
+     * @return an unmodifiable list of all local variables
+     */
+    public LocalVariable[] getLocalVariables() {
         return this.localVariables;
     }
 
@@ -170,9 +178,16 @@ public class ReadMethod implements Comparable<ReadMethod> {
         } else {
             out.writeBoolean(false);
         }
-        OptimizedDataOutputStream.writeInt0(this.localVariables.size(), out);
+        int realNumLocalVars = 0;
         for (final LocalVariable v: this.localVariables)
-            v.writeOut(out);
+        	if (v != null)
+        		++realNumLocalVars;
+        OptimizedDataOutputStream.writeInt0(realNumLocalVars, out);
+        for (final LocalVariable v: this.localVariables)
+        	if (v != null)
+        		v.writeOut(out);
+        	else
+        		out.writeInt(-1);
     }
 
     public static ReadMethod readFrom(final DataInputStream in, final ReadClass readClass, final int instructionNumberStart,
@@ -228,14 +243,24 @@ public class ReadMethod implements Comparable<ReadMethod> {
         }
 
         int localVarsNr = OptimizedDataInputStream.readInt0(in);
-        while (localVarsNr-- > 0)
-            rm.localVariables.add(LocalVariable.readFrom(in));
-        rm.localVariables.trimToSize();
-        Collections.sort(rm.localVariables, new Comparator<LocalVariable>() {
-            public int compare(final LocalVariable o1, final LocalVariable o2) {
-                return o1.getIndex() - o2.getIndex();
-            }
-        });
+        rm.localVariables = new LocalVariable[localVarsNr];
+        boolean trim = false;
+        while (localVarsNr-- > 0) {
+        	LocalVariable var = LocalVariable.readFrom(in);
+        	if (var == null)
+        		continue;
+        	if (rm.localVariables.length <= var.getIndex()) {
+        		rm.localVariables = Arrays.copyOf(rm.localVariables, Math.max(var.getIndex()+1, 2*rm.localVariables.length));
+        		trim = true;
+        	}
+            rm.localVariables[var.getIndex()] = var;
+        }
+        if (trim && rm.localVariables[rm.localVariables.length-1] == null) {
+        	int newSize = rm.localVariables.length-1;
+        	while (rm.localVariables[newSize-1] == null)
+        		--newSize;
+        	rm.localVariables = Arrays.copyOf(rm.localVariables, newSize);
+        }
 
         return rm;
     }
@@ -289,5 +314,9 @@ public class ReadMethod implements Comparable<ReadMethod> {
             return false;
         return true;
     }
+
+	public void setLocalVariables(LocalVariable[] newLocalVars) {
+		this.localVariables = newLocalVars;
+	}
 
 }

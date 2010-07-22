@@ -8,10 +8,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.objectweb.asm.Opcodes;
 
-import de.hammacher.util.ArrayStack;
 import de.hammacher.util.IntHolder;
 import de.hammacher.util.maps.LongMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Field;
@@ -35,9 +35,9 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.TypeIns
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.VarInstruction;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.variables.ArrayElement;
+import de.unisb.cs.st.javaslicer.variables.LocalVariable;
 import de.unisb.cs.st.javaslicer.variables.ObjectField;
 import de.unisb.cs.st.javaslicer.variables.StackEntry;
-import de.unisb.cs.st.javaslicer.variables.StackEntrySet;
 import de.unisb.cs.st.javaslicer.variables.StaticField;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
@@ -56,53 +56,51 @@ public class Simulator<InstanceType extends InstructionInstance> {
     }
 
     public DynamicInformation simulateInstruction(InstructionInstance inst,
-            ExecutionFrame<InstanceType> executionFrame, ExecutionFrame<InstanceType> removedFrame,
-            ArrayStack<ExecutionFrame<InstanceType>> allFrames) {
+            SimulationEnvironment simulationEnvironment) {
         switch (inst.getInstruction().getType()) {
         case ARRAY:
-            return simulateArrayInstruction(inst, executionFrame);
+            return simulateArrayInstruction(inst, simulationEnvironment);
         case FIELD:
-            return simulateFieldInstruction(inst, executionFrame);
+            return simulateFieldInstruction(inst, simulationEnvironment);
         case IINC:
-            Collection<Variable> vars = Collections.singleton((Variable)executionFrame.getLocalVariable(
-                ((IIncInstruction)inst.getInstruction()).getLocalVarIndex()));
+            Set<LocalVariable> vars = Collections.singleton(simulationEnvironment.getLocalVariable(
+            	inst.getStackDepth(), ((IIncInstruction)inst.getInstruction()).getLocalVarIndex()));
             return new SimpleVariableUsage(vars, vars);
         case INT:
             // write 1
-            return new SimpleVariableUsage(Collections.<Variable>emptySet(), new StackEntrySet<InstanceType>(
-                    executionFrame, executionFrame.operandStack.decrementAndGet(), 1));
+            return new SimpleVariableUsage(Collections.<Variable>emptySet(),
+            	simulationEnvironment.getOpStackEntry(inst.getStackDepth(),
+            		simulationEnvironment.decAndGetOpStack(inst.getStackDepth())));
         case JUMP:
-            return simulateJumpInsn((JumpInstruction)inst.getInstruction(), executionFrame);
+            return simulateJumpInsn((JumpInstruction)inst.getInstruction(), inst.getStackDepth(), simulationEnvironment);
         case LABEL:
             if (((LabelMarker)inst.getInstruction()).isCatchBlock()) {
                 // at the catch block start, the reference to the exception is pushed onto the stack
-                executionFrame.operandStack.decrementAndGet();
+                simulationEnvironment.decAndGetOpStack(inst.getStackDepth());
                 return DynamicInformation.CATCHBLOCK;
             }
             return DynamicInformation.EMPTY;
         case LDC:
             // writes 1 or 2, but we only trace the lower variable
-            int stackOffset = (((LdcInstruction)inst.getInstruction()).constantIsLong())
-                ? executionFrame.operandStack.addAndGet(-2)
-                : executionFrame.operandStack.decrementAndGet();
-            return new SimpleVariableUsage(Collections.<Variable>emptySet(), new StackEntrySet<InstanceType>(executionFrame, stackOffset, 1));
+            int stackOffset = simulationEnvironment.subAndGetOpStack(inst.getStackDepth(),
+            	((LdcInstruction)inst.getInstruction()).constantIsLong() ? 2 : 1);
+            return new SimpleVariableUsage(Collections.<Variable>emptySet(), simulationEnvironment.getOpStackEntry(inst.getStackDepth(), stackOffset));
         case LOOKUPSWITCH:
         case TABLESWITCH:
-            return new SimpleVariableUsage(executionFrame.getStackEntry(executionFrame.operandStack.getAndIncrement()),
+            return new SimpleVariableUsage(simulationEnvironment.getOpStackEntry(inst.getStackDepth(), simulationEnvironment.getAndIncOpStack(inst.getStackDepth())),
                     DynamicInformation.EMPTY_VARIABLE_SET);
         case METHODINVOCATION:
-            return simulateMethodInsn((MethodInvocationInstruction)inst.getInstruction(),
-                    executionFrame, removedFrame);
+            return simulateMethodInsn(inst, simulationEnvironment);
         case MULTIANEWARRAY:
-            return simulateMultiANewArrayInsn(inst, executionFrame);
+            return simulateMultiANewArrayInsn(inst, simulationEnvironment);
         case NEWARRAY:
-            return simulateNewarrayInsn(inst, executionFrame);
+            return simulateNewarrayInsn(inst, simulationEnvironment);
         case SIMPLE:
-            return simulateSimpleInsn(inst, executionFrame, allFrames);
+            return simulateSimpleInsn(inst, simulationEnvironment);
         case TYPE:
-            return simulateTypeInsn(inst, executionFrame);
+            return simulateTypeInsn(inst, simulationEnvironment);
         case VAR:
-            return simulateVarInstruction((VarInstruction) inst.getInstruction(), executionFrame);
+            return simulateVarInstruction(inst, simulationEnvironment);
         default:
             assert false;
             return null;
@@ -110,66 +108,66 @@ public class Simulator<InstanceType extends InstructionInstance> {
     }
 
     private DynamicInformation simulateMultiANewArrayInsn(InstructionInstance inst,
-            ExecutionFrame<InstanceType> executionFrame) {
+            SimulationEnvironment simulationEnvironment) {
         assert inst.getInstruction().getType() == InstructionType.MULTIANEWARRAY;
         MultiANewArrayInstrInstanceInfo info = (MultiANewArrayInstrInstanceInfo) inst.getAdditionalInfo();
 
-        LongMap<Collection<Variable>> createdObjects = new LongMap<Collection<Variable>>();
+        LongMap<Collection<? extends Variable>> createdObjects = new LongMap<Collection<? extends Variable>>();
         for (long createdObj: info.getNewObjectIdentifiers()) {
             IntHolder h = this.maxArrayElem.remove(createdObj);
             createdObjects.put(createdObj, new ArrayElementsList(
                     h == null ? 0 : (h.get()+1), createdObj));
         }
 
-        return stackManipulation(executionFrame,
+        return stackManipulation(simulationEnvironment, inst.getStackDepth(),
             ((MultiANewArrayInstruction)inst.getInstruction()).getDimension(), 1,
             createdObjects);
     }
 
     private DynamicInformation simulateNewarrayInsn(InstructionInstance inst,
-            ExecutionFrame<InstanceType> frame) {
+            SimulationEnvironment simulationEnvironment) {
         assert inst.getInstruction().getType() == InstructionType.NEWARRAY;
         NewArrayInstrInstanceInfo info = (NewArrayInstrInstanceInfo) inst.getAdditionalInfo();
         IntHolder h = this.maxArrayElem.remove(info.getNewObjectIdentifier());
-        StackEntry<InstanceType> stackEntry = frame.getStackEntry(frame.operandStack.get()-1);
+        StackEntry stackEntry = simulationEnvironment.getOpStackEntry(inst.getStackDepth(),
+        	simulationEnvironment.getOpStack(inst.getStackDepth()) - 1);
         Collection<Variable> stackEntryColl = Collections.singleton((Variable)stackEntry);
-        Map<Long, Collection<Variable>> createdObjects =
-            Collections.singletonMap(info.getNewObjectIdentifier(),
-                (Collection<Variable>)new ArrayElementsList(h == null ? 0 : (h.get()+1),
+        Map<Long, Collection<? extends Variable>> createdObjects =
+            Collections.<Long, Collection<? extends Variable>>singletonMap(info.getNewObjectIdentifier(),
+                new ArrayElementsList(h == null ? 0 : (h.get()+1),
                                           info.getNewObjectIdentifier()));
         return new SimpleVariableUsage(stackEntryColl, stackEntryColl, createdObjects);
     }
 
-    private DynamicInformation simulateTypeInsn(InstructionInstance inst, ExecutionFrame<InstanceType> frame) {
+    private DynamicInformation simulateTypeInsn(InstructionInstance inst, SimulationEnvironment simEnv) {
         assert inst.getInstruction().getType() == InstructionType.TYPE;
         TypeInstrInstanceInfo info = (TypeInstrInstanceInfo) inst.getAdditionalInfo();
+        int stackDepth = inst.getStackDepth();
         switch (inst.getInstruction().getOpcode()) {
         case Opcodes.NEW:
-            Collection<Variable> definedVariables = Collections.singleton(
-                (Variable)frame.getStackEntry(frame.operandStack.decrementAndGet()));
             return new SimpleVariableUsage(DynamicInformation.EMPTY_VARIABLE_SET,
-                definedVariables,
-                Collections.singletonMap(info.getNewObjectIdentifier(),
+            	Collections.<Variable>singleton(simEnv.getOpStackEntry(stackDepth, simEnv.decAndGetOpStack(stackDepth))),
+                Collections.<Long, Collection<? extends Variable>>singletonMap(info.getNewObjectIdentifier(),
                     getAllFields(((TypeInstruction)inst.getInstruction()).getJavaClassName(),
                         info.getNewObjectIdentifier())));
         case Opcodes.ANEWARRAY:
-            int stackSize = frame.operandStack.get()-1;
+            int stackSize = simEnv.getOpStack(stackDepth)-1;
             IntHolder h = this.maxArrayElem.remove(info.getNewObjectIdentifier());
-            Collection<Variable> stackEntryColl = Collections.singleton((Variable)frame.getStackEntry(stackSize));
+            Collection<Variable> stackEntryColl = Collections.<Variable>singleton(simEnv.getOpStackEntry(stackDepth, stackSize));
             return new SimpleVariableUsage(stackEntryColl, stackEntryColl,
-                Collections.singletonMap(info.getNewObjectIdentifier(),
-                    (Collection<Variable>)new ArrayElementsList(h == null ? 0 : (h.get()+1), info.getNewObjectIdentifier())));
+                Collections.<Long, Collection<? extends Variable>>singletonMap(info.getNewObjectIdentifier(),
+                    new ArrayElementsList(h == null ? 0 : (h.get()+1), info.getNewObjectIdentifier())));
         case Opcodes.CHECKCAST:
-            return new SimpleVariableUsage(frame.getStackEntry(frame.operandStack.get()-1), DynamicInformation.EMPTY_VARIABLE_SET);
+            return new SimpleVariableUsage(simEnv.getOpStackEntry(stackDepth, simEnv.getOpStack(stackDepth)-1), DynamicInformation.EMPTY_VARIABLE_SET);
         case Opcodes.INSTANCEOF:
-            return stackManipulation(frame, 1, 1);
+            return stackManipulation(simEnv, stackDepth, 1, 1);
         default:
             assert false;
             return null;
         }
     }
 
-    private Collection<Variable> getAllFields(String className, long objId) {
+    private Collection<ObjectField> getAllFields(String className, long objId) {
         String[] cachedFields = this.fieldsCache.get(className);
         if (cachedFields == null) {
             HashSet<String> allFields = new HashSet<String>();
@@ -190,18 +188,17 @@ public class Simulator<InstanceType extends InstructionInstance> {
         return new ObjectFieldList(objId, cachedFields);
     }
 
-    private DynamicInformation simulateJumpInsn(JumpInstruction instruction, ExecutionFrame<InstanceType> frame) {
-        switch (instruction.getOpcode()) {
+    private DynamicInformation simulateJumpInsn(JumpInstruction inst, int stackDepth, SimulationEnvironment simulationEnvironment) {
+        switch (inst.getOpcode()) {
         case IFEQ: case IFNE: case IFLT: case IFGE: case IFGT: case IFLE:
         case IFNULL: case IFNONNULL:
             // read 1 stack entry and compare it to zero / null
-            return new SimpleVariableUsage(frame.getStackEntry(frame.operandStack.getAndIncrement()),
-                DynamicInformation.EMPTY_VARIABLE_SET);
+            return new ReadSingleValueVariableUsage(simulationEnvironment.getOpStackEntry(stackDepth, simulationEnvironment.getAndIncOpStack(stackDepth)));
 
         case IF_ICMPEQ: case IF_ICMPNE: case IF_ICMPLT: case IF_ICMPGE:
         case IF_ICMPGT: case IF_ICMPLE: case IF_ACMPEQ: case IF_ACMPNE:
             // read two stack entries and compare them
-            return new SimpleVariableUsage(new StackEntrySet<InstanceType>(frame, frame.operandStack.getAndAdd(2), 2),
+            return new SimpleVariableUsage(simulationEnvironment.getOpStackEntries(stackDepth, simulationEnvironment.getAndAddOpStack(stackDepth, 2), 2),
                 DynamicInformation.EMPTY_VARIABLE_SET);
 
         case GOTO:
@@ -219,7 +216,7 @@ public class Simulator<InstanceType extends InstructionInstance> {
     }
 
     private DynamicInformation simulateArrayInstruction(InstructionInstance inst,
-            ExecutionFrame<InstanceType> frame) {
+            SimulationEnvironment simulationEnvironment) {
         assert inst.getInstruction().getType() == InstructionType.ARRAY;
         ArrayInstrInstanceInfo arrInfo = (ArrayInstrInstanceInfo) inst.getAdditionalInfo();
         long arrayId = arrInfo.getArrayId();
@@ -230,32 +227,34 @@ public class Simulator<InstanceType extends InstructionInstance> {
         else if (arrayIndex > h.get())
             h.set(arrayIndex);
 
+        int stackDepth = inst.getStackDepth();
+
         switch (inst.getInstruction().getOpcode()) {
         case IALOAD: case FALOAD: case AALOAD: case BALOAD: case CALOAD: case SALOAD:
             // read 2, write 1
-            int stackOffset = frame.operandStack.getAndIncrement()-1;
-            Variable lowerVar = frame.getStackEntry(stackOffset);
+            int stackOffset = simulationEnvironment.getAndIncOpStack(stackDepth)-1;
+            Variable lowerVar = simulationEnvironment.getOpStackEntry(stackDepth, stackOffset);
             ArrayElement arrayElem = new ArrayElement(arrayId, arrayIndex);
-            return new SimpleVariableUsage(Arrays.asList(lowerVar, frame.getStackEntry(stackOffset+1),
+            return new SimpleVariableUsage(Arrays.asList(lowerVar, simulationEnvironment.getOpStackEntry(stackDepth, stackOffset+1),
                     arrayElem), lowerVar);
         case LALOAD: case DALOAD:
             // read 2, write 2 (but we only trace the lower written value)
-            stackOffset = frame.operandStack.get()-2;
+            stackOffset = simulationEnvironment.getOpStack(stackDepth)-2;
             arrayElem = new ArrayElement(arrayId, arrayIndex);
-            lowerVar = frame.getStackEntry(stackOffset);
-            return new SimpleVariableUsage(Arrays.asList(lowerVar, frame.getStackEntry(stackOffset+1),
+            lowerVar = simulationEnvironment.getOpStackEntry(stackDepth, stackOffset);
+            return new SimpleVariableUsage(Arrays.asList(lowerVar, simulationEnvironment.getOpStackEntry(stackDepth, stackOffset+1),
                     arrayElem), lowerVar);
         case IASTORE: case FASTORE: case AASTORE: case BASTORE: case CASTORE: case SASTORE:
             // read 3, write 0
-            stackOffset = frame.operandStack.getAndAdd(3);
+            stackOffset = simulationEnvironment.getAndAddOpStack(stackDepth, 3);
             arrayElem = new ArrayElement(arrayId, arrayIndex);
-            return new SimpleVariableUsage(new StackEntrySet<InstanceType>(frame, stackOffset, 3),
+            return new SimpleVariableUsage(simulationEnvironment.getOpStackEntries(stackDepth, stackOffset, 3),
                     arrayElem);
         case LASTORE: case DASTORE:
             // read 4 (but we only trace the lower 3), write 0
-            stackOffset = frame.operandStack.getAndAdd(4);
+            stackOffset = simulationEnvironment.getAndAddOpStack(stackDepth, 4);
             arrayElem = new ArrayElement(arrayId, arrayIndex);
-            return new SimpleVariableUsage(new StackEntrySet<InstanceType>(frame, stackOffset, 3),
+            return new SimpleVariableUsage(simulationEnvironment.getOpStackEntries(stackDepth, stackOffset, 3),
                     arrayElem);
         default:
             assert false;
@@ -263,20 +262,22 @@ public class Simulator<InstanceType extends InstructionInstance> {
         }
     }
 
-    private DynamicInformation simulateMethodInsn(MethodInvocationInstruction inst,
-            ExecutionFrame<InstanceType> executionFrame, ExecutionFrame<InstanceType> removedFrame) {
-        int paramCount = inst.getOpcode() == INVOKESTATIC ? 0 : 1;
-        for (int param = inst.getParameterCount()-1; param >= 0; --param)
-            paramCount += inst.parameterIsLong(param) ? 2 : 1;
-        boolean removedFrameMatches = removedFrame != null
-            && inst.getInvokedMethodName().equals(removedFrame.method.getName())
-            && inst.getInvokedMethodDesc().equals(removedFrame.method.getDesc());
+    private DynamicInformation simulateMethodInsn(InstructionInstance inst,
+            SimulationEnvironment simEnv) {
+    	MethodInvocationInstruction instr = (MethodInvocationInstruction)inst.getInstruction();
+        int paramCount = instr.getOpcode() == INVOKESTATIC ? 0 : 1;
+        for (int param = instr.getParameterCount()-1; param >= 0; --param)
+            paramCount += instr.parameterIsLong(param) ? 2 : 1;
+        boolean removedFrameMatches = simEnv.removedMethod != null
+            && instr.getInvokedMethodName().equals(simEnv.removedMethod.getName())
+            && instr.getInvokedMethodDesc().equals(simEnv.removedMethod.getDesc());
         // if we threw an exception, then we didn't produce a value on the stack
-        byte returnedSize = executionFrame.throwsException ? 0 : inst.getReturnedSize();
+        int stackDepth = inst.getStackDepth();
+        byte returnedSize = simEnv.throwsException[stackDepth] ? 0 : instr.getReturnedSize();
         boolean hasReturn = returnedSize != 0;
         int parametersStackOffset = (paramCount == returnedSize
-            ? executionFrame.operandStack.get()
-            : executionFrame.operandStack.getAndAdd(paramCount-returnedSize)) - returnedSize;
+            ? simEnv.getOpStack(stackDepth)
+            : simEnv.getAndAddOpStack(stackDepth, paramCount-returnedSize)) - returnedSize;
 
         // we have to handle two special cases:
         // 1. this very instruction threw an exception (NPE because arg0 was null)
@@ -286,27 +287,28 @@ public class Simulator<InstanceType extends InstructionInstance> {
         // we overapproximate by taking all cases where we don't have a removedFrame, and we know that we throw an exception
         // TODO do we actually have to do anything in these cases??
 
-        return new MethodInvokationVariableUsages<InstanceType>(parametersStackOffset,
-                paramCount, hasReturn, executionFrame, removedFrameMatches ? removedFrame : null);
+        return new MethodInvokationVariableUsages<InstanceType>(simEnv, stackDepth, parametersStackOffset,
+                paramCount, hasReturn, removedFrameMatches);
     }
 
-    private DynamicInformation simulateFieldInstruction(InstructionInstance instance, ExecutionFrame<InstanceType> frame) {
+    private DynamicInformation simulateFieldInstruction(InstructionInstance instance, SimulationEnvironment simulationEnvironment) {
         assert instance.getInstruction().getType() == InstructionType.FIELD;
         FieldInstrInstanceInfo info = (FieldInstrInstanceInfo) instance.getAdditionalInfo();
         int stackOffset;
         Variable lowerVar;
         FieldInstruction instruction = (FieldInstruction) instance.getInstruction();
+        int stackDepth = instance.getStackDepth();
         switch (instruction.getOpcode()) {
         case GETFIELD:
-        	assert ((info.getObjectId() == 0) == (frame.throwsException));
+        	assert ((info.getObjectId() == 0) == (simulationEnvironment.throwsException[stackDepth]));
             // read 1, write 1 or 2 (we only trace the lower one of 2), or write 0 on exception
-            stackOffset = frame.throwsException
-            	? frame.operandStack.getAndIncrement()
+            stackOffset = simulationEnvironment.throwsException[stackDepth]
+            	? simulationEnvironment.getAndIncOpStack(stackDepth)
                 : instruction.isLongValue()
-                	? frame.operandStack.decrementAndGet()-1
-                	: frame.operandStack.get()-1;
-            lowerVar = frame.getStackEntry(stackOffset);
-            if (frame.throwsException) {
+                	? simulationEnvironment.decAndGetOpStack(stackDepth)-1
+                	: simulationEnvironment.getOpStack(stackDepth)-1;
+            lowerVar = simulationEnvironment.getOpStackEntry(stackDepth, stackOffset);
+            if (simulationEnvironment.throwsException[stackDepth]) {
             	return new ReadSingleValueVariableUsage(lowerVar);
             }
             return new SimpleVariableUsage(Arrays.asList(lowerVar,
@@ -314,27 +316,27 @@ public class Simulator<InstanceType extends InstructionInstance> {
         case GETSTATIC:
             // read 0, write 1 or 2 (we only trace the lower one of 2)
             stackOffset = instruction.isLongValue()
-                ? frame.operandStack.addAndGet(-2)
-                : frame.operandStack.decrementAndGet();
+                ? simulationEnvironment.subAndGetOpStack(stackDepth, 2)
+                : simulationEnvironment.decAndGetOpStack(stackDepth);
             return new SimpleVariableUsage(new StaticField(instruction.getOwnerInternalClassName(), instruction.getFieldName()),
-                    frame.getStackEntry(stackOffset));
+                    simulationEnvironment.getOpStackEntry(stackDepth, stackOffset));
         case PUTFIELD:
             // read 2 or 3 (only trace 2), write 0
-            stackOffset = frame.operandStack.getAndAdd(instruction.isLongValue() ? 3 : 2);
+            stackOffset = simulationEnvironment.getAndAddOpStack(stackDepth, instruction.isLongValue() ? 3 : 2);
         	// if we threw an instruction, then we did not write to the object field
-        	assert ((info.getObjectId() == 0) == (frame.throwsException));
-            if (frame.throwsException) {
+        	assert ((info.getObjectId() == 0) == (simulationEnvironment.throwsException[stackDepth]));
+            if (simulationEnvironment.throwsException[stackDepth]) {
             	// on an exception, we only read the object reference
-            	return new ReadSingleValueVariableUsage(frame.getStackEntry(stackOffset));
+            	return new ReadSingleValueVariableUsage(simulationEnvironment.getOpStackEntry(stackDepth, stackOffset));
             }
-            return new SimpleVariableUsage(new StackEntrySet<InstanceType>(frame, stackOffset, 2),
+            return new SimpleVariableUsage(simulationEnvironment.getOpStackEntries(stackDepth, stackOffset, 2),
             	new ObjectField(info.getObjectId(), instruction.getFieldName()));
         case PUTSTATIC:
             // read 1 or 2 (only trace 1), write 0
             stackOffset = instruction.isLongValue()
-                ? frame.operandStack.getAndAdd(2)
-                : frame.operandStack.getAndIncrement();
-            return new SimpleVariableUsage(frame.getStackEntry(stackOffset),
+                ? simulationEnvironment.getAndAddOpStack(stackDepth, 2)
+                : simulationEnvironment.getAndIncOpStack(stackDepth);
+            return new SimpleVariableUsage(simulationEnvironment.getOpStackEntry(stackDepth, stackOffset),
                     new StaticField(instruction.getOwnerInternalClassName(), instruction.getFieldName()));
         default:
             assert false;
@@ -342,28 +344,30 @@ public class Simulator<InstanceType extends InstructionInstance> {
         }
     }
 
-    private DynamicInformation simulateVarInstruction(VarInstruction inst, ExecutionFrame<InstanceType> frame) {
-        switch (inst.getOpcode()) {
+    private DynamicInformation simulateVarInstruction(InstructionInstance inst, SimulationEnvironment simEnv) {
+    	int stackDepth = inst.getStackDepth();
+    	VarInstruction instr = (VarInstruction) inst.getInstruction();
+        switch (inst.getInstruction().getOpcode()) {
         case ILOAD: case FLOAD: case ALOAD:
             // read 0, write 1 stack entry
-            int stackOffset = frame.operandStack.decrementAndGet();
-            return new SimpleVariableUsage(frame.getLocalVariable(inst.getLocalVarIndex()),
-                    new StackEntrySet<InstanceType>(frame, stackOffset, 1));
+            int stackOffset = simEnv.decAndGetOpStack(stackDepth);
+            return new SimpleVariableUsage(simEnv.getLocalVariable(stackDepth, instr.getLocalVarIndex()),
+                    Collections.singleton(simEnv.getOpStackEntry(stackDepth, stackOffset)));
         case LLOAD: case DLOAD:
             // read 0, write 2 stack entries (but we only trace the lower one)
-            stackOffset = frame.operandStack.addAndGet(-2);
-            return new SimpleVariableUsage(frame.getLocalVariable(inst.getLocalVarIndex()),
-                    new StackEntrySet<InstanceType>(frame, stackOffset, 1));
+            stackOffset = simEnv.subAndGetOpStack(stackDepth, 2);
+            return new SimpleVariableUsage(simEnv.getLocalVariable(stackDepth, instr.getLocalVarIndex()),
+                Collections.singleton(simEnv.getOpStackEntry(stackDepth, stackOffset)));
         case ISTORE: case FSTORE: case ASTORE:
             // read 1, write 0
-            stackOffset = frame.operandStack.getAndIncrement();
-            return new SimpleVariableUsage(new StackEntrySet<InstanceType>(frame, stackOffset, 1),
-                    frame.getLocalVariable(inst.getLocalVarIndex()));
+            stackOffset = simEnv.getAndIncOpStack(stackDepth);
+            return new SimpleVariableUsage(Collections.singleton(simEnv.getOpStackEntry(stackDepth, stackOffset)),
+                    simEnv.getLocalVariable(stackDepth, instr.getLocalVarIndex()));
         case LSTORE: case DSTORE:
             // read 2 (but only trace 1), write 0
-            stackOffset = frame.operandStack.getAndAdd(2);
-            return new SimpleVariableUsage(new StackEntrySet<InstanceType>(frame, stackOffset, 1),
-                    frame.getLocalVariable(inst.getLocalVarIndex()));
+            stackOffset = simEnv.getAndAddOpStack(stackDepth, 2);
+            return new SimpleVariableUsage(Collections.singleton(simEnv.getOpStackEntry(stackDepth, stackOffset)),
+                simEnv.getLocalVariable(stackDepth, instr.getLocalVarIndex()));
         case RET:
             // RET reads a local variable, but since this is no "data" (in our sense), we
             // do not trace that
@@ -375,94 +379,58 @@ public class Simulator<InstanceType extends InstructionInstance> {
         }
     }
 
-    private DynamicInformation simulateSimpleInsn(InstructionInstance inst, ExecutionFrame<InstanceType> frame,
-            ArrayStack<ExecutionFrame<InstanceType>> allFrames) {
+    private DynamicInformation simulateSimpleInsn(InstructionInstance inst, SimulationEnvironment simEnv) {
+    	int stackDepth = inst.getStackDepth();
+    	// TODO improvement: define which variables are defined by which ones
+    	// FIXME only define and read the lower parts of long values
         switch (inst.getInstruction().getOpcode()) {
         case DUP:
-            int stackHeight = frame.operandStack.decrementAndGet();
-            return new SimpleVariableUsage(frame.getStackEntry(stackHeight-1), frame.getStackEntry(stackHeight));
+            int stackHeight = simEnv.decAndGetOpStack(stackDepth);
+            return new SimpleVariableUsage(simEnv.getOpStackEntry(stackDepth, stackHeight-1), simEnv.getOpStackEntry(stackDepth, stackHeight));
         case DUP2:
-            stackHeight = frame.operandStack.addAndGet(-2);
-            return new SimpleVariableUsage(
-                    Arrays.asList((Variable)frame.getStackEntry(stackHeight-2), frame.getStackEntry(stackHeight-1)),
-                    Arrays.asList((Variable)frame.getStackEntry(stackHeight), frame.getStackEntry(stackHeight+1)));
+            stackHeight = simEnv.subAndGetOpStack(stackDepth, 2);
+            return new SimpleVariableUsage(simEnv.getOpStackEntries(stackDepth, stackHeight-2, 2),
+            	simEnv.getOpStackEntries(stackDepth, stackHeight, 2));
         case DUP_X1:
-            stackHeight = frame.operandStack.decrementAndGet();
-            return new SimpleVariableUsage(
-                    Arrays.asList((Variable)frame.getStackEntry(stackHeight-2), frame.getStackEntry(stackHeight-1)),
-                    Arrays.asList((Variable)frame.getStackEntry(stackHeight-2), frame.getStackEntry(stackHeight-1),
-                            frame.getStackEntry(stackHeight)));
+            stackHeight = simEnv.decAndGetOpStack(stackDepth);
+            return new SimpleVariableUsage(simEnv.getOpStackEntries(stackDepth, stackHeight-2, 2),
+            	simEnv.getOpStackEntries(stackDepth, stackHeight-2, 3));
         case DUP_X2:
-            stackHeight = frame.operandStack.decrementAndGet();
-            return new SimpleVariableUsage(
-                    Arrays.asList((Variable)frame.getStackEntry(stackHeight-3), frame.getStackEntry(stackHeight-2),
-                            frame.getStackEntry(stackHeight-1)),
-                    Arrays.asList((Variable)frame.getStackEntry(stackHeight-3), frame.getStackEntry(stackHeight-2),
-                            frame.getStackEntry(stackHeight-1), frame.getStackEntry(stackHeight)));
+            stackHeight = simEnv.decAndGetOpStack(stackDepth);
+            return new SimpleVariableUsage(simEnv.getOpStackEntries(stackDepth, stackHeight-3, 3),
+            	simEnv.getOpStackEntries(stackDepth, stackHeight-3, 4));
         case DUP2_X1:
-            stackHeight = frame.operandStack.addAndGet(-2);
-            return new SimpleVariableUsage(
-                    Arrays.asList((Variable)frame.getStackEntry(stackHeight-3), frame.getStackEntry(stackHeight-2),
-                            frame.getStackEntry(stackHeight-1)),
-                    Arrays.asList((Variable)frame.getStackEntry(stackHeight-3), frame.getStackEntry(stackHeight-2),
-                            frame.getStackEntry(stackHeight-1), frame.getStackEntry(stackHeight), frame.getStackEntry(stackHeight+1)));
+            stackHeight = simEnv.subAndGetOpStack(stackDepth, 2);
+            return new SimpleVariableUsage(simEnv.getOpStackEntries(stackDepth, stackHeight-3, 3),
+            	simEnv.getOpStackEntries(stackDepth, stackHeight-3, 5));
         case DUP2_X2:
-            stackHeight = frame.operandStack.addAndGet(-2);
-            return new SimpleVariableUsage(
-                    Arrays.asList((Variable)frame.getStackEntry(stackHeight-4), frame.getStackEntry(stackHeight-3),
-                            frame.getStackEntry(stackHeight-2), frame.getStackEntry(stackHeight-1)),
-                    Arrays.asList((Variable)frame.getStackEntry(stackHeight-4), frame.getStackEntry(stackHeight-3),
-                            frame.getStackEntry(stackHeight-2), frame.getStackEntry(stackHeight-1),
-                            frame.getStackEntry(stackHeight), frame.getStackEntry(stackHeight+1)));
+            stackHeight = simEnv.subAndGetOpStack(stackDepth, 2);
+            return new SimpleVariableUsage(simEnv.getOpStackEntries(stackDepth, stackHeight-4, 4),
+            	simEnv.getOpStackEntries(stackDepth, stackHeight-4, 6));
 
         case IRETURN: case FRETURN: case ARETURN:
-            frame.throwsException = false;
-            assert frame.returnValue == null;
-            StackEntry<InstanceType> stackEntry = frame.getStackEntry(frame.operandStack.getAndIncrement());
-            frame.returnValue = stackEntry;
-            ExecutionFrame<InstanceType> lowerFrame = null;
-            if (inst.getStackDepth() >= 2) {
-                lowerFrame = allFrames.get(inst.getStackDepth()-2);
-                Instruction prev = lowerFrame.lastInstance != null ? lowerFrame.lastInstance.getInstruction().getPrevious() : null;
-                if (prev != null && prev instanceof MethodInvocationInstruction) {
-                    MethodInvocationInstruction m = (MethodInvocationInstruction) prev;
-                    if (!m.getInvokedMethodName().equals(frame.method.getName()) ||
-                            !m.getInvokedMethodDesc().equals(frame.method.getDesc())) {
-                        lowerFrame = null;
-                    }
-                }
-            }
-
-            // it is sufficient to trace the lower variable of the double-sized value (long or double)
-            return new SimpleVariableUsage(stackEntry,
-                    lowerFrame == null ? DynamicInformation.EMPTY_VARIABLE_SET :
-                        Arrays.asList((Variable)lowerFrame.getStackEntry(lowerFrame.operandStack.get()-1)));
         case DRETURN: case LRETURN:
-            frame.throwsException = false;
-            assert frame.returnValue == null;
-            stackEntry = frame.getStackEntry(frame.operandStack.getAndAdd(2));
-            frame.returnValue = stackEntry;
-            lowerFrame = null;
-            if (inst.getStackDepth() >= 2) {
-                lowerFrame = allFrames.get(inst.getStackDepth()-2);
-                Instruction prev = lowerFrame.lastInstance != null ? lowerFrame.lastInstance.getInstruction().getPrevious() : null;
-                if (prev != null && prev instanceof MethodInvocationInstruction) {
+        	int returnedSize = inst.getInstruction().getOpcode() == DRETURN || inst.getInstruction().getOpcode() == LRETURN ? 2 : 1;
+            simEnv.throwsException[stackDepth] = false;
+            StackEntry stackEntry = simEnv.getOpStackEntry(stackDepth, simEnv.getAndAddOpStack(stackDepth, returnedSize));
+
+            Set<? extends Variable> written = DynamicInformation.EMPTY_VARIABLE_SET;
+            if (stackDepth >= 2) {
+                Instruction prev = simEnv.lastInstruction[stackDepth-1] == null ? null : simEnv.lastInstruction[stackDepth-1].getPrevious();
+                if (prev instanceof MethodInvocationInstruction) {
                     MethodInvocationInstruction m = (MethodInvocationInstruction) prev;
-                    if (!m.getInvokedMethodName().equals(frame.method.getName()) ||
-                            !m.getInvokedMethodDesc().equals(frame.method.getDesc())) {
-                        lowerFrame = null;
+                    if (!m.getInvokedMethodName().equals(simEnv.method[stackDepth-1].getName()) ||
+                            !m.getInvokedMethodDesc().equals(simEnv.method[stackDepth-1].getDesc())) {
+                        written = Collections.singleton(simEnv.getOpStackEntry(stackDepth - 1, simEnv.getOpStack(stackDepth - 1) - returnedSize));
                     }
                 }
             }
 
             // it is sufficient to trace the lower variable of the double-sized value (long or double)
-            return new SimpleVariableUsage(stackEntry,
-                    lowerFrame == null ? DynamicInformation.EMPTY_VARIABLE_SET :
-                        Arrays.asList((Variable)lowerFrame.getStackEntry(lowerFrame.operandStack.get()-2)));
+            return new SimpleVariableUsage(stackEntry, written);
 
         case RETURN:
-            assert frame.returnValue == null;
-            frame.throwsException = false;
+            simEnv.throwsException[stackDepth] = false;
             return DynamicInformation.EMPTY;
 
         case NOP:
@@ -470,75 +438,75 @@ public class Simulator<InstanceType extends InstructionInstance> {
 
         case ACONST_NULL: case ICONST_M1: case ICONST_0: case ICONST_1: case ICONST_2: case ICONST_3:
         case ICONST_4: case ICONST_5: case FCONST_0: case FCONST_1: case FCONST_2:
-            return stackManipulation(frame, 0, 1);
+            return stackManipulation(simEnv, stackDepth, 0, 1);
 
         case DCONST_0: case DCONST_1: case LCONST_0: case LCONST_1:
-            return stackManipulation(frame, 0, 2);
+            return stackManipulation(simEnv, stackDepth, 0, 2);
 
         case ATHROW:
         	// the data dependence to the catching frame is modelled in DirectSlicer / DependencesExtractor
-            return new SimpleVariableUsage(frame.getStackEntry(frame.operandStack.getAndIncrement()),
+            return new SimpleVariableUsage(simEnv.getOpStackEntry(stackDepth, simEnv.getAndIncOpStack(stackDepth)),
                     DynamicInformation.EMPTY_VARIABLE_SET);
 
         case MONITORENTER: case MONITOREXIT:
         case POP:
-            return stackManipulation(frame, 1, 0);
+            return stackManipulation(simEnv, stackDepth, 1, 0);
 
         case I2F: case F2I: case I2B: case I2C: case I2S:
         case ARRAYLENGTH:
         case INEG: case FNEG:
-            return stackManipulation(frame, 1, 1);
+            return stackManipulation(simEnv, stackDepth, 1, 1);
 
         case I2L: case I2D: case F2L: case F2D:
             // these operations write two entries, but we only trace the lower one
-            Collection<Variable> stackEntryColl = Collections.singleton(
-                (Variable)frame.getStackEntry(frame.operandStack.decrementAndGet() - 1));
+            Set<StackEntry> stackEntryColl = Collections.singleton(
+                simEnv.getOpStackEntry(stackDepth, simEnv.decAndGetOpStack(stackDepth) - 1));
             return new SimpleVariableUsage(stackEntryColl, stackEntryColl);
 
         case POP2:
-            return stackManipulation(frame, 2, 0);
+            return stackManipulation(simEnv, stackDepth, 2, 0);
 
         case L2I: case D2I: case L2F: case D2F:
             // these operations read two entries, but we only trace the lower one
             stackEntryColl = Collections.singleton(
-                (Variable)frame.getStackEntry(frame.operandStack.getAndIncrement() - 1));
+                simEnv.getOpStackEntry(stackDepth, simEnv.getAndIncOpStack(stackDepth) - 1));
             return new SimpleVariableUsage(stackEntryColl, stackEntryColl);
 
         case FCMPL: case FCMPG:
         case IADD: case FADD: case ISUB: case FSUB: case IMUL: case FMUL: case IDIV: case FDIV: case IREM:
         case FREM: case ISHL: case ISHR: case IUSHR: case IAND: case IOR: case IXOR:
-            return stackManipulation(frame, 2, 1);
+            return stackManipulation(simEnv, stackDepth, 2, 1);
 
         case L2D: case D2L:
         case LNEG: case DNEG:
             // reads one double-sized value and writes one. we only trace the lower parts
-            stackEntryColl = Collections.<Variable>singleton(frame.getStackEntry(frame.operandStack.get() - 2));
+            stackEntryColl = Collections.singleton(simEnv.getOpStackEntry(stackDepth, simEnv.getOpStack(stackDepth) - 2));
             return new SimpleVariableUsage(stackEntryColl, stackEntryColl);
 
         case SWAP:
-            return new SwapVariableUsages<InstanceType>(frame);
+            return new SwapVariableUsage(simEnv, stackDepth);
 
         case LCMP: case DCMPL: case DCMPG:
             // reads two double-sized values. we only trace the lower parts
             // writes one single-sized value
-            int stackOffset = frame.operandStack.getAndAdd(3) - 1;
-            stackEntry = frame.getStackEntry(stackOffset);
-            return new SimpleVariableUsage(Arrays.<Variable>asList(stackEntry, frame.getStackEntry(stackOffset+2)),
+            int stackOffset = simEnv.getAndAddOpStack(stackDepth, 3) - 1;
+            stackEntry = simEnv.getOpStackEntry(stackDepth, stackOffset);
+            return new SimpleVariableUsage(Arrays.asList(stackEntry, simEnv.getOpStackEntry(stackDepth, stackOffset + 2)),
                 stackEntry);
 
         case LADD: case DADD: case LSUB: case DSUB: case LMUL: case DMUL: case LDIV: case DDIV: case LREM:
         case DREM: case LAND: case LOR: case LXOR:
             // reads two double-sized values and writes one. we only trace the lower parts
-            stackOffset = frame.operandStack.getAndAdd(2);
-            stackEntry = frame.getStackEntry(stackOffset - 2);
-            return new SimpleVariableUsage(Arrays.<Variable>asList(stackEntry, frame.getStackEntry(stackOffset)),
+            stackOffset = simEnv.getAndAddOpStack(stackDepth, 2);
+            stackEntry = simEnv.getOpStackEntry(stackDepth, stackOffset - 2);
+            return new SimpleVariableUsage(Arrays.asList(stackEntry, simEnv.getOpStackEntry(stackDepth, stackOffset)),
                 stackEntry);
 
         case LSHL: case LSHR: case LUSHR:
             // reads one double-sized and one single-sized value and writes one double-sized. we only trace the lower parts
-            stackOffset = frame.operandStack.getAndIncrement();
-            stackEntry = frame.getStackEntry(stackOffset-2);
-            return new SimpleVariableUsage(Arrays.<Variable>asList(stackEntry, frame.getStackEntry(stackOffset)),
+            stackOffset = simEnv.getAndIncOpStack(stackDepth);
+            stackEntry = simEnv.getOpStackEntry(stackDepth, stackOffset-2);
+            return new SimpleVariableUsage(Arrays.asList(stackEntry, simEnv.getOpStackEntry(stackDepth, stackOffset)),
                 stackEntry);
 
         default:
@@ -547,15 +515,15 @@ public class Simulator<InstanceType extends InstructionInstance> {
         }
     }
 
-    private DynamicInformation stackManipulation(ExecutionFrame<InstanceType> frame, int read,
+    private DynamicInformation stackManipulation(SimulationEnvironment simEnv, int stackDepth, int read,
             int write) {
-        return stackManipulation(frame, read, write, Collections.<Long, Collection<Variable>>emptyMap());
+        return stackManipulation(simEnv, stackDepth, read, write, Collections.<Long, Collection<? extends Variable>>emptyMap());
     }
 
-    private DynamicInformation stackManipulation(ExecutionFrame<InstanceType> frame, int read,
-            int write, Map<Long, Collection<Variable>> createdObjects) {
-        int stackOffset = (read == write ? frame.operandStack.get() : frame.operandStack.getAndAdd(read - write)) - write;
-        return new StackManipulation<InstanceType>(frame, read, write, stackOffset, createdObjects);
+    private DynamicInformation stackManipulation(SimulationEnvironment simEnv, int stackDepth, int read,
+            int write, Map<Long, Collection<? extends Variable>> createdObjects) {
+        int stackOffset = (read == write ? simEnv.getOpStack(stackDepth) : simEnv.getAndAddOpStack(stackDepth, read - write)) - write;
+        return new StackManipulation<InstanceType>(simEnv, stackDepth, read, write, stackOffset, createdObjects);
     }
 
 }

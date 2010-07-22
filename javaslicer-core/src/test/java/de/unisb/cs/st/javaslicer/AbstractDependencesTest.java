@@ -13,8 +13,8 @@ import java.util.Set;
 
 import junit.framework.Assert;
 import de.hammacher.util.Diff;
-import de.hammacher.util.DiffPrint;
 import de.hammacher.util.Diff.change;
+import de.hammacher.util.DiffPrint;
 import de.unisb.cs.st.javaslicer.AbstractDependencesTest.Dependence.Type;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DataDependenceType;
@@ -96,10 +96,10 @@ public abstract class AbstractDependencesTest {
 
         @Override
         public void visitDataDependence(InstructionInstance from,
-                InstructionInstance to, Collection<Variable> fromVars,
+                InstructionInstance to, Collection<? extends Variable> fromVars,
                 Variable toVar, DataDependenceType type)
                 throws InterruptedException {
-            if (toVar instanceof StackEntry<?>)
+            if (toVar instanceof StackEntry)
                 return;
             if (!this.instrFilter.filterInstance(from) || !this.instrFilter.filterInstance(to))
                 return;

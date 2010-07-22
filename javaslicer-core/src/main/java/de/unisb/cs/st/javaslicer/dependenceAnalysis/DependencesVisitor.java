@@ -34,7 +34,7 @@ public interface DependencesVisitor<InstanceType> {
      * @param type the type of the data dependence (read after write / write after read)
      */
     void visitDataDependence(InstanceType from, InstanceType to,
-            Collection<Variable> fromVars, Variable toVar, DataDependenceType type) throws InterruptedException;
+            Collection<? extends Variable> fromVars, Variable toVar, DataDependenceType type) throws InterruptedException;
 
     /**
      * Gets called if a dynamic occurence of a control dependence has been determined.

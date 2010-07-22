@@ -28,7 +28,7 @@ public abstract class DependencesVisitorAdapter<InstanceType> implements Depende
     }
 
     public void visitDataDependence(InstanceType from, InstanceType to,
-            Collection<Variable> fromVars, Variable toVar, DataDependenceType type)
+            Collection<? extends Variable> fromVars, Variable toVar, DataDependenceType type)
             throws InterruptedException {
         // null
     }

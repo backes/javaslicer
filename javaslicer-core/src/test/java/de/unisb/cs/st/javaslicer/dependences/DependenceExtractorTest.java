@@ -131,9 +131,9 @@ public class DependenceExtractorTest extends DependencesVisitorAdapter<Instructi
                 //if (var.equals(this.varWithMax))
                 //    instancesOnOldVarWithMax.add(p.getFirst());
                 instances.add(p.getFirst());
-                if (var instanceof StackEntry<?>) {
+                if (var instanceof StackEntry) {
                     ++stackEntries;
-                } else if (var instanceof LocalVariable<?>) {
+                } else if (var instanceof LocalVariable) {
                     ++localVariables;
                 } else if (var instanceof ObjectField) {
                     ++objectFields;

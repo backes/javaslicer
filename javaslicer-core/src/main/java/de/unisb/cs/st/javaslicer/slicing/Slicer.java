@@ -242,7 +242,6 @@ public class Slicer {
             private final UntracedCallVisitor[] untracedCallsVisitorsArray = untracedCallVisitors0.toArray(new UntracedCallVisitor[untracedCallVisitors0.size()]);
 
             private ReadMethod enteredMethod;
-            private IntegerMap<Object> enteredMethodInterestingLocalVariables;
 
             private List<SlicingCriterionInstance> instantiateSlicingCriteria(
                     List<SlicingCriterion> criteria) {
@@ -425,7 +424,7 @@ public class Slicer {
 
             @Override
             public void visitDataDependence(SlicerInstance from,
-                    SlicerInstance to, Collection<Variable> fromVars,
+                    SlicerInstance to, Collection<? extends Variable> fromVars,
                     Variable toVar, DataDependenceType type)
                     throws InterruptedException {
                 assert type == DataDependenceType.READ_AFTER_WRITE;
@@ -449,7 +448,7 @@ public class Slicer {
                             vis.visitSliceDependence(from, to, toVar, distance);
                     }
                     if (!fromVars.isEmpty()) {
-                        Iterator<Variable> varIt = fromVars.iterator();
+                        Iterator<? extends Variable> varIt = fromVars.iterator();
                         assert varIt.hasNext() : "Iterator of a non-empty collection should have at least one element";
                         Variable first = varIt.next();
                         if (to.interestingVariable == null || to.interestingVariable.equals(first)) {
@@ -483,7 +482,6 @@ public class Slicer {
                 if (this.interestingLocalVariables.length > stackDepth &&
                         this.interestingLocalVariables[stackDepth] != null) {
                     this.enteredMethod = method;
-                    this.enteredMethodInterestingLocalVariables = this.interestingLocalVariables[stackDepth];
                     this.interestingLocalVariables[stackDepth] = null;
                 }
             }

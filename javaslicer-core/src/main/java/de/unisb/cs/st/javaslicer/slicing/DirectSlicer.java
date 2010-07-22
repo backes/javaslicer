@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -23,24 +24,24 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.objectweb.asm.Opcodes;
 
-import de.hammacher.util.ArrayStack;
 import de.hammacher.util.maps.IntegerMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.LabelMarker;
 import de.unisb.cs.st.javaslicer.common.progress.ConsoleProgressMonitor;
 import de.unisb.cs.st.javaslicer.common.progress.ProgressMonitor;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.instructionSimulation.DynamicInformation;
-import de.unisb.cs.st.javaslicer.instructionSimulation.ExecutionFrame;
+import de.unisb.cs.st.javaslicer.instructionSimulation.SimulationEnvironment;
 import de.unisb.cs.st.javaslicer.instructionSimulation.Simulator;
 import de.unisb.cs.st.javaslicer.slicing.SlicingCriterion.SlicingCriterionInstance;
 import de.unisb.cs.st.javaslicer.traceResult.BackwardTraceIterator;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
+import de.unisb.cs.st.javaslicer.variables.LocalVariable;
+import de.unisb.cs.st.javaslicer.variables.StackEntry;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
 /**
@@ -171,18 +172,54 @@ public class DirectSlicer implements Opcodes {
 
         IntegerMap<Set<Instruction>> controlDependences = new IntegerMap<Set<Instruction>>();
 
-        ArrayStack<ExecutionFrame<InstructionInstance>> frames = new ArrayStack<ExecutionFrame<InstructionInstance>>();
-
         Set<Variable> interestingVariables = new HashSet<Variable>();
         Set<Instruction> dynamicSlice = new HashSet<Instruction>();
 
-        ExecutionFrame<InstructionInstance> currentFrame = null;
-        for (ReadMethod method: backwardInsnItr.getInitialStackMethods()) {
-            currentFrame = new ExecutionFrame<InstructionInstance>();
-            currentFrame.method = method;
-            currentFrame.interruptedControlFlow = true;
-            frames.push(currentFrame);
+        long nextFrameNr = 0;
+        int stackDepth = 0;
+
+        List<ReadMethod> initialStackMethods = backwardInsnItr.getInitialStackMethods();
+
+        int allocStack = initialStackMethods.size() + 1;
+        allocStack = Integer.highestOneBit(allocStack)*2;
+
+        Instruction[] atCatchBlockStart = new Instruction[allocStack];
+        boolean[] throwsException = new boolean[allocStack];
+        boolean[] interruptedControlFlow = new boolean[allocStack];
+        /**
+         * <code>true</code> iff this frame was aborted abnormally (NOT by a RETURN
+         * instruction)
+         */
+        boolean[] abnormalTermination = new boolean[allocStack];
+        /**
+         * is set to true if the methods entry label has been passed
+         */
+        boolean[] finished = new boolean[allocStack];
+        int[] opStack = new int[allocStack];
+        int[] minOpStack = new int[allocStack];
+        long[] frames = new long[allocStack];
+        Instruction[] lastInstruction = new Instruction[allocStack];
+        @SuppressWarnings("unchecked")
+        HashSet<Instruction>[] interestingInstructions = (HashSet<Instruction>[]) new HashSet<?>[allocStack];
+        StackEntry[][] cachedStackEntries = new StackEntry[allocStack][];
+        LocalVariable[][] cachedLocalVariables = new LocalVariable[allocStack][];
+        ReadMethod[] method = new ReadMethod[allocStack];
+
+		for (ReadMethod method0: initialStackMethods) {
+        	++stackDepth;
+        	method[stackDepth] = method0;
+        	interruptedControlFlow[stackDepth] = true;
+        	frames[stackDepth] = nextFrameNr++;
         }
+
+		for (int i = 1; i < allocStack; ++i) {
+        	interestingInstructions[i] = new HashSet<Instruction>();
+        	cachedStackEntries[i] = new StackEntry[8];
+        	cachedLocalVariables[i] = new LocalVariable[8];
+		}
+
+		SimulationEnvironment simEnv = new SimulationEnvironment(frames, opStack, minOpStack,
+			cachedStackEntries, cachedLocalVariables, throwsException, lastInstruction, method, interruptedControlFlow);
 
         List<SlicingCriterionInstance> slicingCriteria;
         if (sc.isEmpty())
@@ -205,61 +242,83 @@ public class DirectSlicer implements Opcodes {
                 InstructionInstance instance = backwardInsnItr.next();
                 Instruction instruction = instance.getInstruction();
 
-                ExecutionFrame<InstructionInstance> removedFrame = null;
-                int stackDepth = instance.getStackDepth();
-                assert stackDepth > 0;
+                int newStackDepth = instance.getStackDepth();
+                assert newStackDepth > 0;
 
-                if (frames.size() != stackDepth) {
-                    if (frames.size() > stackDepth) {
-                        assert frames.size() == stackDepth+1;
-                        removedFrame = frames.pop();
-                        currentFrame = frames.peek();
-                    } else {
-                        assert frames.size() == stackDepth-1;
-                        ExecutionFrame<InstructionInstance> newFrame = new ExecutionFrame<InstructionInstance>();
-                        newFrame.method = instruction.getMethod();
-                        if (instruction == newFrame.method.getAbnormalTerminationLabel()) {
-                            newFrame.throwsException = newFrame.interruptedControlFlow = newFrame.abnormalTermination = true;
-                            if (currentFrame != null)
-                            	currentFrame.interruptedControlFlow = true;
+                simEnv.removedMethod = null;
+                boolean reenter = false;
+                if (newStackDepth != stackDepth || (reenter = finished[stackDepth] || method[stackDepth] != instruction.getMethod())) {
+                    if (newStackDepth >= stackDepth) {
+                        // in all steps, the stackDepth can change by at most 1 (except for the very first instruction)
+                        assert newStackDepth == stackDepth+1 || stackDepth == 0 || reenter;
+                        if (newStackDepth >= atCatchBlockStart.length) {
+                        	int oldLen = atCatchBlockStart.length;
+                        	int newLen = oldLen == 0 ? 8 : 2*oldLen;
+                            atCatchBlockStart = Arrays.copyOf(atCatchBlockStart, newLen);
+                            throwsException = Arrays.copyOf(throwsException, newLen);
+                            interruptedControlFlow = Arrays.copyOf(interruptedControlFlow, newLen);
+                            abnormalTermination = Arrays.copyOf(abnormalTermination, newLen);
+                            finished = Arrays.copyOf(finished, newLen);
+                            opStack = Arrays.copyOf(opStack, newLen);
+                            minOpStack = Arrays.copyOf(minOpStack, newLen);
+                            frames = Arrays.copyOf(frames, newLen);
+                            interestingInstructions = Arrays.copyOf(interestingInstructions, newLen);
+                            lastInstruction = Arrays.copyOf(lastInstruction, newLen);
+                            cachedStackEntries = Arrays.copyOf(cachedStackEntries, newLen);
+                            cachedLocalVariables = Arrays.copyOf(cachedLocalVariables, newLen);
+                            method = Arrays.copyOf(method, newLen);
+                            for (int i = oldLen; i < newLen; ++i) {
+                            	interestingInstructions[i] = new HashSet<Instruction>();
+                            	cachedStackEntries[i] = new StackEntry[8];
+                            	cachedLocalVariables[i] = new LocalVariable[8];
+                            }
+                			simEnv = new SimulationEnvironment(frames, opStack, minOpStack,
+                				cachedStackEntries, cachedLocalVariables, throwsException, lastInstruction, method, interruptedControlFlow);
                         }
-                        frames.push(newFrame);
-                        currentFrame = newFrame;
+                        frames[newStackDepth] = nextFrameNr++;
+                        method[newStackDepth] = instruction.getMethod();
+
+                        atCatchBlockStart[newStackDepth] = null;
+                        if (instruction == method[newStackDepth].getAbnormalTerminationLabel()) {
+                            throwsException[newStackDepth] = interruptedControlFlow[newStackDepth] = abnormalTermination[newStackDepth] = true;
+                            interruptedControlFlow[stackDepth] = true;
+                        } else {
+                        	throwsException[newStackDepth] = interruptedControlFlow[newStackDepth] = abnormalTermination[newStackDepth] = false;
+                        }
+                        finished[newStackDepth] = false;
+                        opStack[newStackDepth] = 0;
+                        minOpStack[newStackDepth] = 0;
+                        interestingInstructions[newStackDepth].clear();
+                        if (cachedLocalVariables[newStackDepth].length > 128)
+                        	cachedLocalVariables[newStackDepth] = new LocalVariable[8];
+                        else
+                        	Arrays.fill(cachedLocalVariables[newStackDepth], null);
+                        if (cachedStackEntries[newStackDepth].length > 128)
+                        	cachedStackEntries[newStackDepth] = new StackEntry[8];
+                        else
+                        	Arrays.fill(cachedStackEntries[newStackDepth], null);
+                    } else {
+                        assert newStackDepth == stackDepth-1;
+                        simEnv.removedMethod = method[stackDepth];
                     }
                 }
+                stackDepth = newStackDepth;
 
-                assert currentFrame != null : "current frame must be set";
-
-                if (currentFrame.atCatchBlockStart != null)
-                	currentFrame.throwsException = true;
-
-                // it is possible that we see successive instructions of different methods,
-                // e.g. when called from native code
-                if (currentFrame.method  == null) {
-                    assert currentFrame.returnValue == null;
-                    currentFrame.method = instruction.getMethod();
-                } else if (currentFrame.finished || currentFrame.method != instruction.getMethod()) {
-                    currentFrame = new ExecutionFrame<InstructionInstance>();
-                    currentFrame.method = instruction.getMethod();
-                    frames.set(stackDepth-1, currentFrame);
-                }
+                if (atCatchBlockStart[stackDepth] != null)
+                	throwsException[stackDepth] = true;
 
                 if (instruction == instruction.getMethod().getMethodEntryLabel())
-                    currentFrame.finished = true;
-                currentFrame.lastInstance = instance;
+                    finished[stackDepth] = true;
+                lastInstruction[stackDepth] = instruction;
 
-                DynamicInformation dynInfo = this.simulator.simulateInstruction(instance, currentFrame,
-                        removedFrame, frames);
+                DynamicInformation dynInfo = this.simulator.simulateInstruction(instance, simEnv);
 
-                if (removedFrame != null &&
-                        removedFrame.interestingInstructions != null &&
-                        !removedFrame.interestingInstructions.isEmpty()) {
+                if (simEnv.removedMethod != null &&
+                        !interestingInstructions[stackDepth+1].isEmpty()) {
                     // ok, we have a control dependence since the method was called by (or for) this instruction
                     // checking if this is the instr. that directly called the method is impossible
                     dynamicSlice.add(instruction);
-                    if (currentFrame.interestingInstructions == null)
-                        currentFrame.interestingInstructions = new HashSet<Instruction>();
-                    currentFrame.interestingInstructions.add(instruction);
+                    interestingInstructions[stackDepth].add(instruction);
                 }
 
                 if (matchedCriterionVariables.length <= stackDepth) {
@@ -277,12 +336,11 @@ public class DirectSlicer implements Opcodes {
                             matchedCriterionVariables[stackDepth].removeAll(dynInfo.getDefinedVariables());
                             matchedCriterionVariables[stackDepth].addAll(dynInfo.getUsedVariables());
                         } else if (crit.hasLocalVariables()) {
-                            for (LocalVariable var : crit.getLocalVariables())
-                                interestingVariables.add(new de.unisb.cs.st.javaslicer.variables.LocalVariable<InstructionInstance>(currentFrame, var.getIndex()));
+                            for (de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable var :
+                            		crit.getLocalVariables())
+                                interestingVariables.add(simEnv.getLocalVariable(stackDepth, var.getIndex()));
                         } else {
-                            if (currentFrame.interestingInstructions == null)
-                                currentFrame.interestingInstructions = new HashSet<Instruction>();
-                            currentFrame.interestingInstructions.add(instance.getInstruction());
+                            interestingInstructions[stackDepth].add(instance.getInstruction());
                             dynamicSlice.add(instruction);
                         }
                     } else if (matchedCriterionVariables[stackDepth] != null) {
@@ -291,10 +349,10 @@ public class DirectSlicer implements Opcodes {
                     }
                 }
 
-                boolean isExceptionsThrowingInstance = currentFrame.throwsException &&
-                    (instruction.getType() != InstructionType.LABEL || !((LabelMarker)instruction).isAdditionalLabel());
-                if ((currentFrame.interestingInstructions != null && !currentFrame.interestingInstructions.isEmpty())
-                        || isExceptionsThrowingInstance) {
+                boolean isExceptionsThrowingInstance = throwsException[stackDepth] &&
+                    (instruction.getType() != InstructionType.LABEL || !((LabelMarker)instruction).isAdditionalLabel()) &&
+                    (instruction.getOpcode() != Opcodes.GOTO);
+                if (!interestingInstructions[stackDepth].isEmpty() || isExceptionsThrowingInstance) {
                     Set<Instruction> instrControlDependences = controlDependences.get(instruction.getIndex());
                     if (instrControlDependences == null) {
                         computeControlDependences(instruction.getMethod(), controlDependences);
@@ -302,32 +360,27 @@ public class DirectSlicer implements Opcodes {
                         assert instrControlDependences != null;
                     }
                     // get all interesting instructions, that are dependent on the current one
-                    Set<Instruction> dependantInterestingInstructions = currentFrame.interestingInstructions == null
-                        ? Collections.<Instruction>emptySet()
-                        : intersect(instrControlDependences, currentFrame.interestingInstructions);
+                    Set<Instruction> dependantInterestingInstructions = intersect(instrControlDependences,
+                    	interestingInstructions[stackDepth]);
                     if (isExceptionsThrowingInstance) {
-                        currentFrame.throwsException = false;
+                        throwsException[stackDepth] = false;
                         // in this case, we have an additional control dependence from the catching to
                         // the throwing instruction, and a data dependence on the thrown instruction
-                        for (int i = stackDepth-1; i >= 0; --i) {
-                            ExecutionFrame<InstructionInstance> f = frames.get(i);
-                            if (f.atCatchBlockStart != null) {
-                                if (f.interestingInstructions != null &&
-                                        f.interestingInstructions.contains(f.atCatchBlockStart.getInstruction())) {
+                        for (int i = stackDepth; i > 0; --i) {
+                            if (atCatchBlockStart[i] != null) {
+                                if (interestingInstructions[i].contains(atCatchBlockStart[i])) {
                                     if (dependantInterestingInstructions.isEmpty())
-                                        dependantInterestingInstructions = Collections.singleton(f.atCatchBlockStart.getInstruction());
+                                        dependantInterestingInstructions = Collections.singleton(atCatchBlockStart[i]);
                                     else
-                                        dependantInterestingInstructions.add(f.atCatchBlockStart.getInstruction());
+                                        dependantInterestingInstructions.add(atCatchBlockStart[i]);
                                 }
-                                f.atCatchBlockStart = null;
+                                atCatchBlockStart[i] = null;
 
                                 // data dependence:
                                 // (the stack height has already been decremented when entering the catch block)
-                                Variable definedException = f.getStackEntry(f.operandStack.get());
+                                Variable definedException = simEnv.getOpStackEntry(i, opStack[i]);
                                 if (interestingVariables.contains(definedException)) {
-                                    if (currentFrame.interestingInstructions == null)
-                                        currentFrame.interestingInstructions = new HashSet<Instruction>();
-                                    currentFrame.interestingInstructions.add(instruction);
+                                    interestingInstructions[stackDepth].add(instruction);
                                     dynamicSlice.add(instruction);
                                     interestingVariables.remove(definedException);
                                     interestingVariables.addAll(dynInfo.getUsedVariables());
@@ -339,11 +392,8 @@ public class DirectSlicer implements Opcodes {
                     }
                     if (!dependantInterestingInstructions.isEmpty()) {
                         dynamicSlice.add(instruction);
-                        if (currentFrame.interestingInstructions == null)
-                            currentFrame.interestingInstructions = new HashSet<Instruction>();
-                        else
-                            currentFrame.interestingInstructions.removeAll(dependantInterestingInstructions);
-                        currentFrame.interestingInstructions.add(instruction);
+                        interestingInstructions[stackDepth].removeAll(dependantInterestingInstructions);
+                        interestingInstructions[stackDepth].add(instruction);
                         interestingVariables.addAll(dynInfo.getUsedVariables());
                     }
                 }
@@ -351,9 +401,7 @@ public class DirectSlicer implements Opcodes {
                 if (!interestingVariables.isEmpty()) {
                     for (Variable definedVariable: dynInfo.getDefinedVariables()) {
                         if (interestingVariables.contains(definedVariable)) {
-                            if (currentFrame.interestingInstructions == null)
-                                currentFrame.interestingInstructions = new HashSet<Instruction>();
-                            currentFrame.interestingInstructions.add(instruction);
+                            interestingInstructions[stackDepth].add(instruction);
                             dynamicSlice.add(instruction);
                             interestingVariables.remove(definedVariable);
                             interestingVariables.addAll(dynInfo.getUsedVariables(definedVariable));
@@ -362,10 +410,10 @@ public class DirectSlicer implements Opcodes {
                 }
 
                 if (dynInfo.isCatchBlock()) {
-                    currentFrame.atCatchBlockStart = instance;
-                    currentFrame.interruptedControlFlow = true;
-                } else if (currentFrame.atCatchBlockStart != null) {
-                    currentFrame.atCatchBlockStart = null;
+                    atCatchBlockStart[stackDepth] = instance.getInstruction();
+                    interruptedControlFlow[stackDepth] = true;
+                } else if (atCatchBlockStart[stackDepth] != null) {
+                    atCatchBlockStart[stackDepth] = null;
                 }
 
             }

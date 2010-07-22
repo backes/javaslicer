@@ -1,6 +1,7 @@
 package de.unisb.cs.st.javaslicer.dependenceAnalysis;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -16,7 +17,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.objectweb.asm.Opcodes;
 
-import de.hammacher.util.ArrayStack;
 import de.hammacher.util.collections.BlockwiseSynchronizedBuffer;
 import de.hammacher.util.maps.IntegerMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstructionInstanceFactory;
@@ -32,12 +32,13 @@ import de.unisb.cs.st.javaslicer.common.progress.ProgressMonitor;
 import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.instructionSimulation.AdditionalDataDependence;
 import de.unisb.cs.st.javaslicer.instructionSimulation.DynamicInformation;
-import de.unisb.cs.st.javaslicer.instructionSimulation.ExecutionFrame;
+import de.unisb.cs.st.javaslicer.instructionSimulation.SimulationEnvironment;
 import de.unisb.cs.st.javaslicer.instructionSimulation.Simulator;
 import de.unisb.cs.st.javaslicer.traceResult.BackwardTraceIterator;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.variables.ArrayElement;
+import de.unisb.cs.st.javaslicer.variables.LocalVariable;
 import de.unisb.cs.st.javaslicer.variables.ObjectField;
 import de.unisb.cs.st.javaslicer.variables.StackEntry;
 import de.unisb.cs.st.javaslicer.variables.Variable;
@@ -281,9 +282,6 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
 
         IntegerMap<Set<Instruction>> controlDependences = new IntegerMap<Set<Instruction>>();
 
-        ArrayStack<ExecutionFrame<InstanceType>> frames = new ArrayStack<ExecutionFrame<InstanceType>>();
-        ExecutionFrame<InstanceType> currentFrame = null;
-
         Iterator<InstanceType> instanceIterator;
         ProgressInformationProvider progressInfoProv;
         Thread iteratorThread = null;
@@ -392,15 +390,55 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
 
         try {
 
-            for (ReadMethod method: backwardInsnItr.getInitialStackMethods()) {
-                currentFrame = new ExecutionFrame<InstanceType>();
-                currentFrame.method = method;
-                currentFrame.interruptedControlFlow = true;
-                frames.push(currentFrame);
+            long nextFrameNr = 0;
+            int stackDepth = 0;
+
+            List<ReadMethod> initialStackMethods = backwardInsnItr.getInitialStackMethods();
+
+            int allocStack = initialStackMethods.size() + 1;
+            allocStack = Integer.highestOneBit(allocStack)*2;
+
+            @SuppressWarnings("unchecked")
+            InstanceType[] atCatchBlockStart = (InstanceType[])(new InstructionInstance[allocStack]);
+            boolean[] throwsException = new boolean[allocStack];
+            boolean[] interruptedControlFlow = new boolean[allocStack];
+            /**
+             * <code>true</code> iff this frame was aborted abnormally (NOT by a RETURN
+             * instruction)
+             */
+            boolean[] abnormalTermination = new boolean[allocStack];
+            /**
+             * is set to true if the methods entry label has been passed
+             */
+            boolean[] finished = new boolean[allocStack];
+            int[] opStack = new int[allocStack];
+            int[] minOpStack = new int[allocStack];
+            long[] frames = new long[allocStack];
+            Instruction[] lastInstruction = new Instruction[allocStack];
+            @SuppressWarnings("unchecked")
+            HashSet<InstanceType>[] interestingInstances = (HashSet<InstanceType>[]) new HashSet<?>[allocStack];
+            StackEntry[][] cachedStackEntries = new StackEntry[allocStack][];
+            LocalVariable[][] cachedLocalVariables = new LocalVariable[allocStack][];
+            ReadMethod[] method = new ReadMethod[allocStack];
+
+			for (ReadMethod method0: initialStackMethods) {
+            	++stackDepth;
+            	method[stackDepth] = method0;
+            	interruptedControlFlow[stackDepth] = true;
+            	frames[stackDepth] = nextFrameNr++;
                 if (methodEntryLeaveVisitors0 != null)
                     for (DependencesVisitor<? super InstanceType> vis: methodEntryLeaveVisitors0)
-                        vis.visitMethodLeave(method, frames.size());
+                        vis.visitMethodLeave(method0, stackDepth);
             }
+
+			for (int i = 1; i < allocStack; ++i) {
+            	interestingInstances[i] = new HashSet<InstanceType>();
+            	cachedStackEntries[i] = new StackEntry[8];
+            	cachedLocalVariables[i] = new LocalVariable[8];
+			}
+
+			SimulationEnvironment simEnv = new SimulationEnvironment(frames, opStack, minOpStack,
+				cachedStackEntries, cachedLocalVariables, throwsException, lastInstruction, method, interruptedControlFlow);
 
             while (instanceIterator.hasNext()) {
 
@@ -410,78 +448,103 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                 if ((instance.getInstanceNr() & ((1<<16)-1)) == 0 && Thread.interrupted())
                     throw new InterruptedException();
 
-                ExecutionFrame<InstanceType> removedFrame = null;
-                int stackDepth = instance.getStackDepth();
-                assert stackDepth > 0;
+                int newStackDepth = instance.getStackDepth();
+                assert newStackDepth > 0;
 
-                if (frames.size() != stackDepth) {
-                    if (frames.size() > stackDepth) {
-                        assert frames.size() == stackDepth+1;
-                        removedFrame = frames.pop();
-                        assert removedFrame.method != null;
-                        if (methodEntryLeaveVisitors0 != null)
-                            for (DependencesVisitor<? super InstanceType> vis: methodEntryLeaveVisitors0)
-                                vis.visitMethodEntry(removedFrame.method, stackDepth+1);
-                        currentFrame = frames.peek();
-                    } else {
-                        // in all steps, the stackDepth can change by at most 1
-                        assert frames.size() == stackDepth-1;
-                        ExecutionFrame<InstanceType> newFrame = new ExecutionFrame<InstanceType>();
-                        newFrame.method = instruction.getMethod();
-                        if (instruction == newFrame.method.getAbnormalTerminationLabel()) {
-                            newFrame.throwsException = newFrame.interruptedControlFlow = newFrame.abnormalTermination = true;
-                            if (currentFrame != null)
-                            	currentFrame.interruptedControlFlow = true;
+                simEnv.removedMethod = null;
+                boolean reenter = false;
+                if (newStackDepth != stackDepth || (reenter = finished[stackDepth] || method[stackDepth] != instruction.getMethod())) {
+                    if (newStackDepth >= stackDepth) {
+                        // in all steps, the stackDepth can change by at most 1 (except for the very first instruction)
+                        assert newStackDepth == stackDepth+1 || stackDepth == 0 || reenter;
+                        if (newStackDepth >= atCatchBlockStart.length) {
+                        	int oldLen = atCatchBlockStart.length;
+                        	int newLen = oldLen == 0 ? 8 : 2*oldLen;
+                            atCatchBlockStart = Arrays.copyOf(atCatchBlockStart, newLen);
+                            throwsException = Arrays.copyOf(throwsException, newLen);
+                            interruptedControlFlow = Arrays.copyOf(interruptedControlFlow, newLen);
+                            abnormalTermination = Arrays.copyOf(abnormalTermination, newLen);
+                            finished = Arrays.copyOf(finished, newLen);
+                            opStack = Arrays.copyOf(opStack, newLen);
+                            minOpStack = Arrays.copyOf(minOpStack, newLen);
+                            frames = Arrays.copyOf(frames, newLen);
+                            interestingInstances = Arrays.copyOf(interestingInstances, newLen);
+                            lastInstruction = Arrays.copyOf(lastInstruction, newLen);
+                            cachedStackEntries = Arrays.copyOf(cachedStackEntries, newLen);
+                            cachedLocalVariables = Arrays.copyOf(cachedLocalVariables, newLen);
+                            method = Arrays.copyOf(method, newLen);
+                            for (int i = oldLen; i < newLen; ++i) {
+                            	interestingInstances[i] = new HashSet<InstanceType>();
+                            	cachedStackEntries[i] = new StackEntry[8];
+                            	cachedLocalVariables[i] = new LocalVariable[8];
+                            }
+                			simEnv = new SimulationEnvironment(frames, opStack, minOpStack,
+                				cachedStackEntries, cachedLocalVariables, throwsException, lastInstruction, method, interruptedControlFlow);
                         }
-                        frames.push(newFrame);
-                        if (methodEntryLeaveVisitors0 != null)
-                            for (DependencesVisitor<? super InstanceType> vis: methodEntryLeaveVisitors0)
-                                vis.visitMethodLeave(newFrame.method, stackDepth);
-                        currentFrame = newFrame;
+                        frames[newStackDepth] = nextFrameNr++;
+                        ReadMethod oldMethod = method[newStackDepth];
+                        method[newStackDepth] = instruction.getMethod();
+                        if (methodEntryLeaveVisitors0 != null) {
+                            for (DependencesVisitor<? super InstanceType> vis: methodEntryLeaveVisitors0) {
+                            	if (reenter)
+                            		vis.visitMethodEntry(oldMethod, newStackDepth);
+                                vis.visitMethodLeave(method[newStackDepth], newStackDepth);
+                            }
+                        }
+
+                        if (reenter) {
+                        	cleanUpExecutionFrame(simEnv, stackDepth, lastReaders, lastWriter,
+                            	pendingDataDependenceVisitorsWriteAfterRead0, pendingDataDependenceVisitorsReadAfterWrite0,
+                            	dataDependenceVisitorsWriteAfterRead0, dataDependenceVisitorsReadAfterWrite0);
+                        }
+
+                        atCatchBlockStart[newStackDepth] = null;
+                        if (instruction == method[newStackDepth].getAbnormalTerminationLabel()) {
+                            throwsException[newStackDepth] = interruptedControlFlow[newStackDepth] = abnormalTermination[newStackDepth] = true;
+                            interruptedControlFlow[stackDepth] = true;
+                        } else {
+	                        throwsException[newStackDepth] = interruptedControlFlow[newStackDepth] = abnormalTermination[newStackDepth] = false;
+                        }
+                        finished[newStackDepth] = false;
+                        opStack[newStackDepth] = 0;
+                        minOpStack[newStackDepth] = 0;
+                        interestingInstances[newStackDepth].clear();
+                        if (cachedLocalVariables[newStackDepth].length > 128)
+                        	cachedLocalVariables[newStackDepth] = new LocalVariable[8];
+                        else
+                        	Arrays.fill(cachedLocalVariables[newStackDepth], null);
+                        if (cachedStackEntries[newStackDepth].length > 128)
+                        	cachedStackEntries[newStackDepth] = new StackEntry[8];
+                        else
+                        	Arrays.fill(cachedStackEntries[newStackDepth], null);
+
+                    } else {
+                        assert newStackDepth == stackDepth-1;
+                        if (methodEntryLeaveVisitors0 != null) {
+                            for (DependencesVisitor<? super InstanceType> vis: methodEntryLeaveVisitors0) {
+                                vis.visitMethodEntry(method[stackDepth], stackDepth);
+                            }
+                        }
+                        simEnv.removedMethod = method[stackDepth];
                     }
                 }
-                assert currentFrame != null;
+                stackDepth = newStackDepth;
 
-                // it is possible that we see successive instructions of different methods,
-                // e.g. when called from native code
-                if (currentFrame.method  == null) {
-                    assert currentFrame.returnValue == null;
-                    currentFrame.method = instruction.getMethod();
-                } else if (currentFrame.finished || currentFrame.method != instruction.getMethod()) {
-                    ReadMethod newMethod = instruction.getMethod();
-                    if (methodEntryLeaveVisitors0 != null)
-                        for (DependencesVisitor<? super InstanceType> vis: methodEntryLeaveVisitors0) {
-                            vis.visitMethodEntry(currentFrame.method, stackDepth);
-                            vis.visitMethodLeave(newMethod, stackDepth);
-                        }
-                    cleanUpExecutionFrame(currentFrame, lastReaders, lastWriter,
-                        pendingDataDependenceVisitorsWriteAfterRead0, pendingDataDependenceVisitorsReadAfterWrite0,
-                        dataDependenceVisitorsWriteAfterRead0, dataDependenceVisitorsReadAfterWrite0);
-                    currentFrame = new ExecutionFrame<InstanceType>();
-                    currentFrame.method = newMethod;
-                    frames.set(stackDepth-1, currentFrame);
-                } else if ((removedFrame == null) &&
-                           (instruction.getType() == InstructionType.METHODINVOCATION) &&
-                           (this.untracedMethodsVisitors != null)) {
+                if (simEnv.removedMethod == null &&
+                		(this.untracedMethodsVisitors != null) &&
+                		(instruction.getType() == InstructionType.METHODINVOCATION)) {
                     for (DependencesVisitor<? super InstanceType> vis: this.untracedMethodsVisitors)
                         vis.visitUntracedMethodCall(instance);
                 }
 
                 if (instruction == instruction.getMethod().getMethodEntryLabel())
-                    currentFrame.finished = true;
-                currentFrame.lastInstance = instance;
+                    finished[stackDepth] = true;
+                lastInstruction[stackDepth] = instruction;
 
-                if (currentFrame.atCatchBlockStart != null)
-                	currentFrame.throwsException = true;
+                if (atCatchBlockStart[stackDepth] != null)
+                	throwsException[stackDepth] = true;
 
-                /*
-                if (stackDepth == 1) {
-                    System.out.format("%3d    %3d   %s%n", stepNr, currentFrame.operandStack.intValue(), instance);
-                }
-                */
-
-                DynamicInformation dynInfo = this.simulator.simulateInstruction(instance, currentFrame,
-                        removedFrame, frames);
+                DynamicInformation dynInfo = this.simulator.simulateInstruction(instance, simEnv);
 
                 if (instructionVisitors0 != null)
                     for (DependencesVisitor<? super InstanceType> vis: instructionVisitors0)
@@ -490,19 +553,16 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                 // the computation of control dependences only has to be performed
                 // if there are any controlDependenceVisitors
                 if (controlDependenceVisitors0 != null) {
-                    if (removedFrame != null &&
-                            removedFrame.interestingInstances != null &&
-                            !removedFrame.interestingInstances.isEmpty()) {
+                    if (simEnv.removedMethod != null &&
+                            !interestingInstances[stackDepth + 1].isEmpty()) {
                         // ok, we have a control dependence since the method was called by (or for) this instruction
                         // checking if this is the instr. that directly called the method is impossible
-                        for (InstanceType depend : removedFrame.interestingInstances) {
-                            for (DependencesVisitor<? super InstanceType> vis: this.controlDependenceVisitors) {
+                        for (InstanceType depend : interestingInstances[stackDepth + 1]) {
+                            for (DependencesVisitor<? super InstanceType> vis: controlDependenceVisitors0) {
                                 vis.visitControlDependence(depend, instance);
                             }
                         }
-                        if (currentFrame.interestingInstances == null)
-                            currentFrame.interestingInstances = new HashSet<InstanceType>();
-                        currentFrame.interestingInstances.add(instance);
+                        interestingInstances[stackDepth].add(instance);
                     }
 
                     Set<Instruction> instrControlDependences = controlDependences.get(instruction.getIndex());
@@ -511,34 +571,30 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                         instrControlDependences = controlDependences.get(instruction.getIndex());
                         assert instrControlDependences != null;
                     }
-                    boolean isExceptionsThrowingInstruction = currentFrame.throwsException &&
+                    boolean isExceptionsThrowingInstruction = throwsException[stackDepth] &&
                         (instruction.getType() != InstructionType.LABEL || !((LabelMarker)instruction).isAdditionalLabel()) &&
                         (instruction.getOpcode() != Opcodes.GOTO);
                     // assert: every ATHROW must be an exception throwing instance
                     assert (instruction.getOpcode() != Opcodes.ATHROW || isExceptionsThrowingInstruction);
                     // get all interesting instructions, that are dependent on the current one
-                    Set<InstanceType> dependantInterestingInstances = currentFrame.interestingInstances == null
-                        ? Collections.<InstanceType>emptySet()
-                        : getInstanceIntersection(instrControlDependences, currentFrame.interestingInstances);
+                    Set<InstanceType> dependantInterestingInstances = getInstanceIntersection(instrControlDependences, interestingInstances[stackDepth]);
                     if (isExceptionsThrowingInstruction) {
-                        currentFrame.throwsException = false;
+                        throwsException[stackDepth] = false;
                         // in this case, we have an additional control dependence from the catching to
                         // the throwing instruction, and a data dependence on the thrown instruction
-                        // TODO data dependence
-                        for (int i = stackDepth-1; i >= 0; --i) {
-                            ExecutionFrame<InstanceType> f = frames.get(i);
-                            if (f.atCatchBlockStart != null) {
-                                if (f.interestingInstances != null && f.interestingInstances.contains(f.atCatchBlockStart)) {
+                        for (int i = stackDepth; i > 0; --i) {
+                            if (atCatchBlockStart[i] != null) {
+                                if (interestingInstances[i].contains(atCatchBlockStart[i])) {
                                     if (dependantInterestingInstances.isEmpty())
-                                        dependantInterestingInstances = Collections.singleton(f.atCatchBlockStart);
+                                        dependantInterestingInstances = Collections.singleton(atCatchBlockStart[i]);
                                     else
-                                        dependantInterestingInstances.add(f.atCatchBlockStart);
+                                        dependantInterestingInstances.add(atCatchBlockStart[i]);
                                 }
-                                f.atCatchBlockStart = null;
+                                atCatchBlockStart[i] = null;
 
                                 // data dependence:
                                 // (the stack height has already been decremented when entering the catch block)
-                                Variable definedException = f.getStackEntry(f.operandStack.get());
+                                Variable definedException = simEnv.getOpStackEntry(i, opStack[i]);
                                 dynInfo = AdditionalDataDependence.annotate(dynInfo, definedException, dynInfo.getUsedVariables());
 
                                 break;
@@ -547,27 +603,22 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                     }
                     if (!dependantInterestingInstances.isEmpty()) {
                         for (InstanceType depend: dependantInterestingInstances) {
-                            for (DependencesVisitor<? super InstanceType> vis: this.controlDependenceVisitors) {
+                            for (DependencesVisitor<? super InstanceType> vis: controlDependenceVisitors0) {
                                 vis.visitControlDependence(depend, instance);
                             }
                         }
-                        if (currentFrame.interestingInstances != null)
-                            currentFrame.interestingInstances.removeAll(dependantInterestingInstances);
+                    	interestingInstances[stackDepth].removeAll(dependantInterestingInstances);
                     }
-                    if (currentFrame.interestingInstances == null)
-                        currentFrame.interestingInstances = new HashSet<InstanceType>();
-                    currentFrame.interestingInstances.add(instance);
+                    interestingInstances[stackDepth].add(instance);
                 }
                 // TODO check this:
                 if (pendingControlDependenceVisitors0 != null) {
-                    if (currentFrame.interestingInstances == null)
-                        currentFrame.interestingInstances = new HashSet<InstanceType>();
-                    currentFrame.interestingInstances.add(instance);
+                	interestingInstances[stackDepth].add(instance);
                     for (DependencesVisitor<? super InstanceType> vis: pendingControlDependenceVisitors0)
                         vis.visitPendingControlDependence(instance);
                 }
 
-                Collection<Variable> definedVariables = dynInfo.getDefinedVariables();
+                Collection<? extends Variable> definedVariables = dynInfo.getDefinedVariables();
                 if (!definedVariables.isEmpty()) {
                     /*
                     for (Variable definedVariable: dynInfo.getDefinedVariables()) {
@@ -585,7 +636,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                             || dataDependenceVisitorsWriteAfterRead0 != null
                             || pendingDataDependenceVisitorsWriteAfterRead0 != null) {
                         for (Variable definedVariable: definedVariables) {
-                            if (!(definedVariable instanceof StackEntry<?>)) {
+                            if (!(definedVariable instanceof StackEntry)) {
                                 // we ignore WAR dependences over the stack!
                                 if (pendingDataDependenceVisitorsWriteAfterRead0 != null) {
                                     // for each defined variable, we have a pending WAR dependence
@@ -606,7 +657,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                                     || pendingDataDependenceVisitorsReadAfterWrite0 != null) {
                                 List<InstanceType> readers = lastReaders.remove(definedVariable);
                                 if (readers != null) {
-                                    Collection<Variable> usedVariables = dataDependenceVisitorsReadAfterWrite0 != null
+                                    Collection<? extends Variable> usedVariables = dataDependenceVisitorsReadAfterWrite0 != null
                                         ? dynInfo.getUsedVariables(definedVariable)
                                         : null;
                                     for (InstanceType reader: readers) {
@@ -624,7 +675,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                     }
                 }
 
-                Collection<Variable> usedVariables = dynInfo.getUsedVariables();
+                Collection<? extends Variable> usedVariables = dynInfo.getUsedVariables();
                 if (!usedVariables.isEmpty()) {
                     /*
                     for (Variable usedVariable: dynInfo.getUsedVariables()) {
@@ -644,7 +695,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                             pendingDataDependenceVisitorsReadAfterWrite0 != null) {
                         for (Variable usedVariable: usedVariables) {
                             // if we have WAR visitors, we inform them about a new dependence
-                            if (dataDependenceVisitorsWriteAfterRead0 != null && !(usedVariable instanceof StackEntry<?>)) {
+                            if (dataDependenceVisitorsWriteAfterRead0 != null && !(usedVariable instanceof StackEntry)) {
                                 InstanceType lastWriterInst = lastWriter.get(usedVariable);
 
                                 // avoid self-loops in the DDG (e.g. for IINC, which reads and writes to the same variable)
@@ -673,7 +724,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                     }
                 }
 
-                for (Entry<Long, Collection<Variable>> e: dynInfo.getCreatedObjects().entrySet()) {
+                for (Entry<Long, Collection<? extends Variable>> e: dynInfo.getCreatedObjects().entrySet()) {
                     /*
                     boolean added = createdObjects.add(e.getKey());
                     assert added;
@@ -710,16 +761,17 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                 }
 
                 if (dynInfo.isCatchBlock()) {
-                    currentFrame.atCatchBlockStart = instance;
-                    currentFrame.interruptedControlFlow = true;
-                } else if (currentFrame.atCatchBlockStart != null) {
-                    currentFrame.atCatchBlockStart = null;
+                    atCatchBlockStart[stackDepth] = instance;
+                    interruptedControlFlow[stackDepth] = true;
+                } else if (atCatchBlockStart[stackDepth] != null) {
+                    atCatchBlockStart[stackDepth] = null;
                 }
 
-                if (removedFrame != null)
-                    cleanUpExecutionFrame(removedFrame, lastReaders, lastWriter,
+                if (simEnv.removedMethod != null) {
+                    cleanUpExecutionFrame(simEnv, stackDepth+1, lastReaders, lastWriter,
                         pendingDataDependenceVisitorsWriteAfterRead0, pendingDataDependenceVisitorsReadAfterWrite0,
                         dataDependenceVisitorsWriteAfterRead0, dataDependenceVisitorsReadAfterWrite0);
+                }
 
                 /*
                 if (instance.getInstanceNr() % 1000000 == 0) {
@@ -790,7 +842,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
         }
     }
 
-    private DependencesVisitor<? super InstanceType>[] union(
+	private DependencesVisitor<? super InstanceType>[] union(
             DependencesVisitor<? super InstanceType>[] ... visitors) {
         Set<DependencesVisitor<? super InstanceType>> allVisitors =
             new HashSet<DependencesVisitor<? super InstanceType>>();
@@ -806,16 +858,16 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
         return (DependencesVisitor<? super InstanceType>[]) new DependencesVisitor<?>[size];
     }
 
-    private void cleanUpExecutionFrame(ExecutionFrame<InstanceType> frame,
+    private void cleanUpExecutionFrame(SimulationEnvironment simEnv, int stackDepth,
             Map<Variable, List<InstanceType>> lastReaders,
             Map<Variable, InstanceType> lastWriter,
             DependencesVisitor<? super InstanceType>[] pendingDataDependenceVisitorsWriteAfterRead0,
             DependencesVisitor<? super InstanceType>[] pendingDataDependenceVisitorsReadAfterWrite0,
             DependencesVisitor<? super InstanceType>[] dataDependenceVisitorsWriteAfterRead0,
             DependencesVisitor<? super InstanceType>[] dataDependenceVisitorsReadAfterWrite0) throws InterruptedException {
-        for (Variable var: frame.getAllVariables()) {
+        for (Variable var: simEnv.getAllVariables(stackDepth)) {
             // lastWriter does not contain stack entries
-            if (!(var instanceof StackEntry<?>)) {
+            if (!(var instanceof StackEntry)) {
                 if (pendingDataDependenceVisitorsWriteAfterRead0 != null) {
                     InstanceType inst = lastWriter.remove(var);
                     if (inst != null)
@@ -842,7 +894,7 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
         if (pendingDataDependenceVisitorsWriteAfterRead0 != null) {
             for (Entry<Variable, InstanceType> e: lastWriter.entrySet()) {
                 Variable var = e.getKey();
-                assert !(var instanceof StackEntry<?>);
+                assert !(var instanceof StackEntry);
                 for (DependencesVisitor<? super InstanceType> vis: pendingDataDependenceVisitorsWriteAfterRead0)
                     vis.discardPendingDataDependence(e.getValue(), var, DataDependenceType.WRITE_AFTER_READ);
             }

@@ -8,28 +8,28 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
 
 public class SimpleVariableUsage implements DynamicInformation {
 
-    private final Collection<Variable> usedVariables;
-    private final Collection<Variable> definedVariables;
+    private final Collection<? extends Variable> usedVariables;
+    private final Collection<? extends Variable> definedVariables;
     private final boolean isCatchBlock;
-    private final Map<Long, Collection<Variable>> createdObjects;
+    private final Map<Long, Collection<? extends Variable>> createdObjects;
 
-    public SimpleVariableUsage(final Collection<Variable> usedVariables,
-            final Collection<Variable> definedVariables) {
-        this(usedVariables, definedVariables, Collections.<Long, Collection<Variable>>emptyMap());
+    public SimpleVariableUsage(final Collection<? extends Variable> usedVariables,
+            final Collection<? extends Variable> definedVariables) {
+        this(usedVariables, definedVariables, Collections.<Long, Collection<? extends Variable>>emptyMap());
     }
-    public SimpleVariableUsage(final Collection<Variable> usedVariables,
-            final Collection<Variable> definedVariables,
-            final Map<Long, Collection<Variable>> createdObjects) {
+    public SimpleVariableUsage(final Collection<? extends Variable> usedVariables,
+            final Collection<? extends Variable> definedVariables,
+            final Map<Long, Collection<? extends Variable>> createdObjects) {
         this(usedVariables, definedVariables, false, createdObjects);
     }
 
-    public SimpleVariableUsage(final Collection<Variable> usedVariables,
-            final Collection<Variable> definedVariables, final boolean isCatchBlock) {
-        this(usedVariables, definedVariables, isCatchBlock, Collections.<Long, Collection<Variable>>emptyMap());
+    public SimpleVariableUsage(final Collection<? extends Variable> usedVariables,
+            final Collection<? extends Variable> definedVariables, final boolean isCatchBlock) {
+        this(usedVariables, definedVariables, isCatchBlock, Collections.<Long, Collection<? extends Variable>>emptyMap());
     }
-    public SimpleVariableUsage(final Collection<Variable> usedVariables,
-            final Collection<Variable> definedVariables, final boolean isCatchBlock,
-            final Map<Long, Collection<Variable>> createdObjects) {
+    public SimpleVariableUsage(final Collection<? extends Variable> usedVariables,
+            final Collection<? extends Variable> definedVariables, final boolean isCatchBlock,
+            final Map<Long, Collection<? extends Variable>> createdObjects) {
         this.usedVariables = usedVariables;
         this.definedVariables = definedVariables;
         this.isCatchBlock = isCatchBlock;
@@ -41,19 +41,19 @@ public class SimpleVariableUsage implements DynamicInformation {
         this(Collections.singleton(usedVariable), Collections.singleton(definedVariable));
     }
 
-    public SimpleVariableUsage(final Collection<Variable> usedVariables, final Variable definedVariable) {
+    public SimpleVariableUsage(final Collection<? extends Variable> usedVariables, final Variable definedVariable) {
         this(usedVariables, Collections.singleton(definedVariable));
     }
 
-    public SimpleVariableUsage(final Variable usedVariable, final Collection<Variable> definedVariables) {
+    public SimpleVariableUsage(final Variable usedVariable, final Collection<? extends Variable> definedVariables) {
         this(Collections.singleton(usedVariable), definedVariables);
     }
 
-    public Collection<Variable> getUsedVariables() {
+    public Collection<? extends Variable> getUsedVariables() {
         return this.usedVariables;
     }
 
-    public Collection<Variable> getDefinedVariables() {
+    public Collection<? extends Variable> getDefinedVariables() {
         return this.definedVariables;
     }
 
@@ -61,7 +61,7 @@ public class SimpleVariableUsage implements DynamicInformation {
         return this.isCatchBlock;
     }
 
-    public Collection<Variable> getUsedVariables(final Variable definedVariable) {
+    public Collection<? extends Variable> getUsedVariables(final Variable definedVariable) {
         return this.usedVariables;
     }
 
@@ -70,7 +70,7 @@ public class SimpleVariableUsage implements DynamicInformation {
         return "used:    "+getUsedVariables()+System.getProperty("line.separator")
             +"defined: "+getDefinedVariables();
     }
-    public Map<Long, Collection<Variable>> getCreatedObjects() {
+    public Map<Long, Collection<? extends Variable>> getCreatedObjects() {
         return this.createdObjects;
     }
 

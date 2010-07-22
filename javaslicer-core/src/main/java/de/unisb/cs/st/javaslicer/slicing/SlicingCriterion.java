@@ -303,7 +303,7 @@ public class SlicingCriterion {
                 throw new IllegalArgumentException("Illegal variable definition: " + part);
 
             for (LocalVariable var: method.getLocalVariables()) {
-                if (localVarStr.equals(var.getName())) {
+                if (var != null && localVarStr.equals(var.getName())) {
                     varList.add(var);
                     continue outer;
                 }

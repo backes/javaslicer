@@ -1,19 +1,22 @@
 package de.unisb.cs.st.javaslicer.variables;
 
-import de.unisb.cs.st.javaslicer.instructionSimulation.ExecutionFrame;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 
-public class LocalVariable<InstanceType> implements Variable {
 
-    private final ExecutionFrame<InstanceType> frame;
+public class LocalVariable implements Variable {
+
+    private final long frame;
     private final int varIndex;
+	private final ReadMethod method;
 
-    public LocalVariable(final ExecutionFrame<InstanceType> executionFrame, final int localVarIndex) {
+    public LocalVariable(long frame, int localVarIndex, ReadMethod method) {
         assert localVarIndex >= 0;
-        this.frame = executionFrame;
+        this.frame = frame;
         this.varIndex = localVarIndex;
+        this.method = method;
     }
 
-    public ExecutionFrame<InstanceType> getFrame() {
+    public long getFrame() {
         return this.frame;
     }
 
@@ -22,24 +25,22 @@ public class LocalVariable<InstanceType> implements Variable {
     }
 
     public String getVarName() {
-        if (this.frame != null && this.frame.method != null) {
-            for (de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable
-                    var: this.frame.method.getLocalVariables()) {
-                if (var.getIndex() == this.varIndex)
-                    return var.getName();
-            }
+        if (this.method != null) {
+        	de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable[] localVarArr = this.method.getLocalVariables();
+        	if (localVarArr.length > this.varIndex && localVarArr[this.varIndex] != null)
+        		return localVarArr[this.varIndex].getName();
         }
         return "unknown_var_" + this.varIndex;
     }
 
     @Override
     public String toString() {
-        return "local["+this.frame.frameNr+","+this.varIndex+" ("+getVarName()+")]";
+        return "local["+this.frame+","+this.varIndex+" ("+getVarName()+")]";
     }
 
     @Override
     public int hashCode() {
-        return 31*this.frame.hashCode() + this.varIndex;
+        return 31*(int)this.frame + this.varIndex;
     }
 
     @Override
@@ -50,10 +51,10 @@ public class LocalVariable<InstanceType> implements Variable {
             return false;
         if (getClass() != obj.getClass())
             return false;
-        final LocalVariable<?> other = (LocalVariable<?>) obj;
+        LocalVariable other = (LocalVariable) obj;
         if (this.varIndex != other.varIndex)
             return false;
-        if (!this.frame.equals(other.frame))
+        if (this.frame != other.frame)
             return false;
         return true;
     }

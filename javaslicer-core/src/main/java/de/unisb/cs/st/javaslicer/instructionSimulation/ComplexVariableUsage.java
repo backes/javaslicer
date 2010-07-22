@@ -42,7 +42,7 @@ public class ComplexVariableUsage implements DynamicInformation {
         return false;
     }
 
-    public Map<Long, Collection<Variable>> getCreatedObjects() {
+    public Map<Long, Collection<? extends Variable>> getCreatedObjects() {
         return Collections.emptyMap();
     }
 

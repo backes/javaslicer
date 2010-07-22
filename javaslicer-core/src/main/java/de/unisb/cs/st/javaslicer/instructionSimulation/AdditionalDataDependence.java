@@ -12,23 +12,23 @@ public class AdditionalDataDependence implements DynamicInformation {
 
 	private final DynamicInformation dynInfo;
 	private final Variable definedVar;
-	private final Collection<Variable> usedVars;
+	private final Collection<? extends Variable> usedVars;
 
 	private AdditionalDataDependence(DynamicInformation dynInfo,
-			Variable definedVar, Collection<Variable> usedVars) {
+			Variable definedVar, Collection<? extends Variable> usedVars) {
 		this.dynInfo = dynInfo;
 		this.definedVar = definedVar;
 		this.usedVars = usedVars;
 	}
 
 	public static DynamicInformation annotate(DynamicInformation dynInfo,
-			Variable definedVar, Collection<Variable> usedVars) {
+			Variable definedVar, Collection<? extends Variable> usedVars) {
 		assert (!dynInfo.getDefinedVariables().contains(definedVar));
 		return new AdditionalDataDependence(dynInfo, definedVar, usedVars);
 	}
 
-	public Collection<Variable> getUsedVariables() {
-		Collection<Variable> oldUsed = this.dynInfo.getUsedVariables();
+	public Collection<? extends Variable> getUsedVariables() {
+		Collection<? extends Variable> oldUsed = this.dynInfo.getUsedVariables();
 		if (oldUsed.isEmpty() || oldUsed == this.usedVars)
 			return this.usedVars;
 		HashSet<Variable> union = new HashSet<Variable>(oldUsed);
@@ -36,8 +36,8 @@ public class AdditionalDataDependence implements DynamicInformation {
 		return union;
 	}
 
-	public Collection<Variable> getDefinedVariables() {
-		Collection<Variable> oldDef = this.dynInfo.getDefinedVariables();
+	public Collection<? extends Variable> getDefinedVariables() {
+		Collection<? extends Variable> oldDef = this.dynInfo.getDefinedVariables();
 		if (oldDef.isEmpty())
 			return Collections.singleton(this.definedVar);
 		HashSet<Variable> union = new HashSet<Variable>(oldDef);
@@ -45,13 +45,13 @@ public class AdditionalDataDependence implements DynamicInformation {
 		return union;
 	}
 
-	public Collection<Variable> getUsedVariables(Variable definedVariable) {
+	public Collection<? extends Variable> getUsedVariables(Variable definedVariable) {
 		if (definedVariable.equals(this.definedVar))
 			return this.usedVars;
 		return this.dynInfo.getUsedVariables(definedVariable);
 	}
 
-	public Map<Long, Collection<Variable>> getCreatedObjects() {
+	public Map<Long, Collection<? extends Variable>> getCreatedObjects() {
 		return this.dynInfo.getCreatedObjects();
 	}
 
