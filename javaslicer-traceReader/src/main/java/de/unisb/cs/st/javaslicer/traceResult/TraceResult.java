@@ -358,8 +358,6 @@ public class TraceResult {
         	filter = InstanceFilter.AdditionalLabelFilter.instance;
         }
 
-        boolean warnUntracedMethods = cmdLine.hasOption("warn-untraced");
-
         String[] additionalArgs = cmdLine.getArgs();
         if (additionalArgs.length != 1) {
             System.err.println("Error: No input file given.");
@@ -423,7 +421,7 @@ public class TraceResult {
                     filter, new AbstractInstructionInstanceFactory());
                 ProgressMonitor monitor = null;
                 if (cmdLine.hasOption("--progress")) {
-                    monitor = new ConsoleProgressMonitor(System.out, "Computing trace length", true, 100, true);
+                    monitor = new ConsoleProgressMonitor(System.out, "Computing trace length", true, 100, true, true);
                     monitor.start(it);
                 }
                 try {
