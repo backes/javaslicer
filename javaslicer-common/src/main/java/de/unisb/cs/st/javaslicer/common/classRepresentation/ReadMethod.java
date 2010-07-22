@@ -41,6 +41,8 @@ public class ReadMethod implements Comparable<ReadMethod> {
 
     }
 
+	private static final LocalVariable[] EMPTY_LOCAL_VARIABLES = new LocalVariable[0];
+
     private final UntracedArrayList<AbstractInstruction> instructions = new UntracedArrayList<AbstractInstruction>();
     private final UntracedArrayList<TryCatchBlock> tryCatchBlocks = new UntracedArrayList<TryCatchBlock>();
     private final ReadClass readClass;
@@ -61,7 +63,7 @@ public class ReadMethod implements Comparable<ReadMethod> {
         this.instructionNumberStart = instructionNumberStart;
         // default: no instructions
         this.instructionNumberEnd = instructionNumberStart;
-        this.localVariables = null;
+        this.localVariables = EMPTY_LOCAL_VARIABLES;
     }
 
     public void addInstruction(final AbstractInstruction instruction) {
@@ -178,6 +180,7 @@ public class ReadMethod implements Comparable<ReadMethod> {
         } else {
             out.writeBoolean(false);
         }
+    	// FIXME: On the next change of the trace file format, fix this up...
         int realNumLocalVars = 0;
         for (final LocalVariable v: this.localVariables)
         	if (v != null)
@@ -245,10 +248,11 @@ public class ReadMethod implements Comparable<ReadMethod> {
         int localVarsNr = OptimizedDataInputStream.readInt0(in);
         rm.localVariables = new LocalVariable[localVarsNr];
         boolean trim = false;
-        while (localVarsNr-- > 0) {
+        while (localVarsNr > 0) {
         	LocalVariable var = LocalVariable.readFrom(in);
         	if (var == null)
         		continue;
+        	--localVarsNr;
         	if (rm.localVariables.length <= var.getIndex()) {
         		rm.localVariables = Arrays.copyOf(rm.localVariables, Math.max(var.getIndex()+1, 2*rm.localVariables.length));
         		trim = true;

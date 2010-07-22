@@ -29,6 +29,8 @@ public class LocalVariable {
     }
 
     public void writeOut(final DataOutput out) throws IOException {
+    	// FIXME: On the next change of the trace file format, use OptimizedDataOutputStream here
+    	assert this.index >= 0;
         out.writeInt(this.index);
         out.writeUTF(this.name);
         out.writeUTF(this.desc);
