@@ -11,7 +11,7 @@
 
     <version>1.1.1-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <url>http://www.st.cs.uni-sb.de/</url>
+    <url>http://www.st.cs.uni-saarland.de/javaslicer/</url>
     <inceptionYear>2008</inceptionYear>
 
     <properties>
@@ -22,10 +22,10 @@
         <developer>
             <id>hammacher</id>
             <name>Clemens Hammacher</name>
-            <email>hammacher@st.cs.uni-sb.de</email>
-            <url>http://www.st.cs.uni-sb.de/~hammacher/</url>
+            <email>hammacher@cs.uni-saarland.de</email>
+            <url>http://www.st.cs.uni-saarland.de/~hammacher/</url>
             <organization>Software Engineering Group at Saarland University</organization>
-            <organizationUrl>http://www.st.cs.uni-sb.de/</organizationUrl>
+            <organizationUrl>http://www.st.cs.uni-saarland.de/</organizationUrl>
             <timezone>2</timezone>
             <roles>
                 <role>Developer</role>
@@ -34,10 +34,10 @@
         <developer>
             <id>dallmeier</id>
             <name>Valentin Dallmeier</name>
-            <email>dallmeier@st.cs.uni-sb.de</email>
-            <url>http://www.st.cs.uni-sb.de/~dallmeier/</url>
+            <email>dallmeier@st.cs.uni-saarland.de</email>
+            <url>http://www.st.cs.uni-saarland.de/~dallmeier/</url>
             <organization>Software Engineering Group at Saarland University</organization>
-            <organizationUrl>http://www.st.cs.uni-sb.de/</organizationUrl>
+            <organizationUrl>http://www.st.cs.uni-saarland.de/</organizationUrl>
             <timezone>2</timezone>
             <roles>
                 <role>Tutor</role>
@@ -46,10 +46,10 @@
         <developer>
             <id>mburger</id>
             <name>Martin Burger</name>
-            <email>mburger@cs.uni-sb.de</email>
-            <url>http://www.st.cs.uni-sb.de/~mburger/</url>
+            <email>mburger@cs.uni-saarland.de</email>
+            <url>http://www.st.cs.uni-saarland.de/~mburger/</url>
             <organization>Software Engineering Group at Saarland University</organization>
-            <organizationUrl>http://www.st.cs.uni-sb.de/</organizationUrl>
+            <organizationUrl>http://www.st.cs.uni-saarland.de/</organizationUrl>
             <timezone>2</timezone>
             <roles>
                 <role>Tutor</role>
@@ -73,7 +73,7 @@
             <notifier>
                 <type>mail</type>
                 <configuration>
-                    <recipients>hammacher@st.cs.uni-sb.de</recipients>
+                    <recipients>hammacher@st.cs.uni-saarland.de</recipients>
                 </configuration>
                 <sendOnError>true</sendOnError>
                 <sendOnFailure>true</sendOnFailure>
@@ -83,7 +83,7 @@
             <notifier>
                 <type>mail</type>
                 <configuration>
-                    <recipients>mburger@cs.uni-sb.de</recipients>
+                    <recipients>mburger@cs.uni-saarland.de</recipients>
                 </configuration>
                 <sendOnError>true</sendOnError>
                 <sendOnFailure>true</sendOnFailure>
@@ -93,7 +93,7 @@
             <notifier>
                 <type>mail</type>
                 <configuration>
-                    <recipients>dallmeier@cs.uni-sb.de</recipients>
+                    <recipients>dallmeier@cs.uni-saarland.de</recipients>
                 </configuration>
                 <sendOnError>true</sendOnError>
                 <sendOnFailure>true</sendOnFailure>
@@ -104,14 +104,14 @@
     </ciManagement>
 
     <scm>
-        <connection>scm:svn:https://svn.st.cs.uni-sb.de/svn/st/projects/java-slicer/trunk/java-slicer</connection>
-        <developerConnection>scm:svn:https://svn.st.cs.uni-sb.de/svn/st/projects/java-slicer/trunk/java-slicer</developerConnection>
-        <url>https://svn.st.cs.uni-sb.de/svn/st/projects/java-slicer/trunk/java-slicer</url>
+        <connection>scm:svn:https://svn.st.cs.uni-saarland.de/svn/st/projects/java-slicer/trunk/java-slicer</connection>
+        <developerConnection>scm:svn:https://svn.st.cs.uni-saarland.de/svn/st/projects/java-slicer/trunk/java-slicer</developerConnection>
+        <url>https://svn.st.cs.uni-saarland.de/svn/st/projects/java-slicer/trunk/java-slicer</url>
     </scm>
 
     <organization>
         <name>Software Engineering Group at Saarland University</name>
-        <url>http://www.st.cs.uni-sb.de/</url>
+        <url>http://www.st.cs.uni-saarland.de/</url>
     </organization>
 
     <modules>
@@ -219,7 +219,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-release-plugin</artifactId>
                 <configuration>
-                    <tagBase>https://svn.st.cs.uni-sb.de/svn/st/projects/java-slicer/tags</tagBase>
+                    <tagBase>https://svn.st.cs.uni-saarland.de/svn/st/projects/java-slicer/tags</tagBase>
                 </configuration>
             </plugin>
             <plugin>
