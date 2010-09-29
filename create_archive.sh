@@ -27,7 +27,6 @@ for e in $EXCLUDE; do
 	COMMAND=$COMMAND" --exclude java-slicer/"$e
 done
 COMMAND=$COMMAND" -f java-slicer/"$FILENAME" java-slicer"
-echo "Command: $COMMAND"
 if ! $COMMAND; then
   echo Could not create archive...
   exit 1
@@ -43,6 +42,7 @@ echo
 
 TAGNAME="archive_"$DATE
 echo Creating git tag $TAGNAME...
+echo git tag $TAGNAME
 git tag $TAGNAME
 
 echo Do not forget to push the tag:
