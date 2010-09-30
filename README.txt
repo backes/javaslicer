@@ -1,3 +1,17 @@
+Software Required:
+1. JDK 1.6
+test:
+> javac -version
+javac 1.6.0_20
+
+2. apache maven (http://maven.apache.org/)
+test:
+> mvn --version
+Apache Maven 2.2.0 (r788681; 2009-06-26 15:04:01+0200)
+Java version: 1.6.0_20
+
+
+
 This is some way to start with the slicer:
 
 Go to the javaslicer directory and run the assemble.sh script
