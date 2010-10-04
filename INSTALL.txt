@@ -1,0 +1,24 @@
+Software Required:
+1. JDK 1.6
+test if it works:
+> javac -version
+javac 1.6.0_20
+
+2. apache maven (http://maven.apache.org/)
+test if it works:
+> mvn --version
+Apache Maven 2.2.0 (r788681; 2009-06-26 15:04:01+0200)
+Java version: 1.6.0_20
+
+
+
+To compile all JavaSlicer components, do simply run the assemble script:
+> cd javaslicer
+> ./assemble.sh
+
+This should create an assembly directory and copy runnable jars into it:
+> ls -lh assembly
+slicer.jar     traceReader.jar   tracer.jar     visualize.jar
+
+The file USAGE.txt explains how to use them.
+

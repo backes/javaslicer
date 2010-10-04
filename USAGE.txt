@@ -1,24 +1,8 @@
-Software Required:
-1. JDK 1.6
-test:
-> javac -version
-javac 1.6.0_20
+This file describes shortly how to use JavaSlicer. It assumes that you have
+the runnable jar files, either from the downloadable archive, or created
+using the assemble.sh script.
 
-2. apache maven (http://maven.apache.org/)
-test:
-> mvn --version
-Apache Maven 2.2.0 (r788681; 2009-06-26 15:04:01+0200)
-Java version: 1.6.0_20
-
-
-
-This is some way to start with the slicer:
-
-Go to the javaslicer directory and run the assemble.sh script
-> cd javaslicer
-> ./assemble.sh
-
-This should have created an assembly directory and copy runnable jars into it:
+You should have the following jar files:
 > ls -lh assembly
 slicer.jar     traceReader.jar   tracer.jar     visualize.jar
 
