@@ -38,6 +38,11 @@ the values that the variables have in this line.
 If you want to slice for all local variables, then specify "*", i.e.
     java.util.HashMap.clear:614:*
 
+You can specify several slicing criteria for one slicing run by specifying them all together,
+separated by a comma:
+    java.util.HashMap.clear:614:*,java.util.HashMap.put:373:{hash}
+
+
 There are still problems with tracing for parameters. If you trace for a "local variable" which is a
 parameter that has not been written in the method, then the slice may be empty.
 This will propably be fixed some day.

@@ -170,7 +170,7 @@
     <repositories>
         <repository>
             <id>titania</id>
-            <name>the students' nexus server</name>
+            <name>the students' council's nexus server</name>
             <url>http://titania.fs.uni-saarland.de/nexus/content/groups/public</url>
         </repository>
     </repositories>
