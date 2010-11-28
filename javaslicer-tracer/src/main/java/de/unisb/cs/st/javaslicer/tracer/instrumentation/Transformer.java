@@ -279,7 +279,7 @@ public class Transformer implements ClassFileTransformer {
         final byte[] newClassfileBuffer = writer.toByteArray();
 
         if (this.tracer.check) {
-            checkClass(newClassfileBuffer, className);
+            checkClass(newClassfileBuffer, className, classfileBuffer);
         }
 
         //printClass(newClassfileBuffer, Type.getObjectType(className).getClassName());
@@ -291,7 +291,7 @@ public class Transformer implements ClassFileTransformer {
         return newClassfileBuffer;
     }
 
-    private boolean checkClass(final byte[] newClassfileBuffer, final String classname) {
+    private boolean checkClass(final byte[] newClassfileBuffer, final String classname, byte[] origClassfileBuffer) {
         final ClassNode cn = new ClassNode();
         final ClassReader cr = new ClassReader(newClassfileBuffer);
         //cr.accept(new CheckClassAdapter(cn), ClassReader.SKIP_DEBUG);
@@ -308,9 +308,19 @@ public class Transformer implements ClassFileTransformer {
                 a.analyze(cn.name, method);
             } catch (final AnalyzerException e) {
                 System.err.println("Error in method " + classname + "." + method.name
-                        + method.desc + ":");
-                e.printStackTrace(System.err);
+                        + method.desc + ": " + e);
+                //e.printStackTrace(System.err);
                 printMethod(a, System.err, method);
+                System.err.println("original bytecode:");
+                ClassReader origClassReader = new ClassReader(origClassfileBuffer);
+                ClassNode origClassNode = new ClassNode();
+                origClassReader.accept(origClassNode, 0);
+                for (Object origMethodObj : origClassNode.methods) {
+                	MethodNode origMethod = (MethodNode) origMethodObj;
+                	if (origMethod.name.equals(method.name) && origMethod.desc.equals(method.desc))
+                		printMethod(System.err, origMethod);
+
+                }
                 return false;
             }
         }
