@@ -22,8 +22,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Map.Entry;
 
 import org.apache.commons.collections.Factory;
 import org.apache.commons.collections.map.LazyMap;
@@ -297,6 +297,7 @@ public class TracingMethodInstrumenter implements Opcodes {
 
         // then, visit the instructions that were in the method before
         while (this.instructionIterator.hasNext()) {
+
             final AbstractInsnNode insnNode = this.instructionIterator.next();
             switch (insnNode.getType()) {
             case AbstractInsnNode.INSN:
@@ -945,43 +946,43 @@ public class TracingMethodInstrumenter implements Opcodes {
                 if (this.tracer.debug)
                     Transformer.printMethod(System.err, this.methodNode);
                 throw new TracerException("Bytecode of method "+this.classNode.name+"."+this.methodNode.name+
-                    " has unsupported form. Maybe it was compiled for JRE < 1.5?");
+                    " has unsupported form (constructor call does not immediately follow NEW instruction). " +
+                    "Maybe it was compiled for JRE < 1.5?");
             } else if (this.instructionIterator.next().getOpcode() != DUP) {
+            	// this code handles a special kind of object initialization, which is sometimes used
+            	// in a catch block which throws a new exceptions which encapsulates the old one.
+            	// the bytecode of this construct looks like this:
+            	//   NEW <newExceptionType>
+            	//   DUP_X1
+            	//   SWAP
+            	//   INVOKESPECIAL <newExceptionType>.<init> (Ljava/lang/Throwable;)V
+            	//   ATHROW
                 this.instructionIterator.previous();
                 AbstractInsnNode dup_x1 = this.instructionIterator.next();
-                AbstractInsnNode swap = null;
-                AbstractInsnNode init = null;
 
                 boolean matches = false;
                 if (dup_x1.getOpcode() == DUP_X1 && this.instructionIterator.hasNext()) {
-                    swap = this.instructionIterator.next();
+                    AbstractInsnNode swap = this.instructionIterator.next();
                     if (swap.getOpcode() == SWAP && this.instructionIterator.hasNext()) {
-                        init = this.instructionIterator.next();
-                        if (init.getOpcode() == INVOKESPECIAL) {
-                            MethodInsnNode mtdInvokation = (MethodInsnNode) init;
-                            Type[] args = Type.getArgumentTypes(mtdInvokation.desc);
-                            if ("<init>".equals(mtdInvokation.name) &&
-                                    args.length == 1 && args[0].getSort() == Type.OBJECT) {
-                                matches = true;
-                            }
-                        }
+                        matches = true;
                     }
                 }
 
                 if (matches) {
-                    // add another DUP_X1 after the existing one
-                    this.instructionIterator.previous(); this.instructionIterator.previous();
+                    // add another DUP_X1 before the existing one
+                    this.instructionIterator.previous();
+                    this.instructionIterator.previous();
                     this.instructionIterator.add(new InsnNode(DUP_X1));
-//                    if (this.tracer.debug) {
-//                        System.err.println("Added DUP_X1 at position " + this.instructionIterator.previousIndex() + "!");
-//                        Transformer.printMethod(System.err, this.methodNode);
-//                    }
-                    this.instructionIterator.next(); // next instruction visited would be the <init> call
+                    //if (this.tracer.debug) {
+                    //    System.err.println("Added DUP_X1 at position " + this.instructionIterator.previousIndex() + "!");
+                    //    Transformer.printMethod(System.err, this.methodNode);
+                    //}
                 } else {
                     if (this.tracer.debug)
                         Transformer.printMethod(System.err, this.methodNode);
                     throw new TracerException("Bytecode of method "+this.classNode.name+"."+this.methodNode.name+
-                        " has unsupported form. Maybe it was compiled for JRE < 1.5?");
+                        " has unsupported form (constructor call does not immediately follow NEW instruction). " +
+                        "Maybe it was compiled for JRE < 1.5?");
                 }
             } else {
                 this.instructionIterator.previous();
