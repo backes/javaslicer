@@ -53,7 +53,8 @@ public class IntPush extends AbstractInstruction {
         return this.operand;
     }
 
-    public InstructionType getType() {
+    @Override
+	public InstructionType getType() {
         return InstructionType.INT;
     }
 

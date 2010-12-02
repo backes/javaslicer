@@ -41,7 +41,8 @@ public class SequiturIntegerTraceSequence implements IntegerTraceSequence {
         this.sequiturSeqLength = outputSeqLength;
     }
 
-    public void trace(final int value) {
+    @Override
+	public void trace(final int value) {
         assert !this.ready: "Trace cannot be extended any more";
 
         if (this.count == this.values.length)

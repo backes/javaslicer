@@ -126,7 +126,8 @@ public class Transformer implements ClassFileTransformer {
         this.notRedefinedClasses = notRedefinedClasses;
     }
 
-    public byte[] transform(final ClassLoader loader, final String className,
+    @Override
+	public byte[] transform(final ClassLoader loader, final String className,
             final Class<?> classBeingRedefined, final ProtectionDomain protectionDomain,
             final byte[] classfileBuffer) {
 

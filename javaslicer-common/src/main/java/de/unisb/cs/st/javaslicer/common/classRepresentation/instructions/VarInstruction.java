@@ -72,7 +72,8 @@ public class VarInstruction extends AbstractInstruction {
         return this.localVarIndex;
     }
 
-    public InstructionType getType() {
+    @Override
+	public InstructionType getType() {
         return InstructionType.VAR;
     }
 

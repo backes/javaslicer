@@ -129,7 +129,8 @@ public class UntracedArrayList<E> implements List<E> {
      *
      * @return the number of elements in this list
      */
-    public int size() {
+    @Override
+	public int size() {
         return this.size;
     }
 
@@ -138,7 +139,8 @@ public class UntracedArrayList<E> implements List<E> {
      *
      * @return <tt>true</tt> if this list contains no elements
      */
-    public boolean isEmpty() {
+    @Override
+	public boolean isEmpty() {
         return this.size == 0;
     }
 
@@ -151,7 +153,8 @@ public class UntracedArrayList<E> implements List<E> {
      *            element whose presence in this list is to be tested
      * @return <tt>true</tt> if this list contains the specified element
      */
-    public boolean contains(final Object o) {
+    @Override
+	public boolean contains(final Object o) {
         return indexOf(o) >= 0;
     }
 
@@ -160,7 +163,8 @@ public class UntracedArrayList<E> implements List<E> {
      * contain the element. More formally, returns the lowest index <tt>i</tt> such that
      * <tt>(o==null&nbsp;?&nbsp;get(i)==null&nbsp;:&nbsp;o.equals(get(i)))</tt>, or -1 if there is no such index.
      */
-    public int indexOf(final Object o) {
+    @Override
+	public int indexOf(final Object o) {
         if (o == null) {
             for (int i = 0; i < this.size; i++)
                 if (this.elementData[i] == null)
@@ -178,7 +182,8 @@ public class UntracedArrayList<E> implements List<E> {
      * contain the element. More formally, returns the highest index <tt>i</tt> such that
      * <tt>(o==null&nbsp;?&nbsp;get(i)==null&nbsp;:&nbsp;o.equals(get(i)))</tt>, or -1 if there is no such index.
      */
-    public int lastIndexOf(final Object o) {
+    @Override
+	public int lastIndexOf(final Object o) {
         if (o == null) {
             for (int i = this.size - 1; i >= 0; i--)
                 if (this.elementData[i] == null)
@@ -203,7 +208,8 @@ public class UntracedArrayList<E> implements List<E> {
      *
      * @return an array containing all of the elements in this list in proper sequence
      */
-    public Object[] toArray() {
+    @Override
+	public Object[] toArray() {
         final Object[] a = new Object[this.size];
         System.arraycopy(this.elementData, 0, a, 0, this.size);
         return a;
@@ -231,7 +237,8 @@ public class UntracedArrayList<E> implements List<E> {
      * @throws NullPointerException
      *             if the specified array is null
      */
-    @SuppressWarnings("unchecked")
+    @Override
+	@SuppressWarnings("unchecked")
     public <T> T[] toArray(final T[] a) {
         if (a.length < this.size) {
             // Make a new array of a's runtime type, but my contents:
@@ -257,7 +264,8 @@ public class UntracedArrayList<E> implements List<E> {
      * @throws IndexOutOfBoundsException
      *             {@inheritDoc}
      */
-    @SuppressWarnings("unchecked")
+    @Override
+	@SuppressWarnings("unchecked")
     public E get(final int index) {
         rangeCheck(index);
 
@@ -275,7 +283,8 @@ public class UntracedArrayList<E> implements List<E> {
      * @throws IndexOutOfBoundsException
      *             {@inheritDoc}
      */
-    @SuppressWarnings("unchecked")
+    @Override
+	@SuppressWarnings("unchecked")
     public E set(final int index, final E element) {
         rangeCheck(index);
 
@@ -291,7 +300,8 @@ public class UntracedArrayList<E> implements List<E> {
      *            element to be appended to this list
      * @return <tt>true</tt> (as specified by {@link Collection#add})
      */
-    public boolean add(final E e) {
+    @Override
+	public boolean add(final E e) {
         ensureCapacity(this.size + 1); // Increments modCount!!
         this.elementData[this.size++] = e;
         return true;
@@ -308,7 +318,8 @@ public class UntracedArrayList<E> implements List<E> {
      * @throws IndexOutOfBoundsException
      *             {@inheritDoc}
      */
-    public void add(final int index, final E element) {
+    @Override
+	public void add(final int index, final E element) {
         if (index > this.size || index < 0)
             throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + this.size);
 
@@ -328,7 +339,8 @@ public class UntracedArrayList<E> implements List<E> {
      * @throws IndexOutOfBoundsException
      *             {@inheritDoc}
      */
-    @SuppressWarnings("unchecked")
+    @Override
+	@SuppressWarnings("unchecked")
     public E remove(final int index) {
         rangeCheck(index);
 
@@ -354,7 +366,8 @@ public class UntracedArrayList<E> implements List<E> {
      *            element to be removed from this list, if present
      * @return <tt>true</tt> if this list contained the specified element
      */
-    public boolean remove(final Object o) {
+    @Override
+	public boolean remove(final Object o) {
         if (o == null) {
             for (int index = 0; index < this.size; index++)
                 if (this.elementData[index] == null) {
@@ -386,7 +399,8 @@ public class UntracedArrayList<E> implements List<E> {
     /**
      * Removes all of the elements from this list. The list will be empty after this call returns.
      */
-    public void clear() {
+    @Override
+	public void clear() {
         this.modCount++;
 
         // Let gc do its work
@@ -408,7 +422,8 @@ public class UntracedArrayList<E> implements List<E> {
      * @throws NullPointerException
      *             if the specified collection is null
      */
-    public boolean addAll(final Collection<? extends E> c) {
+    @Override
+	public boolean addAll(final Collection<? extends E> c) {
         final Object[] a = c.toArray();
         final int numNew = a.length;
         ensureCapacity(this.size + numNew); // Increments modCount
@@ -433,7 +448,8 @@ public class UntracedArrayList<E> implements List<E> {
      * @throws NullPointerException
      *             if the specified collection is null
      */
-    public boolean addAll(final int index, final Collection<? extends E> c) {
+    @Override
+	public boolean addAll(final int index, final Collection<? extends E> c) {
         if (index > this.size || index < 0)
             throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + this.size);
 
@@ -460,26 +476,31 @@ public class UntracedArrayList<E> implements List<E> {
             throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + this.size);
     }
 
-    public boolean containsAll(final Collection<?> c) {
+    @Override
+	public boolean containsAll(final Collection<?> c) {
         for (final Object o : c)
             if (!contains(o))
                 return false;
         return true;
     }
 
-    public Iterator<E> iterator() {
+    @Override
+	public Iterator<E> iterator() {
         return new Itr();
     }
 
-    public ListIterator<E> listIterator() {
+    @Override
+	public ListIterator<E> listIterator() {
         return new ListItr(0);
     }
 
-    public ListIterator<E> listIterator(final int index) {
+    @Override
+	public ListIterator<E> listIterator(final int index) {
         return new ListItr(index);
     }
 
-    public boolean removeAll(final Collection<?> c) {
+    @Override
+	public boolean removeAll(final Collection<?> c) {
         boolean modified = false;
         final Iterator<?> e = iterator();
         while (e.hasNext()) {
@@ -491,7 +512,8 @@ public class UntracedArrayList<E> implements List<E> {
         return modified;
     }
 
-    public boolean retainAll(final Collection<?> c) {
+    @Override
+	public boolean retainAll(final Collection<?> c) {
         boolean modified = false;
         final Iterator<E> e = iterator();
         while (e.hasNext()) {
@@ -503,7 +525,8 @@ public class UntracedArrayList<E> implements List<E> {
         return modified;
     }
 
-    public List<E> subList(final int fromIndex, final int toIndex) {
+    @Override
+	public List<E> subList(final int fromIndex, final int toIndex) {
         return (this instanceof RandomAccess ? new RandomAccessSubList(fromIndex, toIndex) : new SubList(fromIndex,
                 toIndex));
     }
@@ -526,11 +549,13 @@ public class UntracedArrayList<E> implements List<E> {
          */
         int expectedModCount = UntracedArrayList.this.modCount;
 
-        public boolean hasNext() {
+        @Override
+		public boolean hasNext() {
             return this.cursor != size();
         }
 
-        public E next() {
+        @Override
+		public E next() {
             checkForComodification();
             try {
                 final E next = get(this.cursor);
@@ -542,7 +567,8 @@ public class UntracedArrayList<E> implements List<E> {
             }
         }
 
-        public void remove() {
+        @Override
+		public void remove() {
             if (this.lastRet == -1)
                 throw new IllegalStateException();
             checkForComodification();
@@ -569,11 +595,13 @@ public class UntracedArrayList<E> implements List<E> {
             this.cursor = index;
         }
 
-        public boolean hasPrevious() {
+        @Override
+		public boolean hasPrevious() {
             return this.cursor != 0;
         }
 
-        public E previous() {
+        @Override
+		public E previous() {
             checkForComodification();
             try {
                 final int i = this.cursor - 1;
@@ -586,15 +614,18 @@ public class UntracedArrayList<E> implements List<E> {
             }
         }
 
-        public int nextIndex() {
+        @Override
+		public int nextIndex() {
             return this.cursor;
         }
 
-        public int previousIndex() {
+        @Override
+		public int previousIndex() {
             return this.cursor - 1;
         }
 
-        public void set(final E e) {
+        @Override
+		public void set(final E e) {
             if (this.lastRet == -1)
                 throw new IllegalStateException();
             checkForComodification();
@@ -607,7 +638,8 @@ public class UntracedArrayList<E> implements List<E> {
             }
         }
 
-        public void add(final E e) {
+        @Override
+		public void add(final E e) {
             checkForComodification();
 
             try {
@@ -718,46 +750,55 @@ public class UntracedArrayList<E> implements List<E> {
                 private final ListIterator<E> i = UntracedArrayList.this.listIterator(index
                         + UntracedArrayList.SubList.this.offset);
 
-                public boolean hasNext() {
+                @Override
+				public boolean hasNext() {
                     return nextIndex() < SubList.this.sublistSize;
                 }
 
-                public E next() {
+                @Override
+				public E next() {
                     if (!hasNext())
                         throw new NoSuchElementException();
                     return this.i.next();
                 }
 
-                public boolean hasPrevious() {
+                @Override
+				public boolean hasPrevious() {
                     return previousIndex() >= 0;
                 }
 
-                public E previous() {
+                @Override
+				public E previous() {
                     if (!hasPrevious())
                         throw new NoSuchElementException();
                     return this.i.previous();
                 }
 
-                public int nextIndex() {
+                @Override
+				public int nextIndex() {
                     return this.i.nextIndex() - SubList.this.offset;
                 }
 
-                public int previousIndex() {
+                @Override
+				public int previousIndex() {
                     return this.i.previousIndex() - SubList.this.offset;
                 }
 
-                public void remove() {
+                @Override
+				public void remove() {
                     this.i.remove();
                     SubList.this.expectedModCount = UntracedArrayList.this.modCount;
                     SubList.this.sublistSize--;
                     UntracedArrayList.this.modCount++;
                 }
 
-                public void set(final E e) {
+                @Override
+				public void set(final E e) {
                     this.i.set(e);
                 }
 
-                public void add(final E e) {
+                @Override
+				public void add(final E e) {
                     this.i.add(e);
                     SubList.this.expectedModCount = UntracedArrayList.this.modCount;
                     SubList.this.sublistSize++;

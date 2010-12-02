@@ -41,7 +41,8 @@ public class SequiturLongTraceSequence implements LongTraceSequence {
         this.sequiturSeqLength = outputSeqLength;
     }
 
-    public void trace(final long value) {
+    @Override
+	public void trace(final long value) {
         assert !this.ready: "Trace cannot be extended any more";
 
         if (this.count == this.values.length)

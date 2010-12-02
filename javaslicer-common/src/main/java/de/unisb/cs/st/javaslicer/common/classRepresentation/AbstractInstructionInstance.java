@@ -46,23 +46,28 @@ public class AbstractInstructionInstance implements InstructionInstance {
         this.additionalInfo = additionalInfo;
     }
 
-    public long getOccurrenceNumber() {
+    @Override
+	public long getOccurrenceNumber() {
         return this.occurenceNumber;
     }
 
-    public Instruction getInstruction() {
+    @Override
+	public Instruction getInstruction() {
         return this.instruction;
     }
 
-    public long getInstanceNr() {
+    @Override
+	public long getInstanceNr() {
         return this.instanceNr;
     }
 
-    public int getStackDepth() {
+    @Override
+	public int getStackDepth() {
         return this.stackDepth;
     }
 
-    public InstructionInstanceInfo getAdditionalInfo() {
+    @Override
+	public InstructionInstanceInfo getAdditionalInfo() {
         return this.additionalInfo;
     }
 
@@ -110,7 +115,8 @@ public class AbstractInstructionInstance implements InstructionInstance {
             append(instrStr).append(infoStr).toString();
     }
 
-    public int compareTo(InstructionInstance o) {
+    @Override
+	public int compareTo(InstructionInstance o) {
         long thisInstanceNr = getInstanceNr();
         long otherInstanceNr = o.getInstanceNr();
         return thisInstanceNr < otherInstanceNr ? -1 :

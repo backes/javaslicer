@@ -80,7 +80,8 @@ public class TableSwitchInstruction extends AbstractInstruction {
         return this.min + this.handlers.length - 1;
     }
 
-    public InstructionType getType() {
+    @Override
+	public InstructionType getType() {
         return InstructionType.TABLESWITCH;
     }
 

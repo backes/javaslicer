@@ -63,7 +63,8 @@ public class SimpleInstruction extends AbstractInstruction {
         return new SimpleInstruction(methodInfo.getMethod(), lineNumber, opcode, index);
     }
 
-    public InstructionType getType() {
+    @Override
+	public InstructionType getType() {
         return InstructionType.SIMPLE;
     }
 

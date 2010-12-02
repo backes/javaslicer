@@ -78,7 +78,8 @@ public abstract class ProgressLineEmitter implements ProgressMonitor {
         this.onlyIfChanged = onlyIfChanged;
     }
 
-    public void start(ProgressInformationProvider progressInfoProv) {
+    @Override
+	public void start(ProgressInformationProvider progressInfoProv) {
         if (this.outputThread != null)
             this.outputThread.interrupt();
         this.numApprox = 0;
@@ -87,7 +88,8 @@ public abstract class ProgressLineEmitter implements ProgressMonitor {
         this.outputThread.start();
     }
 
-    public void end() {
+    @Override
+	public void end() {
         assert (this.outputThread != null) : "Called end() before start()";
         this.outputThread.interrupt();
         boolean interrupted = false;

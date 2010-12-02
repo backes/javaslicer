@@ -35,12 +35,14 @@ public class SequiturTraceSequenceFactory implements TraceSequenceFactory {
     public static class PerThread implements TraceSequenceFactory.PerThread {
 
         private static ObjectWriter<Long> LONG_WRITER = new ObjectWriter<Long>() {
-            public void writeObject(final Long object, final ObjectOutputStream outputStream) throws IOException {
+            @Override
+			public void writeObject(final Long object, final ObjectOutputStream outputStream) throws IOException {
                 OptimizedDataOutputStream.writeLong0(object.longValue(), outputStream);
             }
         };
         private static ObjectWriter<Integer> INT_WRITER = new ObjectWriter<Integer>() {
-            public void writeObject(final Integer object, final ObjectOutputStream outputStream) throws IOException {
+            @Override
+			public void writeObject(final Integer object, final ObjectOutputStream outputStream) throws IOException {
                 OptimizedDataOutputStream.writeInt0(object.intValue(), outputStream);
             }
         };
@@ -53,7 +55,8 @@ public class SequiturTraceSequenceFactory implements TraceSequenceFactory {
         private List<SequiturIntegerTraceSequence> intSequences = new ArrayList<SequiturIntegerTraceSequence>();
         private List<SequiturLongTraceSequence> longSequences = new ArrayList<SequiturLongTraceSequence>();
 
-        public synchronized TraceSequence createTraceSequence(final Type type, final Tracer tracer) throws IOException {
+        @Override
+		public synchronized TraceSequence createTraceSequence(final Type type, final Tracer tracer) throws IOException {
             if (this.intSequences == null)
                 throw new IOException("sequence factory already finished");
             SequiturIntegerTraceSequence intTraceSequence;

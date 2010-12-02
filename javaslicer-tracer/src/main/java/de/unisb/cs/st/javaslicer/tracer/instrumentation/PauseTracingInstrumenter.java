@@ -41,7 +41,7 @@ import de.unisb.cs.st.javaslicer.tracer.Tracer;
 /**
  * This class instruments methods to stop tracing as soon as the method is entered
  * and continue when it is left (either by a return statement or by a thrown exception).
- * 
+ *
  * @author Clemens Hammacher
  */
 public class PauseTracingInstrumenter implements Opcodes {
@@ -145,7 +145,8 @@ public class PauseTracingInstrumenter implements Opcodes {
 
             final Map<LabelNode, LabelNode> newMethodLabels = LazyMap.decorate(
                     new HashMap<LabelNode, LabelNode>(), new Factory() {
-                        public Object create() {
+                        @Override
+						public Object create() {
                             return new LabelNode();
                         }
                     });

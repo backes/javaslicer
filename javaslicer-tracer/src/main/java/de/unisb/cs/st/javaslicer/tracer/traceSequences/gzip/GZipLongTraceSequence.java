@@ -121,7 +121,8 @@ public class GZipLongTraceSequence implements LongTraceSequence {
         this.dataOut = new MyDataOutputStream(this.baOutputStream);
     }
 
-    public void trace(final long value) throws IOException {
+    @Override
+	public void trace(final long value) throws IOException {
         assert this.dataOut != null : "Trace cannot be extended any more";
 
         this.dataOut.writeLong(value);
@@ -142,7 +143,8 @@ public class GZipLongTraceSequence implements LongTraceSequence {
         out.writeInt(this.mplexOut.getId());
     }
 
-    public void finish() throws IOException {
+    @Override
+	public void finish() throws IOException {
         if (this.dataOut == null)
             return;
         this.dataOut = null;
@@ -151,7 +153,6 @@ public class GZipLongTraceSequence implements LongTraceSequence {
         this.mplexOut = this.tracer.newOutputStream();
 
         // now we have to inverse the long stream
-        assert this.baOutputStream != null || oldMplexOut != null;
         if (this.baOutputStream != null) {
             this.gzipped = false;
             int nextPos = this.baOutputStream.size() - 8;
@@ -166,6 +167,7 @@ public class GZipLongTraceSequence implements LongTraceSequence {
             this.baOutputStream = null;
             optOut.close();
         } else {
+            assert oldMplexOut != null;
             ByteArrayOutputStream invStreamFirstPart = null;
             OptimizedDataOutputStream optOut = null;
             final BackwardLongStreamReader backwardReader = new BackwardLongStreamReader(oldMplexOut, 4*1024);

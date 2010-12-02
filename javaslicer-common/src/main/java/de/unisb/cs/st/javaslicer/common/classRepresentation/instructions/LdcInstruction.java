@@ -59,7 +59,8 @@ public class LdcInstruction extends AbstractInstruction {
         return this.isLongObject;
     }
 
-    public InstructionType getType() {
+    @Override
+	public InstructionType getType() {
         return InstructionType.LDC;
     }
 

@@ -29,8 +29,8 @@ import de.hammacher.util.streams.OptimizedDataOutputStream;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceFactory;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
-import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterator;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod.MethodReadInformation;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterator;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 
 /**
@@ -97,19 +97,23 @@ public abstract class AbstractInstruction implements Instruction {
         this.index = index;
     }
 
-    public int getIndex() {
+    @Override
+	public int getIndex() {
         return this.index;
     }
 
-    public ReadMethod getMethod() {
+    @Override
+	public ReadMethod getMethod() {
         return this.method;
     }
 
-    public int getOpcode() {
+    @Override
+	public int getOpcode() {
         return this.opcode;
     }
 
-    public int getLineNumber() {
+    @Override
+	public int getLineNumber() {
         return this.lineNumber;
     }
 
@@ -117,11 +121,13 @@ public abstract class AbstractInstruction implements Instruction {
         return nextIndex;
     }
 
-    public int getBackwardInstructionIndex(final TraceIterator infoProv) {
+    @Override
+	public int getBackwardInstructionIndex(final TraceIterator infoProv) {
         return this.index - 1;
     }
 
-    public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
+    @Override
+	public void writeOut(final DataOutputStream out, final StringCacheOutput stringCache) throws IOException {
         // write out type of the instruction
         final Integer typeIndex = instructions.get(getClass());
         if (typeIndex == null)
@@ -160,7 +166,8 @@ public abstract class AbstractInstruction implements Instruction {
     }
 
     // must be overridden by classes with dynamic parameters (e.g. array load/store)
-    public <InstanceType> InstanceType getNextInstance(
+    @Override
+	public <InstanceType> InstanceType getNextInstance(
             TraceIterator infoProv, int stackDepth,
             long instanceNr, InstructionInstanceFactory<InstanceType> instanceFactory)
             throws TracerException {
@@ -168,7 +175,8 @@ public abstract class AbstractInstruction implements Instruction {
             stackDepth, instanceNr, null);
     }
 
-    public AbstractInstruction getPrevious() {
+    @Override
+	public AbstractInstruction getPrevious() {
         assert getIndex() >= getMethod().getInstructionNumberStart()
             && getIndex() < getMethod().getInstructionNumberEnd();
         if (getIndex() == getMethod().getInstructionNumberStart())
@@ -179,7 +187,8 @@ public abstract class AbstractInstruction implements Instruction {
         return previous;
     }
 
-    public AbstractInstruction getNext() {
+    @Override
+	public AbstractInstruction getNext() {
         assert getIndex() >= getMethod().getInstructionNumberStart()
             && getIndex() < getMethod().getInstructionNumberEnd();
         if (getIndex() + 1 == getMethod().getInstructionNumberEnd())
@@ -190,7 +199,8 @@ public abstract class AbstractInstruction implements Instruction {
         return next;
     }
 
-    public int compareTo(final Instruction o) {
+    @Override
+	public int compareTo(final Instruction o) {
         // we want so sort by class, line number, and index. NOT by method.
         int cmp = getMethod().getReadClass().compareTo(o.getMethod().getReadClass());
         if (cmp != 0)

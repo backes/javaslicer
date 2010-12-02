@@ -121,7 +121,8 @@ public class GZipIntegerTraceSequence implements IntegerTraceSequence {
         this.dataOut = new MyDataOutputStream(this.baOutputStream);
     }
 
-    public void trace(final int value) throws IOException {
+    @Override
+	public void trace(final int value) throws IOException {
         assert this.dataOut != null : "Trace cannot be extended any more";
 
         this.dataOut.writeInt(value);
@@ -142,7 +143,8 @@ public class GZipIntegerTraceSequence implements IntegerTraceSequence {
         out.writeInt(this.mplexOut.getId());
     }
 
-    public void finish() throws IOException {
+    @Override
+	public void finish() throws IOException {
         if (this.dataOut == null)
             return;
         this.dataOut = null;
@@ -151,7 +153,6 @@ public class GZipIntegerTraceSequence implements IntegerTraceSequence {
         this.mplexOut = this.tracer.newOutputStream();
 
         // now we have to inverse the integer stream
-        assert this.baOutputStream != null || oldMplexOut != null;
         if (this.baOutputStream != null) {
             this.gzipped = false;
             int nextPos = this.baOutputStream.size() - 4;
@@ -166,6 +167,7 @@ public class GZipIntegerTraceSequence implements IntegerTraceSequence {
             this.baOutputStream = null;
             optOut.close();
         } else {
+            assert oldMplexOut != null;
             ByteArrayOutputStream invStreamFirstPart = null;
             OptimizedDataOutputStream optOut = null;
             final BackwardIntegerStreamReader backwardReader = new BackwardIntegerStreamReader(oldMplexOut, 8*1024);

@@ -59,7 +59,8 @@ public class JumpInstruction extends AbstractInstruction {
         this.label = label;
     }
 
-    public InstructionType getType() {
+    @Override
+	public InstructionType getType() {
         return InstructionType.JUMP;
     }
 

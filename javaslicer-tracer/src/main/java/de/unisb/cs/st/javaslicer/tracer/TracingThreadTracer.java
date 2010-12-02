@@ -39,9 +39,9 @@ import de.unisb.cs.st.javaslicer.common.TraceSequenceTypes.Type;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.Identifiable;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.ObjectIdentifier;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence;
-import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.IntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequence.LongTraceSequence;
+import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
 
 public class TracingThreadTracer implements ThreadTracer {
 
@@ -85,7 +85,8 @@ public class TracingThreadTracer implements ThreadTracer {
                     new ThreadFactory() {
                         private final AtomicInteger nextId = new AtomicInteger(0);
 
-                        public Thread newThread(final Runnable r) {
+                        @Override
+						public Thread newThread(final Runnable r) {
                             final Thread t = new UntracedThread(r, "sequence finisher " + this.nextId.getAndIncrement());
                             if (!t.isDaemon())
                                 t.setDaemon(true);
@@ -288,7 +289,8 @@ public class TracingThreadTracer implements ThreadTracer {
         this.writeOutThread.start();
     }
 
-    public synchronized void traceInt(final int value, final int traceSequenceIndex) {
+    @Override
+	public synchronized void traceInt(final int value, final int traceSequenceIndex) {
         if (this.paused > 0)
             return;
 
@@ -304,7 +306,8 @@ public class TracingThreadTracer implements ThreadTracer {
         }
     }
 
-    public synchronized void traceObject(final Object obj, final int traceSequenceIndex) {
+    @Override
+	public synchronized void traceObject(final Object obj, final int traceSequenceIndex) {
         if (this.paused > 0)
             return;
 
@@ -338,7 +341,8 @@ public class TracingThreadTracer implements ThreadTracer {
         }
     }
 
-    public synchronized void traceLastInstructionIndex(final int traceSequenceIndex) {
+    @Override
+	public synchronized void traceLastInstructionIndex(final int traceSequenceIndex) {
         if (this.paused > 0)
             return;
 
@@ -346,7 +350,8 @@ public class TracingThreadTracer implements ThreadTracer {
         traceInt(this.lastInstructionIndex, traceSequenceIndex);
     }
 
-    public void passInstruction(final int instructionIndex) {
+    @Override
+	public void passInstruction(final int instructionIndex) {
         if (this.paused > 0)
             return;
 
@@ -361,7 +366,8 @@ public class TracingThreadTracer implements ThreadTracer {
         this.lastInstructionIndex = instructionIndex;
     }
 
-    public synchronized void finish() {
+    @Override
+	public synchronized void finish() {
         pauseTracing();
 
         // this ensures that the finishing tasks are only done once!
@@ -398,16 +404,19 @@ public class TracingThreadTracer implements ThreadTracer {
             out.writeInt(this.methodStack[i]);
     }
 
-    public synchronized void pauseTracing() {
+    @Override
+	public synchronized void pauseTracing() {
         ++this.paused;
     }
 
-    public synchronized void resumeTracing() {
+    @Override
+	public synchronized void resumeTracing() {
         --this.paused;
         assert this.paused >= 0: "resumed more than paused";
     }
 
-    public boolean isPaused() {
+    @Override
+	public boolean isPaused() {
         return this.paused > 0;
     }
 

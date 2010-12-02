@@ -98,7 +98,8 @@ public class MethodInvocationInstruction extends AbstractInstruction {
         return this.returnedSize;
     }
 
-    public InstructionType getType() {
+    @Override
+	public InstructionType getType() {
         return InstructionType.METHODINVOCATION;
     }
 

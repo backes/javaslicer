@@ -18,7 +18,8 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.Abstrac
 
 public class AbstractInstructionInstanceFactory implements InstructionInstanceFactory<AbstractInstructionInstance> {
 
-    public AbstractInstructionInstance createInstructionInstance(AbstractInstruction instruction,
+    @Override
+	public AbstractInstructionInstance createInstructionInstance(AbstractInstruction instruction,
             long occurenceNumber, int stackDepth, long instanceNr,
             InstructionInstanceInfo additionalInfo) {
 

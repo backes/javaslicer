@@ -25,7 +25,8 @@ import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
 
 public class UncompressedTraceSequenceFactory implements TraceSequenceFactory, TraceSequenceFactory.PerThread {
 
-    public TraceSequence createTraceSequence(final Type type, final Tracer tracer) {
+    @Override
+	public TraceSequence createTraceSequence(final Type type, final Tracer tracer) {
         switch (type) {
         case INTEGER:
             return new UncompressedIntegerTraceSequence(tracer);

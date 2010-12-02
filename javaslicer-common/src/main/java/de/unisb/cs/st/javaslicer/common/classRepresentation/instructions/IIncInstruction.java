@@ -57,7 +57,8 @@ public class IIncInstruction extends AbstractInstruction {
         return this.increment;
     }
 
-    public InstructionType getType() {
+    @Override
+	public InstructionType getType() {
         return InstructionType.IINC;
     }
 

@@ -54,7 +54,8 @@ public class NullTraceSequenceFactory implements TraceSequenceFactory, TraceSequ
 
     }
 
-    public TraceSequence createTraceSequence(final Type type, final Tracer tracer) {
+    @Override
+	public TraceSequence createTraceSequence(final Type type, final Tracer tracer) {
         return new NullTraceSequence();
     }
 

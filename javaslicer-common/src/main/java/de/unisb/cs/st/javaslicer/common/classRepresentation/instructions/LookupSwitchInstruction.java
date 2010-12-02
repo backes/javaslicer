@@ -73,7 +73,8 @@ public class LookupSwitchInstruction extends AbstractInstruction {
         this.handlers = handlers;
     }
 
-    public InstructionType getType() {
+    @Override
+	public InstructionType getType() {
         return InstructionType.LOOKUPSWITCH;
     }
 
@@ -108,7 +109,8 @@ public class LookupSwitchInstruction extends AbstractInstruction {
         final List<Entry<Integer, LabelMarker>> sortedHandlers =
             new ArrayList<Entry<Integer,LabelMarker>>(this.handlers.entrySet());
         Collections.sort(sortedHandlers, new Comparator<Entry<Integer, LabelMarker>>() {
-            public int compare(final Entry<Integer, LabelMarker> o1, final Entry<Integer, LabelMarker> o2) {
+            @Override
+			public int compare(final Entry<Integer, LabelMarker> o1, final Entry<Integer, LabelMarker> o2) {
                 return o1.getKey() - o2.getKey();
             }
         });

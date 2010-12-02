@@ -22,35 +22,43 @@ public class NullThreadTracer implements ThreadTracer {
         // private constructor ==> singleton
     }
 
-    public void finish() {
+    @Override
+	public void finish() {
         // nop
     }
 
-    public boolean isPaused() {
+    @Override
+	public boolean isPaused() {
         return true;
     }
 
-    public void passInstruction(final int instructionIndex) {
+    @Override
+	public void passInstruction(final int instructionIndex) {
         // nop
     }
 
-    public void pauseTracing() {
+    @Override
+	public void pauseTracing() {
         // nop
     }
 
-    public void traceInt(final int value, final int traceSequenceIndex) {
+    @Override
+	public void traceInt(final int value, final int traceSequenceIndex) {
         // nop
     }
 
-    public void traceLastInstructionIndex(final int traceSequenceIndex) {
+    @Override
+	public void traceLastInstructionIndex(final int traceSequenceIndex) {
         // nop
     }
 
-    public void traceObject(final Object obj, final int traceSequenceIndex) {
+    @Override
+	public void traceObject(final Object obj, final int traceSequenceIndex) {
         // nop
     }
 
-    public void resumeTracing() {
+    @Override
+	public void resumeTracing() {
         // nop
     }
 

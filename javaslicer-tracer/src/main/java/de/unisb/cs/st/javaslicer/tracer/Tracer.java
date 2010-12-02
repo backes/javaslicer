@@ -28,8 +28,8 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -37,8 +37,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPOutputStream;
 
 import de.hammacher.util.MultiplexedFileWriter;
-import de.hammacher.util.StringCacheOutput;
 import de.hammacher.util.MultiplexedFileWriter.MultiplexOutputStream;
+import de.hammacher.util.StringCacheOutput;
 import de.hammacher.util.maps.ConcurrentReferenceHashMap;
 import de.hammacher.util.maps.ConcurrentReferenceHashMap.Option;
 import de.hammacher.util.maps.ConcurrentReferenceHashMap.ReferenceType;
@@ -128,7 +128,8 @@ public class Tracer {
                     32, .75f, 16, ReferenceType.WEAK, ReferenceType.STRONG,
                     EnumSet.of(Option.IDENTITY_COMPARISONS));
         threadTracersMap.addRemoveStaleListener(new ConcurrentReferenceHashMap.RemoveStaleListener<ThreadTracer>() {
-            public void removed(final ThreadTracer removedValue) {
+            @Override
+			public void removed(final ThreadTracer removedValue) {
                 if (removedValue instanceof TracingThreadTracer) {
                     synchronized (Tracer.this.readyThreadTracers) {
                         Tracer.this.readyThreadTracers.add((TracingThreadTracer) removedValue);
