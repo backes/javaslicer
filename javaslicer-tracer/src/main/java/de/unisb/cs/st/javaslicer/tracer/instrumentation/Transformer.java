@@ -109,7 +109,7 @@ public class Transformer implements ClassFileTransformer {
 
     private final Set<String> notRedefinedClasses;
 
-    private static final boolean COMPUTE_FRAMES = false;
+    private static final boolean COMPUTE_FRAMES = true;
     private final Object transformationLock = new Object();
 
     private final AtomicLong totalBytecodeParsingTime = new AtomicLong(0);
