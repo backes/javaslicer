@@ -112,6 +112,9 @@ public class Transformer implements ClassFileTransformer {
     private static final boolean COMPUTE_FRAMES = false;
     private final Object transformationLock = new Object();
 
+    private final AtomicLong totalBytecodeParsingTime = new AtomicLong(0);
+    private final AtomicLong totalRawTransformationTime = new AtomicLong(0);
+    private final AtomicLong totalBytecodeWritingTime = new AtomicLong(0);
     private final AtomicLong totalTransformationTime = new AtomicLong(0);
     private final AtomicInteger totalTransformedClasses = new AtomicInteger(0);
 
@@ -221,11 +224,16 @@ public class Transformer implements ClassFileTransformer {
     }
 
     private byte[] transform0(final String className, final String javaClassName, final byte[] classfileBuffer) {
+
+    	long startNanos = System.nanoTime();
+
         final ClassReader reader = new ClassReader(classfileBuffer);
 
         final ClassNode classNode = new ClassNode();
         reader.accept(classNode, 0);
         final ClassWriter writer;
+
+        this.totalBytecodeParsingTime.addAndGet(System.nanoTime() - startNanos);
 
         // we have to synchronize on System.out first.
         // otherwise it may lead to a deadlock if a thread calls removeStale() on ConcurrentReferenceHashMap
@@ -234,11 +242,9 @@ public class Transformer implements ClassFileTransformer {
         synchronized (System.out) { synchronized (this.transformationLock) {
 
             // register that class for later reconstruction of the trace
-            List<Field> fields;
-            if (classNode.fields.isEmpty())
-                fields = Collections.emptyList();
-            else
-                fields = new ArrayList<Field>(classNode.fields.size());
+            List<Field> fields = classNode.fields.isEmpty()
+            	? Collections.<Field>emptyList()
+            	: new ArrayList<Field>(classNode.fields.size());
 
             final String javaSuperName = Type.getObjectType(classNode.superName).getClassName();
             final ReadClass readClass = new ReadClass(
@@ -249,9 +255,7 @@ public class Transformer implements ClassFileTransformer {
                 fields.add(new Field(f.name, f.desc, f.access, readClass));
             }
 
-            writer = new FixedClassWriter(COMPUTE_FRAMES ? ClassWriter.COMPUTE_FRAMES : ClassWriter.COMPUTE_MAXS);
-
-            final ClassVisitor output = this.tracer.check ? new CheckClassAdapter(writer) : writer;
+            long nanosBeforeTransformation = System.nanoTime();
 
             if (Arrays.asList(this.pauseTracingClasses).contains(javaClassName)
                     || className.startsWith("java/security/")) {
@@ -265,7 +269,15 @@ public class Transformer implements ClassFileTransformer {
 
             new IdentifiableInstrumenter(readClass, this.tracer).transform(classNode);
 
+            long nanosAfterTransformation = System.nanoTime();
+            this.totalRawTransformationTime.addAndGet(nanosAfterTransformation - nanosBeforeTransformation);
+
+            writer = new FixedClassWriter(COMPUTE_FRAMES ? ClassWriter.COMPUTE_FRAMES : ClassWriter.COMPUTE_MAXS);
+            ClassVisitor output = this.tracer.check ? new CheckClassAdapter(writer) : writer;
+
             classNode.accept(COMPUTE_FRAMES ? new JSRInliner(output) : output);
+
+            this.totalBytecodeWritingTime.addAndGet(System.nanoTime() - nanosAfterTransformation);
 
             readClass.setInstructionNumberEnd(AbstractInstruction.getNextIndex());
 
@@ -428,6 +440,8 @@ public class Transformer implements ClassFileTransformer {
             TracingMethodInstrumenter.printStats(System.out);
             System.out.format((Locale)null, "Transforming %d classes took %.3f seconds in total.%n",
                     this.totalTransformedClasses.get(), 1e-9*this.totalTransformationTime.get());
+            System.out.format((Locale)null, "  - %7.3f seconds for parsing bytecode\n  - %7.3f seconds for transformations\n  - %7.3f seconds for writing bytecode\n",
+            	1e-9*this.totalBytecodeParsingTime.get(), 1e-9*this.totalRawTransformationTime.get(), 1e-9*this.totalBytecodeWritingTime.get());
         }
     }
 
