@@ -38,24 +38,29 @@ public class ComplexVariableUsage implements DynamicInformation {
         return true;
     }
 
-    public Collection<Variable> getDefinedVariables() {
+    @Override
+	public Collection<Variable> getDefinedVariables() {
         return this.definedVariablesAndDependences.keySet();
     }
 
-    public Collection<Variable> getUsedVariables() {
+    @Override
+	public Collection<Variable> getUsedVariables() {
         return this.allUsedVariables;
     }
 
-    public Collection<Variable> getUsedVariables(final Variable definedVariable) {
+    @Override
+	public Collection<Variable> getUsedVariables(final Variable definedVariable) {
         assert this.definedVariablesAndDependences.containsKey(definedVariable);
         return this.definedVariablesAndDependences.get(definedVariable);
     }
 
-    public boolean isCatchBlock() {
+    @Override
+	public boolean isCatchBlock() {
         return false;
     }
 
-    public Map<Long, Collection<? extends Variable>> getCreatedObjects() {
+    @Override
+	public Map<Long, Collection<? extends Variable>> getCreatedObjects() {
         return Collections.emptyMap();
     }
 

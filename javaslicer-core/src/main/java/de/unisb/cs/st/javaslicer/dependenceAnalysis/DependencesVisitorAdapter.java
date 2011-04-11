@@ -26,61 +26,73 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
  */
 public abstract class DependencesVisitorAdapter<InstanceType> implements DependencesVisitor<InstanceType> {
 
-    public void discardPendingDataDependence(InstanceType from, Variable var,
+    @Override
+	public void discardPendingDataDependence(InstanceType from, Variable var,
             DataDependenceType type) throws InterruptedException {
         // null
     }
 
-    public void interrupted() throws InterruptedException {
+    @Override
+	public void interrupted() throws InterruptedException {
         // null
     }
 
-    public void visitControlDependence(InstanceType from, InstanceType to)
+    @Override
+	public void visitControlDependence(InstanceType from, InstanceType to)
             throws InterruptedException {
         // null
     }
 
-    public void visitDataDependence(InstanceType from, InstanceType to,
+    @Override
+	public void visitDataDependence(InstanceType from, InstanceType to,
             Collection<? extends Variable> fromVars, Variable toVar, DataDependenceType type)
             throws InterruptedException {
         // null
     }
 
-    public void visitEnd(long numInstances) throws InterruptedException {
+    @Override
+	public void visitEnd(long numInstances) throws InterruptedException {
         // null
     }
 
-    public void visitInstructionExecution(InstanceType instance)
+    @Override
+	public void visitInstructionExecution(InstanceType instance)
             throws InterruptedException {
         // null
     }
 
-    public void visitMethodEntry(ReadMethod method, int stackDepth)
+    @Override
+	public void visitMethodEntry(ReadMethod method, int stackDepth)
             throws InterruptedException {
         // null
     }
 
-    public void visitMethodLeave(ReadMethod method, int stackDepth)
+    @Override
+	public void visitMethodLeave(ReadMethod method, int stackDepth)
             throws InterruptedException {
         // null
     }
 
-    public void visitObjectCreation(long objectId, InstanceType instrInstance)
+    @Override
+	public void visitObjectCreation(long objectId, InstanceType instrInstance)
             throws InterruptedException {
         // null
     }
 
-    public void visitPendingControlDependence(InstanceType from)
+    @Override
+	public void visitPendingControlDependence(InstanceType from)
             throws InterruptedException {
         // null
     }
 
-    public void visitPendingDataDependence(InstanceType from, Variable var,
+    @Override
+	public void visitPendingDataDependence(InstanceType from, Variable var,
             DataDependenceType type) throws InterruptedException {
         // null
     }
 
-    public void visitUntracedMethodCall(InstanceType instrInstance)
+    @Override
+	public void visitUntracedMethodCall(InstanceType instrInstance)
             throws InterruptedException {
         // null
     }

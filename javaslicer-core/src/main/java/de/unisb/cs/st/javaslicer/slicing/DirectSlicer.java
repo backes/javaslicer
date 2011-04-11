@@ -49,7 +49,6 @@ import de.unisb.cs.st.javaslicer.controlflowanalysis.ControlFlowAnalyser;
 import de.unisb.cs.st.javaslicer.instructionSimulation.DynamicInformation;
 import de.unisb.cs.st.javaslicer.instructionSimulation.SimulationEnvironment;
 import de.unisb.cs.st.javaslicer.instructionSimulation.Simulator;
-import de.unisb.cs.st.javaslicer.slicing.SlicingCriterion.SlicingCriterionInstance;
 import de.unisb.cs.st.javaslicer.traceResult.BackwardTraceIterator;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
@@ -124,7 +123,7 @@ public class DirectSlicer implements Opcodes {
 
         List<SlicingCriterion> sc = null;
         try {
-            sc = SlicingCriterion.parseAll(slicingCriterionString, trace.getReadClasses());
+            sc = StaticSlicingCriterion.parseAll(slicingCriterionString, trace.getReadClasses());
         } catch (IllegalArgumentException e) {
             System.err.println("Error parsing slicing criterion: " + e.getMessage());
             System.exit(-1);

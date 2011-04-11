@@ -87,7 +87,10 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
          */
         int getInDegree();
 
-        Collection<InstrNode> getSuccessors();
+        // concretisation:
+        @Override
+		Collection<InstrNode> getSuccessors();
+
         Collection<InstrNode> getPredecessors();
 
         Instruction getInstruction();
@@ -124,31 +127,38 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
             this.instruction = instr;
         }
 
-        public Instruction getInstruction() {
+        @Override
+		public Instruction getInstruction() {
             return this.instruction;
         }
 
-        public Collection<InstrNode> getSuccessors() {
+        @Override
+		public Collection<InstrNode> getSuccessors() {
             return this.successors;
         }
 
-        public Collection<InstrNode> getPredecessors() {
+        @Override
+		public Collection<InstrNode> getPredecessors() {
             return this.predecessors;
         }
 
-        public int getOutDegree() {
+        @Override
+		public int getOutDegree() {
             return this.successors.size();
         }
 
-        public int getInDegree() {
+        @Override
+		public int getInDegree() {
             return this.predecessors.size();
         }
 
-        public void addSuccessor(InstrNode successor) {
+        @Override
+		public void addSuccessor(InstrNode successor) {
             this.successors.add(successor);
         }
 
-        public void addPredecessor(InstrNode predecessor) {
+        @Override
+		public void addPredecessor(InstrNode predecessor) {
             this.predecessors.add(predecessor);
         }
 
@@ -176,11 +186,13 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
             return this.instruction.toString();
         }
 
-        public ControlFlowGraph getGraph() {
+        @Override
+		public ControlFlowGraph getGraph() {
             return this.cfg;
         }
 
-        public String getLabel() {
+        @Override
+		public String getLabel() {
             return toString();
         }
 
@@ -194,7 +206,8 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
 
     public static class AbstractNodeFactory implements NodeFactory {
 
-        public InstrNode createNode(ControlFlowGraph cfg, Instruction instr) {
+        @Override
+		public InstrNode createNode(ControlFlowGraph cfg, Instruction instr) {
             return new AbstractInstrNode(cfg, instr);
         }
 
@@ -433,7 +446,8 @@ public class ControlFlowGraph implements Graph<ControlFlowGraph.InstrNode> {
         return list;
     }
 
-    public List<InstrNode> getNodes() {
+    @Override
+	public List<InstrNode> getNodes() {
         if (this.nonNullPositions == null) {
             int numNonNull = 0;
             int[] newNonNullPositions = new int[this.instructionNodes.length];

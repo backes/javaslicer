@@ -42,7 +42,8 @@ public class MethodInvokationVariableUsages<InstanceType> implements DynamicInfo
         this.hasRemovedFrame = hasRemovedFrame;
     }
 
-    public Collection<? extends Variable> getDefinedVariables() {
+    @Override
+	public Collection<? extends Variable> getDefinedVariables() {
         // if we have no removedFrame, then the defined variable is the return value.
         // it is sufficient to take the lower variable of double sized values (long & double).
         if (!this.hasRemovedFrame)
@@ -55,7 +56,8 @@ public class MethodInvokationVariableUsages<InstanceType> implements DynamicInfo
         return this.simEnv.getLocalVariables(this.stackDepth+1, 0, this.paramCount);
     }
 
-    public Collection<? extends Variable> getUsedVariables() {
+    @Override
+	public Collection<? extends Variable> getUsedVariables() {
         if (this.paramCount == 0)
             return EMPTY_VARIABLE_SET;
         if (this.usedVariables == null)
@@ -63,7 +65,8 @@ public class MethodInvokationVariableUsages<InstanceType> implements DynamicInfo
         return this.usedVariables;
     }
 
-    public Collection<? extends Variable> getUsedVariables(final Variable definedVariable) {
+    @Override
+	public Collection<? extends Variable> getUsedVariables(final Variable definedVariable) {
         // if we have no information about the executed method, we assume that all parameters had an influence on the outcome
         if (!this.hasRemovedFrame) {
             assert definedVariable instanceof StackEntry; // stack entry in the "old" frame (return value)
@@ -77,11 +80,13 @@ public class MethodInvokationVariableUsages<InstanceType> implements DynamicInfo
         return Collections.<Variable>singleton(this.simEnv.getOpStackEntry(this.stackDepth, this.stackOffset + varIndex));
     }
 
-    public boolean isCatchBlock() {
+    @Override
+	public boolean isCatchBlock() {
         return false;
     }
 
-    public Map<Long, Collection<? extends Variable>> getCreatedObjects() {
+    @Override
+	public Map<Long, Collection<? extends Variable>> getCreatedObjects() {
         return Collections.emptyMap();
     }
 

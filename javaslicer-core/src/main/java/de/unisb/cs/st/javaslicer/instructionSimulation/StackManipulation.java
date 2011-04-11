@@ -40,7 +40,8 @@ public class StackManipulation<InstanceType> implements DynamicInformation {
         this.createdObjects = createdObjects;
     }
 
-    public Collection<StackEntry> getDefinedVariables() {
+    @Override
+	public Collection<StackEntry> getDefinedVariables() {
         if (this.write == 0)
             return Collections.emptySet();
 
@@ -55,7 +56,8 @@ public class StackManipulation<InstanceType> implements DynamicInformation {
         return definedVars;
     }
 
-    public Collection<StackEntry> getUsedVariables() {
+    @Override
+	public Collection<StackEntry> getUsedVariables() {
         if (this.usedVars != null)
             return this.usedVars;
 
@@ -69,15 +71,18 @@ public class StackManipulation<InstanceType> implements DynamicInformation {
         return this.usedVars;
     }
 
-    public Collection<StackEntry> getUsedVariables(Variable definedVariable) {
+    @Override
+	public Collection<StackEntry> getUsedVariables(Variable definedVariable) {
         return getUsedVariables();
     }
 
-    public boolean isCatchBlock() {
+    @Override
+	public boolean isCatchBlock() {
         return false;
     }
 
-    public Map<Long, Collection<? extends Variable>> getCreatedObjects() {
+    @Override
+	public Map<Long, Collection<? extends Variable>> getCreatedObjects() {
         return this.createdObjects;
     }
 

@@ -338,7 +338,8 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
 
                 private InstanceType next = firstInstance;
 
-                public boolean hasNext() {
+                @Override
+				public boolean hasNext() {
                     if (this.next == null) {
                         while (true) {
                             try {
@@ -357,7 +358,8 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                     return this.next != null;
                 }
 
-                public InstanceType next() {
+                @Override
+				public InstanceType next() {
                     if (!hasNext())
                         throw new NoSuchElementException();
                     InstanceType ret = this.next;
@@ -367,7 +369,8 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
                     return ret;
                 }
 
-                public void remove() {
+                @Override
+				public void remove() {
                     throw new UnsupportedOperationException();
                 }
 
@@ -375,7 +378,8 @@ public class DependencesExtractor<InstanceType extends InstructionInstance> {
             progressInfoProv = percentPerInstance == null
                 ? null
                 : new ProgressInformationProvider() {
-                    public double getPercentageDone() {
+                    @Override
+					public double getPercentageDone() {
                         return Double.longBitsToDouble(percentPerInstance.get()) *
                                 numInstancesSeen.get();
                     }

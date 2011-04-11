@@ -62,19 +62,23 @@ public class SimpleVariableUsage implements DynamicInformation {
         this(Collections.singleton(usedVariable), definedVariables);
     }
 
-    public Collection<? extends Variable> getUsedVariables() {
+    @Override
+	public Collection<? extends Variable> getUsedVariables() {
         return this.usedVariables;
     }
 
-    public Collection<? extends Variable> getDefinedVariables() {
+    @Override
+	public Collection<? extends Variable> getDefinedVariables() {
         return this.definedVariables;
     }
 
-    public boolean isCatchBlock() {
+    @Override
+	public boolean isCatchBlock() {
         return this.isCatchBlock;
     }
 
-    public Collection<? extends Variable> getUsedVariables(final Variable definedVariable) {
+    @Override
+	public Collection<? extends Variable> getUsedVariables(final Variable definedVariable) {
         return this.usedVariables;
     }
 
@@ -83,7 +87,8 @@ public class SimpleVariableUsage implements DynamicInformation {
         return "used:    "+getUsedVariables()+System.getProperty("line.separator")
             +"defined: "+getDefinedVariables();
     }
-    public Map<Long, Collection<? extends Variable>> getCreatedObjects() {
+    @Override
+	public Map<Long, Collection<? extends Variable>> getCreatedObjects() {
         return this.createdObjects;
     }
 

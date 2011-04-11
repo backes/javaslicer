@@ -33,64 +33,76 @@ public class FilteringDependencesVisitor<InstanceType> implements
         this.visitor = visitor;
     }
 
-    public void discardPendingDataDependence(InstanceType from,
+    @Override
+	public void discardPendingDataDependence(InstanceType from,
             Variable var, DataDependenceType type) throws InterruptedException {
         if (this.filter.filter(from))
             this.visitor.discardPendingDataDependence(from, var, type);
     }
 
-    public void visitControlDependence(InstanceType from, InstanceType to) throws InterruptedException {
+    @Override
+	public void visitControlDependence(InstanceType from, InstanceType to) throws InterruptedException {
         if (this.filter.filter(from) && this.filter.filter(to))
             this.visitor.visitControlDependence(from, to);
     }
 
-    public void visitDataDependence(InstanceType from, InstanceType to,
+    @Override
+	public void visitDataDependence(InstanceType from, InstanceType to,
             Collection<? extends Variable> fromVars, Variable toVar, DataDependenceType type) throws InterruptedException {
         if (this.filter.filter(from) && this.filter.filter(to))
             this.visitor.visitDataDependence(from, to, fromVars, toVar, type);
     }
 
-    public void visitEnd(long numInstances) throws InterruptedException {
+    @Override
+	public void visitEnd(long numInstances) throws InterruptedException {
         this.visitor.visitEnd(numInstances);
     }
 
-    public void visitInstructionExecution(InstanceType instance) throws InterruptedException {
+    @Override
+	public void visitInstructionExecution(InstanceType instance) throws InterruptedException {
         if (this.filter.filter(instance))
             this.visitor.visitInstructionExecution(instance);
     }
 
-    public void visitMethodEntry(ReadMethod method, int stackDepth)
+    @Override
+	public void visitMethodEntry(ReadMethod method, int stackDepth)
             throws InterruptedException {
         this.visitor.visitMethodEntry(method, stackDepth);
     }
 
-    public void visitMethodLeave(ReadMethod method, int stackDepth)
+    @Override
+	public void visitMethodLeave(ReadMethod method, int stackDepth)
             throws InterruptedException {
         this.visitor.visitMethodLeave(method, stackDepth);
     }
 
-    public void visitObjectCreation(long objectId, InstanceType instrInstance) throws InterruptedException {
+    @Override
+	public void visitObjectCreation(long objectId, InstanceType instrInstance) throws InterruptedException {
         if (this.filter.filter(instrInstance))
             this.visitor.visitObjectCreation(objectId, instrInstance);
     }
 
-    public void visitPendingControlDependence(InstanceType from) throws InterruptedException {
+    @Override
+	public void visitPendingControlDependence(InstanceType from) throws InterruptedException {
         if (this.filter.filter(from))
             this.visitor.visitPendingControlDependence(from);
     }
 
-    public void visitPendingDataDependence(InstanceType from, Variable var,
+    @Override
+	public void visitPendingDataDependence(InstanceType from, Variable var,
             DataDependenceType type) throws InterruptedException {
         if (this.filter.filter(from))
             this.visitor.visitPendingDataDependence(from, var, type);
     }
 
-    public void visitUntracedMethodCall(InstanceType instrInstance) throws InterruptedException {
+    @Override
+	public void visitUntracedMethodCall(InstanceType instrInstance) throws InterruptedException {
         if (this.filter.filter(instrInstance))
             this.visitor.visitUntracedMethodCall(instrInstance);
     }
 
-    public void interrupted() throws InterruptedException {
+    @Override
+	public void interrupted() throws InterruptedException {
         this.visitor.interrupted();
     }
 

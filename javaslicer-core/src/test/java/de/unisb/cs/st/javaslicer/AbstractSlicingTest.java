@@ -37,6 +37,7 @@ import de.unisb.cs.st.javaslicer.slicing.DirectSlicer;
 import de.unisb.cs.st.javaslicer.slicing.SliceInstructionsCollector;
 import de.unisb.cs.st.javaslicer.slicing.Slicer;
 import de.unisb.cs.st.javaslicer.slicing.SlicingCriterion;
+import de.unisb.cs.st.javaslicer.slicing.StaticSlicingCriterion;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
 
@@ -94,7 +95,7 @@ public abstract class AbstractSlicingTest {
         File traceFile = new File(AbstractSlicingTest.class.getResource(traceFilename).toURI());
         TraceResult trace = TraceResult.readFrom(traceFile);
 
-        List<SlicingCriterion> sc = SlicingCriterion.parseAll(criterion, trace.getReadClasses());
+        List<SlicingCriterion> sc = StaticSlicingCriterion.parseAll(criterion, trace.getReadClasses());
 
         ThreadId threadId = null;
         for (ThreadId t: trace.getThreads()) {

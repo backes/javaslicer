@@ -1,8 +1,8 @@
 /** License information:
  *    Component: javaslicer-core
  *    Package:   de.unisb.cs.st.javaslicer.slicing
- *    Class:     SlicingCriterion
- *    Filename:  javaslicer-core/src/main/java/de/unisb/cs/st/javaslicer/slicing/SlicingCriterion.java
+ *    Class:     SlicingCriterionInstance
+ *    Filename:  javaslicer-core/src/main/java/de/unisb/cs/st/javaslicer/slicing/SlicingCriterionInstance.java
  *
  * This file is part of the JavaSlicer tool, developed by Clemens Hammacher at Saarland University.
  * See http://www.st.cs.uni-saarland.de/javaslicer/ for more information.
@@ -13,16 +13,22 @@
  */
 package de.unisb.cs.st.javaslicer.slicing;
 
+import java.util.List;
+
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable;
 
 
-/**
- * General interface for a slicing criterion. For each new slicing run, a new instance
- * is requested.
- *
- * @author Clemens Hammacher
- */
-public interface SlicingCriterion {
+public interface SlicingCriterionInstance {
 
-	SlicingCriterionInstance getInstance();
+	boolean matches(InstructionInstance instructionInstance);
+
+	List<LocalVariable> getLocalVariables();
+
+	boolean hasLocalVariables();
+
+	boolean matchAllData();
+
+	long getOccurenceNumber();
 
 }

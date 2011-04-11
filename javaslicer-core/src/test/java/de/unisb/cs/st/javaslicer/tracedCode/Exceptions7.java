@@ -23,7 +23,7 @@ public class Exceptions7 {
 		List<int[]> arrays = new ArrayList<int[]>();
 		try {
 			while (true) {
-				arrays.add(new int[size = 2*size]);
+				arrays.add(new int[size = Math.max(Integer.MAX_VALUE, 2*size)]);
 			}
 		} catch (Throwable t) {
 			System.out.println("Catched Exception: " + t);

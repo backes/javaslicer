@@ -26,11 +26,13 @@ public class SliceInstructionsCollector implements SliceVisitor {
 
     private final Set<Instruction> dynamicSlice = new HashSet<Instruction>();
 
-    public void visitMatchedInstance(InstructionInstance instance) {
+    @Override
+	public void visitMatchedInstance(InstructionInstance instance) {
         this.dynamicSlice.add(instance.getInstruction());
     }
 
-    public void visitSliceDependence(InstructionInstance from,
+    @Override
+	public void visitSliceDependence(InstructionInstance from,
     		InstructionInstance to, Variable variable, int distance) {
         this.dynamicSlice.add(to.getInstruction());
     }

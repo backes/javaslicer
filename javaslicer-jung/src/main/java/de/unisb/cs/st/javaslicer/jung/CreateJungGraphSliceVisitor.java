@@ -39,10 +39,12 @@ public class CreateJungGraphSliceVisitor<VertexType> implements SliceVisitor {
 		this.maxDistance = maxDistance;
 	}
 
+	@Override
 	public void visitMatchedInstance(InstructionInstance instance) {
 		this.graph.addVertex(this.vertexTransformer.transform(instance));
 	}
 
+	@Override
 	public void visitSliceDependence(InstructionInstance from,
 			InstructionInstance to, Variable variable, int distance) {
 		if (distance <= this.maxDistance) {

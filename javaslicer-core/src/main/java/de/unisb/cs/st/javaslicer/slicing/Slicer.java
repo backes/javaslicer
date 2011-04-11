@@ -55,7 +55,6 @@ import de.unisb.cs.st.javaslicer.dependenceAnalysis.DataDependenceType;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesExtractor;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.DependencesVisitorAdapter;
 import de.unisb.cs.st.javaslicer.dependenceAnalysis.VisitorCapability;
-import de.unisb.cs.st.javaslicer.slicing.SlicingCriterion.SlicingCriterionInstance;
 import de.unisb.cs.st.javaslicer.traceResult.PrintUniqueUntracedMethods;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
@@ -99,7 +98,8 @@ public class Slicer {
 
         public static final SlicerInstanceFactory instance = new SlicerInstanceFactory();
 
-        public SlicerInstance createInstructionInstance(
+        @Override
+		public SlicerInstance createInstructionInstance(
                 AbstractInstruction instruction, long occurenceNumber,
                 int stackDepth, long instanceNr,
                 InstructionInstanceInfo additionalInfo) {
@@ -163,7 +163,7 @@ public class Slicer {
 
         List<SlicingCriterion> sc = null;
         try {
-            sc = SlicingCriterion.parseAll(slicingCriterionString, trace.getReadClasses());
+            sc = StaticSlicingCriterion.parseAll(slicingCriterionString, trace.getReadClasses());
         } catch (IllegalArgumentException e) {
             System.err.println("Error parsing slicing criterion: " + e.getMessage());
             System.exit(-1);
@@ -264,8 +264,7 @@ public class Slicer {
 
             private ReadMethod enteredMethod;
 
-            private List<SlicingCriterionInstance> instantiateSlicingCriteria(
-                    List<SlicingCriterion> criteria) {
+            private List<SlicingCriterionInstance> instantiateSlicingCriteria(List<SlicingCriterion> criteria) {
                 if (criteria.isEmpty())
                     return Collections.emptyList();
                 else if (criteria.size() == 1)

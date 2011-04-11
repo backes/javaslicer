@@ -27,19 +27,23 @@ public class ReadSingleValueVariableUsage implements DynamicInformation {
     	this.usedVariable = usedVariable;
     }
 
-    public Collection<Variable> getUsedVariables() {
+    @Override
+	public Collection<Variable> getUsedVariables() {
         return Collections.singleton(this.usedVariable);
     }
 
-    public Collection<Variable> getDefinedVariables() {
+    @Override
+	public Collection<Variable> getDefinedVariables() {
         return Collections.emptySet();
     }
 
-    public boolean isCatchBlock() {
+    @Override
+	public boolean isCatchBlock() {
         return false;
     }
 
-    public Collection<Variable> getUsedVariables(final Variable definedVariable) {
+    @Override
+	public Collection<Variable> getUsedVariables(final Variable definedVariable) {
     	assert (false);
         return getUsedVariables();
     }
@@ -49,7 +53,8 @@ public class ReadSingleValueVariableUsage implements DynamicInformation {
         return "used:    "+this.usedVariable+System.getProperty("line.separator")
             +"defined: none";
     }
-    public Map<Long, Collection<? extends Variable>> getCreatedObjects() {
+    @Override
+	public Map<Long, Collection<? extends Variable>> getCreatedObjects() {
         return Collections.emptyMap();
     }
 

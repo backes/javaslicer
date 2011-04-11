@@ -54,7 +54,8 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
             this.newThreadPriority = newThreadPriority;
         }
 
-        public Thread newThread(Runnable r) {
+        @Override
+		public Thread newThread(Runnable r) {
             Thread t = new Thread(this.group, r,
                                   "ParallelDependencesVisitor"+this.factoryId+" Worker"+this.threadNumber.getAndIncrement());
             if (t.isDaemon())
@@ -289,7 +290,8 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
             // nop
         }
 
-        public void run() {
+        @Override
+		public void run() {
             Thread currentThread = Thread.currentThread();
             try {
                 while (true) {
@@ -473,7 +475,8 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         }
     }
 
-    public void visitEnd(long numInstances) throws InterruptedException {
+    @Override
+	public void visitEnd(long numInstances) throws InterruptedException {
         if (!this.visitors.isEmpty()) {
             this.events[this.eventCount++] = END;
             addLong(numInstances);
@@ -483,7 +486,8 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         checkException();
     }
 
-    public void visitInstructionExecution(InstanceType instance) throws InterruptedException {
+    @Override
+	public void visitInstructionExecution(InstanceType instance) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = INSTRUCTION_EXECUTION;
@@ -491,7 +495,8 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         checkFull();
     }
 
-    public void visitMethodEntry(ReadMethod method, int stackDepth) throws InterruptedException {
+    @Override
+	public void visitMethodEntry(ReadMethod method, int stackDepth) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = METHOD_ENTRY;
@@ -500,7 +505,8 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         checkFull();
     }
 
-    public void visitMethodLeave(ReadMethod method, int stackDepth) throws InterruptedException {
+    @Override
+	public void visitMethodLeave(ReadMethod method, int stackDepth) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = METHOD_LEAVE;
@@ -509,7 +515,8 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         checkFull();
     }
 
-    public void visitObjectCreation(long objectId,
+    @Override
+	public void visitObjectCreation(long objectId,
             InstanceType instrInstance) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
@@ -519,7 +526,8 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         checkFull();
     }
 
-    public void visitDataDependence(InstanceType from, InstanceType to,
+    @Override
+	public void visitDataDependence(InstanceType from, InstanceType to,
             Collection<? extends Variable> fromVars, Variable toVar, DataDependenceType type) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
@@ -539,7 +547,8 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         checkFull();
     }
 
-    public void visitPendingDataDependence(InstanceType from,
+    @Override
+	public void visitPendingDataDependence(InstanceType from,
             Variable var, DataDependenceType type) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
@@ -550,7 +559,8 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         checkFull();
     }
 
-    public void discardPendingDataDependence(InstanceType from,
+    @Override
+	public void discardPendingDataDependence(InstanceType from,
             Variable var, DataDependenceType type) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
@@ -561,7 +571,8 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         checkFull();
     }
 
-    public void visitControlDependence(InstanceType from, InstanceType to) throws InterruptedException {
+    @Override
+	public void visitControlDependence(InstanceType from, InstanceType to) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = CONTROL_DEPENDENCE;
@@ -570,7 +581,8 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         checkFull();
     }
 
-    public void visitPendingControlDependence(InstanceType from) throws InterruptedException {
+    @Override
+	public void visitPendingControlDependence(InstanceType from) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = PENDING_CONTROL_DEPENDENCE;
@@ -578,7 +590,8 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         checkFull();
     }
 
-    public void visitUntracedMethodCall(InstanceType instrInstance) throws InterruptedException {
+    @Override
+	public void visitUntracedMethodCall(InstanceType instrInstance) throws InterruptedException {
         if (this.visitors.isEmpty())
             return;
         this.events[this.eventCount++] = UNTRACED_CALL;
@@ -705,7 +718,8 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         }
     }
 
-    public void interrupted() throws InterruptedException {
+    @Override
+	public void interrupted() throws InterruptedException {
         finish(true, false);
     }
 

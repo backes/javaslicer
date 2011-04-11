@@ -43,19 +43,23 @@ public class SwapVariableUsage extends AbstractList<StackEntry>
         this.upperStackEntry = simEnv.getOpStackEntry(stackDepth, lowerOffset + 1);
     }
 
-    public Map<Long, Collection<? extends Variable>> getCreatedObjects() {
+    @Override
+	public Map<Long, Collection<? extends Variable>> getCreatedObjects() {
         return Collections.emptyMap();
     }
 
-    public Collection<StackEntry> getDefinedVariables() {
+    @Override
+	public Collection<StackEntry> getDefinedVariables() {
         return this;
     }
 
-    public Collection<StackEntry> getUsedVariables() {
+    @Override
+	public Collection<StackEntry> getUsedVariables() {
         return this;
     }
 
-    public Collection<StackEntry> getUsedVariables(
+    @Override
+	public Collection<StackEntry> getUsedVariables(
             Variable definedVariable) {
         if (definedVariable == this.lowerStackEntry) {
             return Collections.singleton(this.upperStackEntry);
@@ -65,7 +69,8 @@ public class SwapVariableUsage extends AbstractList<StackEntry>
         }
     }
 
-    public boolean isCatchBlock() {
+    @Override
+	public boolean isCatchBlock() {
         return false;
     }
 

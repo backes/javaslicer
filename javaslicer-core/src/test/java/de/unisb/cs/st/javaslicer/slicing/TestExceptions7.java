@@ -27,7 +27,7 @@ public class TestExceptions7 extends AbstractSlicingTest {
 	@Test
 	public void test() throws IllegalArgumentException, IOException,
 			URISyntaxException, InterruptedException {
-		final List<Instruction> slice = getSlice("/traces/exceptions7", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions7.main:17");
+		final List<Instruction> slice = getSlice("/traces/exceptions7", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions7.main:26");
 		checkSlice(
 			slice,
 			new String[] {

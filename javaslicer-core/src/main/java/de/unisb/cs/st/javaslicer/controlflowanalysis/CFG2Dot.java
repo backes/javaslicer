@@ -64,6 +64,7 @@ public class CFG2Dot {
 	                    exporter.setNodeShape("box");
 	                    exporter.setGraphAttribute("rankdir", "TB");
 	                    exporter.setNodeLabelProvider(new NodeLabelProvider<InstrNode>() {
+							@Override
 							public String getNodeLabel(InstrNode node) {
 								return node.getInstruction().toString() + "\n" + node.getInstruction().getLineNumber();
 							}

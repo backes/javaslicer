@@ -57,10 +57,12 @@ public class SimulationEnvironment {
 				this.posStackEntries = firstStackEntry;
 			}
 
+			@Override
 			public boolean hasNext() {
 				return this.posStackEntries == this.stackEntries.length;
 			}
 
+			@Override
 			public Variable next() {
 				if (!hasNext())
 					throw new NoSuchElementException();
@@ -82,6 +84,7 @@ public class SimulationEnvironment {
 				return ret;
 			}
 
+			@Override
 			public void remove() {
 				throw new UnsupportedOperationException();
 			}

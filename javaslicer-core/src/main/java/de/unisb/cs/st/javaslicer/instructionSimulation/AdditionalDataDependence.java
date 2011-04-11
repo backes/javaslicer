@@ -40,6 +40,7 @@ public class AdditionalDataDependence implements DynamicInformation {
 		return new AdditionalDataDependence(dynInfo, definedVar, usedVars);
 	}
 
+	@Override
 	public Collection<? extends Variable> getUsedVariables() {
 		Collection<? extends Variable> oldUsed = this.dynInfo.getUsedVariables();
 		if (oldUsed.isEmpty() || oldUsed == this.usedVars)
@@ -49,6 +50,7 @@ public class AdditionalDataDependence implements DynamicInformation {
 		return union;
 	}
 
+	@Override
 	public Collection<? extends Variable> getDefinedVariables() {
 		Collection<? extends Variable> oldDef = this.dynInfo.getDefinedVariables();
 		if (oldDef.isEmpty())
@@ -58,16 +60,19 @@ public class AdditionalDataDependence implements DynamicInformation {
 		return union;
 	}
 
+	@Override
 	public Collection<? extends Variable> getUsedVariables(Variable definedVariable) {
 		if (definedVariable.equals(this.definedVar))
 			return this.usedVars;
 		return this.dynInfo.getUsedVariables(definedVariable);
 	}
 
+	@Override
 	public Map<Long, Collection<? extends Variable>> getCreatedObjects() {
 		return this.dynInfo.getCreatedObjects();
 	}
 
+	@Override
 	public boolean isCatchBlock() {
 		return this.dynInfo.isCatchBlock();
 	}

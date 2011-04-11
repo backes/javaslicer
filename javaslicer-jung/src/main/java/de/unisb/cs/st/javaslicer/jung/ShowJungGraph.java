@@ -51,6 +51,7 @@ import de.unisb.cs.st.javaslicer.common.progress.ProgressMonitor;
 import de.unisb.cs.st.javaslicer.slicing.SliceVisitor;
 import de.unisb.cs.st.javaslicer.slicing.Slicer;
 import de.unisb.cs.st.javaslicer.slicing.SlicingCriterion;
+import de.unisb.cs.st.javaslicer.slicing.StaticSlicingCriterion;
 import de.unisb.cs.st.javaslicer.traceResult.ThreadId;
 import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
 import de.unisb.cs.st.javaslicer.variables.ArrayElement;
@@ -137,7 +138,7 @@ public class ShowJungGraph<VertexType> {
 
         List<SlicingCriterion> sc = null;
         try {
-            sc = SlicingCriterion.parseAll(slicingCriterionString, trace.getReadClasses());
+            sc = StaticSlicingCriterion.parseAll(slicingCriterionString, trace.getReadClasses());
         } catch (IllegalArgumentException e) {
             System.err.println("Error parsing slicing criterion: " + e.getMessage());
             System.exit(-1);
@@ -174,49 +175,58 @@ public class ShowJungGraph<VertexType> {
 		String granularity = cmdLine.getOptionValue("granularity");
 		if (granularity == null || "instance".equals(granularity)) {
 			transformer = new Transformer<InstructionInstance, Object>() {
+				@Override
 				public InstructionInstance transform(InstructionInstance inst) {
 					return inst;
 				}
 			};
 			vertexLabelTransformer = new Transformer<Object, String>() {
+				@Override
 				public String transform(Object inst) {
 					return getShortInstructionText(((InstructionInstance) inst).getInstruction());
 				}
 			};
 			vertexTooltipTransformer = new Transformer<Object, String>() {
+				@Override
 				public String transform(Object inst) {
 					return getInstructionTooltip(((InstructionInstance) inst).getInstruction());
 				}
 			};
 		} else if ("instruction".equals(granularity)) {
 			transformer = new Transformer<InstructionInstance, Object>() {
+				@Override
 				public Instruction transform(InstructionInstance inst) {
 					return inst.getInstruction();
 				}
 			};
 			vertexLabelTransformer = new Transformer<Object, String>() {
+				@Override
 				public String transform(Object inst) {
 					return getShortInstructionText(((Instruction) inst));
 				}
 			};
 			vertexTooltipTransformer = new Transformer<Object, String>() {
+				@Override
 				public String transform(Object inst) {
 					return getInstructionTooltip(((Instruction) inst));
 				}
 			};
 		} else if ("line".equals(granularity)) {
 			transformer = new Transformer<InstructionInstance, Object>() {
+				@Override
 				public Line transform(InstructionInstance inst) {
 					return new Line(inst.getInstruction().getMethod(), inst.getInstruction().getLineNumber());
 				}
 			};
 			vertexLabelTransformer = new Transformer<Object, String>() {
+				@Override
 				public String transform(Object inst) {
 					Line line = (Line) inst;
 					return line.getMethod().getName() + ":" + line.getLineNr();
 				}
 			};
 			vertexTooltipTransformer = new Transformer<Object, String>() {
+				@Override
 				public String transform(Object inst) {
 					Line line = (Line) inst;
 					return "Line " + line.getLineNr() + " in method " + line.getMethod().getReadClass().getName() + "." + line.getMethod();
@@ -277,6 +287,7 @@ public class ShowJungGraph<VertexType> {
 		viewer.getRenderContext().setVertexLabelTransformer(this.vertexLabelTransformer);
 		viewer.setVertexToolTipTransformer(this.vertexTooltipTransformer);
 		viewer.getRenderContext().setEdgeLabelTransformer(new Transformer<SliceEdge<VertexType>, String>() {
+			@Override
 			public String transform(SliceEdge<VertexType> edge) {
 				Variable var = edge.getVariable();
 				if (var instanceof ArrayElement) {
@@ -305,6 +316,7 @@ public class ShowJungGraph<VertexType> {
 			}
 		});
 		viewer.setEdgeToolTipTransformer(new Transformer<SliceEdge<VertexType>, String>() {
+			@Override
 			public String transform(SliceEdge<VertexType> edge) {
 				Variable var = edge.getVariable();
 				if (var instanceof ArrayElement) {
@@ -331,6 +343,7 @@ public class ShowJungGraph<VertexType> {
 			}
 		});
 		viewer.getRenderContext().setEdgeDrawPaintTransformer(new Transformer<SliceEdge<VertexType>, Paint>() {
+			@Override
 			public Paint transform(SliceEdge<VertexType> edge) {
 				return edge.getVariable() == null
 					? Color.red
@@ -340,6 +353,7 @@ public class ShowJungGraph<VertexType> {
 
 		viewer.getRenderer().getVertexLabelRenderer().setPosition(Position.CNTR);
 		viewer.getRenderContext().setVertexShapeTransformer(new Transformer<VertexType, Shape>() {
+			@Override
 			public Shape transform(VertexType inst) {
 				Font font = viewer.getFont();
 				String text = viewer.getRenderContext().getVertexLabelTransformer().transform(inst);
