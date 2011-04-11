@@ -26,7 +26,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 public class TestExceptions1 extends AbstractSlicingTest {
 
     @Test
-    public void test16c() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+    public void test29c() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
         final List<Instruction> slice = getSlice("/traces/exceptions1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:29:{c}");
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:20 ACONST_NULL",
@@ -41,7 +41,7 @@ public class TestExceptions1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void test24c() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+    public void test37c() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
         final List<Instruction> slice = getSlice("/traces/exceptions1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:37:{c}");
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:30 ACONST_NULL",
