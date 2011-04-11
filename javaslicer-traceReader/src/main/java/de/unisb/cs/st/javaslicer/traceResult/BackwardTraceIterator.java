@@ -36,6 +36,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterator;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.common.progress.ProgressInformationProvider;
+import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantIntegerTraceSequence;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence.ConstantLongTraceSequence;
 
@@ -92,7 +93,8 @@ public class BackwardTraceIterator<InstanceType extends InstructionInstance>
         this.nextInstruction = getNextInstruction(this.threadTraceResult.lastInstructionIndex);
     }
 
-    public boolean hasNext() {
+    @Override
+	public boolean hasNext() {
         if (this.nextInstruction != null)
             return true;
         if (WRITE_ITERATION_DEBUG_FILE)
@@ -100,7 +102,8 @@ public class BackwardTraceIterator<InstanceType extends InstructionInstance>
         return false;
     }
 
-    public InstanceType next() throws TracerException {
+    @Override
+	public InstanceType next() throws TracerException {
         if (this.nextInstruction == null)
             throw new NoSuchElementException();
         final InstanceType old = this.nextInstruction;
@@ -149,15 +152,20 @@ public class BackwardTraceIterator<InstanceType extends InstructionInstance>
         }
     }
 
-    public void remove() {
+    @Override
+	public void remove() {
         throw new UnsupportedOperationException();
     }
 
-    public long getNextLong(final int seqIndex) throws TracerException {
+    @Override
+	public long getNextLong(final int seqIndex) throws TracerException {
         Iterator<Long> it = this.longSequenceBackwardIterators.get(seqIndex);
         if (it == null) {
             try {
-                it = ((ConstantLongTraceSequence)this.threadTraceResult.sequences.get(seqIndex)).backwardIterator();
+                ConstantTraceSequence sequence = this.threadTraceResult.sequences.get(seqIndex);
+                if (sequence == null)
+		            throw new TracerException("corrupted data (cannot trace backwards)");
+                it = ((ConstantLongTraceSequence)sequence).backwardIterator();
             } catch (final IOException e) {
                 throw new TracerException(e);
             }
@@ -171,7 +179,8 @@ public class BackwardTraceIterator<InstanceType extends InstructionInstance>
         return ret;
     }
 
-    public int getNextInteger(final int seqIndex) throws TracerException {
+    @Override
+	public int getNextInteger(final int seqIndex) throws TracerException {
         Iterator<Integer> it = this.integerSequenceBackwardIterators.get(seqIndex);
         if (it == null) {
             try {
@@ -189,7 +198,8 @@ public class BackwardTraceIterator<InstanceType extends InstructionInstance>
         return ret;
     }
 
-    public long getNextInstructionOccurenceNumber(final int instructionIndex) {
+    @Override
+	public long getNextInstructionOccurenceNumber(final int instructionIndex) {
         final long nr = this.instructionNextOccurenceNumber.incrementAndGet(instructionIndex, 1);
         return nr - 1;
     }
@@ -202,10 +212,12 @@ public class BackwardTraceIterator<InstanceType extends InstructionInstance>
         return this.filteredInstancesCount;
     }
 
+	@Override
 	public void incNumCrossedLabels() {
 		++this.numCrossedLabels;
 	}
 
+	@Override
 	public double getPercentageDone() {
     	return this.threadTraceResult.numCrossedLabels == 0 ? 0 : (100. * this.numCrossedLabels / this.threadTraceResult.numCrossedLabels);
     }
