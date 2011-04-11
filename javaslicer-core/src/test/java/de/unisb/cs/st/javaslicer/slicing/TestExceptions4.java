@@ -27,16 +27,16 @@ public class TestExceptions4 extends AbstractSlicingTest {
 	@Test
 	public void test() throws IllegalArgumentException, IOException,
 			URISyntaxException, InterruptedException {
-		final List<Instruction> slice = getSlice("/traces/exceptions4", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:13:*");
+		final List<Instruction> slice = getSlice("/traces/exceptions4", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:26:*");
 		checkSlice(
 			slice,
 			new String[] {
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:6 ACONST_NULL",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:6 ASTORE 1",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:8 ALOAD 1",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:8 INVOKEVIRTUAL java/lang/String.toString()Ljava/lang/String;",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:10 LDC \"null\"",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:10 ASTORE 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:19 ACONST_NULL",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:19 ASTORE 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:21 ALOAD 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:21 INVOKEVIRTUAL java/lang/String.toString()Ljava/lang/String;",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:23 LDC \"null\"",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:23 ASTORE 1",
 				});
 	}
 

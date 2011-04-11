@@ -26,7 +26,8 @@ public class SimpleTest3 extends AbstractDependencesTest {
 
     protected static class Simple3Filter implements InstructionFilter {
 
-        public boolean filterInstance(final InstructionInstance inst) {
+        @Override
+		public boolean filterInstance(InstructionInstance inst) {
             return inst.getInstruction().getMethod().getReadClass().getName().endsWith("Simple3");
         }
 
@@ -34,11 +35,11 @@ public class SimpleTest3 extends AbstractDependencesTest {
     @Test
     public void test() throws IOException, URISyntaxException, InterruptedException {
         final Dependence[] expectedDependences = new Dependence[] {
-                new Dependence("Simple3.java:10", "Simple3.java:9",  Type.RAW),
-                new Dependence("Simple3.java:11", "Simple3.java:9",  Type.RAW),
-                new Dependence("Simple3.java:12", "Simple3.java:10", Type.WAR),
-                new Dependence("Simple3.java:12", "Simple3.java:11", Type.WAR),
-                new Dependence("Simple3.java:14", "Simple3.java:13", Type.RAW),
+                new Dependence("Simple3.java:23", "Simple3.java:22",  Type.RAW),
+                new Dependence("Simple3.java:24", "Simple3.java:22",  Type.RAW),
+                new Dependence("Simple3.java:25", "Simple3.java:23", Type.WAR),
+                new Dependence("Simple3.java:25", "Simple3.java:24", Type.WAR),
+                new Dependence("Simple3.java:27", "Simple3.java:26", Type.RAW),
         };
 
         compareDependences(expectedDependences, "/traces/simple3", "main", new Simple3Filter());

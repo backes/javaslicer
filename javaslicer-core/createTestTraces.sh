@@ -21,7 +21,7 @@ for file in $SOURCEDIR/*.java; do
 		echo -e "\n\nRunning $CLASS..."
 		STARTTIME=`date +%s`
 		echo executing: java -javaagent:$TRACER=tracefile:$TARGETPATH -ea -esa -cp $CLASSPATH $PACKAGE.$CLASS $DEFAULT_ARGUMENT
-		java -javaagent:$TRACER=tracefile:$TARGETPATH -ea -esa -cp $CLASSPATH $PACKAGE.$CLASS $DEFAULT_ARGUMENT
+		java -Xmx2g -javaagent:$TRACER=tracefile:$TARGETPATH -ea -esa -cp $CLASSPATH $PACKAGE.$CLASS $DEFAULT_ARGUMENT
 		ENDTIME=`date +%s`
 		echo "Realtime seconds: "$((ENDTIME - STARTTIME))
 	fi
