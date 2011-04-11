@@ -46,6 +46,10 @@ public class NewArrayInstruction extends AbstractInstruction {
             this.newObjectIdentifier = newObjId;
         }
 
+        /**
+         * @return the object identifier that this instruction created, or <code>0</code> if it
+         *         didn't complete normally (i.e. OutOfMemoryError)
+         */
         public long getNewObjectIdentifier() {
             return this.newObjectIdentifier;
         }

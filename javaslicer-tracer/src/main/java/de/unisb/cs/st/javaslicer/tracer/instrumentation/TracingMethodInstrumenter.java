@@ -192,6 +192,7 @@ public class TracingMethodInstrumenter implements Opcodes {
     private int currentLine = -1;
     private int firstLine = -1;
     private int outstandingInitializations = 0;
+	private Map<LabelNode,Integer> newArrayErrorHandlers;
 
     public TracingMethodInstrumenter(final Tracer tracer, final ReadMethod readMethod, final ClassNode classNode, final MethodNode methodNode) {
         this.tracer = tracer;
@@ -354,6 +355,23 @@ public class TracingMethodInstrumenter implements Opcodes {
 
         assert this.outstandingInitializations == 0;
 
+        // add exception handlers for array allocations, *before* any other exception handler.
+        // the Java VM Spec (§3.10) specified that they are executed in the order in which they
+        // appear in the bytecode
+        if (this.newArrayErrorHandlers != null) {
+        	for (Entry<LabelNode, Integer> handler : this.newArrayErrorHandlers.entrySet()) {
+        		this.methodNode.instructions.add(handler.getKey());
+	            this.methodNode.instructions.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
+	            this.methodNode.instructions.add(new InsnNode(ACONST_NULL));
+        		this.methodNode.instructions.add(getIntConstInsn(handler.getValue()));
+	            this.methodNode.instructions.add(new MethodInsnNode(INVOKEINTERFACE,
+	                Type.getInternalName(ThreadTracer.class), "traceObject",
+	                "(Ljava/lang/Object;I)V"));
+	            this.methodNode.instructions.add(new InsnNode(ATHROW));
+        	}
+        	this.newArrayErrorHandlers = null;
+        }
+
         // add the (old) try-catch blocks to the readMethods
         // (can only be done down here since we use the information in the
         // labels map)
@@ -375,7 +393,7 @@ public class TracingMethodInstrumenter implements Opcodes {
         this.methodNode.instructions.add(new InsnNode(ATHROW));
 
         // add a try catch block around the method so that we can trace when this method is left
-        // a thrown exception
+        // by a thrown exception
         this.methodNode.tryCatchBlocks.add(new TryCatchBlockNode(l0, l1, l1, null));
 
         // now add the code that is executed if no tracing should be performed
@@ -805,10 +823,17 @@ public class TracingMethodInstrumenter implements Opcodes {
         }
     }
 
-    private void transformIntInsn(final IntInsnNode insn) {
+    @SuppressWarnings("unchecked")
+	private void transformIntInsn(final IntInsnNode insn) {
         if (insn.getOpcode() == NEWARRAY) {
+        	// add a try/catch around the instruction to catch OutOfMemoryErrors
+        	LabelNode startLabel = new LabelNode(), endLabel = new LabelNode(), handlerLabel = new LabelNode();
             final int newObjectIdSeqIndex = this.tracer.newLongTraceSequence();
             registerInstruction(new NewArrayInstruction(this.readMethod, this.currentLine, insn.operand, newObjectIdSeqIndex), InstructionType.UNSAFE);
+            this.instructionIterator.previous();
+            this.instructionIterator.add(startLabel);
+            this.instructionIterator.next();
+            this.instructionIterator.add(endLabel);
             this.instructionIterator.add(new InsnNode(DUP));
             this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
             this.instructionIterator.add(new InsnNode(SWAP));
@@ -816,6 +841,11 @@ public class TracingMethodInstrumenter implements Opcodes {
             this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
                 Type.getInternalName(ThreadTracer.class), "traceObject",
                 "(Ljava/lang/Object;I)V"));
+            // and add it *before* the other try-catch blocks
+            this.methodNode.tryCatchBlocks.add(0, new TryCatchBlockNode(startLabel, endLabel, handlerLabel, "java/lang/OutOfMemoryError"));
+            if (this.newArrayErrorHandlers == null)
+            	this.newArrayErrorHandlers = new HashMap<LabelNode, Integer>();
+            this.newArrayErrorHandlers.put(handlerLabel, newObjectIdSeqIndex);
         } else {
             assert insn.getOpcode() == BIPUSH || insn.getOpcode() == SIPUSH;
             registerInstruction(new IntPush(this.readMethod, insn.getOpcode(), insn.operand, this.currentLine), InstructionType.SAFE);
@@ -921,13 +951,20 @@ public class TracingMethodInstrumenter implements Opcodes {
         registerInstruction(instr, InstructionType.UNSAFE);
     }
 
-    private void transformTypeInsn(final TypeInsnNode insn) {
+    @SuppressWarnings("unchecked")
+	private void transformTypeInsn(final TypeInsnNode insn) {
         if (insn.getOpcode() == ANEWARRAY) {
             // after the ANEWARRAY instruction, insert code that traces the
-            // object identifier of the newly created object/array
+            // object identifier of the newly created object/array.
+        	// add a try/catch around the instruction to catch OutOfMemoryErrors
+        	LabelNode startLabel = new LabelNode(), endLabel = new LabelNode(), handlerLabel = new LabelNode();
             final int newObjectIdSeqIndex = this.tracer.newLongTraceSequence();
             registerInstruction(new TypeInstruction(this.readMethod, insn.getOpcode(),
                 this.currentLine, insn.desc, newObjectIdSeqIndex), InstructionType.UNSAFE);
+            this.instructionIterator.previous();
+            this.instructionIterator.add(startLabel);
+            this.instructionIterator.next();
+            this.instructionIterator.add(endLabel);
             this.instructionIterator.add(new InsnNode(DUP));
             this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
             this.instructionIterator.add(new InsnNode(SWAP));
@@ -935,6 +972,11 @@ public class TracingMethodInstrumenter implements Opcodes {
             this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
                 Type.getInternalName(ThreadTracer.class), "traceObject",
                 "(Ljava/lang/Object;I)V"));
+            // and add it *before* the other try-catch blocks
+            this.methodNode.tryCatchBlocks.add(0, new TryCatchBlockNode(startLabel, endLabel, handlerLabel, "java/lang/OutOfMemoryError"));
+            if (this.newArrayErrorHandlers == null)
+            	this.newArrayErrorHandlers = new HashMap<LabelNode, Integer>();
+            this.newArrayErrorHandlers.put(handlerLabel, newObjectIdSeqIndex);
         } else if (insn.getOpcode() == NEW) {
             // after a NEW, we store the sequence number in the ThreadTracer object.
             // after the constructor has been called (which is guaranteed), its
