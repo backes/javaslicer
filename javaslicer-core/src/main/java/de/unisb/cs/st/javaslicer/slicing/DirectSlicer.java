@@ -333,13 +333,8 @@ public class DirectSlicer implements Opcodes {
                     interestingInstructions[stackDepth].add(instruction);
                 }
 
-                if (matchedCriterionVariables.length <= stackDepth) {
-                    @SuppressWarnings("unchecked")
-                    Set<Variable>[] newMatchedCriterionVariables =
-                        (Set<Variable>[]) new Set<?>[2*Math.max(stackDepth, matchedCriterionVariables.length)];
-                    System.arraycopy(matchedCriterionVariables, 0, newMatchedCriterionVariables, 0, matchedCriterionVariables.length);
-                    matchedCriterionVariables = newMatchedCriterionVariables;
-                }
+                if (matchedCriterionVariables.length <= stackDepth)
+                	matchedCriterionVariables = Arrays.copyOf(matchedCriterionVariables, 2*Math.max(stackDepth, matchedCriterionVariables.length));
                 for (SlicingCriterionInstance crit : slicingCriteria) {
                     if (crit.matches(instance)) {
                         if (matchedCriterionVariables[stackDepth] == null)
@@ -348,8 +343,7 @@ public class DirectSlicer implements Opcodes {
                             matchedCriterionVariables[stackDepth].removeAll(dynInfo.getDefinedVariables());
                             matchedCriterionVariables[stackDepth].addAll(dynInfo.getUsedVariables());
                         } else if (crit.hasLocalVariables()) {
-                            for (de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable var :
-                            		crit.getLocalVariables())
+                            for (de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable var : crit.getLocalVariables())
                                 interestingVariables.add(simEnv.getLocalVariable(stackDepth, var.getIndex()));
                         } else {
                             interestingInstructions[stackDepth].add(instance.getInstruction());

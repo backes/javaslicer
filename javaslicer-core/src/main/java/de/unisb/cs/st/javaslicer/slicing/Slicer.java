@@ -289,7 +289,7 @@ public class Slicer {
                 for (SlicingCriterionInstance crit : this.slicingCritInst) {
                     if (crit.matches(instance)) {
                         this.critOccurenceNumbers[stackDepth] = crit.getOccurenceNumber();
-                        assert (this.critOccurenceNumbers[stackDepth] > 0);
+                        assert this.critOccurenceNumbers[stackDepth] > 0;
                         // for each criterion, there are three cases:
                         //  - track all data read in this line
                         //  - track a given set of local variables
