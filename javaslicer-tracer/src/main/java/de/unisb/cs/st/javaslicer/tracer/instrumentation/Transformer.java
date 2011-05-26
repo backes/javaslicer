@@ -65,40 +65,11 @@ public class Transformer implements ClassFileTransformer {
         }
 
         @Override
-        protected String getCommonSuperClass(final String type1, final String type2)
+        protected String getCommonSuperClass(String type1, String type2)
         {
-            Class<?> c, d;
-            try {
-                c = Class.forName(type1.replace('/', '.'));
-            } catch (final ClassNotFoundException e) {
-                try {
-                    c = ClassLoader.getSystemClassLoader().loadClass(type1.replace('/', '.'));
-                } catch (final ClassNotFoundException e1) {
-                    throw new RuntimeException(e1);
-                }
-            }
-            try {
-                d = Class.forName(type2.replace('/', '.'));
-            } catch (final ClassNotFoundException e) {
-                try {
-                    d = ClassLoader.getSystemClassLoader().loadClass(type2.replace('/', '.'));
-                } catch (final ClassNotFoundException e1) {
-                    throw new RuntimeException(e1);
-                }
-            }
-            if (c.isAssignableFrom(d)) {
-                return type1;
-            }
-            if (d.isAssignableFrom(c)) {
-                return type2;
-            }
-            if (c.isInterface() || d.isInterface()) {
-                return "java/lang/Object";
-            }
-            do {
-                c = c.getSuperclass();
-            } while (!c.isAssignableFrom(d));
-            return c.getName().replace('.', '/');
+        	if (type1.equals(type2))
+        		return type1;
+        	return "java/lang/Object";
         }
     }
 
