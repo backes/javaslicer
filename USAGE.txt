@@ -6,7 +6,13 @@ You should have the following jar files:
 > ls -lh assembly
 slicer.jar     traceReader.jar   tracer.jar     visualize.jar
 
-Use tracer.jar (containing a java agent) to create traces of a java program run.
+Use tracer.jar (containing the java agent) to create the trace of a java program run.
+In order to have all debug information (like variable names and line numbers) available,
+you should have compiled your program with the "-g" flag.
+JavaSlicer has been developed and tested on bytecode compiled by the Sun Java Compiler in
+version 1.6 (any OpenJDK compiler should be compatible). Other compilers may generate
+unsupported bytecode sequences (especially for creating new objects).
+
 You can get a list of all options for the java agent:
 > java -javaagent:assembly/tracer.jar=help
 
