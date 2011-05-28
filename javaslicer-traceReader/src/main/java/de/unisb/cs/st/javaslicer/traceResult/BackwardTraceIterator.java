@@ -164,7 +164,7 @@ public class BackwardTraceIterator<InstanceType extends InstructionInstance>
             try {
                 ConstantTraceSequence sequence = this.threadTraceResult.sequences.get(seqIndex);
                 if (sequence == null)
-		            throw new TracerException("corrupted data (cannot trace backwards)");
+                    throw new TracerException("corrupted data (cannot trace backwards)");
                 it = ((ConstantLongTraceSequence)sequence).backwardIterator();
             } catch (final IOException e) {
                 throw new TracerException(e);

@@ -92,7 +92,7 @@ public class AccumulatingParallelDependencesVisitor<InstanceType>
         private final Variable[] variables;
         private volatile int remainingVisits;
 
-        @SuppressWarnings("rawtypes")
+		@SuppressWarnings("unchecked")
 		private static final AtomicIntegerFieldUpdater<EventStamp> remainingVisitsUpdater =
             AtomicIntegerFieldUpdater.newUpdater(EventStamp.class, "remainingVisits");
 
