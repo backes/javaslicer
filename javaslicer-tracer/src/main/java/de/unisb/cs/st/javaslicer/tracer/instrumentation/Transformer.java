@@ -206,6 +206,10 @@ public class Transformer implements ClassFileTransformer {
 
         this.totalBytecodeParsingTime.addAndGet(System.nanoTime() - startNanos);
 
+        if (this.tracer.check) {
+            checkClass(classfileBuffer, className, classfileBuffer);
+        }
+
         // we have to synchronize on System.out first.
         // otherwise it may lead to a deadlock if a thread calls removeStale() on ConcurrentReferenceHashMap
         // while he holds the lock for System.out, but another thread is inside the transformation step and
@@ -295,15 +299,19 @@ public class Transformer implements ClassFileTransformer {
                         + method.desc + ": " + e);
                 //e.printStackTrace(System.err);
                 printMethod(a, System.err, method);
-                System.err.println("original bytecode:");
-                ClassReader origClassReader = new ClassReader(origClassfileBuffer);
-                ClassNode origClassNode = new ClassNode();
-                origClassReader.accept(origClassNode, 0);
-                for (Object origMethodObj : origClassNode.methods) {
-                	MethodNode origMethod = (MethodNode) origMethodObj;
-                	if (origMethod.name.equals(method.name) && origMethod.desc.equals(method.desc))
-                		printMethod(System.err, origMethod);
+                if (newClassfileBuffer == origClassfileBuffer) {
+                    System.err.println("This is the original bytecode!");
+                } else {
+	                System.err.println("original bytecode:");
+	                ClassReader origClassReader = new ClassReader(origClassfileBuffer);
+	                ClassNode origClassNode = new ClassNode();
+	                origClassReader.accept(origClassNode, 0);
+	                for (Object origMethodObj : origClassNode.methods) {
+	                	MethodNode origMethod = (MethodNode) origMethodObj;
+	                	if (origMethod.name.equals(method.name) && origMethod.desc.equals(method.desc))
+	                		printMethod(System.err, origMethod);
 
+	                }
                 }
                 return false;
             }
