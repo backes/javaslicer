@@ -53,7 +53,8 @@ There are still problems with tracing for parameters. If you trace for a "local 
 parameter that has not been written in the method, then the slice may be empty.
 This will propably be fixed some day.
 
-Note that in many cases, you have to quote the slicing criterion such that the shell does not try to expand it.
+Note that in many cases, you have to quote the slicing criterion such that the shell does not try to
+expand it (not only "*", but especially "{a,b,c}").
 
 If you wish to, you can even visualize the slice using the JUNG library, but this is not very useful in most cases:
 > java -Xmx2g -jar assembly/visualize.jar -p test.trace java.util.HashMap.clear:614
