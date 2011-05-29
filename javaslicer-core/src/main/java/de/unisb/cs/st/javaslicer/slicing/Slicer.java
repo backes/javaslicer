@@ -64,8 +64,8 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
 /**
  * This is the new slicer implementation, built on top of the {@link DependencesExtractor}.
  *
- * There still exists another implementation {@link DirectSlicer} which is more performant and
- * should yield the same result. Nevertheless it is less maintained, so be alert.
+ * There still exists another implementation {@link DirectSlicer} which is more efficient and
+ * should yield the same result. Nevertheless it is less maintained, so be warned.
  *
  * @author Clemens Hammacher
  */

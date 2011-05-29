@@ -25,8 +25,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Map.Entry;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -57,12 +57,14 @@ import de.unisb.cs.st.javaslicer.variables.StackEntry;
 import de.unisb.cs.st.javaslicer.variables.Variable;
 
 /**
- * This is the first dynamic slicer I wrote. Now i am using the more general
- * dependences extractor, which is a bit less performant, but this way I only
- * have to maintain this one class.
+ * This is the first dynamic slicer I wrote.
+ * It is much faster than the new version which uses the more general
+ * dependences extractor.
  *
- * So this DirectSlicer is only there for comparison to the new version.
- * Don't use it.
+ * I try to maintain both versions, also to verify each other's results.
+ *
+ * You can use this version if you are just interested in the dynamic
+ * slice as a set of bytecode instructions.
  *
  * @author Clemens Hammacher
  */
