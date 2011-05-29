@@ -41,7 +41,7 @@ line 614.
 Note that the local variables don't have to occure in this line. You can even
 leave out the line number, but if you specify it, then the slicer slices for
 the values that the variables have in this line.
-If you want to slice for all local variables, then specify "*", i.e.
+If you want to slice for all data which is used in a specific line, then specify "*", i.e.
     java.util.HashMap.clear:614:*
 
 You can specify several slicing criteria for one slicing run by specifying them all together,
