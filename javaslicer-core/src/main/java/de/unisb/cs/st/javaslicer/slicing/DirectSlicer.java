@@ -344,6 +344,8 @@ public class DirectSlicer implements Opcodes {
                         if (crit.matchAllData()) {
                             matchedCriterionVariables[stackDepth].removeAll(dynInfo.getDefinedVariables());
                             matchedCriterionVariables[stackDepth].addAll(dynInfo.getUsedVariables());
+                            dynamicSlice.add(instruction);
+                            interestingInstructions[stackDepth].add(instance.getInstruction());
                         } else if (crit.hasLocalVariables()) {
                             for (de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable var : crit.getLocalVariables())
                                 interestingVariables.add(simEnv.getLocalVariable(stackDepth, var.getIndex()));

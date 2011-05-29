@@ -77,7 +77,6 @@ public class Slicer {
 
         // these variables are used to resolve which data dependences to follow:
         public boolean allDataInteresting = false;
-        public boolean onlyIfAfterCriterion = false;
         public Variable interestingVariable = null;
         public Set<Variable> moreInterestingVariables = null;
 
@@ -291,37 +290,30 @@ public class Slicer {
                         this.critOccurenceNumbers[stackDepth] = crit.getOccurenceNumber();
                         assert this.critOccurenceNumbers[stackDepth] > 0;
                         // for each criterion, there are three cases:
-                        //  - track all data read in this line
+                        //  - track all data read by the instruction
                         //  - track a given set of local variables
                         //  - track the control dependences of this instruction
-                        // only in the last case, the instructions from that line are added to the dynamic slice
-                        if (crit.matchAllData()) {
-                            instance.allDataInteresting = true;
-                            instance.onlyIfAfterCriterion = true;
-                            instance.onDynamicSlice = true; // it's not really on the dynamic slice, but we have to set this
-                            instance.criterionDistance = 0;
-                        } else {
-                            if (crit.hasLocalVariables()) {
-                                if (this.interestingLocalVariables.length <= stackDepth) {
-                                    @SuppressWarnings("unchecked")
-                                    IntegerMap<Object>[] newInterestingLocalVariables =
-                                            (IntegerMap<Object>[]) new IntegerMap<?>[Math.max(stackDepth+1, this.interestingLocalVariables.length*3/2)];
-                                    System.arraycopy(this.interestingLocalVariables, 0, newInterestingLocalVariables, 0, this.interestingLocalVariables.length);
-                                    this.interestingLocalVariables = newInterestingLocalVariables;
-                                }
-                                List<LocalVariable> localVariables = crit.getLocalVariables();
-                                if (this.interestingLocalVariables[stackDepth] == null)
-                                    this.interestingLocalVariables[stackDepth] = new IntegerMap<Object>(localVariables.size()*4/3+1);
-                                for (LocalVariable i : localVariables)
-                                    this.interestingLocalVariables[stackDepth].put(i.getIndex(), null);
-                            } else {
-                                Instruction insn = instruction;
-                                if (insn.getType() != InstructionType.LABEL)
-                                    for (SliceVisitor vis : this.sliceVisitorsArray)
-                                        vis.visitMatchedInstance(instance);
-                                instance.onDynamicSlice = true;
-                                instance.criterionDistance = 0;
+                        // in the second case, the instruction itself is not added to the dynamic slice
+                        instance.allDataInteresting = crit.matchAllData();
+                        if (!instance.allDataInteresting && crit.hasLocalVariables()) {
+                            if (this.interestingLocalVariables.length <= stackDepth) {
+                                @SuppressWarnings("unchecked")
+                                IntegerMap<Object>[] newInterestingLocalVariables =
+                                        (IntegerMap<Object>[]) new IntegerMap<?>[Math.max(stackDepth+1, this.interestingLocalVariables.length*3/2)];
+                                System.arraycopy(this.interestingLocalVariables, 0, newInterestingLocalVariables, 0, this.interestingLocalVariables.length);
+                                this.interestingLocalVariables = newInterestingLocalVariables;
                             }
+                            List<LocalVariable> localVariables = crit.getLocalVariables();
+                            if (this.interestingLocalVariables[stackDepth] == null)
+                                this.interestingLocalVariables[stackDepth] = new IntegerMap<Object>(localVariables.size()*4/3+1);
+                            for (LocalVariable i : localVariables)
+                                this.interestingLocalVariables[stackDepth].put(i.getIndex(), null);
+                        } else {
+                            if (instruction.getType() != InstructionType.LABEL)
+                                for (SliceVisitor vis : this.sliceVisitorsArray)
+                                    vis.visitMatchedInstance(instance);
+                            instance.onDynamicSlice = true;
+                            instance.criterionDistance = 0;
                         }
                     } else if (this.critOccurenceNumbers[stackDepth] != 0) {
                         this.critOccurenceNumbers[stackDepth] = 0;
@@ -450,23 +442,18 @@ public class Slicer {
                 assert type == DataDependenceType.READ_AFTER_WRITE;
 
                 if (from.onDynamicSlice && // from must definitively be on the dynamic slice
-                        ((from.allDataInteresting && (!from.onlyIfAfterCriterion || this.critOccurenceNumbers[to.getStackDepth()] == 0)) || // and either we want to track all data dependencies
+                        (from.allDataInteresting || // and either we want to track all data dependencies
                             (from.interestingVariable != null && ( // or (if the interestingVariable is set) ...
                                 from.interestingVariable.equals(toVar) || // the interestingVariable must be the one we are just visiting
                                 (from.moreInterestingVariables != null && from.moreInterestingVariables.contains(toVar)))))) { // or it must be in the set of more variables
                     Instruction insn = to.getInstruction();
                     assert insn.getType() != InstructionType.LABEL;
-                    if (from.onlyIfAfterCriterion) {
-                        to.criterionDistance = 0;
-                        for (SliceVisitor vis : this.sliceVisitorsArray)
-                            vis.visitMatchedInstance(to);
-                    } else {
-                        int distance = from.criterionDistance+1;
-                    	if (distance < to.criterionDistance)
-                    		to.criterionDistance = distance;
-                        for (SliceVisitor vis : this.sliceVisitorsArray)
-                            vis.visitSliceDependence(from, to, toVar, distance);
-                    }
+                    int distance = from.criterionDistance+1;
+                	if (distance < to.criterionDistance)
+                		to.criterionDistance = distance;
+                    for (SliceVisitor vis : this.sliceVisitorsArray)
+                        vis.visitSliceDependence(from, to, toVar, distance);
+
                     if (!fromVars.isEmpty()) {
                         Iterator<? extends Variable> varIt = fromVars.iterator();
                         assert varIt.hasNext() : "Iterator of a non-empty collection should have at least one element";

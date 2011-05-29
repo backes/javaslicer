@@ -18,7 +18,7 @@ import de.unisb.cs.st.javaslicer.variables.Variable;
 
 
 /**
- * A Visitor which gets informed about all nodes and their depedencies in the dynamic slice.
+ * A Visitor which gets informed about all nodes and their dependencies in the dynamic slice.
  *
  * @author Clemens Hammacher
  */
