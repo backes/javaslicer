@@ -356,7 +356,7 @@ public class TracingMethodInstrumenter implements Opcodes {
         assert this.outstandingInitializations == 0;
 
         // add exception handlers for array allocations, *before* any other exception handler.
-        // the Java VM Spec (§3.10) specified that they are executed in the order in which they
+        // the Java VM Spec (paragraph 3.10) specified that they are executed in the order in which they
         // appear in the bytecode
         if (this.newArrayErrorHandlers != null) {
         	for (Entry<LabelNode, Integer> handler : this.newArrayErrorHandlers.entrySet()) {
