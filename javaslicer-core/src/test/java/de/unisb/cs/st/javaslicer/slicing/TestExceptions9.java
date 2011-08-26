@@ -45,6 +45,10 @@ public class TestExceptions9 extends AbstractSlicingTest {
 				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:25 ICONST_3",
 				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:25 NEWARRAY T_INT",
 				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:25 ASTORE 2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:27 GETSTATIC java/lang/System.out Ljava/io/PrintStream;",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:27 ALOAD 2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:27 ARRAYLENGTH",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:27 INVOKEVIRTUAL java/io/PrintStream.println(I)V",
 				});
 	}
 

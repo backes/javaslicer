@@ -38,6 +38,10 @@ public class TestExceptions3 extends AbstractSlicingTest {
 				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:24 ALOAD 2",
 				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:24 GETFIELD de/unisb/cs/st/javaslicer/tracedCode/Exceptions3.x I",
 				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:26 IINC 1 2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:28 ILOAD 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:28 ICONST_2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:28 IMUL",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:28 ISTORE 1",
 				});
 	}
 
