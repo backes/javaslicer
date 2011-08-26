@@ -38,9 +38,9 @@ The other option is to slice for specific data:
 Then the slice contains all instructions which influenced the values of the
 local variables "tab" and "modCount" in the method java.util.HashMap.clear in
 line 614.
-Note that the local variables don't have to occure in this line. You can even
-leave out the line number, but if you specify it, then the slicer slices for
-the values that the variables have in this line.
+Note that the local variables don't have to occur in this line. You can even
+leave out the line number, then you will slice for the last value of the variables
+in that method.
 
 If you want to slice for the execution and all data used in a specific line, then specify "*", i.e.
     java.util.HashMap.clear:614:*
