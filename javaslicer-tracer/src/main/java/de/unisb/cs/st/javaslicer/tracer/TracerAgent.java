@@ -17,6 +17,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.instrument.Instrumentation;
+import java.net.URL;
 
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
@@ -47,8 +48,40 @@ public class TracerAgent {
 
     }
 
-    public static void premain(final String agentArgs, final Instrumentation inst) {
+    public static void premain(String agentArgs, Instrumentation inst) {
         try {
+            // find the name of the jar file
+            URL url = ClassLoader.getSystemResource(TracerAgent.class.getName().replace('.', '/') + ".class");
+            String urlFile = url == null ? "" : url.getFile();
+            int bangIndex = urlFile.indexOf('!');
+            if (url == null || !"jar".equals(url.getProtocol()) || !urlFile.startsWith("file:") || bangIndex == -1) {
+                System.err.println("ERROR: Can't find jar file of the tracer. Expected pattern \"jar:file:<path-to-jar>!<classname>.class\" in url: " + url);
+                System.exit(1);
+            }
+
+            File tracerJarFile = new File(urlFile.substring(5, bangIndex));
+            if (!"tracer.jar".equals(tracerJarFile.getName())) {
+                System.err.println("ERROR: The Tracer has to be loaded from a file named 'tracer.jar'.");
+                System.err.println("       Don't rename it, because exactly this filename is added to the boot class path from the MANIFEST.MF.");
+                System.err.println("       It seems that the file was renamed to '" + tracerJarFile.getName() + "'.");
+                System.exit(1);
+            }
+
+            /* Adding the tracer.jar to the bootstrap path is done instead in the MANIFEST.
+             * This way, unfortunately, you cannot rename the tracer.jar.
+             * If appending it to the bootstrapclasspath here, then some classes have already been loaded by another classloader,
+             * which leads to exceptions, at least on mac os:
+             * > java.lang.LinkageError: loader constraint violation: when resolving method "..." the class loader
+             * > (instance of sun/misc/Launcher$AppClassLoader) of the current class, de/unisb/cs/st/javaslicer/tracer/TracerAgent,
+             * > and the class loader (instance of <bootloader>) for resolved class, de/unisb/cs/st/javaslicer/tracer/Tracer,
+             * > have different Class objects for the type de/unisb/cs/st/javaslicer/tracer/traceSequences/TraceSequenceFactory
+             * > used in the signature
+             */
+            /*
+            // add my own jar file to the bootstrap path:
+            inst.appendToBootstrapClassLoaderSearch(new JarFile(urlFile.substring(5, bangIndex), false));
+            */
+
             String logFilename = null;
             final String[] args = agentArgs == null || agentArgs.length() == 0 ? new String[0] : agentArgs.split(",");
 
