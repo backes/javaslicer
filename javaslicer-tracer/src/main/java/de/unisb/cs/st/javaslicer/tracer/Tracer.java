@@ -83,10 +83,10 @@ public class Tracer {
 
     // there are classes needed while retransforming.
     // these must be loaded a-priori, otherwise circular dependencies may occur
-    private final String[] classesToPreload = {
+    private static final String[] classesToPreload = {
             "java.io.IOException",
             "java.io.EOFException",
-            NullThreadTracer.class.getName(),
+            "de.unisb.cs.st.javaslicer.tracer.NullThreadTracer"
     };
 
     private final ConcurrentMap<ThreadTracer, CountDownLatch> writtenThreadTracers =
@@ -186,7 +186,7 @@ public class Tracer {
             throw new TracerException("Your JVM does not support retransformation of classes");
 
         final List<Class<?>> additionalClassesToRetransform = new ArrayList<Class<?>>();
-        for (final String classname: this.classesToPreload) {
+        for (final String classname: Tracer.classesToPreload) {
             Class<?> class1;
             try {
                 class1 = ClassLoader.getSystemClassLoader().loadClass(classname);

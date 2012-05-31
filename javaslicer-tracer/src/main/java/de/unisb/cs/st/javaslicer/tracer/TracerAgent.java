@@ -96,7 +96,7 @@ public class TracerAgent {
 
                 if ("help".equalsIgnoreCase(key) || "h".equalsIgnoreCase(key)) {
                 	String format = "%20s     %s%n";
-                	System.out.println("Use the java agent this way: java -javaagent:tracer.jar=<agentoption>,<agentoption>,... -jar program.jar <programoptions>");
+                    System.out.println("Use the java agent this way: java -javaagent:tracer.jar=<option[:value]>,<option[:value]>,... -jar program.jar <programoptions>");
                 	System.out.println("These are the available agent options:");
                 	System.out.format(format, "check", "(true/false): do check the instrumented bytecode using ASM validators");
                 	System.out.format(format, "compression", "(none/gzip/sequitur): select the compression algorithm for the trace file");
@@ -178,6 +178,7 @@ public class TracerAgent {
         } catch (final Throwable t) {
             System.err.println("ERROR in premain method:");
             t.printStackTrace(System.err);
+            System.exit(1);
         }
     }
 
