@@ -41,12 +41,10 @@
         <dependency>
             <groupId>de.unisb.cs.st</groupId>
             <artifactId>javaslicer-common</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>de.unisb.cs.st</groupId>
             <artifactId>sequitur</artifactId>
-            <version>1.0</version>
         </dependency>
         <dependency>
             <groupId>commons-cli</groupId>
