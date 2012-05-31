@@ -34,11 +34,13 @@ public class ConstantUncompressedLongTraceSequence implements ConstantLongTraceS
         this.streamIndex = streamIndex;
     }
 
-    public Iterator<Long> backwardIterator() throws IOException {
+    @Override
+	public Iterator<Long> backwardIterator() throws IOException {
         return new BackwardIterator(this.file, this.streamIndex, 4*1024);
     }
 
-    public ListIterator<Long> iterator() throws IOException {
+    @Override
+	public ListIterator<Long> iterator() throws IOException {
         return new ForwardIterator(this.file, this.streamIndex);
     }
 
@@ -75,7 +77,8 @@ public class ConstantUncompressedLongTraceSequence implements ConstantLongTraceS
             }
         }
 
-        public boolean hasNext() {
+        @Override
+		public boolean hasNext() {
             try {
                 if (this.bufPos >= 0)
                     return true;
@@ -94,13 +97,15 @@ public class ConstantUncompressedLongTraceSequence implements ConstantLongTraceS
             }
         }
 
-        public Long next() {
+        @Override
+		public Long next() {
             if (!hasNext())
                 throw new NoSuchElementException();
             return this.buf[this.bufPos--];
         }
 
-        public void remove() {
+        @Override
+		public void remove() {
             throw new UnsupportedOperationException();
         }
 
@@ -121,7 +126,8 @@ public class ConstantUncompressedLongTraceSequence implements ConstantLongTraceS
             this.dataIn = new DataInputStream(this.inputStream);
         }
 
-        public boolean hasNext() {
+        @Override
+		public boolean hasNext() {
             try {
                 return !this.inputStream.isEOF();
             } catch (final IOException e) {
@@ -129,7 +135,8 @@ public class ConstantUncompressedLongTraceSequence implements ConstantLongTraceS
             }
         }
 
-        public Long next() {
+        @Override
+		public Long next() {
             if (!hasNext())
                 throw new NoSuchElementException();
             try {
@@ -139,23 +146,28 @@ public class ConstantUncompressedLongTraceSequence implements ConstantLongTraceS
             }
         }
 
-        public void remove() {
+        @Override
+		public void remove() {
             throw new UnsupportedOperationException();
         }
 
-        public void add(final Long e) {
+        @Override
+		public void add(final Long e) {
             throw new UnsupportedOperationException();
         }
 
-        public boolean hasPrevious() {
+        @Override
+		public boolean hasPrevious() {
             return this.inputStream.getPosition() != 0;
         }
 
-        public int nextIndex() {
+        @Override
+		public int nextIndex() {
             return (int) Math.min(Integer.MAX_VALUE, this.inputStream.getPosition() / 8);
         }
 
-        public Long previous() {
+        @Override
+		public Long previous() {
             if (!hasPrevious())
                 throw new NoSuchElementException();
             try {
@@ -169,11 +181,13 @@ public class ConstantUncompressedLongTraceSequence implements ConstantLongTraceS
             }
         }
 
-        public int previousIndex() {
+        @Override
+		public int previousIndex() {
             return (int) Math.min(Integer.MAX_VALUE, (this.inputStream.getPosition() / 8)-1);
         }
 
-        public void set(final Long e) {
+        @Override
+		public void set(final Long e) {
             throw new UnsupportedOperationException();
         }
     }

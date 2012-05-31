@@ -36,7 +36,8 @@ public class ThreadId implements Comparable<ThreadId> {
         return this.threadId + ": " + this.threadName;
     }
 
-    public int compareTo(final ThreadId other) {
+    @Override
+	public int compareTo(final ThreadId other) {
         if (this.threadId == other.threadId) {
             final int nameCmp = this.threadName.compareTo(other.threadName);
             if (nameCmp == 0 && this != other)

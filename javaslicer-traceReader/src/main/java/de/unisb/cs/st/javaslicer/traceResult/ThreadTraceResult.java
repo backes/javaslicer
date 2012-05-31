@@ -194,7 +194,8 @@ public class ThreadTraceResult implements Comparable<ThreadTraceResult> {
         return this.traceResult.getInstruction(instructionIndex);
     }
 
-    public int compareTo(ThreadTraceResult o) {
+    @Override
+	public int compareTo(ThreadTraceResult o) {
         return this.getId().compareTo(o.getId());
     }
 

@@ -65,11 +65,13 @@ public class ForwardTraceIterator<InstanceType extends InstructionInstance>
         this.instanceFactory = instanceFactory;
     }
 
-    public boolean hasNext() {
+    @Override
+	public boolean hasNext() {
         return this.backwardInstrNr != 0;
     }
 
-    public InstructionInstance next() {
+    @Override
+	public InstructionInstance next() {
         if (!hasNext())
             throw new NoSuchElementException();
         --this.backwardInstrNr;
@@ -93,15 +95,18 @@ public class ForwardTraceIterator<InstanceType extends InstructionInstance>
         }
     }
 
-    public void remove() {
+    @Override
+	public void remove() {
         throw new UnsupportedOperationException();
     }
 
-    public long getNextInstructionOccurenceNumber(int index) {
+    @Override
+	public long getNextInstructionOccurenceNumber(int index) {
         return this.occurrences.incrementAndGet(index, 1) - 1;
     }
 
-    public long getNextLong(int seqIndex) throws TracerException {
+    @Override
+	public long getNextLong(int seqIndex) throws TracerException {
         ListIterator<Long> it = this.longSequenceIterators.get(seqIndex);
         if (it == null) {
             try {
@@ -116,7 +121,8 @@ public class ForwardTraceIterator<InstanceType extends InstructionInstance>
         return it.next();
     }
 
-    public int getNextInteger(int seqIndex) throws TracerException {
+    @Override
+	public int getNextInteger(int seqIndex) throws TracerException {
         ListIterator<Integer> it = this.integerSequenceIterators.get(seqIndex);
         if (it == null) {
             try {
@@ -131,6 +137,7 @@ public class ForwardTraceIterator<InstanceType extends InstructionInstance>
         return it.next();
     }
 
+	@Override
 	public void incNumCrossedLabels() {
 		++this.numCrossedLabels;
 	}

@@ -42,11 +42,13 @@ public class ConstantSequiturIntegerTraceSequence implements ConstantIntegerTrac
             this.lastValue = it.previous();
         }
 
-        public boolean hasNext() {
+        @Override
+		public boolean hasNext() {
             return this.count != 0 && this.it.hasPrevious();
         }
 
-        public Integer next() {
+        @Override
+		public Integer next() {
             if (this.count == 0)
                 throw new NoSuchElementException();
             final int oldValue = this.lastValue;
@@ -55,7 +57,8 @@ public class ConstantSequiturIntegerTraceSequence implements ConstantIntegerTrac
             return oldValue;
         }
 
-        public void remove() {
+        @Override
+		public void remove() {
             throw new UnsupportedOperationException();
         }
 
@@ -77,11 +80,13 @@ public class ConstantSequiturIntegerTraceSequence implements ConstantIntegerTrac
             this.lastValue = 0;
         }
 
-        public boolean hasNext() {
+        @Override
+		public boolean hasNext() {
             return this.pos != this.count && this.it.hasNext();
         }
 
-        public Integer next() {
+        @Override
+		public Integer next() {
             if (!hasNext())
                 throw new NoSuchElementException();
             this.lastValue += this.it.next();
@@ -89,23 +94,28 @@ public class ConstantSequiturIntegerTraceSequence implements ConstantIntegerTrac
             return this.lastValue;
         }
 
-        public void remove() {
+        @Override
+		public void remove() {
             throw new UnsupportedOperationException();
         }
 
-        public void add(final Integer e) {
+        @Override
+		public void add(final Integer e) {
             throw new UnsupportedOperationException();
         }
 
-        public boolean hasPrevious() {
+        @Override
+		public boolean hasPrevious() {
             return this.pos != 0 && this.it.hasPrevious();
         }
 
-        public int nextIndex() {
+        @Override
+		public int nextIndex() {
             return this.pos;
         }
 
-        public Integer previous() {
+        @Override
+		public Integer previous() {
             if (!hasPrevious())
                 throw new NoSuchElementException();
             final int ret = this.lastValue;
@@ -114,11 +124,13 @@ public class ConstantSequiturIntegerTraceSequence implements ConstantIntegerTrac
             return ret;
         }
 
-        public int previousIndex() {
+        @Override
+		public int previousIndex() {
             return this.pos - 1;
         }
 
-        public void set(final Integer e) {
+        @Override
+		public void set(final Integer e) {
             throw new UnsupportedOperationException();
         }
 
@@ -135,7 +147,8 @@ public class ConstantSequiturIntegerTraceSequence implements ConstantIntegerTrac
         this.sequence = inputSequence;
     }
 
-    public Iterator<Integer> backwardIterator() throws IOException {
+    @Override
+	public Iterator<Integer> backwardIterator() throws IOException {
         if (this.count <= 10) {
             if (this.count == 1)
                 return new SingletonIterator<Integer>(this.sequence.iterator(this.offset).next());
@@ -150,7 +163,8 @@ public class ConstantSequiturIntegerTraceSequence implements ConstantIntegerTrac
         return new BackwardIterator(this.sequence.iterator(this.offset+this.count+1), this.count);
     }
 
-    public ListIterator<Integer> iterator() throws IOException {
+    @Override
+	public ListIterator<Integer> iterator() throws IOException {
         if (this.count <= 10) {
             if (this.count == 1)
                 return new SingletonIterator<Integer>(this.sequence.iterator(this.offset).next());

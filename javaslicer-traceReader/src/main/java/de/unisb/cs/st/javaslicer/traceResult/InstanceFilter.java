@@ -32,7 +32,8 @@ public interface InstanceFilter<InstanceType> {
 
         public static LabelFilter instance = new LabelFilter();
 
-        public boolean filterInstance(final InstructionInstance instrInstance) {
+        @Override
+		public boolean filterInstance(final InstructionInstance instrInstance) {
             return instrInstance.getInstruction().getType() == InstructionType.LABEL;
         }
 
@@ -46,7 +47,8 @@ public interface InstanceFilter<InstanceType> {
 
         public static AdditionalLabelFilter instance = new AdditionalLabelFilter();
 
-        public boolean filterInstance(final InstructionInstance instrInstance) {
+        @Override
+		public boolean filterInstance(final InstructionInstance instrInstance) {
             return (instrInstance.getInstruction().getType() == InstructionType.LABEL) &&
                 (((LabelMarker)instrInstance.getInstruction()).isAdditionalLabel());
         }

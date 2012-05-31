@@ -68,7 +68,8 @@ public class PrintUniqueUntracedMethods implements UntracedCallVisitor {
     private final IntegerMap<Object> reportedCalls = new IntegerMap<Object>();
     private final HashSet<MethodSignature> reportedMethods = new HashSet<MethodSignature>();
 
-    public void visitUntracedMethodCall(InstructionInstance instrInstance)
+    @Override
+	public void visitUntracedMethodCall(InstructionInstance instrInstance)
             throws InterruptedException {
         MethodInvocationInstruction mtdInv = (MethodInvocationInstruction)instrInstance.getInstruction();
         if (this.reportedCalls.containsKey(mtdInv.getIndex()))

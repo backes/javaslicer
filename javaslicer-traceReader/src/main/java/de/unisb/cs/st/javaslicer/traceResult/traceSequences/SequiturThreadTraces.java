@@ -26,12 +26,14 @@ import de.unisb.cs.st.sequitur.input.ObjectReader;
 public class SequiturThreadTraces extends ConstantThreadTraces {
 
     private static final ObjectReader<Integer> INT_READER = new ObjectReader<Integer>() {
-        public Integer readObject(final ObjectInputStream inputStream) throws IOException {
+        @Override
+		public Integer readObject(final ObjectInputStream inputStream) throws IOException {
             return OptimizedDataInputStream.readInt0(inputStream);
         }
     };
     private static final ObjectReader<Long> LONG_READER = new ObjectReader<Long>() {
-        public Long readObject(final ObjectInputStream inputStream) throws IOException {
+        @Override
+		public Long readObject(final ObjectInputStream inputStream) throws IOException {
             return OptimizedDataInputStream.readLong0(inputStream);
         }
     };

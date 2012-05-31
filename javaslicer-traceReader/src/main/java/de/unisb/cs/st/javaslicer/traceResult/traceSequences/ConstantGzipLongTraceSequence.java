@@ -40,7 +40,8 @@ public class ConstantGzipLongTraceSequence implements ConstantLongTraceSequence 
         this.streamIndex = streamIndex;
     }
 
-    public Iterator<Long> backwardIterator() {
+    @Override
+	public Iterator<Long> backwardIterator() {
         try {
             return this.gzipped ? new GZippedBackwardIterator(this.file, this.streamIndex)
                 : new NoGzipBackwardIterator(this.file, this.streamIndex);
@@ -49,7 +50,8 @@ public class ConstantGzipLongTraceSequence implements ConstantLongTraceSequence 
         }
     }
 
-    public ListIterator<Long> iterator() {
+    @Override
+	public ListIterator<Long> iterator() {
         throw new UnsupportedOperationException();
     }
 
@@ -77,7 +79,8 @@ public class ConstantGzipLongTraceSequence implements ConstantLongTraceSequence 
             this.dataIn = new OptimizedDataInputStream(this.pushBackInput, true);
         }
 
-        public boolean hasNext() {
+        @Override
+		public boolean hasNext() {
             if (this.error)
                 return false;
             int read;
@@ -93,7 +96,8 @@ public class ConstantGzipLongTraceSequence implements ConstantLongTraceSequence 
             }
         }
 
-        public Long next() {
+        @Override
+		public Long next() {
             try {
                 return this.dataIn.readLong();
             } catch (final IOException e) {
@@ -102,7 +106,8 @@ public class ConstantGzipLongTraceSequence implements ConstantLongTraceSequence 
             }
         }
 
-        public void remove() {
+        @Override
+		public void remove() {
             throw new UnsupportedOperationException();
         }
 
@@ -119,7 +124,8 @@ public class ConstantGzipLongTraceSequence implements ConstantLongTraceSequence 
             this.dataIn = new OptimizedDataInputStream(this.multiplexedStream, true);
         }
 
-        public boolean hasNext() {
+        @Override
+		public boolean hasNext() {
             if (this.error)
                 return false;
             try {
@@ -130,7 +136,8 @@ public class ConstantGzipLongTraceSequence implements ConstantLongTraceSequence 
             }
         }
 
-        public Long next() {
+        @Override
+		public Long next() {
             try {
                 return this.dataIn.readLong();
             } catch (final IOException e) {
@@ -139,7 +146,8 @@ public class ConstantGzipLongTraceSequence implements ConstantLongTraceSequence 
             }
         }
 
-        public void remove() {
+        @Override
+		public void remove() {
             throw new UnsupportedOperationException();
         }
 
