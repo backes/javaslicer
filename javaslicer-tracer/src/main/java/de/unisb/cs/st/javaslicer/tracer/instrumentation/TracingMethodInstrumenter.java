@@ -928,6 +928,7 @@ public class TracingMethodInstrumenter implements Opcodes {
         for (int i = 0; i < dimensions.length-1; ++i) {
             final Object[][] newQueue = i == dimensions.length-2 ? null : new Object[dimensions[i]][];
             int nqPos = 0;
+            assert queue != null;
             for (final Object[] o: queue) {
                 assert o != null;
                 assert o.length == dimensions[i];
