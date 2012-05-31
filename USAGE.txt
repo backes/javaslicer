@@ -22,6 +22,9 @@ Create a trace file:
 Then you can just view the complete trace, if you want so (warning: very large output!):
 > java -jar assembly/traceReader.jar test.trace
 
+For output options of the traceReader, please see the provided help:
+> java -jar assembly/traceReader.jar -h
+
 Or you can run the dynamic slicer on it, and you should give the JVM some more memory:
 > java -Xmx2g -jar assembly/slicer.jar -p test.trace java.util.HashMap.clear:614
 

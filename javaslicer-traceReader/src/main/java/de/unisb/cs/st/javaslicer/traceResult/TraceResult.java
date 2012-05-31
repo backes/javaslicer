@@ -500,6 +500,17 @@ public class TraceResult {
         HelpFormatter formatter = new HelpFormatter();
         PrintWriter pw = new PrintWriter(out, true);
         formatter.printOptions(pw, 120, options, 5, 3);
+        out.println();
+        out.println("The output of the trace itself will have six fields:");
+        out.println("   - Nr: just a continuously increasing counter, starting at 0");
+        out.println("   - intern Nr: this is the instance number, which will always be identical when iterating the trace");
+        out.println("   - Location: Class name, method name and line number of the instruction");
+        out.println("   - Dep: Stack depth of the instruction (1 for outermost stack frames, like main)");
+        out.println("   - OccNr: The occurence number of that single instruction (how often was it visited before)");
+        out.println("   - Instruction: Textual representation of the bytecode instruction");
+        out.println("Remember that the trace is output backwards. This means nr, intern nr and occNr are counting from the end of the trace.");
+        out.println("The intern Nr may have gaps if specific instructions have been filtered out (see -f option).");
+        out.println("By default, labels that have been inserted during instrumentation (so called additionals) are filtered out.");
     }
 
     public ThreadId getThreadId(final long javaThreadId) {
