@@ -1,5 +1,5 @@
 This file describes shortly how to use JavaSlicer. It assumes that you have
-the runnable jar files, either from the downloadable archive, or created
+the compiled jar files, either from the downloadable archive, or created
 using the assemble.sh script.
 
 You should have the following jar files:
@@ -16,10 +16,16 @@ unsupported bytecode sequences (especially for creating new objects).
 You can get a list of all options for the java agent:
 > java -javaagent:assembly/tracer.jar=help
 
-Create a trace file:
+Create a trace file by just attaching the java agent (tracer.jar) to the java process.
+It does not matter whether you execute a runnable jar, like this:
 > java -javaagent:assembly/tracer.jar=tracefile:test.trace -jar evaluation/dacapo-2006-10-MR2.jar -s small pmd
+or any other class files from your classpath:
+> java -javaagent:... -cp bin/classes:resources my.package.ClassName
+You can also trace JUnit tests (cmp. http://junit.sourceforge.net/doc/faq/faq.htm#running_4):
+> java -javaagent:... org.junit.runner.JUnitCore <test class name>
 
-Then you can just view the complete trace, if you want so (warning: very large output!):
+
+Then you can just view the complete trace, if you want so (be warned that the output can be huge!):
 > java -jar assembly/traceReader.jar test.trace
 
 For output options of the traceReader, please see the provided help:
