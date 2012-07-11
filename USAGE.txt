@@ -1,8 +1,12 @@
-This file describes shortly how to use JavaSlicer. It assumes that you have
-the compiled jar files, either from the downloadable archive, or created
-using the assemble.sh script.
+This file shortly describes how to use the command-line tools of JavaSlicer.
+It assumes that you have the compiled jar files, either from the downloadable
+archive, or created using the assemble.sh script.
+If you plan to integrate JavaSlicer into your own tool or to develop another
+tool on top of JavaSlicer, I recommend looking at the Java API instead of
+using the existing command line tools. You should start learning the API from
+the existing main-methods, mainly Slicer.main.
 
-You should have the following jar files:
+This document assumes that you have the following jar files:
 > ls -lh assembly
 slicer.jar     traceReader.jar   tracer.jar     visualize.jar
 
