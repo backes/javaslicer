@@ -14,6 +14,7 @@
 package de.unisb.cs.st.javaslicer.slicing;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -341,7 +342,7 @@ public class StaticSlicingCriterion implements SlicingCriterion {
             StringBuilder errorMsg = new StringBuilder();
             errorMsg.append("Local variable '").append(localVarStr).append("' not found in method ");
             errorMsg.append(method.getReadClass().getName()).append(".").append(method.getName());
-            errorMsg.append(". The method contains the following local variables: ").append(method.getLocalVariables());
+            errorMsg.append(". The method contains the following local variables: ").append(Arrays.toString(method.getLocalVariables()));
             throw new IllegalArgumentException(errorMsg.toString());
         }
 
