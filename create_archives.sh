@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # space separated list of excludes
-EXCLUDE="javaslicer_*.tar.bz2 create_archives.sh add_license_header.pl checkstyle-license.txt evaluation"
+EXCLUDE="javaslicer_*.tar.bz2 create_archives.sh add_license_header.pl evaluation"
 
-if [[ ! -d ../java-slicer ]]; then
-  echo Please execute this script inside the java-slicer directory.
+if [[ ! -d ../javaslicer || ! -f pom.xml || ! -d javaslicer-core ]]; then
+  echo Please execute this script inside the javaslicer directory.
   exit 1
 fi
 
@@ -33,14 +33,14 @@ fi
 cd ..
 COMMAND="tar cj"
 for e in $EXCLUDE; do
-	COMMAND=$COMMAND" --exclude java-slicer/"$e
+	COMMAND=$COMMAND" --exclude javaslicer/"$e
 done
-COMMAND=$COMMAND" -f java-slicer/"$FILENAME" java-slicer"
+COMMAND=$COMMAND" -f javaslicer/"$FILENAME" javaslicer"
 if ! $COMMAND; then
   echo Could not create archive...
   exit 1
 fi
-cd java-slicer
+cd javaslicer
 
 if [[ -d assembly ]]; then
   echo Error: assembly directory already exists
@@ -63,8 +63,8 @@ if ! tar -cf ../$FILENAME_BIN *.jar; then
   exit 1
 fi
 cd ..
-if ! tar -rf $FILENAME_BIN USAGE.txt; then
-  echo Error adding USAGE.txt
+if ! tar -rf $FILENAME_BIN README.md; then
+  echo Error adding README.md
   exit 1
 fi
 
