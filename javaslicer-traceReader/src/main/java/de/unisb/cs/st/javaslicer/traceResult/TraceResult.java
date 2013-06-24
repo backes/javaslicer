@@ -491,15 +491,20 @@ public class TraceResult {
     private static Options createOptions() {
         Options options = new Options();
         options.addOption(OptionBuilder.isRequired(false).withArgName("threadid").hasArg(true).
-            withDescription("thread id to select for trace output (default: main thread)").withLongOpt("threadid").create('t'));
+            withDescription("thread id to select for trace output (default: main thread)").
+            withLongOpt("threadid").create('t'));
         options.addOption(OptionBuilder.isRequired(false).hasArg(false).
             withDescription("do only output the trace length").withLongOpt("length").create('l'));
         options.addOption(OptionBuilder.isRequired(false).hasArg(false).
-            withDescription("show progress while computing the trace length (only effectfull together with --length)").withLongOpt("progress").create('p'));
+            withDescription("show progress while computing the trace length " +
+                "(only effectfull together with --length)").
+            withLongOpt("progress").create('p'));
         options.addOption(OptionBuilder.isRequired(false).hasArg(false).
             withDescription("print this help and exit").withLongOpt("help").create('h'));
         options.addOption(OptionBuilder.isRequired(false).withArgName("filter").hasArg(true).
-            withDescription("(none/labels/additionals) which instructions to filter out (default: additionals)").withLongOpt("filter").create('f'));
+            withDescription("(none/labels/additionals) which instructions to filter out " +
+                "(default: additionals = labels added during instrumentation)").
+            withLongOpt("filter").create('f'));
         return options;
     }
 
