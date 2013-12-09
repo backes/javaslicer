@@ -3,6 +3,8 @@ JavaSlicer
 
 JavaSlicer is an open-source dynamic slicing tool developed by Clemens
 Hammacher at Saarland University.
+It computes dynamic backward slices of Java programs by attaching to them
+as a [java agent](http://docs.oracle.com/javase/6/docs/api/java/lang/instrument/package-summary.html).
 
 Installation
 ------------
@@ -47,7 +49,7 @@ This section shortly describes how to use the command-line tools of JavaSlicer.
 It assumes that you have the compiled jar files, either from the downloadable
 archive from
 [the JavaSlicer webpage](http://www.st.cs.uni-saarland.de/javaslicer/), or
-created using the assemble.sh script.  
+created using the assemble.sh script.
 If you plan to integrate JavaSlicer into your own tool or to develop another
 tool on top of JavaSlicer, I recommend looking at the Java API instead of
 using the existing command line tools. You should start learning the API from
