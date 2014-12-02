@@ -10,7 +10,10 @@ Installation
 ------------
 
 JavaSlicer requires the following software on your machine:
-* JDK >= 1.6
+* JDK 1.6 or 1.7
+
+  JDK 1.8 introduces new language features which JavaSlicer is unable to handle
+  (pull requests are welcome!)
 
         > javac -version
         javac 1.6.0_20
