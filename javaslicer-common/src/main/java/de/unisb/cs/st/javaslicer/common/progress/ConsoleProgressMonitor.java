@@ -68,20 +68,20 @@ public class ConsoleProgressMonitor extends ProgressLineEmitter {
      */
     public ConsoleProgressMonitor(PrintStream outputStream, String title, boolean overwriteOutput,
             int intervalMillis, boolean showApproxTimeRemaining, boolean onlyIfChanged) {
-    	super(title, intervalMillis, showApproxTimeRemaining, onlyIfChanged);
+        super(title, intervalMillis, showApproxTimeRemaining, onlyIfChanged);
         this.outputStream = outputStream;
         this.overwriteOutput = overwriteOutput;
     }
 
     @Override
 	public void start(ProgressInformationProvider progressInfoProv) {
-    	super.start(progressInfoProv);
+        super.start(progressInfoProv);
     }
 
     @Override
 	public void end() {
-    	super.end();
-    	finished();
+        super.end();
+        finished();
     }
 
 	@Override
@@ -95,8 +95,8 @@ public class ConsoleProgressMonitor extends ProgressLineEmitter {
             this.outputStream.print(sb.toString());
             this.outputStream.flush();
         } else {
-        	this.outputStream.println(progressLine);
-        	this.outputStream.flush();
+            this.outputStream.println(progressLine);
+            this.outputStream.flush();
         }
 		this.lastLength = progressLine.length();
     }
@@ -111,8 +111,8 @@ public class ConsoleProgressMonitor extends ProgressLineEmitter {
 			s = sb.toString();
         }
 
-    	this.outputStream.println(s);
-    	this.outputStream.flush();
+        this.outputStream.println(s);
+        this.outputStream.flush();
 	}
 
 }
