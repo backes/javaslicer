@@ -49,6 +49,7 @@ import org.objectweb.asm.tree.analysis.AnalyzerException;
 import org.objectweb.asm.tree.analysis.BasicVerifier;
 import org.objectweb.asm.tree.analysis.Frame;
 import org.objectweb.asm.util.CheckClassAdapter;
+import org.objectweb.asm.util.Textifier;
 import org.objectweb.asm.util.TraceMethodVisitor;
 
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Field;
@@ -329,7 +330,8 @@ public class Transformer implements ClassFileTransformer {
     }
 
     public static void printMethod(PrintStream out, MethodNode method) {
-        final TraceMethodVisitor mv = new TraceMethodVisitor();
+        final Textifier textifier = new Textifier();
+        final TraceMethodVisitor mv = new TraceMethodVisitor(textifier);
 
         out.println(method.name + method.desc);
         for (int j = 0; j < method.instructions.size(); ++j) {
@@ -340,11 +342,11 @@ public class Transformer implements ClassFileTransformer {
                 s.append(' ');
             }
             out.print(Integer.toString(j + 100000).substring(1));
-            out.print(" " + s + " : " + mv.text.get(j));
+            out.print(" " + s + " : " + textifier.text.get(j));
         }
         for (int j = 0; j < method.tryCatchBlocks.size(); ++j) {
             ((TryCatchBlockNode) method.tryCatchBlocks.get(j)).accept(mv);
-            out.print(" " + mv.text.get(method.instructions.size()+j));
+            out.print(" " + textifier.text.get(method.instructions.size()+j));
         }
         out.println(" MAXSTACK " + method.maxStack);
         out.println(" MAXLOCALS " + method.maxLocals);
@@ -354,7 +356,8 @@ public class Transformer implements ClassFileTransformer {
     private static void printMethod(final Analyzer a, final PrintStream out, final MethodNode method) {
         final Frame[] frames = a.getFrames();
 
-        final TraceMethodVisitor mv = new TraceMethodVisitor();
+        final Textifier textifier = new Textifier();
+        final TraceMethodVisitor mv = new TraceMethodVisitor(textifier);
 
         out.println(method.name + method.desc);
         for (int j = 0; j < method.instructions.size(); ++j) {
@@ -377,11 +380,11 @@ public class Transformer implements ClassFileTransformer {
                 s.append(' ');
             }
             out.print(Integer.toString(j + 100000).substring(1));
-            out.print(" " + s + " : " + mv.text.get(j));
+            out.print(" " + s + " : " + textifier.text.get(j));
         }
         for (int j = 0; j < method.tryCatchBlocks.size(); ++j) {
             ((TryCatchBlockNode) method.tryCatchBlocks.get(j)).accept(mv);
-            out.print(" " + mv.text.get(method.instructions.size()+j));
+            out.print(" " + textifier.text.get(method.instructions.size()+j));
         }
         out.println(" MAXSTACK " + method.maxStack);
         out.println(" MAXLOCALS " + method.maxLocals);
