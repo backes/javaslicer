@@ -61,7 +61,7 @@ public interface InstructionInstance extends Comparable<InstructionInstance> {
 
     /**
      * Returns the stack depth at which this instance occurred.
-     * The stack depth is always > 0.
+     * The stack depth is always greater than zero.
      *
      * @return the stack depth at which this instance occurred
      */
