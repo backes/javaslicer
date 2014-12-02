@@ -50,6 +50,8 @@ public class ConsoleProgressMonitor extends ProgressLineEmitter {
      * every 0.1 seconds, tries to overwrite previous output using '\r', and shows the approximated
      * remaining time.
      * Use {@link #ConsoleProgressMonitor(PrintStream, String, boolean, int, boolean, boolean)} if you need more options.
+     *
+     * @param outputStream the output stream to which this ProgressMonitor outputs
      * @see #ConsoleProgressMonitor(PrintStream, String, boolean, int, boolean, boolean)
      */
     public ConsoleProgressMonitor(PrintStream outputStream) {
@@ -65,6 +67,7 @@ public class ConsoleProgressMonitor extends ProgressLineEmitter {
      * @param intervalMillis the interval in milli seconds between output of the percentage
      *        done
      * @param showApproxTimeRemaining whether to show an approximation of the remaining time
+     * @param onlyIfChanged do only emit a progress line if anything really changed
      */
     public ConsoleProgressMonitor(PrintStream outputStream, String title, boolean overwriteOutput,
             int intervalMillis, boolean showApproxTimeRemaining, boolean onlyIfChanged) {
