@@ -49,10 +49,7 @@ Usage
 -----
 
 This section shortly describes how to use the command-line tools of JavaSlicer.
-It assumes that you have the compiled jar files, either from the downloadable
-archive from
-[the JavaSlicer webpage](http://www.st.cs.uni-saarland.de/javaslicer/), or
-created using the assemble.sh script.
+It assumes that you have the assembled jar files as created by Maven.
 If you plan to integrate JavaSlicer into your own tool or to develop another
 tool on top of JavaSlicer, I recommend looking at the Java API instead of
 using the existing command line tools. You should start learning the API from
