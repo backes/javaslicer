@@ -61,7 +61,8 @@ public class TestExceptions2 extends AbstractSlicingTest {
 
     @Test
     public void test46all() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/exceptions2", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:46:*");
+        final List<Instruction> slice = getSlice("/traces/exceptions2", "main",
+            "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:46:*");
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:39 ACONST_NULL",
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:39 ASTORE 1",
@@ -84,8 +85,9 @@ public class TestExceptions2 extends AbstractSlicingTest {
     }
 
     @Test
-    public void test36a() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/exceptions2", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:49:{a}");
+    public void test49a() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+        final List<Instruction> slice = getSlice("/traces/exceptions2", "main",
+            "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:49:{a}");
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:39 ACONST_NULL",
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:39 ASTORE 1",

@@ -36,7 +36,8 @@ public class TestExceptions4 extends AbstractSlicingTest {
 	@Test
 	public void test() throws IllegalArgumentException, IOException,
 			URISyntaxException, InterruptedException {
-		final List<Instruction> slice = getSlice("/traces/exceptions4", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:35:*");
+		final List<Instruction> slice = getSlice("/traces/exceptions4", "main",
+		    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:35:*");
 		checkSlice(
 			slice,
 			new String[] {
@@ -46,6 +47,9 @@ public class TestExceptions4 extends AbstractSlicingTest {
 				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:30 INVOKEVIRTUAL java/lang/String.toString()Ljava/lang/String;",
 				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:32 LDC \"null\"",
 				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:32 ASTORE 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:35 GETSTATIC java/lang/System.out Ljava/io/PrintStream;",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:35 ALOAD 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions4.main:35 INVOKEVIRTUAL java/io/PrintStream.println(Ljava/lang/String;)V",
 				});
 	}
 
