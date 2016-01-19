@@ -121,13 +121,19 @@ public abstract class AbstractSlicingTest {
 
         assertTrue("Thread not found", threadId != null);
 
+        long beforeFirstRun = System.nanoTime();
         Slicer slicer = new Slicer(trace);
         SliceInstructionsCollector collector = new SliceInstructionsCollector();
         slicer.addSliceVisitor(collector);
         slicer.process(threadId, sc, true);
         Set<Instruction> slice = new TreeSet<Instruction>(collector.getDynamicSlice());
+        long afterFirstRun = System.nanoTime();
 
         Set<Instruction> slice2 = new TreeSet<Instruction>(new DirectSlicer(trace).getDynamicSlice(threadId, sc));
+        long afterSecondRun = System.nanoTime();
+
+        System.out.format("Slicer runtime: %.3f ms, direct slicer: %.3f ms%n",
+            1e-6*(afterFirstRun-beforeFirstRun), 1e-6*(afterSecondRun-afterFirstRun));
 
         SliceEntry[] arr1 = new SliceEntry[slice.size()];
         Iterator<Instruction> sliceIt = slice.iterator();
