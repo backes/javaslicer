@@ -36,26 +36,26 @@ public class TestExceptions5 extends AbstractSlicingTest {
 	@Test
 	public void test() throws IllegalArgumentException, IOException,
 			URISyntaxException, InterruptedException {
-		final List<Instruction> slice = getSlice("/traces/exceptions5", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:38:{y}");
+		final List<Instruction> slice = getSlice("/traces/exceptions5", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:47:{y}");
 		checkSlice(
 			slice,
 			new String[] {
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:25 ICONST_3",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:25 ISTORE 1",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:26 ACONST_NULL",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:26 ASTORE 2",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:28 ALOAD 2",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:28 PUTFIELD de/unisb/cs/st/javaslicer/tracedCode/Exceptions5.x I",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:30 IINC 1 2",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:33 ALOAD 2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:34 ICONST_3",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:34 ISTORE 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:35 ACONST_NULL",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:35 ASTORE 2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:37 ALOAD 2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:37 PUTFIELD de/unisb/cs/st/javaslicer/tracedCode/Exceptions5.x I",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:39 IINC 1 2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:42 ALOAD 2",
 				    // TODO this should be removed by more precise tracing:
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:33 ICONST_2",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:33 INVOKEVIRTUAL de/unisb/cs/st/javaslicer/tracedCode/Exceptions5.set(I)V",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:35 IINC 1 3",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:37 ILOAD 1",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:37 ICONST_2",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:37 IMUL",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:37 ISTORE 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:42 ICONST_2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:42 INVOKEVIRTUAL de/unisb/cs/st/javaslicer/tracedCode/Exceptions5.set(I)V",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:44 IINC 1 3",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:46 ILOAD 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:46 ICONST_2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:46 IMUL",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions5.main:46 ISTORE 1",
 				});
 	}
 

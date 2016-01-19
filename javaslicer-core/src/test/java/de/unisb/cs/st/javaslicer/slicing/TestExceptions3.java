@@ -36,21 +36,21 @@ public class TestExceptions3 extends AbstractSlicingTest {
 	@Test
 	public void test() throws IllegalArgumentException, IOException,
 			URISyntaxException, InterruptedException {
-		final List<Instruction> slice = getSlice("/traces/exceptions3", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:28:*");
+		final List<Instruction> slice = getSlice("/traces/exceptions3", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:37:*");
 		checkSlice(
 			slice,
 			new String[] {
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:21 ICONST_3",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:21 ISTORE 1",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:23 ACONST_NULL",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:23 ASTORE 2",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:24 ALOAD 2",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:24 GETFIELD de/unisb/cs/st/javaslicer/tracedCode/Exceptions3.x I",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:26 IINC 1 2",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:28 ILOAD 1",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:28 ICONST_2",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:28 IMUL",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:28 ISTORE 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:30 ICONST_3",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:30 ISTORE 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:32 ACONST_NULL",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:32 ASTORE 2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:33 ALOAD 2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:33 GETFIELD de/unisb/cs/st/javaslicer/tracedCode/Exceptions3.x I",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:35 IINC 1 2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:37 ILOAD 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:37 ICONST_2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:37 IMUL",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions3.main:37 ISTORE 1",
 				});
 	}
 

@@ -36,28 +36,28 @@ public class TestExceptions9 extends AbstractSlicingTest {
 	@Test
 	public void test() throws IllegalArgumentException, IOException,
 			URISyntaxException, InterruptedException {
-		final List<Instruction> slice = getSlice("/traces/exceptions9", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:27:*");
+		final List<Instruction> slice = getSlice("/traces/exceptions9", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:36:*");
 		checkSlice(
 			slice,
 			new String[] {
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:20 ICONST_2",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:20 NEWARRAY T_INT",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:20 ASTORE 1",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:21 ACONST_NULL",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:21 ASTORE 2",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:23 ALOAD 1",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:23 ICONST_0",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:23 ALOAD 2",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:23 ICONST_0",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:23 ICONST_2",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:23 INVOKESTATIC java/lang/System.arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:25 ICONST_3",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:25 NEWARRAY T_INT",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:25 ASTORE 2",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:27 GETSTATIC java/lang/System.out Ljava/io/PrintStream;",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:27 ALOAD 2",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:27 ARRAYLENGTH",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:27 INVOKEVIRTUAL java/io/PrintStream.println(I)V",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:29 ICONST_2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:29 NEWARRAY T_INT",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:29 ASTORE 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:30 ACONST_NULL",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:30 ASTORE 2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:32 ALOAD 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:32 ICONST_0",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:32 ALOAD 2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:32 ICONST_0",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:32 ICONST_2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:32 INVOKESTATIC java/lang/System.arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:34 ICONST_3",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:34 NEWARRAY T_INT",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:34 ASTORE 2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:36 GETSTATIC java/lang/System.out Ljava/io/PrintStream;",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:36 ALOAD 2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:36 ARRAYLENGTH",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions9.main:36 INVOKEVIRTUAL java/io/PrintStream.println(I)V",
 				});
 	}
 

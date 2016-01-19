@@ -36,19 +36,19 @@ public class TestExceptions8 extends AbstractSlicingTest {
 	@Test
 	public void test() throws IllegalArgumentException, IOException,
 			URISyntaxException, InterruptedException {
-		final List<Instruction> slice = getSlice("/traces/exceptions8", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions8.main:27:*");
+		final List<Instruction> slice = getSlice("/traces/exceptions8", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions8.main:36:*");
 		checkSlice(
 			slice,
 			new String[] {
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions8.main:20 ACONST_NULL",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions8.main:20 ASTORE 1",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions8.main:23 ALOAD 1",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions8.main:23 INVOKEVIRTUAL java/lang/String.length()I",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions8.main:25 SIPUSH 4711",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions8.main:25 ISTORE 2",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions8.main:27 GETSTATIC java/lang/System.out Ljava/io/PrintStream;",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions8.main:27 ILOAD 2",
-				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions8.main:27 INVOKEVIRTUAL java/io/PrintStream.println(I)V",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions8.main:29 ACONST_NULL",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions8.main:29 ASTORE 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions8.main:32 ALOAD 1",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions8.main:32 INVOKEVIRTUAL java/lang/String.length()I",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions8.main:34 SIPUSH 4711",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions8.main:34 ISTORE 2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions8.main:36 GETSTATIC java/lang/System.out Ljava/io/PrintStream;",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions8.main:36 ILOAD 2",
+				    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions8.main:36 INVOKEVIRTUAL java/io/PrintStream.println(I)V",
 				});
 	}
 

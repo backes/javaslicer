@@ -37,149 +37,149 @@ public class TestMethod1 extends AbstractSlicingTest {
 
     @Test
     public void testAll() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:24:{a,b,c,d,e}");
+        final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:33:{a,b,c,d,e}");
         checkSlice(slice, new String[] {
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ALOAD 0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ICONST_0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 AALOAD",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ICONST_0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 INVOKEVIRTUAL java/lang/String.charAt(I)C",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 BIPUSH 48",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ISUB",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ISTORE 1",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:21 ICONST_2",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:21 ILOAD 1",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:21 IMUL",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:21 ISTORE 2",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:22 ILOAD 1",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:22 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Method1.getFirst(II)I",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:22 ISTORE 3",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:23 ILOAD 2",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:23 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Method1.getSecond(II)I",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:23 ISTORE 4",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:24 ILOAD 1",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:24 ICONST_2",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:24 NEWARRAY T_INT",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:24 DUP",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:24 ICONST_1",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:24 ILOAD 2",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:24 IASTORE",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:24 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Method1.get(I[I)I",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:24 ISTORE 5",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.getFirst:28 ILOAD 0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.getFirst:28 IRETURN",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.getSecond:32 ILOAD 1",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.getSecond:32 IRETURN",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.get:36 ALOAD 1",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.get:36 ILOAD 0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.get:36 IALOAD",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.get:36 IRETURN",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ALOAD 0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ICONST_0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 AALOAD",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ICONST_0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 INVOKEVIRTUAL java/lang/String.charAt(I)C",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 BIPUSH 48",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ISUB",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ISTORE 1",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:30 ICONST_2",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:30 ILOAD 1",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:30 IMUL",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:30 ISTORE 2",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:31 ILOAD 1",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:31 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Method1.getFirst(II)I",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:31 ISTORE 3",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:32 ILOAD 2",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:32 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Method1.getSecond(II)I",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:32 ISTORE 4",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:33 ILOAD 1",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:33 ICONST_2",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:33 NEWARRAY T_INT",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:33 DUP",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:33 ICONST_1",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:33 ILOAD 2",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:33 IASTORE",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:33 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Method1.get(I[I)I",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:33 ISTORE 5",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.getFirst:37 ILOAD 0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.getFirst:37 IRETURN",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.getSecond:41 ILOAD 1",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.getSecond:41 IRETURN",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.get:45 ALOAD 1",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.get:45 ILOAD 0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.get:45 IALOAD",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.get:45 IRETURN",
             });
     }
 
     @Test
     public void testAa() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:25:{a}");
+        final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:34:{a}");
         checkSlice(slice, new String[] {
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ALOAD 0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ICONST_0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 AALOAD",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ICONST_0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 INVOKEVIRTUAL java/lang/String.charAt(I)C",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 BIPUSH 48",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ISUB",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ISTORE 1",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ALOAD 0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ICONST_0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 AALOAD",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ICONST_0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 INVOKEVIRTUAL java/lang/String.charAt(I)C",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 BIPUSH 48",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ISUB",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ISTORE 1",
             });
     }
 
     @Test
     public void testAb() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20:{a}");
+        final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29:{a}");
         checkSlice(slice, new String[] {
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ALOAD 0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ICONST_0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 AALOAD",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ICONST_0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 INVOKEVIRTUAL java/lang/String.charAt(I)C",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 BIPUSH 48",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ISUB",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ISTORE 1",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ALOAD 0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ICONST_0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 AALOAD",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ICONST_0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 INVOKEVIRTUAL java/lang/String.charAt(I)C",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 BIPUSH 48",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ISUB",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ISTORE 1",
             });
     }
 
     @Test
     public void testC() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:25:{c}");
+        final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:34:{c}");
         checkSlice(slice, new String[] {
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ALOAD 0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ICONST_0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 AALOAD",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ICONST_0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 INVOKEVIRTUAL java/lang/String.charAt(I)C",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 BIPUSH 48",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ISUB",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ISTORE 1",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:22 ILOAD 1",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:22 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Method1.getFirst(II)I",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:22 ISTORE 3",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.getFirst:28 ILOAD 0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.getFirst:28 IRETURN",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ALOAD 0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ICONST_0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 AALOAD",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ICONST_0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 INVOKEVIRTUAL java/lang/String.charAt(I)C",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 BIPUSH 48",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ISUB",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ISTORE 1",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:31 ILOAD 1",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:31 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Method1.getFirst(II)I",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:31 ISTORE 3",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.getFirst:37 ILOAD 0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.getFirst:37 IRETURN",
             });
     }
 
     @Test
     public void testD() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:25:{d}");
+        final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:34:{d}");
         checkSlice(slice, new String[] {
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ALOAD 0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ICONST_0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 AALOAD",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ICONST_0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 INVOKEVIRTUAL java/lang/String.charAt(I)C",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 BIPUSH 48",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ISUB",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ISTORE 1",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:21 ICONST_2",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:21 ILOAD 1",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:21 IMUL",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:21 ISTORE 2",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:23 ILOAD 2",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:23 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Method1.getSecond(II)I",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:23 ISTORE 4",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.getSecond:32 ILOAD 1",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.getSecond:32 IRETURN",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ALOAD 0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ICONST_0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 AALOAD",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ICONST_0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 INVOKEVIRTUAL java/lang/String.charAt(I)C",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 BIPUSH 48",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ISUB",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ISTORE 1",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:30 ICONST_2",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:30 ILOAD 1",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:30 IMUL",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:30 ISTORE 2",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:32 ILOAD 2",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:32 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Method1.getSecond(II)I",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:32 ISTORE 4",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.getSecond:41 ILOAD 1",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.getSecond:41 IRETURN",
             });
     }
 
     @Test
     public void testE() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:25:{e}");
+        final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:34:{e}");
         checkSlice(slice, new String[] {
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ALOAD 0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ICONST_0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 AALOAD",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ICONST_0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 INVOKEVIRTUAL java/lang/String.charAt(I)C",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 BIPUSH 48",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ISUB",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ISTORE 1",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:21 ICONST_2",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:21 ILOAD 1",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:21 IMUL",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:21 ISTORE 2",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:24 ILOAD 1",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:24 ICONST_2",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:24 NEWARRAY T_INT",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:24 DUP",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:24 ICONST_1",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:24 ILOAD 2",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:24 IASTORE",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:24 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Method1.get(I[I)I",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:24 ISTORE 5",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.get:36 ALOAD 1",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.get:36 ILOAD 0",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.get:36 IALOAD",
-                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.get:36 IRETURN",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ALOAD 0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ICONST_0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 AALOAD",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ICONST_0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 INVOKEVIRTUAL java/lang/String.charAt(I)C",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 BIPUSH 48",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ISUB",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ISTORE 1",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:30 ICONST_2",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:30 ILOAD 1",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:30 IMUL",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:30 ISTORE 2",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:33 ILOAD 1",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:33 ICONST_2",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:33 NEWARRAY T_INT",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:33 DUP",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:33 ICONST_1",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:33 ILOAD 2",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:33 IASTORE",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:33 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Method1.get(I[I)I",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:33 ISTORE 5",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.get:45 ALOAD 1",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.get:45 ILOAD 0",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.get:45 IALOAD",
+                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.get:45 IRETURN",
             });
     }
 
@@ -189,20 +189,20 @@ public class TestMethod1 extends AbstractSlicingTest {
     public void testGetFirstB() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
         final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.getFirst:{b}");
         checkSlice(slice, new String[] {
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ALOAD 0",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ICONST_0",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 AALOAD",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ICONST_0",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 INVOKEVIRTUAL java/lang/String.charAt(I)C",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 BIPUSH 48",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ISUB",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ISTORE 1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:21 ICONST_2",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:21 ILOAD 1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:21 IMUL",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:21 ISTORE 2",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:22 ILOAD 2",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:22 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Method1.getFirst(II)I",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ALOAD 0",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ICONST_0",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 AALOAD",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ICONST_0",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 INVOKEVIRTUAL java/lang/String.charAt(I)C",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 BIPUSH 48",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ISUB",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ISTORE 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:30 ICONST_2",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:30 ILOAD 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:30 IMUL",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:30 ISTORE 2",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:31 ILOAD 2",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:31 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Method1.getFirst(II)I",
             });
     }
 
@@ -212,16 +212,16 @@ public class TestMethod1 extends AbstractSlicingTest {
     public void testGetSecondA() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
         final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.getSecond:{a}");
         checkSlice(slice, new String[] {
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ALOAD 0",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ICONST_0",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 AALOAD",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ICONST_0",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 INVOKEVIRTUAL java/lang/String.charAt(I)C",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 BIPUSH 48",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ISUB",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:20 ISTORE 1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:23 ILOAD 1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:23 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Method1.getSecond(II)I",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ALOAD 0",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ICONST_0",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 AALOAD",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ICONST_0",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 INVOKEVIRTUAL java/lang/String.charAt(I)C",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 BIPUSH 48",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ISUB",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ISTORE 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:32 ILOAD 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:32 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Method1.getSecond(II)I",
             });
     }
 

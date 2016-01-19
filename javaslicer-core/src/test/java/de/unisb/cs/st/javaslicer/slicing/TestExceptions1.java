@@ -35,114 +35,114 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 public class TestExceptions1 extends AbstractSlicingTest {
 
     @Test
-    public void test29c() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/exceptions1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:29:{c}");
+    public void test38c() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+        final List<Instruction> slice = getSlice("/traces/exceptions1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:38:{c}");
         checkSlice(slice, new String[] {
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:20 ACONST_NULL",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:20 ASTORE 2",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:24 ALOAD 2",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:24 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Exceptions1.useArrays([I[I)I",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:26 ICONST_1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:26 ISTORE 3",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:47 ALOAD 1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:47 ARRAYLENGTH",
-            });
-    }
-
-    @Test
-    public void test37c() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/exceptions1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:37:{c}");
-        checkSlice(slice, new String[] {
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:30 ACONST_NULL",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:30 ASTORE 1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:32 ALOAD 1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:32 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Exceptions1.useArrays([I[I)I",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:34 ICONST_2",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:34 ISTORE 3",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:47 ALOAD 0",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:47 ARRAYLENGTH",
-            });
-    }
-
-    @Test
-    public void test25() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/exceptions1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:25");
-        checkSlice(slice, new String[] {
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:20 ACONST_NULL",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:20 ASTORE 2",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:24 ALOAD 2",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:24 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Exceptions1.useArrays([I[I)I",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:25 ASTORE 4",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:47 ALOAD 1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:47 ARRAYLENGTH",
-            });
-    }
-
-    @Test
-    public void test25all() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/exceptions1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:25:*");
-        checkSlice(slice, new String[] {
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:20 ACONST_NULL",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:20 ASTORE 2",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:24 ALOAD 2",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:24 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Exceptions1.useArrays([I[I)I",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:25 ASTORE 4",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:47 ALOAD 1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:47 ARRAYLENGTH",
-            });
-    }
-
-    @Test
-    public void test43() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/exceptions1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:43:*");
-        checkSlice(slice, new String[] {
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:19 ICONST_1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:19 NEWARRAY T_INT",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:19 ASTORE 1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:29 ALOAD 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:29 ACONST_NULL",
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:29 ASTORE 2",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:30 ACONST_NULL",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:30 ASTORE 1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:32 ALOAD 1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:32 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Exceptions1.useArrays([I[I)I",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:34 ICONST_2",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:34 ISTORE 3",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:37 ALOAD 2",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:37 ASTORE 1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:43 ALOAD 1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:43 ICONST_0",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:43 ILOAD 3",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:43 IASTORE",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:47 ALOAD 0",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:47 ARRAYLENGTH",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:33 ALOAD 2",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:33 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Exceptions1.useArrays([I[I)I",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:35 ICONST_1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:35 ISTORE 3",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:56 ALOAD 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:56 ARRAYLENGTH",
             });
     }
 
     @Test
-    public void test33() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/exceptions1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:33");
+    public void test46c() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+        final List<Instruction> slice = getSlice("/traces/exceptions1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:46:{c}");
         checkSlice(slice, new String[] {
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:30 ACONST_NULL",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:30 ASTORE 1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:32 ALOAD 1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:32 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Exceptions1.useArrays([I[I)I",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:33 ASTORE 4",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:47 ALOAD 0",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:47 ARRAYLENGTH",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:39 ACONST_NULL",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:39 ASTORE 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:41 ALOAD 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:41 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Exceptions1.useArrays([I[I)I",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:43 ICONST_2",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:43 ISTORE 3",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:56 ALOAD 0",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:56 ARRAYLENGTH",
             });
     }
 
     @Test
-    public void test33all() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/exceptions1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:33:*");
+    public void test34() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+        final List<Instruction> slice = getSlice("/traces/exceptions1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:34");
         checkSlice(slice, new String[] {
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:30 ACONST_NULL",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:30 ASTORE 1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:32 ALOAD 1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:32 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Exceptions1.useArrays([I[I)I",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:33 ASTORE 4",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:47 ALOAD 0",
-                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:47 ARRAYLENGTH",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:29 ACONST_NULL",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:29 ASTORE 2",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:33 ALOAD 2",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:33 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Exceptions1.useArrays([I[I)I",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:34 ASTORE 4",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:56 ALOAD 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:56 ARRAYLENGTH",
+            });
+    }
+
+    @Test
+    public void test34all() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+        final List<Instruction> slice = getSlice("/traces/exceptions1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:34:*");
+        checkSlice(slice, new String[] {
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:29 ACONST_NULL",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:29 ASTORE 2",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:33 ALOAD 2",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:33 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Exceptions1.useArrays([I[I)I",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:34 ASTORE 4",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:56 ALOAD 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:56 ARRAYLENGTH",
+            });
+    }
+
+    @Test
+    public void test52() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+        final List<Instruction> slice = getSlice("/traces/exceptions1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:52:*");
+        checkSlice(slice, new String[] {
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:28 ICONST_1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:28 NEWARRAY T_INT",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:28 ASTORE 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:38 ALOAD 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:38 ASTORE 2",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:39 ACONST_NULL",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:39 ASTORE 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:41 ALOAD 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:41 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Exceptions1.useArrays([I[I)I",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:43 ICONST_2",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:43 ISTORE 3",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:46 ALOAD 2",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:46 ASTORE 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:52 ALOAD 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:52 ICONST_0",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:52 ILOAD 3",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:52 IASTORE",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:56 ALOAD 0",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:56 ARRAYLENGTH",
+            });
+    }
+
+    @Test
+    public void test42() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+        final List<Instruction> slice = getSlice("/traces/exceptions1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:42");
+        checkSlice(slice, new String[] {
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:39 ACONST_NULL",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:39 ASTORE 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:41 ALOAD 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:41 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Exceptions1.useArrays([I[I)I",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:42 ASTORE 4",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:56 ALOAD 0",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:56 ARRAYLENGTH",
+            });
+    }
+
+    @Test
+    public void test42all() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+        final List<Instruction> slice = getSlice("/traces/exceptions1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:42:*");
+        checkSlice(slice, new String[] {
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:39 ACONST_NULL",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:39 ASTORE 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:41 ALOAD 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:41 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Exceptions1.useArrays([I[I)I",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.main:42 ASTORE 4",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:56 ALOAD 0",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions1.useArrays:56 ARRAYLENGTH",
             });
     }
 
