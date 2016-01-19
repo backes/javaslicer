@@ -1,13 +1,10 @@
-JavaSlicer
-==========
-
-JavaSlicer is an open-source dynamic slicing tool developed by Clemens
+**_JavaSlicer_** is an open-source dynamic slicing tool developed by Clemens
 Hammacher at Saarland University.
 It computes dynamic backward slices of Java programs by attaching to them
 as a [java agent](http://docs.oracle.com/javase/6/docs/api/java/lang/instrument/package-summary.html).
 
 Installation
-------------
+============
 
 JavaSlicer requires the following software on your machine:
 * JDK 1.6 or 1.7
@@ -46,7 +43,7 @@ calling "mvn eclipse:eclipse" on the command line.
 
 
 Usage
------
+=====
 
 This section shortly describes how to use the command-line tools of JavaSlicer.
 It assumes that you have the assembled jar files as created by Maven.
@@ -99,11 +96,15 @@ The slicer gives you a summary of the options available:
 
     > java -jar assembly/slicer.jar
 
-The crucial part here is to define the slicing criterion. There are two options:
+Defining The Slicing Criterion
+------------------------------
+
+It is crucial for the usave of JavaSlicer to understand how to specify the slicing criterion.
+There are *three options*:
 Either you slice for the execution of specific instructions (i.e. you start with control dependencies):
 > java.util.HashMap.clear:614
 
-The slice should contain all instructions which lead to the execution of this specific line.
+The slice then contains all instructions on the specified line plus (transitively) those instructions which lead to the execution of any of the selected instructions.
 
 The other option is to slice for specific data:
 > java.util.HashMap.clear:614:{tab,modCount}
@@ -115,7 +116,10 @@ Note that the local variables don't have to occur in this line. You can even
 leave out the line number, then you will slice for the last value of the variables
 in that method.
 
-If you want to slice for the execution and all data used in a specific line, then specify "*", i.e.
+In this form, the instructions on the specified line are *only* added to the slice if their produced value is used by any other instruction on that line.
+
+The third option is to slice for the execution and all data used in a specific line.
+A slicing criterion of this form looks like this:
 > java.util.HashMap.clear:614:*
 
 This slice will be the transitive closure over all control and data dependences starting from
@@ -138,7 +142,7 @@ If you wish to, you can even visualize the slice using the JUNG library, but thi
     > java -Xmx2g -jar assembly/visualize.jar -p test.trace java.util.HashMap.clear:614
 
 License
--------
+=======
 
 JavaSlicer is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
