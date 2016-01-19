@@ -28,6 +28,19 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable;
 
 
+/**
+ * A dynamic instance of a slicing criterion.
+ *
+ * There are three forms of slicing criteria:
+ * 1. slice only for control dependences
+ *    (hasLocalVariables() == false && computeTransitiveClosure() == false)
+ * 2. slice for specific local variables
+ *    (hasLocalVariables() == true && computeTransitiveClosure() == false)
+ * 3. compute the full transitive closure (data and control dependences)
+ *    (hasLocalVariables() == false && computeTransitiveClosure() == true)
+ *
+ * @author Clemens Hammacher
+ */
 public interface SlicingCriterionInstance {
 
 	boolean matches(InstructionInstance instructionInstance);
@@ -36,7 +49,7 @@ public interface SlicingCriterionInstance {
 
 	boolean hasLocalVariables();
 
-	boolean matchAllData();
+	boolean computeTransitiveClosure();
 
 	long getOccurenceNumber();
 

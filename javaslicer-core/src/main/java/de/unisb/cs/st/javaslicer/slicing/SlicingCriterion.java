@@ -28,6 +28,8 @@ package de.unisb.cs.st.javaslicer.slicing;
  * General interface for a slicing criterion. For each new slicing run, a new instance
  * is requested.
  *
+ * See {@link SlicingCriterionInstance} for more information.
+ *
  * @author Clemens Hammacher
  */
 public interface SlicingCriterion {

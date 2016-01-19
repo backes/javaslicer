@@ -117,7 +117,7 @@ public class StaticSlicingCriterion implements SlicingCriterion {
 		 * @see de.unisb.cs.st.javaslicer.slicing.SlicingCriterionInstance#matchAllData()
 		 */
         @Override
-		public boolean matchAllData() {
+		public boolean computeTransitiveClosure() {
             return StaticSlicingCriterion.this.matchAllData;
         }
 

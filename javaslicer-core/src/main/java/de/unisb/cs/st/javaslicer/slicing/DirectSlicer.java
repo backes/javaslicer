@@ -351,7 +351,7 @@ public class DirectSlicer implements Opcodes {
                     if (crit.matches(instance)) {
                         if (matchedCriterionVariables[stackDepth] == null)
                             matchedCriterionVariables[stackDepth] = new HashSet<Variable>();
-                        if (crit.matchAllData()) {
+                        if (crit.computeTransitiveClosure()) {
                             matchedCriterionVariables[stackDepth].removeAll(dynInfo.getDefinedVariables());
                             if (instruction.getType() == InstructionType.LABEL && ((LabelMarker)instruction).isCatchBlock())
                                 matchedCriterionVariables[stackDepth].remove(
@@ -364,7 +364,6 @@ public class DirectSlicer implements Opcodes {
                                 interestingVariables.add(simEnv.getLocalVariable(stackDepth, var.getIndex()));
                         } else {
                             interestingInstructions[stackDepth].add(instance.getInstruction());
-                            dynamicSlice.add(instruction);
                         }
                     } else if (matchedCriterionVariables[stackDepth] != null) {
                         interestingVariables.addAll(matchedCriterionVariables[stackDepth]);
