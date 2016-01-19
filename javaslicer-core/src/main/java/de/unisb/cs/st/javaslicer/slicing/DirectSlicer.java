@@ -296,8 +296,10 @@ public class DirectSlicer implements Opcodes {
                             	cachedStackEntries[i] = new StackEntry[8];
                             	cachedLocalVariables[i] = new LocalVariable[8];
                             }
-                			simEnv = new SimulationEnvironment(frames, opStack, minOpStack,
-                				cachedStackEntries, cachedLocalVariables, throwsException, lastInstruction, method, interruptedControlFlow);
+                            simEnv.reallocate(frames, opStack, minOpStack,
+                                cachedStackEntries, cachedLocalVariables,
+                                throwsException, lastInstruction, method,
+                                interruptedControlFlow);
                         }
                         frames[newStackDepth] = nextFrameNr++;
                         method[newStackDepth] = instruction.getMethod();

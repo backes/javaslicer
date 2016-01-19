@@ -181,17 +181,17 @@ public class SimulationEnvironment {
 
 	}
 
-	public final long[] frames;
-	public final int[] opStack;
-	public final int[] minOpStack;
-	private final StackEntry[][] cachedStackEntries;
-	private final LocalVariable[][] cachedLocalVariables;
+	public long[] frames;
+	public int[] opStack;
+	public int[] minOpStack;
+	private StackEntry[][] cachedStackEntries;
+	private LocalVariable[][] cachedLocalVariables;
 
     /**
      * <code>true</code> if the next visited instruction in this frame must
      * have thrown an exception
      */
-	public final boolean[] throwsException;
+	public boolean[] throwsException;
 	public ReadMethod removedMethod;
 	public Instruction[] lastInstruction;
 	public ReadMethod[] method;
@@ -221,6 +221,25 @@ public class SimulationEnvironment {
 		this.lastInstruction = lastInstruction;
 		this.method = method;
 		this.interruptedControlFlow = interruptedControlFlow;
+	}
+
+	public void reallocate(long[] newFrames, int[] newOpStack,
+			int[] newMinOpStack,
+			StackEntry[][] newCachedStackEntries,
+			LocalVariable[][] newCachedLocalVariables,
+			boolean[] newThrowsException,
+			Instruction[] newLastInstruction,
+			ReadMethod[] newMethod,
+			boolean[] newInterruptedControlFlow) {
+		this.frames = newFrames;
+		this.opStack = newOpStack;
+		this.minOpStack = newMinOpStack;
+		this.cachedStackEntries = newCachedStackEntries;
+		this.cachedLocalVariables = newCachedLocalVariables;
+		this.throwsException = newThrowsException;
+		this.lastInstruction = newLastInstruction;
+		this.method = newMethod;
+		this.interruptedControlFlow = newInterruptedControlFlow;
 	}
 
 	public LocalVariable getLocalVariable(int stackDepth, int varIndex) {
