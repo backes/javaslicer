@@ -34,8 +34,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -227,6 +227,8 @@ public class DirectSlicer implements Opcodes {
         StackEntry[][] cachedStackEntries = new StackEntry[allocStack][];
         LocalVariable[][] cachedLocalVariables = new LocalVariable[allocStack][];
         ReadMethod[] method = new ReadMethod[allocStack];
+        @SuppressWarnings("unchecked")
+        Set<Variable>[] matchedCriterionVariables = (Set<Variable>[]) new Set<?>[allocStack];
 
 		for (ReadMethod method0: initialStackMethods) {
         	++stackDepth;
@@ -258,8 +260,6 @@ public class DirectSlicer implements Opcodes {
         for (ProgressMonitor mon : this.progressMonitors)
             mon.start(backwardInsnItr);
         try {
-            @SuppressWarnings("unchecked")
-            Set<Variable>[] matchedCriterionVariables = (Set<Variable>[]) new Set<?>[8];
 
             while (backwardInsnItr.hasNext()) {
                 InstructionInstance instance = backwardInsnItr.next();
@@ -290,6 +290,7 @@ public class DirectSlicer implements Opcodes {
                             cachedStackEntries = Arrays.copyOf(cachedStackEntries, newLen);
                             cachedLocalVariables = Arrays.copyOf(cachedLocalVariables, newLen);
                             method = Arrays.copyOf(method, newLen);
+                            matchedCriterionVariables = Arrays.copyOf(matchedCriterionVariables, newLen);
                             for (int i = oldLen; i < newLen; ++i) {
                             	interestingInstructions[i] = new HashSet<Instruction>();
                             	cachedStackEntries[i] = new StackEntry[8];
@@ -344,14 +345,15 @@ public class DirectSlicer implements Opcodes {
                     interestingInstructions[stackDepth].add(instruction);
                 }
 
-                if (matchedCriterionVariables.length <= stackDepth)
-                	matchedCriterionVariables = Arrays.copyOf(matchedCriterionVariables, 2*Math.max(stackDepth, matchedCriterionVariables.length));
                 for (SlicingCriterionInstance crit : slicingCriteria) {
                     if (crit.matches(instance)) {
                         if (matchedCriterionVariables[stackDepth] == null)
                             matchedCriterionVariables[stackDepth] = new HashSet<Variable>();
                         if (crit.matchAllData()) {
                             matchedCriterionVariables[stackDepth].removeAll(dynInfo.getDefinedVariables());
+                            if (instruction.getType() == InstructionType.LABEL && ((LabelMarker)instruction).isCatchBlock())
+                                matchedCriterionVariables[stackDepth].remove(
+                                    simEnv.getOpStackEntry(stackDepth, simEnv.getOpStack(stackDepth)));
                             matchedCriterionVariables[stackDepth].addAll(dynInfo.getUsedVariables());
                             dynamicSlice.add(instruction);
                             interestingInstructions[stackDepth].add(instance.getInstruction());
