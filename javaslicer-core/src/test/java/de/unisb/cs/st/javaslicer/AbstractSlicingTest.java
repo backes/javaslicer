@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -52,11 +53,15 @@ import de.unisb.cs.st.javaslicer.traceResult.TraceResult;
 
 public abstract class AbstractSlicingTest {
 
-    private static class SliceEntry {
+    protected interface SliceEntryFilter {
+        boolean keepEntry(SliceEntry entry);
+    }
 
-        private final String method;
-        private final String line;
-        private final String instr;
+    protected static class SliceEntry {
+
+        public final String method;
+        public final String line;
+        public final String instr;
 
         public SliceEntry(String method, String line, String instr) {
             this.method = method;
@@ -160,14 +165,28 @@ public abstract class AbstractSlicingTest {
 
     private static Pattern sliceEntryPattern = Pattern.compile("^([^ ]+):([0-9]+) (.*)$");
 
-    protected static void checkSlice(List<Instruction> slice, String[] expected) {
+    protected void checkSlice(List<Instruction> slice, String[] expected) {
         checkSlice("", slice, expected);
     }
 
-    protected static void checkSlice(String prefix, List<Instruction> slice, String[] expected) {
+    protected void checkSlice(String prefix, List<Instruction> slice, String[] expected) {
         SliceEntry[] gotEntries = new SliceEntry[slice.size()];
         for (int i = 0; i < slice.size(); ++i) {
             gotEntries[i] = instrToSliceEntry(slice.get(i));
+        }
+
+        SliceEntryFilter filter = getSliceEntryFilter();
+        if (filter != null) {
+            int keptEntries = 0;
+            for (int idx = 0; idx < gotEntries.length; ++idx) {
+                if (!filter.keepEntry(gotEntries[idx]))
+                    continue;
+                if (keptEntries != idx)
+                    gotEntries[keptEntries] = gotEntries[idx];
+                ++keptEntries;
+            }
+            if (keptEntries != gotEntries.length)
+                gotEntries = Arrays.copyOf(gotEntries, keptEntries);
         }
 
         SliceEntry[] expectedEntries = new SliceEntry[expected.length];
@@ -195,6 +214,11 @@ public abstract class AbstractSlicingTest {
         diffPrinter.print_script(diff);
 
         Assert.fail(output.toString());
+    }
+
+    // can be overwritten by subclasses
+    protected SliceEntryFilter getSliceEntryFilter() {
+        return null;
     }
 
     private static SliceEntry instrToSliceEntry(Instruction instr) {

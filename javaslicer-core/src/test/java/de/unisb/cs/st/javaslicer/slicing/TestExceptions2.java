@@ -33,6 +33,16 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 
 public class TestExceptions2 extends AbstractSlicingTest {
 
+    @Override
+    protected SliceEntryFilter getSliceEntryFilter() {
+        return new SliceEntryFilter() {
+            @Override
+            public boolean keepEntry(SliceEntry entry) {
+                return entry.method.startsWith("de.");
+            }
+        };
+    }
+
     @Test
     public void test34all() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
         final List<Instruction> slice = getSlice("/traces/exceptions2", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:34:*");
@@ -70,21 +80,6 @@ public class TestExceptions2 extends AbstractSlicingTest {
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.useArrays:54 LDC \"a is null\"",
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.useArrays:54 INVOKESPECIAL java/lang/NullPointerException.<init>(Ljava/lang/String;)V",
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.useArrays:54 ATHROW",
-                "java.lang.Exception.<init>:50 ALOAD 0",
-                "java.lang.Exception.<init>:50 ALOAD 1",
-                "java.lang.Exception.<init>:50 INVOKESPECIAL java/lang/Throwable.<init>(Ljava/lang/String;)V",
-                "java.lang.NullPointerException.<init>:55 ALOAD 0",
-                "java.lang.NullPointerException.<init>:55 ALOAD 1",
-                "java.lang.NullPointerException.<init>:55 INVOKESPECIAL java/lang/RuntimeException.<init>(Ljava/lang/String;)V",
-                "java.lang.RuntimeException.<init>:52 ALOAD 0",
-                "java.lang.RuntimeException.<init>:52 ALOAD 1",
-                "java.lang.RuntimeException.<init>:52 INVOKESPECIAL java/lang/Exception.<init>(Ljava/lang/String;)V",
-                "java.lang.Throwable.<init>:206 ALOAD 0",
-                "java.lang.Throwable.<init>:206 ALOAD 1",
-                "java.lang.Throwable.<init>:206 PUTFIELD java/lang/Throwable.detailMessage Ljava/lang/String;",
-                "java.lang.Throwable.getMessage:262 ALOAD 0",
-                "java.lang.Throwable.getMessage:262 GETFIELD java/lang/Throwable.detailMessage Ljava/lang/String;",
-                "java.lang.Throwable.getMessage:262 ARETURN",
             });
     }
 
@@ -113,21 +108,6 @@ public class TestExceptions2 extends AbstractSlicingTest {
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.useArrays:54 LDC \"a is null\"",
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.useArrays:54 INVOKESPECIAL java/lang/NullPointerException.<init>(Ljava/lang/String;)V",
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.useArrays:54 ATHROW",
-                "java.lang.Exception.<init>:50 ALOAD 0",
-                "java.lang.Exception.<init>:50 ALOAD 1",
-                "java.lang.Exception.<init>:50 INVOKESPECIAL java/lang/Throwable.<init>(Ljava/lang/String;)V",
-                "java.lang.NullPointerException.<init>:55 ALOAD 0",
-                "java.lang.NullPointerException.<init>:55 ALOAD 1",
-                "java.lang.NullPointerException.<init>:55 INVOKESPECIAL java/lang/RuntimeException.<init>(Ljava/lang/String;)V",
-                "java.lang.RuntimeException.<init>:52 ALOAD 0",
-                "java.lang.RuntimeException.<init>:52 ALOAD 1",
-                "java.lang.RuntimeException.<init>:52 INVOKESPECIAL java/lang/Exception.<init>(Ljava/lang/String;)V",
-                "java.lang.Throwable.<init>:206 ALOAD 0",
-                "java.lang.Throwable.<init>:206 ALOAD 1",
-                "java.lang.Throwable.<init>:206 PUTFIELD java/lang/Throwable.detailMessage Ljava/lang/String;",
-                "java.lang.Throwable.getMessage:262 ALOAD 0",
-                "java.lang.Throwable.getMessage:262 GETFIELD java/lang/Throwable.detailMessage Ljava/lang/String;",
-                "java.lang.Throwable.getMessage:262 ARETURN",
             });
     }
 
