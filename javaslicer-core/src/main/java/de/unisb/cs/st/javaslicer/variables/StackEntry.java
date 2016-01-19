@@ -48,7 +48,7 @@ public class StackEntry implements Variable {
 
     @Override
     public int hashCode() {
-        return (int)this.frame + this.index;
+        return (int)(31 * this.frame) + this.index;
     }
 
     @Override
