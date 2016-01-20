@@ -32,42 +32,25 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 
 public class TestExceptions7 extends AbstractSlicingTest {
 
-	@Test
-	public void test() throws IllegalArgumentException, IOException {
-		final List<Instruction> slice = getSlice("/traces/exceptions7", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions7.main:40");
-		checkSlice(
-			slice,
-			new String[] {
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:39 ACONST_NULL",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:39 ASTORE 1",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:41 ALOAD 1",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:41 INVOKESTATIC de/unisb/cs/st/javaslicer/tracedCode/Exceptions2.useArrays([I[I)I",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:42 ASTORE 4",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:43 ALOAD 4",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:43 INVOKEVIRTUAL java/lang/NullPointerException.getMessage()Ljava/lang/String;",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:43 ASTORE 3",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.useArrays:53 ALOAD 0",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.useArrays:53 IFNONNULL L0",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.useArrays:54 NEW java/lang/NullPointerException",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.useArrays:54 DUP",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.useArrays:54 LDC \"a is null\"",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.useArrays:54 INVOKESPECIAL java/lang/NullPointerException.<init>(Ljava/lang/String;)V",
-					"de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.useArrays:54 ATHROW",
-					"java.lang.Exception.<init>:63 ALOAD 0",
-					"java.lang.Exception.<init>:63 ALOAD 1",
-					"java.lang.Exception.<init>:63 INVOKESPECIAL java/lang/Throwable.<init>(Ljava/lang/String;)V",
-					"java.lang.NullPointerException.<init>:68 ALOAD 0",
-					"java.lang.NullPointerException.<init>:68 ALOAD 1",
-					"java.lang.NullPointerException.<init>:68 INVOKESPECIAL java/lang/RuntimeException.<init>(Ljava/lang/String;)V",
-					"java.lang.RuntimeException.<init>:65 ALOAD 0",
-					"java.lang.RuntimeException.<init>:65 ALOAD 1",
-					"java.lang.RuntimeException.<init>:65 INVOKESPECIAL java/lang/Exception.<init>(Ljava/lang/String;)V",
-					"java.lang.Throwable.<init>:219 ALOAD 0",
-					"java.lang.Throwable.<init>:219 ALOAD 1",
-					"java.lang.Throwable.<init>:219 PUTFIELD java/lang/Throwable.detailMessage Ljava/lang/String;",
-					"java.lang.Throwable.getMessage:275 ALOAD 0",
-					"java.lang.Throwable.getMessage:275 GETFIELD java/lang/Throwable.detailMessage Ljava/lang/String;",
-					"java.lang.Throwable.getMessage:275 ARETURN", });
-	}
+    @Test
+    public void test() throws IllegalArgumentException, IOException {
+        final List<Instruction> slice = getSlice("/traces/exceptions7", "main",
+                "de.unisb.cs.st.javaslicer.tracedCode.Exceptions7.main:39");
+        checkSlice(
+            slice,
+            new String[] {
+                    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions7.main:31 LCONST_1",
+                    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions7.main:31 LSTORE 1",
+                    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions7.main:35 LDC 2147483647",
+                    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions7.main:35 LDC 2",
+                    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions7.main:35 LLOAD 1",
+                    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions7.main:35 LMUL",
+                    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions7.main:35 INVOKESTATIC java/lang/Math.min(JJ)J",
+                    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions7.main:35 DUP2",
+                    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions7.main:35 LSTORE 1",
+                    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions7.main:35 L2I",
+                    "de.unisb.cs.st.javaslicer.tracedCode.Exceptions7.main:35 NEWARRAY T_INT",
+            });
+    }
 
 }
