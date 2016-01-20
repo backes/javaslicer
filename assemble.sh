@@ -3,6 +3,7 @@
 cd `dirname $0`
 WORKINGDIR=`pwd`
 ASSEMBLY_DIR=$WORKINGDIR/assembly
+TMPFILE=`mktemp /tmp/assembly_XXXXXX`
 
 mkdir -p "$ASSEMBLY_DIR"
 rm -f "$ASSEMBLY_DIR"/*.jar
@@ -51,7 +52,7 @@ while [[ $num_success != $num_projects ]]; do
       project=${projects[$i]}
       echo -n "  - "$project"...  "
       cd "$WORKINGDIR/$project"
-      if mvn -N -Dmaven.test.skip=true clean install >/dev/null 2>&1; then
+      if mvn -N -Dmaven.test.skip=true clean install >$TMPFILE 2>&1; then
         success[$i]=1
         num_success=$((num_success+1))
         echo success
@@ -68,6 +69,9 @@ while [[ $num_success != $num_projects ]]; do
         echo "  - "${projects[$i]}
       fi
     done
+    echo
+    echo Last error output:
+    cat $TMPFILE
     exit 1
   fi
 done
@@ -82,7 +86,6 @@ for ((i=0; i<num_projects; ++i)); do
   echo "  - "$project
   cd "$WORKINGDIR/$project"
   output=()
-  TMPFILE=`mktemp /tmp/assembly_XXXXXX`
   if ! mvn -Dmaven.test.skip=true assembly:assembly >$TMPFILE 2>&1; then
     echo "failed!"
     echo
@@ -99,5 +102,5 @@ for ((i=0; i<num_projects; ++i)); do
   done
 done
 
-# vim:set encoding=utf-8 fileencoding=utf-8 nomodified :
+# vim:set fileencoding=utf-8 nomodified :
 # vim:set shiftwidth=2 tabstop=2 expandtab smartindent :
