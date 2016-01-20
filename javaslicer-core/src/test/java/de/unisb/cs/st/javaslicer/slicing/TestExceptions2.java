@@ -23,12 +23,13 @@
 package de.unisb.cs.st.javaslicer.slicing;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.List;
 
 import org.junit.Test;
 
 import de.unisb.cs.st.javaslicer.AbstractSlicingTest;
+import de.unisb.cs.st.javaslicer.SliceEntry;
+import de.unisb.cs.st.javaslicer.SliceEntryFilter;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 
 public class TestExceptions2 extends AbstractSlicingTest {
@@ -44,7 +45,7 @@ public class TestExceptions2 extends AbstractSlicingTest {
     }
 
     @Test
-    public void test34all() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+    public void test34all() throws IllegalArgumentException, IOException {
         final List<Instruction> slice = getSlice("/traces/exceptions2", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:34:*");
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:29 ACONST_NULL",
@@ -60,7 +61,7 @@ public class TestExceptions2 extends AbstractSlicingTest {
     }
 
     @Test
-    public void test46all() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+    public void test46all() throws IllegalArgumentException, IOException {
         final List<Instruction> slice = getSlice("/traces/exceptions2", "main",
             "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:46:*");
         checkSlice(slice, new String[] {
@@ -85,7 +86,7 @@ public class TestExceptions2 extends AbstractSlicingTest {
     }
 
     @Test
-    public void test49a() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+    public void test49a() throws IllegalArgumentException, IOException {
         final List<Instruction> slice = getSlice("/traces/exceptions2", "main",
             "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:49:{a}");
         checkSlice(slice, new String[] {
@@ -114,7 +115,7 @@ public class TestExceptions2 extends AbstractSlicingTest {
     }
 
     @Test
-    public void test36b() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+    public void test36b() throws IllegalArgumentException, IOException {
         final List<Instruction> slice = getSlice("/traces/exceptions2", "main", "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:49:{b}");
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Exceptions2.main:39 ACONST_NULL",

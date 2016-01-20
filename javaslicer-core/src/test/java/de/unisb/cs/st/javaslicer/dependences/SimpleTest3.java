@@ -42,7 +42,7 @@ public class SimpleTest3 extends AbstractDependencesTest {
 
     }
     @Test
-    public void test() throws IOException, URISyntaxException, InterruptedException {
+    public void test() throws IOException {
         final Dependence[] expectedDependences = new Dependence[] {
                 new Dependence("Simple3.java:32", "Simple3.java:31",  Type.RAW),
                 new Dependence("Simple3.java:33", "Simple3.java:31",  Type.RAW),

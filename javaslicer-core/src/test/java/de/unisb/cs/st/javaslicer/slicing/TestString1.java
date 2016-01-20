@@ -23,7 +23,6 @@
 package de.unisb.cs.st.javaslicer.slicing;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.List;
 
 import org.junit.Test;
@@ -35,7 +34,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 public class TestString1 extends AbstractSlicingTest {
 
     @Test
-    public void testAll() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+    public void testAll() throws IllegalArgumentException, IOException {
         final List<Instruction> slice = getSlice("/traces/string1", "main", "de.unisb.cs.st.javaslicer.tracedCode.String1.main:*");
         /*
         checkSlice(slice, new String[] {

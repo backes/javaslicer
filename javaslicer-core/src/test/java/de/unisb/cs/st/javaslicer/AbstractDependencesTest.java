@@ -23,6 +23,7 @@
 package de.unisb.cs.st.javaslicer;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -94,6 +95,7 @@ public abstract class AbstractDependencesTest {
         public String toString() {
             return this.type + " from " + this.from + " to " + this.to;
         }
+        @Override
         public int compareTo(final Dependence o) {
             int cmp = this.from.compareTo(o.from);
             if (cmp == 0)
@@ -143,8 +145,13 @@ public abstract class AbstractDependencesTest {
     }
 
     protected void compareDependences(final Dependence[] expectedDependences,
-            final String traceFilename, final String threadName, final InstructionFilter instrFilter) throws IOException, URISyntaxException, InterruptedException {
-        final File traceFile = new File(AbstractSlicingTest.class.getResource(traceFilename).toURI());
+            final String traceFilename, final String threadName, final InstructionFilter instrFilter) throws IOException {
+        File traceFile;
+        try {
+            traceFile = new File(AbstractSlicingTest.class.getResource(traceFilename).toURI());
+        } catch (URISyntaxException e1) {
+            throw new IOException(e1);
+        }
 
         final TraceResult res = TraceResult.readFrom(traceFile);
 
@@ -161,7 +168,12 @@ public abstract class AbstractDependencesTest {
         final Set<Dependence> dependences = new HashSet<Dependence>();
         final DependencesExtractor<InstructionInstance> extr = DependencesExtractor.forTrace(res);
         extr.registerVisitor(new StringArrDepVisitor(instrFilter, dependences), VisitorCapability.DATA_DEPENDENCES_ALL);
-        extr.processBackwardTrace(threadId);
+        try {
+            extr.processBackwardTrace(threadId);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            fail("interrupted");
+        }
         final Dependence[] computetedDependences = dependences.toArray(new Dependence[dependences.size()]);
 
         Arrays.sort(expectedDependences);

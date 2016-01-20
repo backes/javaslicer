@@ -23,7 +23,6 @@
 package de.unisb.cs.st.javaslicer.slicing;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.List;
 
 import org.junit.Test;
@@ -35,8 +34,9 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 public class TestSimpleSlicing1 extends AbstractSlicingTest {
 
     @Test
-    public void test16a() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/simple1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29:{a}");
+    public void test29a() throws IllegalArgumentException, IOException {
+        final List<Instruction> slice = getSlice("/traces/simple1", "main",
+            "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29:{a}");
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 ALOAD 0",
                 "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 ICONST_0",
@@ -50,27 +50,9 @@ public class TestSimpleSlicing1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void test17a() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/simple1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:30:{b}");
-        checkSlice(slice, new String[] {
-                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 ALOAD 0",
-                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 ICONST_0",
-                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 AALOAD",
-                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 ICONST_0",
-                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 INVOKEVIRTUAL java/lang/String.charAt(I)C",
-                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 BIPUSH 48",
-                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 ISUB",
-                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 ISTORE 1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:30 ICONST_2",
-                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:30 ILOAD 1",
-                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:30 IMUL",
-                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:30 ISTORE 2",
-            });
-    }
-
-    @Test
-    public void test17b() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/simple1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:30:{b,c,d}");
+    public void test30b() throws IllegalArgumentException, IOException {
+        final List<Instruction> slice = getSlice("/traces/simple1", "main",
+            "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:30:{b}");
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 ALOAD 0",
                 "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 ICONST_0",
@@ -88,8 +70,9 @@ public class TestSimpleSlicing1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void test17c() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/simple1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:30:{a,b}");
+    public void test30bcd() throws IllegalArgumentException, IOException {
+        final List<Instruction> slice = getSlice("/traces/simple1", "main",
+            "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:30:{b,c,d}");
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 ALOAD 0",
                 "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 ICONST_0",
@@ -107,8 +90,29 @@ public class TestSimpleSlicing1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void test18c() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/simple1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:31:{c}");
+    public void test30ab() throws IllegalArgumentException, IOException {
+        final List<Instruction> slice = getSlice("/traces/simple1", "main",
+            "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:30:{a,b}");
+        checkSlice(slice, new String[] {
+                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 ALOAD 0",
+                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 ICONST_0",
+                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 AALOAD",
+                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 ICONST_0",
+                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 INVOKEVIRTUAL java/lang/String.charAt(I)C",
+                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 BIPUSH 48",
+                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 ISUB",
+                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 ISTORE 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:30 ICONST_2",
+                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:30 ILOAD 1",
+                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:30 IMUL",
+                "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:30 ISTORE 2",
+            });
+    }
+
+    @Test
+    public void test31c() throws IllegalArgumentException, IOException {
+        final List<Instruction> slice = getSlice("/traces/simple1", "main",
+            "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:31:{c}");
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 ALOAD 0",
                 "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 ICONST_0",
@@ -130,8 +134,9 @@ public class TestSimpleSlicing1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void test19d() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
-        final List<Instruction> slice = getSlice("/traces/simple1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:32:{d}");
+    public void test32d() throws IllegalArgumentException, IOException {
+        final List<Instruction> slice = getSlice("/traces/simple1", "main",
+            "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:32:{d}");
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 ALOAD 0",
                 "de.unisb.cs.st.javaslicer.tracedCode.Simple1.main:29 ICONST_0",

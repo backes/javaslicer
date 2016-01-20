@@ -23,7 +23,6 @@
 package de.unisb.cs.st.javaslicer.slicing;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.List;
 
 import org.junit.Ignore;
@@ -36,7 +35,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 public class TestMethod1 extends AbstractSlicingTest {
 
     @Test
-    public void testAll() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+    public void testAll() throws IllegalArgumentException, IOException {
         final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:33:{a,b,c,d,e}");
         checkSlice(slice, new String[] {
                  "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ALOAD 0",
@@ -78,7 +77,7 @@ public class TestMethod1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void testAa() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+    public void testAa() throws IllegalArgumentException, IOException {
         final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:34:{a}");
         checkSlice(slice, new String[] {
                  "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ALOAD 0",
@@ -93,7 +92,7 @@ public class TestMethod1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void testAb() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+    public void testAb() throws IllegalArgumentException, IOException {
         final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29:{a}");
         checkSlice(slice, new String[] {
                  "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ALOAD 0",
@@ -108,7 +107,7 @@ public class TestMethod1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void testC() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+    public void testC() throws IllegalArgumentException, IOException {
         final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:34:{c}");
         checkSlice(slice, new String[] {
                  "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ALOAD 0",
@@ -128,7 +127,7 @@ public class TestMethod1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void testD() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+    public void testD() throws IllegalArgumentException, IOException {
         final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:34:{d}");
         checkSlice(slice, new String[] {
                  "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ALOAD 0",
@@ -152,7 +151,7 @@ public class TestMethod1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void testE() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+    public void testE() throws IllegalArgumentException, IOException {
         final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:34:{e}");
         checkSlice(slice, new String[] {
                  "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ALOAD 0",
@@ -186,7 +185,7 @@ public class TestMethod1 extends AbstractSlicingTest {
     // TODO fix handling of parameters
     @Ignore
     @Test
-    public void testGetFirstB() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+    public void testGetFirstB() throws IllegalArgumentException, IOException {
         final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.getFirst:{b}");
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ALOAD 0",
@@ -209,7 +208,7 @@ public class TestMethod1 extends AbstractSlicingTest {
     // TODO fix handling of parameters
     @Ignore
     @Test
-    public void testGetSecondA() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+    public void testGetSecondA() throws IllegalArgumentException, IOException {
         final List<Instruction> slice = getSlice("/traces/method1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Method1.getSecond:{a}");
         checkSlice(slice, new String[] {
                 "de.unisb.cs.st.javaslicer.tracedCode.Method1.main:29 ALOAD 0",

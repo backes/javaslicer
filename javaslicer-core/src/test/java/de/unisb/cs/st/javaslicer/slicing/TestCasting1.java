@@ -23,7 +23,6 @@
 package de.unisb.cs.st.javaslicer.slicing;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.List;
 
 import org.junit.Test;
@@ -35,7 +34,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 public class TestCasting1 extends AbstractSlicingTest {
 
     @Test
-    public void test_d3() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+    public void test_d3() throws IllegalArgumentException, IOException {
         final List<Instruction> slice = getSlice("/traces/casting1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Casting1.main:42:{d3}");
         checkSlice(slice, new String[] {
         	    "de.unisb.cs.st.javaslicer.tracedCode.Casting1.main:29 ALOAD 0",
@@ -89,7 +88,7 @@ public class TestCasting1 extends AbstractSlicingTest {
     }
 
     @Test
-    public void test_f2() throws IllegalArgumentException, IOException, URISyntaxException, InterruptedException {
+    public void test_f2() throws IllegalArgumentException, IOException {
         final List<Instruction> slice = getSlice("/traces/casting1", "main", "de.unisb.cs.st.javaslicer.tracedCode.Casting1.main:42:{f2}");
         checkSlice(slice, new String[] {
         	    "de.unisb.cs.st.javaslicer.tracedCode.Casting1.main:29 ALOAD 0",
