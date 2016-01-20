@@ -227,8 +227,6 @@ public class DirectSlicer implements Opcodes {
         StackEntry[][] cachedStackEntries = new StackEntry[allocStack][];
         LocalVariable[][] cachedLocalVariables = new LocalVariable[allocStack][];
         ReadMethod[] method = new ReadMethod[allocStack];
-        @SuppressWarnings("unchecked")
-        Set<Variable>[] matchedCriterionVariables = (Set<Variable>[]) new Set<?>[allocStack];
 
 		for (ReadMethod method0: initialStackMethods) {
         	++stackDepth;
@@ -290,7 +288,6 @@ public class DirectSlicer implements Opcodes {
                             cachedStackEntries = Arrays.copyOf(cachedStackEntries, newLen);
                             cachedLocalVariables = Arrays.copyOf(cachedLocalVariables, newLen);
                             method = Arrays.copyOf(method, newLen);
-                            matchedCriterionVariables = Arrays.copyOf(matchedCriterionVariables, newLen);
                             for (int i = oldLen; i < newLen; ++i) {
                             	interestingInstructions[i] = new HashSet<Instruction>();
                             	cachedStackEntries[i] = new StackEntry[8];
@@ -349,14 +346,8 @@ public class DirectSlicer implements Opcodes {
 
                 for (SlicingCriterionInstance crit : slicingCriteria) {
                     if (crit.matches(instance)) {
-                        if (matchedCriterionVariables[stackDepth] == null)
-                            matchedCriterionVariables[stackDepth] = new HashSet<Variable>();
                         if (crit.computeTransitiveClosure()) {
-                            matchedCriterionVariables[stackDepth].removeAll(dynInfo.getDefinedVariables());
-                            if (instruction.getType() == InstructionType.LABEL && ((LabelMarker)instruction).isCatchBlock())
-                                matchedCriterionVariables[stackDepth].remove(
-                                    simEnv.getOpStackEntry(stackDepth, simEnv.getOpStack(stackDepth)));
-                            matchedCriterionVariables[stackDepth].addAll(dynInfo.getUsedVariables());
+                            interestingVariables.addAll(dynInfo.getUsedVariables());
                             dynamicSlice.add(instruction);
                             interestingInstructions[stackDepth].add(instance.getInstruction());
                         } else if (crit.hasLocalVariables()) {
@@ -365,9 +356,6 @@ public class DirectSlicer implements Opcodes {
                         } else {
                             interestingInstructions[stackDepth].add(instance.getInstruction());
                         }
-                    } else if (matchedCriterionVariables[stackDepth] != null) {
-                        interestingVariables.addAll(matchedCriterionVariables[stackDepth]);
-                        matchedCriterionVariables[stackDepth] = null;
                     }
                 }
 
