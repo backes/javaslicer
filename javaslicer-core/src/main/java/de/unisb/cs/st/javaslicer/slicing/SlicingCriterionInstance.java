@@ -32,12 +32,14 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.LocalVariable;
  * A dynamic instance of a slicing criterion.
  *
  * There are three forms of slicing criteria:
- * 1. slice only for control dependences
- *    (hasLocalVariables() == false && computeTransitiveClosure() == false)
- * 2. slice for specific local variables
- *    (hasLocalVariables() == true && computeTransitiveClosure() == false)
- * 3. compute the full transitive closure (data and control dependences)
- *    (hasLocalVariables() == false && computeTransitiveClosure() == true)
+ * <ol>
+ * <li>slice only for control dependences
+ *    (hasLocalVariables() == false and computeTransitiveClosure() == false)</li>
+ * <li>slice for specific local variables
+ *    (hasLocalVariables() == true and computeTransitiveClosure() == false)</li>
+ * <li>compute the full transitive closure (data and control dependences)
+ *    (hasLocalVariables() == false and computeTransitiveClosure() == true)</li>
+ * </ol>
  *
  * @author Clemens Hammacher
  */
