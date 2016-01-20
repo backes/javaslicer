@@ -57,56 +57,17 @@
         </developer>
     </developers>
 
-    <!-- TODO Clear licensing with your tutor. -->
-    <!--licenses>
+    <licenses>
         <license>
-            <name>Eclipse Public License (EPL)</name>
-            <url>http://www.opensource.org/licenses/eclipse-1.0.txt</url>
-            <distribution>manual</distribution>
+            <name>GNU GPLv3</name>
+            <url>http://gplv3.fsf.org/</url>
         </license>
-    </licenses-->
-
-    <ciManagement>
-        <system>hudson</system>
-        <url>http://kubrick:8070/</url>
-        <notifiers>
-            <notifier>
-                <type>mail</type>
-                <configuration>
-                    <recipients>hammacher@st.cs.uni-saarland.de</recipients>
-                </configuration>
-                <sendOnError>true</sendOnError>
-                <sendOnFailure>true</sendOnFailure>
-                <sendOnSuccess>true</sendOnSuccess>
-                <sendOnWarning>true</sendOnWarning>
-            </notifier>
-            <notifier>
-                <type>mail</type>
-                <configuration>
-                    <recipients>mburger@cs.uni-saarland.de</recipients>
-                </configuration>
-                <sendOnError>true</sendOnError>
-                <sendOnFailure>true</sendOnFailure>
-                <sendOnSuccess>false</sendOnSuccess>
-                <sendOnWarning>true</sendOnWarning>
-            </notifier>
-            <notifier>
-                <type>mail</type>
-                <configuration>
-                    <recipients>dallmeier@cs.uni-saarland.de</recipients>
-                </configuration>
-                <sendOnError>true</sendOnError>
-                <sendOnFailure>true</sendOnFailure>
-                <sendOnSuccess>false</sendOnSuccess>
-                <sendOnWarning>true</sendOnWarning>
-            </notifier>
-        </notifiers>
-    </ciManagement>
+    </licenses>
 
     <scm>
-        <connection>scm:svn:https://svn.st.cs.uni-saarland.de/svn/st/projects/java-slicer/trunk/java-slicer</connection>
-        <developerConnection>scm:svn:https://svn.st.cs.uni-saarland.de/svn/st/projects/java-slicer/trunk/java-slicer</developerConnection>
-        <url>https://svn.st.cs.uni-saarland.de/svn/st/projects/java-slicer/trunk/java-slicer</url>
+        <url>https://github.com/hammacher/javaslicer</url>
+        <connection>scm:git:git://github.com/hammacher/javaslicer.git</connection>
+        <developerConnection>scm:git:git@github.com:hammacher/javaslicer.git</developerConnection>
     </scm>
 
     <organization>
@@ -224,8 +185,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.2</version>
                 <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
             </plugin>
             <plugin>
@@ -233,7 +194,7 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>2.10.1</version>
                 <configuration>
-                    <source>1.6</source>
+                    <source>1.8</source>
                 </configuration>
                 <executions>
                     <execution>
@@ -340,7 +301,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
-                    <source>1.6</source>
+                    <source>1.8</source>
                     <show>public</show>
                     <minmemory>128m</minmemory>
                     <maxmemory>512m</maxmemory>
@@ -379,7 +340,7 @@
                     <!-- We want individual PMD reports for each project. -->
                     <aggregate>false</aggregate>
                     <linkXref>true</linkXref>
-                    <targetJdk>1.6</targetJdk>
+                    <targetJdk>1.8</targetJdk>
                 </configuration>
             </plugin>
             <!-- Taglist Maven Plugin - http://mojo.codehaus.org/taglist-maven-plugin/ -->
