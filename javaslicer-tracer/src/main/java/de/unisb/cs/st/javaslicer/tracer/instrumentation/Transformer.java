@@ -258,7 +258,7 @@ public class Transformer implements ClassFileTransformer {
             this.totalRawTransformationTime.addAndGet(nanosAfterTransformation - nanosBeforeTransformation);
 
             writer = new FixedClassWriter(COMPUTE_FRAMES ? ClassWriter.COMPUTE_FRAMES : ClassWriter.COMPUTE_MAXS);
-            ClassVisitor output = this.tracer.check ? new CheckClassAdapter(writer) : writer;
+            ClassVisitor output = this.tracer.check ? new CheckClassAdapter(writer, false) : writer;
 
             classNode.accept(COMPUTE_FRAMES ? new JSRInliner(output) : output);
 
