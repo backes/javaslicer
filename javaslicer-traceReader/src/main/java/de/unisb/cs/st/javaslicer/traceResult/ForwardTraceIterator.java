@@ -87,7 +87,8 @@ public class ForwardTraceIterator<InstanceType extends InstructionInstance>
 
         while (true) {
             Instruction instr = this.threadTraceResult.findInstruction(this.nextIndex);
-            InstructionInstance inst = instr.getNextInstance(this, this.stackDepth, this.backwardInstrNr, this.instanceFactory);
+            //TODO: Alex
+            InstructionInstance inst = instr.getNextInstance(this, this.stackDepth, this.backwardInstrNr, this.instanceFactory, this.nextIndex);
             if (inst == null) {
                 ++this.nextIndex;
                 continue;

@@ -22,15 +22,16 @@
  */
 package de.unisb.cs.st.javaslicer.tracer.instrumentation;
 
+
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.commons.JSRInlinerAdapter;
 
-public class JSRInliner extends ClassVisitor {
+public class JSRInliner extends ClassVisitor{
 
     public JSRInliner(final ClassVisitor cv) {
-        super(Opcodes.ASM5, cv);
+        super(Opcodes.ASM4,cv);
     }
 
     @Override

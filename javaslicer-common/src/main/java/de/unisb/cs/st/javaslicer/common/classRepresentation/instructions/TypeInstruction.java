@@ -148,7 +148,7 @@ public class TypeInstruction extends AbstractInstruction {
 
     @Override
     public <InstanceType> InstanceType getNextInstance(TraceIterator infoProv,
-            int stackDepth, long instanceNr, InstructionInstanceFactory<InstanceType> instanceFactory)
+            int stackDepth, long instanceNr, InstructionInstanceFactory<InstanceType> instanceFactory, int id)
             throws TracerException {
 
         TypeInstrInstanceInfo info = this.newObjectIdentifierSeqIndex == -1
@@ -156,7 +156,7 @@ public class TypeInstruction extends AbstractInstruction {
             : new TypeInstrInstanceInfo(infoProv.getNextLong(this.newObjectIdentifierSeqIndex));
         return instanceFactory.createInstructionInstance(this,
             infoProv.getNextInstructionOccurenceNumber(getIndex()), stackDepth,
-            instanceNr, info);
+            instanceNr, info, id);
     }
 
     @Override
@@ -194,7 +194,7 @@ public class TypeInstruction extends AbstractInstruction {
         default:
             instruction = "-ERROR-";
         }
-        return new StringBuilder(instruction.length() + this.className.length() + 1).append(instruction).append(' ').append(this.className).toString();
+        return new StringBuilder(instruction.length() + this.className.length() + 1).append(instruction).append(' ').append(this.className).append(' ').toString();
     }
 
 }

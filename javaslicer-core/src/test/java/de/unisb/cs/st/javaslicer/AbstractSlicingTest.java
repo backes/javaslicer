@@ -49,6 +49,13 @@ public abstract class AbstractSlicingTest {
         }
         return Utils.getSlice(traceFile, thread, criterion);
     }
+    
+    protected static List<Instruction> getSliceNew(String traceResFilename, String thread, String criterion)
+            throws IOException {
+        File traceFile = new File(traceResFilename);
+        return Utils.getSlice(traceFile, thread, criterion);
+    }
+
 
     private static Pattern sliceEntryPattern = Pattern.compile("^([^ ]+):([0-9]+) (.*)$");
 

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
 	<parent>
@@ -14,33 +13,126 @@
 	<name>Core of the slicing component of JAVASLICER</name>
 	<description>Computes slices of Java programs, based on a bytecode trace.</description>
 	<packaging>jar</packaging>
-	
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>2.2-beta-4</version>
-                <configuration>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                    <finalName>slicer</finalName>
-                    <appendAssemblyId>false</appendAssemblyId>
-                    <attach>false</attach>
-                    <archive>
-                        <manifestFile>${basedir}/src/main/resources/META-INF/MANIFEST.MF</manifestFile>
-                    </archive>
-					<outputDirectory>${basedir}/target/assembly</outputDirectory>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+	<properties>
+		<assemblydir>${project.parent.basedir}/assembly/</assemblydir>
+		<skipTracing>true</skipTracing>
+		<skipTests>true</skipTests>
+	</properties>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>2.3.1</version>
+				<configuration>
+					<archive>
+						<manifestFile>${basedir}/src/main/resources/META-INF/MANIFEST.MF</manifestFile>
+					</archive>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>2.3</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<relocations>
+								<relocation>
+									<pattern>org.objectweb.asm</pattern>
+									<shadedPattern>de.unisb.cs.st.javaslicer.org.objectweb.asm</shadedPattern>
+								</relocation>
+							</relocations>
+							<minimizeJar>false</minimizeJar>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>2.18.1</version>
+				<executions>
+					<execution>
+						<id>generate-traces</id>
+						<configuration>
+							<skipTests>${skipTracing}</skipTests>
+							<includes>
+								<include>edu/columbia/cs/psl/javaslicer/tracedTests/Test*.java</include>
+							</includes>
+							<reuseForks>false</reuseForks>
+							<trimStackTrace>false</trimStackTrace>
+							<useFile>false</useFile>
+							<argLine>-Xbootclasspath/p:${project.parent.basedir}/javaslicer-tracer/target/javaslicer-tracer-${project.version}.jar
+								-javaagent:${project.parent.basedir}/javaslicer-tracer/target/javaslicer-tracer-${project.version}.jar=tracefile:${project.build.directory}/trace.,useTestName:true,ignoreBootPath:true</argLine>
+						</configuration>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>slice-traces</id>
+						<configuration>
+							<includes>
+								<include>edu/columbia/cs/psl/javaslicer/sliceTests/Test*.java</include>
+							</includes>
+							<trimStackTrace>false</trimStackTrace>
+							<useFile>false</useFile>
+						</configuration>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
+
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.18.1</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>copy-artifact</id>
+						<phase>install</phase>
+						<goals>
+							<goal>copy</goal>
+						</goals>
+						<configuration>
+							<artifactItems>
+								<artifactItem>
+									<groupId>${project.groupId}</groupId>
+									<artifactId>javaslicer-core</artifactId>
+									<version>${project.version}</version>
+									<type>${project.packaging}</type>
+									<destFileName>slicer.jar</destFileName>
+								</artifactItem>
+							</artifactItems>
+							<outputDirectory>${assemblydir}</outputDirectory>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
 
 	<dependencies>
 		<dependency>
 			<groupId>de.unisb.cs.st</groupId>
 			<artifactId>javaslicer-traceReader</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>de.unisb.cs.st</groupId>
+			<artifactId>javaslicer-tracer</artifactId> <!-- just needed for some integration tests, should probably put them elsewhere. -->
 		</dependency>
 	</dependencies>
 

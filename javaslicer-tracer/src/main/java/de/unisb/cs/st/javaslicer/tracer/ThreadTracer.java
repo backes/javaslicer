@@ -50,7 +50,11 @@ public interface ThreadTracer {
     // the identitiy of the created object is stored in the registered
     // sequence.
     // this is necessary because we cannot use the allocated but uninitialized object!
-    void objectAllocated(int instructionIndex, int traceSequenceNr);
+    void objectAllocated(int traceSequenceNr);
     void objectInitialized(Object obj);
-
+    
+    /**
+     * Returns the number of instructions that have been logged thus far
+     */
+    int getInsnsExecuted();
 }

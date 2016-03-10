@@ -50,6 +50,7 @@ import org.objectweb.asm.Opcodes;
 import de.hammacher.util.maps.IntegerMap;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.AbstractInstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceFactory;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceInfo;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionType;
@@ -95,8 +96,8 @@ public class Slicer {
 
         public SlicerInstance(AbstractInstruction instr, long occurenceNumber,
                 int stackDepth, long instanceNr,
-                InstructionInstanceInfo additionalInfo) {
-            super(instr, occurenceNumber, stackDepth, instanceNr, additionalInfo);
+                InstructionInstanceInfo additionalInfo, int id) {
+            super(instr, occurenceNumber, stackDepth, instanceNr, additionalInfo, id);
             this.criterionDistance = Integer.MAX_VALUE;
         }
 
@@ -110,8 +111,8 @@ public class Slicer {
 		public SlicerInstance createInstructionInstance(
                 AbstractInstruction instruction, long occurenceNumber,
                 int stackDepth, long instanceNr,
-                InstructionInstanceInfo additionalInfo) {
-            return new SlicerInstance(instruction, occurenceNumber, stackDepth, instanceNr, additionalInfo);
+                InstructionInstanceInfo additionalInfo, int id) {
+            return new SlicerInstance(instruction, occurenceNumber, stackDepth, instanceNr, additionalInfo, id);
         }
 
     }
@@ -170,13 +171,25 @@ public class Slicer {
         }
 
         List<SlicingCriterion> sc = null;
-        try {
-            sc = StaticSlicingCriterion.parseAll(slicingCriterionString, trace.getReadClasses());
-        } catch (IllegalArgumentException e) {
-            System.err.println("Error parsing slicing criterion: " + e.getMessage());
-            System.exit(-1);
-            return;
+        //currently it only supports one or the other, not both static and dynamic
+        if (cmdLine.hasOption("dynSlId")) {
+	        try {
+	            sc = DynamicSlicingCriterion.parseAll(slicingCriterionString);
+	        } catch (IllegalArgumentException e) {
+	            System.err.println("Error parsing slicing criterion: " + e.getMessage());
+	            System.exit(-1);
+	            return;
+	        }
+        } else {
+	        try {
+	            sc = StaticSlicingCriterion.parseAll(slicingCriterionString, trace.getReadClasses());
+	        } catch (IllegalArgumentException e) {
+	            System.err.println("Error parsing slicing criterion: " + e.getMessage());
+	            System.exit(-1);
+	            return;
+	        }
         }
+        
 
         List<ThreadId> threads = trace.getThreads();
         if (threads.size() == 0) {
@@ -200,7 +213,7 @@ public class Slicer {
             System.exit(-1);
             return;
         }
-
+        
         long startTime = System.nanoTime();
         Slicer slicer = new Slicer(trace);
         if (cmdLine.hasOption("progress"))
@@ -220,18 +233,18 @@ public class Slicer {
         if (warnUntracedMethods)
             slicer.addUntracedCallVisitor(new PrintUniqueUntracedMethods());
         slicer.process(tracing, sc, multithreaded);
-        Set<Instruction> slice = collector.getDynamicSlice();
+        Set<InstructionInstance> slice = collector.getDynamicSliceInstances();
         long endTime = System.nanoTime();
 
-        Instruction[] sliceArray = slice.toArray(new Instruction[slice.size()]);
+        InstructionInstance[] sliceArray = slice.toArray(new InstructionInstance[slice.size()]);
         Arrays.sort(sliceArray);
 
         System.out.println("The dynamic slice for criterion " + sc + ":");
-        for (Instruction insn: sliceArray) {
-            System.out.format((Locale)null, "%s.%s:%d %s%n",
-                    insn.getMethod().getReadClass().getName(),
-                    insn.getMethod().getName(),
-                    insn.getLineNumber(),
+        for (InstructionInstance insn: sliceArray) {
+            System.out.format((Locale)null, "%s.%s:%d %s\n",
+                    insn.getInstruction().getMethod().getReadClass().getName(),
+                    insn.getInstruction().getMethod().getName(),
+                    insn.getInstruction().getLineNumber(),
                     insn.toString());
         }
         System.out.format((Locale)null, "%nSlice consists of %d bytecode instructions.%n", sliceArray.length);
@@ -356,6 +369,8 @@ public class Slicer {
                                 instance.criterionDistance = 0;
                             }
                             break;
+                        case Opcodes.INVOKEDYNAMIC:
+                        	throw new UnsupportedOperationException("No Invokedynamic support yet");
                         case Opcodes.INVOKEINTERFACE:
                         case Opcodes.INVOKESPECIAL:
                         case Opcodes.INVOKESTATIC:
@@ -524,8 +539,10 @@ public class Slicer {
     @SuppressWarnings("static-access")
     private static Options createOptions() {
         Options options = new Options();
+        options.addOption(OptionBuilder.isRequired(false).withArgName("dynSlId").hasArg(false).
+                withDescription("mark that you are passing dynamic id instead of static slicing criterion").withLongOpt("dynSlId").create('d'));
         options.addOption(OptionBuilder.isRequired(false).withArgName("threadid").hasArg(true).
-            withDescription("thread id to select for slicing (default: main thread)").withLongOpt("threadid").create('t'));
+                withDescription("thread id to select for slicing (default: main thread)").withLongOpt("threadid").create('t'));
         options.addOption(OptionBuilder.isRequired(false).hasArg(false).
             withDescription("show progress while computing the dynamic slice").withLongOpt("progress").create('p'));
         options.addOption(OptionBuilder.isRequired(false).hasArg(false).

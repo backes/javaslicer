@@ -141,14 +141,14 @@ public class FieldInstruction extends AbstractInstruction {
 
     @Override
     public <InstanceType> InstanceType getNextInstance(TraceIterator infoProv,
-            int stackDepth, long instanceNr, InstructionInstanceFactory<InstanceType> instanceFactory)
+            int stackDepth, long instanceNr, InstructionInstanceFactory<InstanceType> instanceFactory, int id)
             throws TracerException {
 
         long objectId = this.objectTraceSeqIndex == -1 ? -1 :
             infoProv.getNextLong(this.objectTraceSeqIndex);
         return instanceFactory.createInstructionInstance(this,
             infoProv.getNextInstructionOccurenceNumber(getIndex()), stackDepth, instanceNr,
-            new FieldInstrInstanceInfo(objectId));
+            new FieldInstrInstanceInfo(objectId), id);
     }
 
     @Override

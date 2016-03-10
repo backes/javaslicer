@@ -22,6 +22,8 @@
  */
 package de.unisb.cs.st.javaslicer.tracer.instrumentation;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
@@ -164,7 +166,15 @@ public class Transformer implements ClassFileTransformer {
             return true;
         if (javaClassName.startsWith("de.unisb.cs.st.sequitur"))
             return true;
-
+        
+        //Start: add jon
+        if(javaClassName.startsWith("org.apache.maven") && !javaClassName.equals("org.apache.maven.surefire.booter.ForkedBooter"))
+            return true;
+        if(javaClassName.startsWith("edu.columbia.cs.psl.testdepends") && !javaClassName.equals("edu.columbia.cs.psl.testdepends.DependencyInfo"))
+            return true;
+        //end: add jon
+            
+            
         //////////////////////////////////////////////////////////////////
         // NOTE: these will be cleaned up when the system runs stable
         //////////////////////////////////////////////////////////////////
@@ -276,6 +286,19 @@ public class Transformer implements ClassFileTransformer {
 
         final byte[] newClassfileBuffer = writer.toByteArray();
 
+        if (this.tracer.debug) {
+            File debugDir = new File("debug-tr");
+            if (!debugDir.exists())
+                debugDir.mkdir();
+            File f = new File("debug-tr/" + className.replace("/", ".") + ".class");
+            try {
+                FileOutputStream fos = new FileOutputStream(f);
+                fos.write(newClassfileBuffer);
+                fos.close();
+            } catch (Throwable t) {
+                t.printStackTrace();
+            }
+        }
         if (this.tracer.check) {
             checkClass(newClassfileBuffer, className, classfileBuffer);
         }

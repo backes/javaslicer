@@ -29,25 +29,34 @@ import java.util.Set;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.Instruction;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.variables.Variable;
+import sun.security.jca.GetInstance.Instance;
 
 
 public class SliceInstructionsCollector implements SliceVisitor {
 
-    private final Set<Instruction> dynamicSlice = new HashSet<Instruction>();
+	private final Set<InstructionInstance> dynamicSliceInstances = new HashSet<InstructionInstance>();
+	private final Set<Instruction> dynamicSlice = new HashSet<Instruction>();
 
     @Override
 	public void visitMatchedInstance(InstructionInstance instance) {
-        this.dynamicSlice.add(instance.getInstruction());
+    	this.dynamicSliceInstances.add(instance);
+    	this.dynamicSlice.add(instance.getInstruction());
     }
 
     @Override
 	public void visitSliceDependence(InstructionInstance from,
     		InstructionInstance to, Variable variable, int distance) {
+        this.dynamicSliceInstances.add(to);
         this.dynamicSlice.add(to.getInstruction());
     }
+    
 
     public Set<Instruction> getDynamicSlice() {
         return Collections.unmodifiableSet(this.dynamicSlice);
+    }
+
+    public Set<InstructionInstance> getDynamicSliceInstances() {
+        return Collections.unmodifiableSet(this.dynamicSliceInstances);
     }
 
 }

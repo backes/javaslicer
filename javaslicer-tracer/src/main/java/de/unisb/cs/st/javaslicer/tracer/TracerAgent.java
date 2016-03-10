@@ -27,6 +27,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.instrument.Instrumentation;
 import java.net.URL;
+import java.util.Scanner;
 
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.tracer.traceSequences.TraceSequenceFactory;
@@ -69,7 +70,7 @@ public class TracerAgent {
             }
 
             File tracerJarFile = new File(urlFile.substring(5, bangIndex));
-            if (!"tracer.jar".equals(tracerJarFile.getName())) {
+            if (!"tracer.jar".equals(tracerJarFile.getName()) && !agentArgs.contains("ignoreBootPath:true")) {
                 System.err.println("ERROR: The Tracer has to be loaded from a file named 'tracer.jar'.");
                 System.err.println("       Don't rename it, because exactly this filename is added to the boot class path from the MANIFEST.MF.");
                 System.err.println("       It seems that the file was renamed to '" + tracerJarFile.getName() + "'.");
@@ -97,7 +98,8 @@ public class TracerAgent {
             boolean debug = false;
             boolean check = false;
             TraceSequenceFactory seqFac = null;
-
+            
+            boolean appendTestName = false;
             for (final String arg : args) {
                 final int colonPos = arg.indexOf(':');
                 final String key = colonPos == -1 ? arg : arg.substring(0, colonPos);
@@ -146,8 +148,13 @@ public class TracerAgent {
                     } else {
                         System.err.println("Unknown compression method: " + value);
                         System.exit(1);
-                    }
-                } else {
+					}
+				} else if ("useTestName".equalsIgnoreCase(key)) {
+					appendTestName = true;
+				} else if("ignoreBootPath".equalsIgnoreCase(key)){
+					
+				}
+				else {
                     System.err.println("Unknown argument: " + key);
                     System.exit(1);
                 }
@@ -157,7 +164,29 @@ public class TracerAgent {
                 System.err.println("ERROR: no logfile specified");
                 System.exit(1);
             }
-
+            if(appendTestName)
+            {
+            	try {
+        			String arg = System.getProperty("sun.java.command");
+        			String[] d = arg.split(" ");
+        			String f = d[1];
+        			Scanner s = new Scanner(new File(f));
+        			String tc = null;
+        			while (s.hasNextLine()) {
+        				String l = s.nextLine();
+        				if (l.startsWith("forkTestSet=")) {
+        					tc = l.replace("forkTestSet=", "").replace("java.lang.Class|", "");
+        				}
+        			}
+					s.close();
+					logFilename += tc;
+					File ff = new File(logFilename);
+					if(!ff.getParentFile().exists())
+						ff.getParentFile().mkdirs();
+        		} catch (Throwable t) {
+        			t.printStackTrace();
+        		}
+            }
             final File logFile = new File(logFilename);
             if (logFile.exists() && !logFile.canWrite()) {
                 System.err.println("ERROR: Cannot write logfile \"" + logFile.getAbsolutePath() + "\"");

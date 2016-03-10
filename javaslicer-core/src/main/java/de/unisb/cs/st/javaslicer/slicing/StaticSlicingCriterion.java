@@ -70,7 +70,7 @@ public class StaticSlicingCriterion implements SlicingCriterion {
                 this.stackDepth = instrStackDepth;
             }
             if ((StaticSlicingCriterion.this.occurence != null &&
-                    this.seenOccurences == StaticSlicingCriterion.this.occurence.longValue())
+                    instructionInstance.getOccurrenceNumber() != StaticSlicingCriterion.this.occurence.longValue())
                 || instructionInstance.getInstruction().getMethod() != StaticSlicingCriterion.this.method
                 || (StaticSlicingCriterion.this.lineNumber != null && instructionInstance.getInstruction().getLineNumber() != StaticSlicingCriterion.this.lineNumber)) {
                 if (this.beingInRun[instrStackDepth-1]) {
@@ -78,19 +78,8 @@ public class StaticSlicingCriterion implements SlicingCriterion {
                 }
                 return false;
             }
-
-            if (this.beingInRun[instrStackDepth-1])
-                return true; // we want to see *all* instruction from that line
-
-            // yeah, we have a new occurence!
-            long newOccurenceNumber = ++this.seenOccurences;
-            if (StaticSlicingCriterion.this.occurence == null ||
-                    newOccurenceNumber == StaticSlicingCriterion.this.occurence.longValue()) {
-                this.beingInRun[instrStackDepth-1] = true;
-                return true;
-            }
-            return false;
-        }
+            return true;
+       }
 
         @Override
         public String toString() {

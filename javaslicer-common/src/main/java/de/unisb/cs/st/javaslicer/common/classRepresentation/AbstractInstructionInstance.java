@@ -39,15 +39,17 @@ public class AbstractInstructionInstance implements InstructionInstance {
     private final int stackDepth;
     private final long instanceNr;
     private final InstructionInstanceInfo additionalInfo;
+    private final int id;
 
     public AbstractInstructionInstance(final AbstractInstruction instr,
             final long occurenceNumber, final int stackDepth,
-            long instanceNr, InstructionInstanceInfo additionalInfo) {
+            long instanceNr, InstructionInstanceInfo additionalInfo, int id) {
         assert instr != null;
         assert occurenceNumber >= 0;
         assert stackDepth >= 0;
         assert instanceNr >= 0;
 
+        this.id = id;
         this.instruction = instr;
         this.occurenceNumber = occurenceNumber;
         this.stackDepth = stackDepth;
@@ -55,6 +57,11 @@ public class AbstractInstructionInstance implements InstructionInstance {
         this.additionalInfo = additionalInfo;
     }
 
+    @Override
+    public int getId() {
+    	return this.id;
+    }
+    
     @Override
 	public long getOccurrenceNumber() {
         return this.occurenceNumber;
@@ -116,12 +123,12 @@ public class AbstractInstructionInstance implements InstructionInstance {
     public String toString() {
         String instrStr = this.instruction.toString();
         if (this.additionalInfo == null)
-            return instrStr;
+            return new StringBuilder(instrStr).append(" ID:").append(this.id).toString();
         String infoStr = this.additionalInfo.toString();
         if (infoStr == null || infoStr.length() == 0)
-            return instrStr;
+            return new StringBuilder(instrStr).append(" ID:").append(this.id).toString();
         return new StringBuilder(instrStr.length() + infoStr.length()).
-            append(instrStr).append(infoStr).toString();
+            append(instrStr).append(instruction.getClass()).append(infoStr).append(" ID:").append(this.id).toString();
     }
 
     @Override

@@ -30,9 +30,9 @@ public class AbstractInstructionInstanceFactory implements InstructionInstanceFa
     @Override
 	public AbstractInstructionInstance createInstructionInstance(AbstractInstruction instruction,
             long occurenceNumber, int stackDepth, long instanceNr,
-            InstructionInstanceInfo additionalInfo) {
+            InstructionInstanceInfo additionalInfo, int id) {
 
-        return new AbstractInstructionInstance(instruction, occurenceNumber, stackDepth, instanceNr, additionalInfo);
+        return new AbstractInstructionInstance(instruction, occurenceNumber, stackDepth, instanceNr, additionalInfo, id);
     }
 
 }

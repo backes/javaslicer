@@ -178,10 +178,10 @@ public abstract class AbstractInstruction implements Instruction {
     @Override
 	public <InstanceType> InstanceType getNextInstance(
             TraceIterator infoProv, int stackDepth,
-            long instanceNr, InstructionInstanceFactory<InstanceType> instanceFactory)
+            long instanceNr, InstructionInstanceFactory<InstanceType> instanceFactory, int id)
             throws TracerException {
         return instanceFactory.createInstructionInstance(this, infoProv.getNextInstructionOccurenceNumber(this.index),
-            stackDepth, instanceNr, null);
+            stackDepth, instanceNr, null, id);
     }
 
     @Override

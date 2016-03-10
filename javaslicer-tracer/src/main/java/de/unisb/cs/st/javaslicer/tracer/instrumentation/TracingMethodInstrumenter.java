@@ -46,6 +46,7 @@ import org.objectweb.asm.tree.IincInsnNode;
 import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.IntInsnNode;
+import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.JumpInsnNode;
 import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.LdcInsnNode;
@@ -327,6 +328,9 @@ public class TracingMethodInstrumenter implements Opcodes {
             case AbstractInsnNode.METHOD_INSN:
                 transformMethodInsn((MethodInsnNode)insnNode);
                 break;
+            case AbstractInsnNode.INVOKE_DYNAMIC_INSN:
+            	transformInvokeDynamicInsn((InvokeDynamicInsnNode)insnNode);
+            	break;
             case AbstractInsnNode.JUMP_INSN:
                 transformJumpInsn((JumpInsnNode)insnNode);
                 break;
@@ -429,7 +433,7 @@ public class TracingMethodInstrumenter implements Opcodes {
             }
 
 
-            newMethod.maxLocals = this.methodNode.maxLocals;
+            newMethod.maxLocals = this.methodNode.maxLocals + 1;
             newMethod.maxStack = this.methodNode.maxStack;
 
             // copy the try-catch-blocks
@@ -458,7 +462,7 @@ public class TracingMethodInstrumenter implements Opcodes {
         ready();
     }
 
-    private void analyze(final MethodNode method) {
+	private void analyze(final MethodNode method) {
         this.jumpTargetLabels = new HashSet<LabelNode>();
         this.labelLineNumbers = new HashMap<LabelNode, Integer>();
         final Iterator<?> insnIt = method.instructions.iterator();
@@ -536,6 +540,26 @@ public class TracingMethodInstrumenter implements Opcodes {
         // if the next instruction is no label, we have to add one after the instruction
         addLabelIfNecessary(thisInsn);
     }
+    
+    private void transformInvokeDynamicInsn(final InvokeDynamicInsnNode insn) {
+        registerInstruction(new MethodInvocationInstruction(this.readMethod, insn.getOpcode(), this.currentLine, insn.bsm.getOwner(), insn.name, insn.desc), InstructionType.UNSAFE);
+
+        InvokeDynamicInsnNode thisInsn = insn;
+
+        // if the method was a constructor, but it is no delegating constructor call and no super constructor call,
+        // then call the tracer for the initialized object
+        if (this.outstandingInitializations > 0 && insn.name.equals("<init>")) {
+            this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
+            this.instructionIterator.add(new InsnNode(SWAP));
+            this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
+                Type.getInternalName(ThreadTracer.class), "objectInitialized", "(Ljava/lang/Object;)V", true));
+            --this.outstandingInitializations;
+        }
+
+        // if the next instruction is no label, we have to add one after the instruction
+        addLabelIfNecessary(thisInsn);
+    }
+
 
     private void addLabelIfNecessary(final AbstractInsnNode insn) {
         AbstractInsnNode next = insn.getNext();
@@ -672,6 +696,8 @@ public class TracingMethodInstrumenter implements Opcodes {
 
         registerInstruction(new FieldInstruction(this.readMethod, insn.getOpcode(), this.currentLine,
                 insn.owner, insn.name, insn.desc, objectTraceSeqIndex), InstructionType.UNSAFE);
+        if(insn.getOpcode() == GETSTATIC || insn.getOpcode() == PUTSTATIC)
+        	traceLabel(null, InstructionType.UNSAFE); //GETSTATIC/PUTSTATIC might cause jump to classloader
     }
 
     private void transformIincInsn(final IincInsnNode insn) {
@@ -866,6 +892,8 @@ public class TracingMethodInstrumenter implements Opcodes {
     private void transformLdcInsn(final LdcInsnNode insn) {
         registerInstruction(new LdcInstruction(this.readMethod, this.currentLine, insn.cst),
                 insn.cst instanceof Number ? InstructionType.SAFE : InstructionType.UNSAFE);
+        if(!(insn.cst instanceof Number))
+        	traceLabel(null, InstructionType.UNSAFE);        
     }
 
     private void transformLookupSwitchInsn(final LookupSwitchInsnNode insn) {
@@ -922,6 +950,7 @@ public class TracingMethodInstrumenter implements Opcodes {
         this.instructionIterator.add(new MethodInsnNode(INVOKESTATIC,
             Type.getInternalName(TracingMethodInstrumenter.class), "traceMultiANewArray",
             "([I[Ljava/lang/Object;"+Type.getDescriptor(ThreadTracer.class)+"II)V", false));
+        traceLabel(null, InstructionType.UNSAFE);
     }
 
     public static void traceMultiANewArray(final int[] dimensions, final Object[] newArray,
@@ -965,9 +994,11 @@ public class TracingMethodInstrumenter implements Opcodes {
 
 	private void transformTypeInsn(final TypeInsnNode insn) {
         if (insn.getOpcode() == ANEWARRAY) {
+
             int newObjectIdSeqIndex = this.tracer.newLongTraceSequence();
             transformArrayAllocation(new TypeInstruction(this.readMethod, insn.getOpcode(),
                 this.currentLine, insn.desc, newObjectIdSeqIndex), newObjectIdSeqIndex);
+            traceLabel(null, InstructionType.UNSAFE);
         } else if (insn.getOpcode() == NEW) {
             // after a NEW, we store the sequence number in the ThreadTracer object.
             // after the constructor has been called (which is guaranteed), its
@@ -975,8 +1006,9 @@ public class TracingMethodInstrumenter implements Opcodes {
             final int newObjectIdSeqIndex = this.tracer.newLongTraceSequence();
             final AbstractInstruction instruction = new TypeInstruction(this.readMethod, insn.getOpcode(),
                 this.currentLine, insn.desc, newObjectIdSeqIndex);
+            registerInstruction(instruction, InstructionType.UNSAFE); //NEW might cause a jump to classloader
             if (!this.instructionIterator.hasNext()) {
-                if (this.tracer.debug)
+//                if (this.tracer.debug)
                     Transformer.printMethod(System.err, this.methodNode);
                 throw new TracerException("Bytecode of method "+this.classNode.name+"."+this.methodNode.name+
                     " has unsupported form (constructor call does not immediately follow NEW instruction). " +
@@ -1000,8 +1032,38 @@ public class TracingMethodInstrumenter implements Opcodes {
                         matches = true;
                     }
                 }
-
-                if (matches) {
+                boolean matches2 = false;
+                if(!matches)
+                {
+                	/*
+                	 * (long)
+                	 * dupx2
+                	 * dupx2
+                	 * pop
+                	 * NEW java.lang.long
+                	 * invokespecial
+                	 */
+                	if(dup_x1.getOpcode() == DUP_X2 && this.instructionIterator.hasNext())
+                	{
+                		AbstractInsnNode dup2x22 = this.instructionIterator.next();
+                		if(dup2x22.getOpcode() == DUP_X2 && this.instructionIterator.hasNext())
+                		{
+                			AbstractInsnNode pop = this.instructionIterator.next();
+                			if(pop.getOpcode() == POP && this.instructionIterator.hasNext())
+                			{
+                				matches2 = true;
+                			}
+                		}
+                	}
+                }
+                if(matches2)
+                {
+                	this.instructionIterator.previous();
+                    this.instructionIterator.previous();
+                    this.instructionIterator.previous();
+                    this.instructionIterator.add(new InsnNode(DUP_X2));
+                }
+                else if (matches) {
                     // add another DUP_X1 before the existing one
                     this.instructionIterator.previous();
                     this.instructionIterator.previous();
@@ -1022,21 +1084,21 @@ public class TracingMethodInstrumenter implements Opcodes {
                 this.instructionIterator.add(new InsnNode(DUP));
             }
             ++this.outstandingInitializations;
+            traceLabel(null, InstructionType.UNSAFE); //To catch return from NEW possibly
+
             // modified code of registerInstruction():
-            this.readMethod.addInstruction(instruction);
             this.instructionIterator.previous();
             this.instructionIterator.add(new VarInsnNode(ALOAD, this.tracerLocalVarIndex));
-            this.instructionIterator.add(getIntConstInsn(instruction.getIndex()));
             this.instructionIterator.add(getIntConstInsn(newObjectIdSeqIndex));
             this.instructionIterator.add(new MethodInsnNode(INVOKEINTERFACE,
-                    Type.getInternalName(ThreadTracer.class), "objectAllocated",
-                    "(II)V", true));
+                    Type.getInternalName(ThreadTracer.class), "objectAllocated", "(I)V", true));
             this.instructionIterator.next();
             ++TracingMethodInstrumenter.statsInstructions;
         } else {
             registerInstruction(new TypeInstruction(this.readMethod, insn.getOpcode(), this.currentLine,
                 insn.desc, -1),
                 InstructionType.UNSAFE);
+            traceLabel(null, InstructionType.UNSAFE);
         }
     }
 

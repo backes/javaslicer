@@ -29,6 +29,6 @@ public interface InstructionInstanceFactory<InstanceType> {
 
     InstanceType createInstructionInstance(AbstractInstruction instruction,
             long occurenceNumber, int stackDepth, long instanceNr,
-            InstructionInstanceInfo additionalInfo);
+            InstructionInstanceInfo additionalInfo, int id);
 
 }

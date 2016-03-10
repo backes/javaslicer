@@ -97,12 +97,12 @@ public class IdentifiableInstrumenter implements Opcodes {
 
         // it is still unset:
         getIdMethod.instructions.add(new MethodInsnNode(INVOKESTATIC, Type.getInternalName(Tracer.class),
-                "getInstance", "()L"+Type.getInternalName(Tracer.class)+";"));
+                "getInstance", "()L"+Type.getInternalName(Tracer.class)+";",false));
         getIdMethod.instructions.add(new MethodInsnNode(INVOKEVIRTUAL, Type.getInternalName(Tracer.class),
-                "getThreadTracer", "()L"+Type.getInternalName(ThreadTracer.class)+";"));
+                "getThreadTracer", "()L"+Type.getInternalName(ThreadTracer.class)+";", false));
         getIdMethod.instructions.add(new InsnNode(DUP));
         getIdMethod.instructions.add(new MethodInsnNode(INVOKEINTERFACE, Type.getInternalName(ThreadTracer.class),
-                "pauseTracing", "()V"));
+                "pauseTracing", "()V", true));
         getIdMethod.instructions.add(new VarInsnNode(ALOAD, 0));
         getIdMethod.instructions.add(new FieldInsnNode(GETSTATIC,
                 Type.getInternalName(ObjectIdentifier.class), "instance",
@@ -110,10 +110,10 @@ public class IdentifiableInstrumenter implements Opcodes {
         getIdMethod.instructions.add(new InsnNode(ACONST_NULL));
         getIdMethod.instructions.add(new MethodInsnNode(INVOKEVIRTUAL,
                 Type.getInternalName(ObjectIdentifier.class), "getNewId",
-                "(Ljava/lang/Object;)J"));
+                "(Ljava/lang/Object;)J",false));
         getIdMethod.instructions.add(new FieldInsnNode(PUTFIELD, classNode.name, ID_FIELD_NAME, "J"));
         getIdMethod.instructions.add(new MethodInsnNode(INVOKEINTERFACE, Type.getInternalName(ThreadTracer.class),
-                "resumeTracing", "()V"));
+                "resumeTracing", "()V", true));
 
         getIdMethod.instructions.add(l2);
         getIdMethod.instructions.add(new VarInsnNode(ALOAD, 0));

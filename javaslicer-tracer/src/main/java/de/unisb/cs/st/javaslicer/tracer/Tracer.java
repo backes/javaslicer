@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -387,6 +388,11 @@ public class Tracer {
         }
     }
 
+    private static LinkedList<InstrumentationListener> listeners = new LinkedList<InstrumentationListener>();
+    public static synchronized void addListener(InstrumentationListener l)
+    {
+        listeners.add(l);
+    }
     private final Object finishLock = new Object();
     public void finish() throws IOException {
         synchronized (this.finishLock) {
@@ -403,6 +409,9 @@ public class Tracer {
                         allThreadTracers.add((TracingThreadTracer) t);
                 }
             }
+            if(listeners != null)
+                for(InstrumentationListener l : listeners)
+                    l.finished();
             synchronized (this.readyThreadTracers) {
                 allThreadTracers.addAll(this.readyThreadTracers);
                 this.readyThreadTracers.clear();

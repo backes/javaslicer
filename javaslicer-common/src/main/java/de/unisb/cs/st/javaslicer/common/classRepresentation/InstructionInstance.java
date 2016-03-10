@@ -85,4 +85,6 @@ public interface InstructionInstance extends Comparable<InstructionInstance> {
      */
     InstructionInstanceInfo getAdditionalInfo();
 
+	int getId();
+
 }

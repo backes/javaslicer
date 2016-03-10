@@ -138,7 +138,7 @@ public class MultiANewArrayInstruction extends AbstractInstruction {
 
     @Override
     public <InstanceType> InstanceType getNextInstance(TraceIterator infoProv,
-            int stackDepth, long instanceNr, InstructionInstanceFactory<InstanceType> instanceFactory)
+            int stackDepth, long instanceNr, InstructionInstanceFactory<InstanceType> instanceFactory, int id)
             throws TracerException {
 
         int numNewObjects = infoProv.getNextInteger(this.numNewObjectIdentifiersSeqIndex);
@@ -147,7 +147,7 @@ public class MultiANewArrayInstruction extends AbstractInstruction {
             newObjects[i] = infoProv.getNextLong(this.newObjectIdentifierSeqIndex);
         return instanceFactory.createInstructionInstance(this,
             infoProv.getNextInstructionOccurenceNumber(getIndex()), stackDepth, instanceNr,
-            new MultiANewArrayInstrInstanceInfo(newObjects));
+            new MultiANewArrayInstrInstanceInfo(newObjects), id);
     }
 
     @Override

@@ -3,4 +3,4 @@
 .settings
 target
 /assembly
-
+dependency-reduced-pom.xml

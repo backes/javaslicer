@@ -153,14 +153,14 @@ public class NewArrayInstruction extends AbstractInstruction {
 
     @Override
     public <InstanceType> InstanceType getNextInstance(TraceIterator infoProv,
-            int stackDepth, long instanceNr, InstructionInstanceFactory<InstanceType> instanceFactory)
+            int stackDepth, long instanceNr, InstructionInstanceFactory<InstanceType> instanceFactory, int id)
             throws TracerException {
 
         final long objectId = this.newObjectIdentifierSequenceIndex == -1 ? -1 :
             infoProv.getNextLong(this.newObjectIdentifierSequenceIndex);
         return instanceFactory.createInstructionInstance(this,
             infoProv.getNextInstructionOccurenceNumber(getIndex()),
-            stackDepth, instanceNr, new NewArrayInstrInstanceInfo(objectId));
+            stackDepth, instanceNr, new NewArrayInstrInstanceInfo(objectId), id);
     }
 
     @Override

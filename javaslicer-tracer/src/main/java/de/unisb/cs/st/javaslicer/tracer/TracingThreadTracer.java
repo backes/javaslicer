@@ -298,6 +298,12 @@ public class TracingThreadTracer implements ThreadTracer {
         this.writeOutThread.start();
     }
 
+    int insnsExecuted = 0;
+    
+    public int getInsnsExecuted() {
+		return insnsExecuted;
+	}
+    
     @Override
 	public synchronized void traceInt(final int value, final int traceSequenceIndex) {
         if (this.paused > 0)
@@ -305,6 +311,7 @@ public class TracingThreadTracer implements ThreadTracer {
 
         this.intSeqNr[this.intSeqIndex] = traceSequenceIndex;
         this.intSeqVal[this.intSeqIndex] = value;
+        insnsExecuted++;
         if (++this.intSeqIndex == CACHE_SIZE) {
             pauseTracing();
             this.writeOutThread.addJob(new WriteOutJob(this.intSeqNr, this.intSeqVal, null, CACHE_SIZE));
@@ -459,7 +466,7 @@ public class TracingThreadTracer implements ThreadTracer {
     }
 
     @Override
-    public synchronized void objectAllocated(final int instructionIndex, final int traceSequenceNr) {
+    public synchronized void objectAllocated(final int traceSequenceNr) {
         if (this.paused > 0)
             return;
 
@@ -470,8 +477,6 @@ public class TracingThreadTracer implements ThreadTracer {
         }
         this.objectAllocationTraceSequence[this.uninitializedObjects++] = traceSequenceNr;
         assert traceSequenceNr != 0;
-
-        passInstruction(instructionIndex);
     }
 
     @Override

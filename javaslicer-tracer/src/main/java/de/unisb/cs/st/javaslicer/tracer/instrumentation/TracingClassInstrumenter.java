@@ -39,6 +39,9 @@ import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.LocalVariableNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TryCatchBlockNode;
+import org.objectweb.asm.util.CheckMethodAdapter;
+import org.objectweb.asm.util.Textifier;
+import org.objectweb.asm.util.TraceMethodVisitor;
 
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
@@ -75,13 +78,8 @@ public class TracingClassInstrumenter implements Opcodes {
         final ReadMethod readMethod = new ReadMethod(this.readClass, method.access,
                 method.name, method.desc, AbstractInstruction.getNextIndex());
         this.readClass.addMethod(readMethod);
-
-        // do not instrument <clinit> methods (break (linear) control flow)
-        // because these methods may call other methods, we have to pause tracing when they are entered
-        if ("<clinit>".equals(method.name)) {
-            new PauseTracingInstrumenter(null, this.tracer).transformMethod(method, methodIt, this.readClass.getName());
-            return;
-        }
+        method.maxLocals = 0;
+        method.maxStack = 0;
 
         MethodNode oldMethod;
         // only copy the old method if it has more than 2000 instructions
@@ -95,21 +93,33 @@ public class TracingClassInstrumenter implements Opcodes {
         new TracingMethodInstrumenter(this.tracer, readMethod, classNode, method).transform(methodIt);
 
         // test the size of the instrumented method
-        final ClassWriter testCW = new ClassWriter(0);
+        final ClassWriter testCW = new ClassWriter(ClassWriter.COMPUTE_MAXS)
+        {
+        	@Override
+        	protected String getCommonSuperClass(String type1, String type2) {
+        		return "Java/lang/Object";
+        	}  
+        };
+        testCW.visit(V1_7, Opcodes.ACC_PUBLIC, readClass.getInternalClassName(), null, "java/lang/Object", new String[0]);
         method.accept(testCW);
-        final int byteCodeSize = testCW.toByteArray().length;
-        if (byteCodeSize >= 1 << 16) {
-            System.err.format("WARNING: instrumented method \"%s.%s%s\" is larger than 64k bytes. undoing instrumentation.%n",
-                this.readClass.getName(), readMethod.getName(), readMethod.getDesc());
-            if (oldMethod == null) {
-                System.err.println("ERROR: uninstrumented method had less than 2000 instructions, so we cannot roll back the instrumentation...");
-            } else {
-                System.err.format("#instructions old: %d; #instructions new: %d; size new: %d%n",
-                    oldMethod.instructions.size(), method.instructions.size(), byteCodeSize);
-                copyMethod(oldMethod, method);
-            }
+        try{
+        	 testCW.toByteArray();
         }
-
+        catch(RuntimeException ex)
+        {
+        	int byteCodeSize = 1 << 16 + 1;
+	        if (byteCodeSize >= 1 << 16) {
+	            System.err.format("WARNING: instrumented method \"%s.%s%s\" is larger than 64k bytes. undoing instrumentation.%n",
+	                this.readClass.getName(), readMethod.getName(), readMethod.getDesc());
+	            if (oldMethod == null) {
+	                System.err.println("ERROR: uninstrumented method had less than 2000 instructions, so we cannot roll back the instrumentation...");
+	            } else {
+	                System.err.format("#instructions old: %d; #instructions new: %d; size new: %d%n",
+	                    oldMethod.instructions.size(), method.instructions.size(), byteCodeSize);
+	                copyMethod(oldMethod, method);
+	            }
+	        }
+        }
         // reset the labels
         final Iterator<?> insnIt = method.instructions.iterator();
         while (insnIt.hasNext()) {

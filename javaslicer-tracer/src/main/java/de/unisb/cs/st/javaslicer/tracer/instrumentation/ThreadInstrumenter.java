@@ -57,14 +57,14 @@ public class ThreadInstrumenter extends TracingClassInstrumenter {
         final ListIterator<AbstractInsnNode> insnIt = method.instructions.iterator();
 
         insnIt.add(new MethodInsnNode(INVOKESTATIC, "java/lang/Thread",
-                "currentThread", "()Ljava/lang/Thread;"));
+                "currentThread", "()Ljava/lang/Thread;", false));
         insnIt.add(new VarInsnNode(ALOAD, 0));
         final LabelNode l0 = new LabelNode();
         insnIt.add(new JumpInsnNode(IF_ACMPNE, l0));
         insnIt.add(new MethodInsnNode(INVOKESTATIC, Type.getInternalName(Tracer.class),
-                "getInstance", "()L" + Type.getInternalName(Tracer.class) + ";"));
+                "getInstance", "()L" + Type.getInternalName(Tracer.class) + ";", false));
         insnIt.add(new MethodInsnNode(INVOKEVIRTUAL, Type.getInternalName(Tracer.class),
-                "threadExits", "()V"));
+                "threadExits", "()V", false));
         insnIt.add(l0);
     }
 

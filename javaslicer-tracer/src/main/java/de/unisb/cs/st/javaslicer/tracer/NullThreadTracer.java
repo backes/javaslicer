@@ -82,13 +82,18 @@ public class NullThreadTracer implements ThreadTracer {
     }
 
     @Override
-    public void objectAllocated(final int instructionIndex, final int traceSequenceNr) {
+    public void objectAllocated(final int traceSequenceNr) {
         // nop
     }
 
     @Override
     public void objectInitialized(final Object obj) {
         // nop
+    }
+
+    @Override
+    public int getInsnsExecuted() {
+        return 0;
     }
 
 }

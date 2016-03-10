@@ -47,7 +47,7 @@ public interface Instruction extends Comparable<Instruction> {
 
     // for internal use only!
     <InstanceType> InstanceType getNextInstance(final TraceIterator infoProv,
-            int stackDepth, long instanceNr, InstructionInstanceFactory<InstanceType> instanceFactory)
+            int stackDepth, long instanceNr, InstructionInstanceFactory<InstanceType> instanceFactory, int id)
         throws TracerException;
 
     void writeOut(final DataOutputStream out, StringCacheOutput stringCache) throws IOException;

@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.util.Printer;
 
 import de.hammacher.util.iterators.EmptyIterator;
 import de.hammacher.util.maps.IntegerMap;
@@ -43,6 +44,7 @@ import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstance;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.InstructionInstanceFactory;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.TraceIterator;
+import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
 import de.unisb.cs.st.javaslicer.common.exceptions.TracerException;
 import de.unisb.cs.st.javaslicer.common.progress.ProgressInformationProvider;
 import de.unisb.cs.st.javaslicer.traceResult.traceSequences.ConstantTraceSequence;
@@ -127,10 +129,15 @@ public class BackwardTraceIterator<InstanceType extends InstructionInstance>
     private InstanceType getNextInstruction(final int nextIndex) throws TracerException {
         int index = nextIndex;
         while (true) {
-            if (WRITE_ITERATION_DEBUG_FILE) {
-                this.debugFileWriter.println(index);
-            }
             final Instruction backwardInstruction = this.threadTraceResult.findInstruction(index);
+            if (WRITE_ITERATION_DEBUG_FILE) {
+                this.debugFileWriter.print(index);
+                if(index >= 0)
+					this.debugFileWriter.print(" " + backwardInstruction.getMethod().getReadClass().getName() + "." + backwardInstruction.getMethod().getName() + ":"
+							+ backwardInstruction.getLineNumber() + "\t" + backwardInstruction.getType() + "\t"+(backwardInstruction.getOpcode() > 0 ? Printer.OPCODES[backwardInstruction.getOpcode()] : ""));
+                this.debugFileWriter.println();
+                this.debugFileWriter.flush();
+            }
             if (backwardInstruction == null) {
                 assert index == -1;
                 return null;
@@ -147,8 +154,13 @@ public class BackwardTraceIterator<InstanceType extends InstructionInstance>
                 // info: the return statements opcodes lie between 172 (IRETURN) and 177 (RETURN)
                 this.stackDepth = ++tmpStackDepth;
             }
+            //TODO Add index in the stream of instructions
+            if (!(backwardInstruction instanceof AbstractInstruction)) {
+            	throw new RuntimeException("The instruction should be an AbstractInstruction! (edu.*)");
+            }
+            AbstractInstruction abstractInstr = (AbstractInstruction)backwardInstruction;
             final InstanceType instance = backwardInstruction.getNextInstance(this, tmpStackDepth,
-                this.instancesCount, this.instanceFactory);
+                this.instancesCount, this.instanceFactory, abstractInstr.getIndex());
             assert instance != null;
 
             ++this.instancesCount;
