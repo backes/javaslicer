@@ -94,14 +94,14 @@ public class PauseTracingInstrumenter implements Opcodes {
 
         insnIt.add(new MethodInsnNode(INVOKESTATIC,
                 Type.getInternalName(Tracer.class), "getInstance",
-                "()L"+Type.getInternalName(Tracer.class)+";"));
+                "()L"+Type.getInternalName(Tracer.class)+";", false));
         insnIt.add(new MethodInsnNode(INVOKEVIRTUAL,
                 Type.getInternalName(Tracer.class), "getThreadTracer",
-                "()L"+Type.getInternalName(ThreadTracer.class)+";"));
+                "()L"+Type.getInternalName(ThreadTracer.class)+";", false));
         insnIt.add(new InsnNode(DUP));
         insnIt.add(new VarInsnNode(ASTORE, tracerLocalVarIndex));
         insnIt.add(new MethodInsnNode(INVOKEINTERFACE,
-                Type.getInternalName(ThreadTracer.class), "pauseTracing", "()V"));
+                Type.getInternalName(ThreadTracer.class), "pauseTracing", "()V", true));
         insnIt.add(l0);
 
         while (insnIt.hasNext()) {
@@ -113,7 +113,7 @@ public class PauseTracingInstrumenter implements Opcodes {
                     insnIt.previous();
                     insnIt.add(new VarInsnNode(ALOAD, tracerLocalVarIndex));
                     insnIt.add(new MethodInsnNode(INVOKEINTERFACE,
-                            Type.getInternalName(ThreadTracer.class), "resumeTracing", "()V"));
+                            Type.getInternalName(ThreadTracer.class), "resumeTracing", "()V", true));
                     insnIt.next();
                 }
                 break;
@@ -134,7 +134,7 @@ public class PauseTracingInstrumenter implements Opcodes {
 
         method.instructions.add(new VarInsnNode(ALOAD, tracerLocalVarIndex));
         method.instructions.add(new MethodInsnNode(INVOKEINTERFACE,
-                Type.getInternalName(ThreadTracer.class), "resumeTracing", "()V"));
+                Type.getInternalName(ThreadTracer.class), "resumeTracing", "()V", true));
         method.instructions.add(new InsnNode(ATHROW));
 
         method.tryCatchBlocks.add(new TryCatchBlockNode(l0, l1, l1, null));
