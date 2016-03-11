@@ -23,13 +23,10 @@
 package de.unisb.cs.st.javaslicer.tracer.instrumentation;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.Map;
 
-import org.apache.commons.collections.Factory;
-import org.apache.commons.collections.map.LazyMap;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -152,13 +149,7 @@ public class PauseTracingInstrumenter implements Opcodes {
                     method.signature, (String[]) method.exceptions.toArray(new String[method.exceptions.size()]));
             methodIt.add(newMethod);
 
-            final Map<LabelNode, LabelNode> newMethodLabels = LazyMap.decorate(
-                    new HashMap<LabelNode, LabelNode>(), new Factory() {
-                        @Override
-						public Object create() {
-                            return new LabelNode();
-                        }
-                    });
+            final Map<LabelNode, LabelNode> newMethodLabels = new LazyLabelMap();
 
             // copy the local variables information to the new method
             for (final Object o: method.localVariables) {

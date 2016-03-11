@@ -34,8 +34,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.commons.collections.Factory;
-import org.apache.commons.collections.map.LazyMap;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -251,13 +249,7 @@ public class TracingMethodInstrumenter implements Opcodes {
         this.instructionIterator.add(new JumpInsnNode(IFNE, noTracingLabel));
         // create a copy of the (uninstrumented) instructions (later, while iterating through the instructions)
         final InsnList oldInstructions = new InsnList();
-        final Map<LabelNode, LabelNode> labelCopies = LazyMap.decorate(
-                new HashMap<LabelNode, LabelNode>(), new Factory() {
-                    @Override
-					public Object create() {
-                        return new LabelNode();
-                    }
-                });
+        final Map<LabelNode, LabelNode> labelCopies = new LazyLabelMap();
         // copy the try-catch-blocks
         final Object[] oldTryCatchblockNodes = this.methodNode.tryCatchBlocks.toArray();
         for (final Object o: oldTryCatchblockNodes) {
@@ -411,13 +403,7 @@ public class TracingMethodInstrumenter implements Opcodes {
             for (final Type t: oldMethodArguments)
                 threadTracerParamPos += t.getSize();
 
-            final Map<LabelNode, LabelNode> newMethodLabels = LazyMap.decorate(
-                    new HashMap<LabelNode, LabelNode>(), new Factory() {
-                        @Override
-						public Object create() {
-                            return new LabelNode();
-                        }
-                    });
+            final Map<LabelNode, LabelNode> newMethodLabels = new LazyLabelMap();
 
             // copy the local variables information to the new method
             for (final Object o: this.methodNode.localVariables) {
