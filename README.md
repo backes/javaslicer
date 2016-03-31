@@ -42,6 +42,25 @@ If you installed a Maven plugin in eclipse (e.g.
 calling "mvn eclipse:eclipse" on the command line.
 
 
+Limitations
+===========
+
+Currently JavaSlicer still has some limitations, which may or may not be lifted in the future. These include:
+
+* Tracing of native methods.
+
+ This is a drawback of using a java agent and will most probably never get fixed. Instrumenting native methods loaded from shared libraries is far more complex that instrumenting java bytecode.
+ This drawback also affects many method in the Standard Library, like for example System.arraycopy and large parts of the java.util.concurrent.atomic package.
+
+* Tracing of some Standard Library classes.
+
+ Unfortunately, some of the integral classes of Java have to be excluded from instrumentation, hence they are not traced. This includes the classes `java.lang.String`, `java.lang.System`, `java.lang.Object` and others. The consequence is that the dependencies through method calls in these classes can not be reconstructed, leading to incomplete slices. It is theoretically possible to circumvent most of the problems arising when instrumenting these classes, so this may get fixes in the future.
+
+* Tracing of multithreaded applications.
+
+ At the moment, each thread is traced separately, so data dependencies between different threads can not be reconstructed. This also means that the finalize method will most probably not be contained in the trace, since (at least in some JVMs) the finalizer is executed in its own thread.
+
+
 Usage
 =====
 
