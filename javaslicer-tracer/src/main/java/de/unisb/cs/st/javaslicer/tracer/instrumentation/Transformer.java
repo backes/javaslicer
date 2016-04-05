@@ -165,20 +165,27 @@ public class Transformer implements ClassFileTransformer {
         if (javaClassName.startsWith("de.unisb.cs.st.sequitur"))
             return true;
 
+        // Object
+        if (javaClassName.equals("java.lang.Object"))
+            return true;
+        // references
+        if (javaClassName.startsWith("java.lang.ref."))
+            return true;
+        
         //////////////////////////////////////////////////////////////////
         // NOTE: these will be cleaned up when the system runs stable
         //////////////////////////////////////////////////////////////////
-
+        /*
         if (javaClassName.equals("java.lang.System"))
             return true;
-        /*
+        
         if (javaClassName.equals("java.lang.VerifyError")
                 || javaClassName.equals("java.lang.ClassCircularityError")
                 || javaClassName.equals("java.lang.LinkageError")
                 || javaClassName.equals("java.lang.Error")
                 || javaClassName.equals("java.lang.Throwable"))
             return null;
-        */
+        
 
         if (javaClassName.startsWith("java.util.Collections"))
             return true;
@@ -193,14 +200,7 @@ public class Transformer implements ClassFileTransformer {
             return true;
         if (javaClassName.equals("java.lang.Math"))
             return true;
-
-        // Object
-        if (javaClassName.equals("java.lang.Object"))
-            return true;
-        // references
-        if (javaClassName.startsWith("java.lang.ref."))
-            return true;
-
+         */
         return false;
     }
 

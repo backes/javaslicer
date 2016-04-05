@@ -340,6 +340,10 @@ public class TracingMethodInstrumenter implements Opcodes {
             case AbstractInsnNode.MULTIANEWARRAY_INSN:
                 transformMultiANewArrayInsn((MultiANewArrayInsnNode)insnNode);
                 break;
+            case AbstractInsnNode.INVOKE_DYNAMIC_INSN:
+            	//TODO
+            	// ignore
+            	break;
             case AbstractInsnNode.FRAME:
                 // ignore
                 break;

@@ -32,18 +32,24 @@ import java.util.Map;
 import org.objectweb.asm.Attribute;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.JumpInsnNode;
 import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.LocalVariableNode;
+import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TryCatchBlockNode;
 
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadClass;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.ReadMethod;
 import de.unisb.cs.st.javaslicer.common.classRepresentation.instructions.AbstractInstruction;
+import de.unisb.cs.st.javaslicer.tracer.ThreadTracer;
 import de.unisb.cs.st.javaslicer.tracer.Tracer;
+import de.unisb.cs.st.javaslicer.tracer.instrumentation.TracingMethodInstrumenter.FixedInstructionIterator;
+
 
 public class TracingClassInstrumenter implements Opcodes {
 
@@ -64,11 +70,77 @@ public class TracingClassInstrumenter implements Opcodes {
 
     @SuppressWarnings("unchecked")
     public void transform(final ClassNode classNode) {
+
         final ListIterator<MethodNode> methodIt = classNode.methods.listIterator();
         while (methodIt.hasNext()) {
-            transformMethod(classNode, methodIt.next(), methodIt);
+        	
+        	MethodNode current = methodIt.next();
+        	
+        	MethodNode unInstrumented = new MethodNode();
+        	copyMethod(current, unInstrumented);
+        	
+        	if(unInstrumented.name.equals("<init>")){
+        		unInstrumented.name = "init_uninstr";
+        	}else if(unInstrumented.name.equals("<clinit>")){
+        		unInstrumented.name = "clinit_uninstr";
+        	}
+        	else{
+        		unInstrumented.name = unInstrumented.name + "_uninstr";
+        	}
+        	
+        	//add label for uninstrumented code
+            LabelNode beginCode = new LabelNode();
+        	
+            transformMethod(classNode, current, methodIt);
+            
+            //do not modify <cinit> and do not modify abstract or native methods
+            if(/*!current.name.equals("<clinit>") &&*/ (current.access & ACC_ABSTRACT) == 0 && (current.access & ACC_NATIVE) == 0){	
+            
+            FixedInstructionIterator instructionIterator = new FixedInstructionIterator(current.instructions);
+            
+            if(current.name.equals("main") && current.desc.equals("([Ljava/lang/String;)V")){
+//            	instructionIterator.add(new MethodInsnNode(INVOKESTATIC, Type.getInternalName(Runtime.class), "init", "()V"));
+            	instructionIterator.add(new MethodInsnNode(INVOKESTATIC, Type.getInternalName(Runtime.class), "startTracing", "()V", false));
+            }
+            
+    		instructionIterator.add(new MethodInsnNode(INVOKESTATIC, Type.getInternalName(Runtime.class), "isRunning", "()Z", false));
+    		instructionIterator.add(new JumpInsnNode(IFEQ, beginCode));
+    		
+    		if(current.name.equals("main") && current.desc.equals("([Ljava/lang/String;)V")){
+    			while (instructionIterator.hasNext()) {
+    				AbstractInsnNode n = instructionIterator.next();
+    				
+    				if(n.getOpcode() == INVOKEINTERFACE /*|| n.getOpcode()==RET*/){
+    					MethodInsnNode call = (MethodInsnNode) n;
+    					if(call.name.equals("leaveMethod") && call.owner.equals(Type.getInternalName(ThreadTracer.class))){
+    					//instructionIterator.previous();
+    					//instructionIterator.add(new MethodInsnNode(INVOKESTATIC, Type.getInternalName(Runtime.class), "stopTracing", "()V"));
+    					instructionIterator.add(new MethodInsnNode(INVOKESTATIC, Type.getInternalName(Runtime.class), "finishTracing", "()V", false));
+    					instructionIterator.next();
+    				}
+    				}
+				}
+			}
+            
+    		instructionIterator = new FixedInstructionIterator(unInstrumented.instructions);
+    		current.instructions.add(beginCode);
+    		while(instructionIterator.hasNext()){
+    			current.instructions.add(instructionIterator.next());
+    		}
+    		
+            // reset the labels
+            final Iterator<?> insnIt = current.instructions.iterator();
+            while (insnIt.hasNext()) {
+                final Object insn = insnIt.next();
+                if (insn instanceof LabelNode)
+                    ((LabelNode)insn).resetLabel();
+            }
+    		
+            }
+        	
         }
         this.readClass.ready();
+    	
     }
 
     protected void transformMethod(final ClassNode classNode, final MethodNode method, final ListIterator<MethodNode> methodIt) {
